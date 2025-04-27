@@ -4,8 +4,6 @@
 
 This game is a simple 2D top-down action game where the player aims to escape by finding and driving a car out of a large building infested with zombies. The player must evade zombies, break through walls to find a path, and then escape the building in a car.
 
-## Screenshots
-
 <img src="imgs/screenshot1.png" width="400">
 
 <img src="imgs/screenshot2.png" width="360">
@@ -19,7 +17,7 @@ This game is a simple 2D top-down action game where the player aims to escape by
 
 ## Game Rules
 
-### Elements
+### Characters/Items
 
 -   **Player:** A blue circle. Controlled with the WASD or arrow keys.
 -   **Zombie:** A red circle. Will chase the player (or car) once detected.
@@ -31,7 +29,7 @@ This game is a simple 2D top-down action game where the player aims to escape by
     -   When the car is destroyed, a **new car will respawn** at a random location within the stage.
 -   **Walls:** Gray rectangles.
     -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible.  Each side has at least three openings (exits).
-    -   **Inner Walls:** Walls randomly placed inside the building. Consist of short segments.
+    -   **Inner Walls:** Walls randomly placed inside the building. Inner wall segments each have durability. Only the **player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
 
 ### Win/Lose Conditions
 
@@ -39,15 +37,6 @@ This game is a simple 2D top-down action game where the player aims to escape by
 -   **Lose Condition:**
     -   The player is touched by a zombie while *not* inside a car.
     -   (Note: In the current implementation, the game does not end immediately when the car is destroyed.  The player can search for another car and continue trying to escape.)
-
-### Special Rules
-
--   **Limited Visibility:** The player (or car they are in) can only see within a certain range around them.
-    -   The central area is clearly visible (`FOV_RADIUS`).
-    -   A slightly wider area around that (`FOV_RADIUS * FOV_RADIUS_SOFT_FACTOR`) is dimly visible.
-    -   Anything beyond that is completely invisible.
--   **Wall Breaking:** Repeatedly colliding with a segment of an inner wall will reduce its durability. When durability reaches 0, the segment will be destroyed and disappear. The car cannot break walls.
--   **Scrolling:** The stage is larger than the screen, and the screen will scroll to follow the player (or car). Scrolling will stop when approaching the edge of the map.
 
 ## How to Run
 
