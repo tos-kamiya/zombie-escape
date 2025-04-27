@@ -12,9 +12,8 @@ This game is a simple 2D top-down action game where the player aims to escape by
 
 ## Controls
 
--   **Player Movement:** `W` / `↑` (Up), `A` / `←` (Left), `S` / `↓` (Down), `D` / `→` (Right)
+-   **Player/Car Movement:** `W` / `↑` (Up), `A` / `←` (Left), `S` / `↓` (Down), `D` / `→` (Right)
 -   **Enter Car:**  Overlap the player with the car.
--   **Drive Car:** (While in the car) `W` / `↑` (Forward), `A` / `←` (Turn Left), `S` / `↓` (Reverse), `D` / `→` (Turn Right)
 -   **Quit Game:** `ESC` key
 -   **Restart:** `R` key (on Game Over/Clear screen)
 
