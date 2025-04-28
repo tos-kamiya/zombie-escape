@@ -39,7 +39,7 @@ ZOMBIE_RADIUS = 10
 ZOMBIE_SPEED = 1.4
 ZOMBIE_SPAWN_DELAY_MS = 100
 MAX_ZOMBIES = 300
-INITIAL_ZOMBIES_INSIDE = 3
+INITIAL_ZOMBIES_INSIDE = 10
 ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
 ZOMBIE_WANDER_SPEED_FACTOR = 0.6
 ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 1.3
@@ -48,7 +48,7 @@ ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 1.3
 CAR_WIDTH = 30
 CAR_HEIGHT = 50
 CAR_SPEED = 5.5
-CAR_HEALTH = 50
+CAR_HEALTH = 100
 CAR_WALL_DAMAGE = 2
 CAR_ZOMBIE_DAMAGE = 1
 
@@ -63,7 +63,7 @@ INTERNAL_WALL_MIN_LEN = 80
 INTERNAL_WALL_MAX_LEN = 300
 INTERNAL_WALL_GRID_SNAP = 40
 WALL_SEGMENT_LENGTH = 25
-WALL_HEALTH = 4
+WALL_HEALTH = 30
 OUTER_WALL_HEALTH = 9999
 
 
@@ -277,7 +277,6 @@ class Zombie(pygame.sprite.Sprite):
 
 
 class Car(pygame.sprite.Sprite):
-    # (変更なし)
     def __init__(self, x, y):
         super().__init__()
         self.original_image = pygame.Surface((CAR_WIDTH, CAR_HEIGHT), pygame.SRCALPHA)
@@ -389,9 +388,10 @@ class Wall(pygame.sprite.Sprite):
             self.image.fill((40, 40, 40))
         else:
             health_ratio = max(0, self.health / self.max_health)
-            r = int(self.base_color[0] + (200 - self.base_color[0]) * (1 - health_ratio))
+            d = (200 - self.base_color[0]) * (1 - health_ratio)
+            r = int(self.base_color[0] + d)
             g = int(self.base_color[1] * health_ratio)
-            b = int(self.base_color[2] * health_ratio)
+            b = int(self.base_color[2] + d)
             self.image.fill((r, g, b))
 
 
@@ -509,17 +509,6 @@ def generate_internal_walls(
             if segment_rect.colliderect(player_check_rect) or segment_rect.colliderect(car_check_rect):
                 valid_line = False
                 break
-            temp_segment_sprite = pygame.sprite.Sprite()
-            temp_segment_sprite.rect = segment_rect
-            nearby_walls = [
-                wall
-                for wall in existing_walls
-                if abs(wall.rect.centerx - segment_rect.centerx) < max_len * 1.2
-                and abs(wall.rect.centery - segment_rect.centery) < max_len * 1.2
-            ]
-            if pygame.sprite.spritecollideany(temp_segment_sprite, nearby_walls):
-                valid_line = False
-                break
             line_segments.add(Wall(current_x, current_y, w, h))
             if is_horizontal:
                 current_x += w
@@ -591,7 +580,7 @@ def game():
         sys.exit()
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Zombie Escape")
+    pygame.display.set_caption("Zombie Escape v0.2")
     clock = pygame.time.Clock()
 
     running = True
