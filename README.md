@@ -1,5 +1,17 @@
 # Zombie Escape
 
+The city is overrun with zombies!
+You fled the horde, taking refuge in an abandoned factory.
+
+Inside, it's a maze. They won't get in easily.
+But you have no weapons. Night has fallen. The power's out, plunging the factory into darkness.
+
+Your only tool: a single flashlight.
+A car... somewhere inside... it's your only hope.
+
+Pierce the darkness and find the car!
+Then, escape this nightmare city!
+
 ## Overview
 
 This game is a simple 2D top-down action game where the player aims to escape by finding and driving a car out of a large building infested with zombies. The player must evade zombies, break through walls to find a path, and then escape the building in a car.
@@ -11,7 +23,7 @@ This game is a simple 2D top-down action game where the player aims to escape by
 ## Controls
 
 -   **Player/Car Movement:** `W` / `↑` (Up), `A` / `←` (Left), `S` / `↓` (Down), `D` / `→` (Right)
--   **Enter Car:**  Overlap the player with the car.
+-   **Enter Car:** Overlap the player with the car.
 -   **Quit Game:** `ESC` key
 -   **Restart:** `R` key (on Game Over/Clear screen)
 
@@ -28,17 +40,19 @@ This game is a simple 2D top-down action game where the player aims to escape by
     -   If durability reaches 0, the car is destroyed, and the player is ejected.
     -   When the car is destroyed, a **new car will respawn** at a random location within the stage.
 -   **Walls:** Gray rectangles.
-    -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible.  Each side has at least three openings (exits).
-    -   **Inner Walls:** Walls randomly placed inside the building. Inner wall segments each have durability. Only the **player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
+    -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
+    -   **Inner Walls:** Walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
 
 ### Win/Lose Conditions
 
--   **Win Condition:** Escape the stage (level) while inside the car, by leaving the boundaries of the stage.
+-   **Win Condition:** Escape the stage (level) boundaries while inside the car.
 -   **Lose Condition:**
     -   The player is touched by a zombie while *not* inside a car.
-    -   (Note: In the current implementation, the game does not end immediately when the car is destroyed.  The player can search for another car and continue trying to escape.)
+    -   (Note: In the current implementation, the game does not end immediately when the car is destroyed. The player can search for another car and continue trying to escape.)
 
 ## How to Run
+
+**Requirements: Python 3.10 or higher**
 
 Install using pipx:
 
@@ -47,6 +61,7 @@ pipx install git+https://github.com/tos-kamiya/zombie-escape
 ```
 
 Alternatively, you can install using git and pip:
+(Installing in a virtual environment is recommended)
 
 ```sh
 git clone https://github.com/tos-kamiya/zombie-escape
@@ -59,6 +74,12 @@ Launch using the following command line:
 ```sh
 zombie-escape
 ```
+
+**An `.exe` file for Windows** is also available. You can download it from the [Releases page](https://github.com/tos-kamiya/zombie-escape/releases).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
 
 ## Acknowledgements
 
