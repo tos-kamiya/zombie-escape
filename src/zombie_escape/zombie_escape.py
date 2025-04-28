@@ -20,8 +20,8 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 GRAY = (100, 100, 100)
+LIGHT_GRAY = (200, 200, 200)
 YELLOW = (255, 255, 0)
-WALL_COLOR = GRAY
 ORANGE = (255, 165, 0)
 DARK_RED = (139, 0, 0)
 FOG_COLOR = (0, 0, 0, 255)
@@ -35,11 +35,11 @@ PLAYER_PUSHBACK = 5
 FOV_RADIUS_SOFT_FACTOR = 1.5
 
 # Zombie settings
-ZOMBIE_RADIUS = 10
+ZOMBIE_RADIUS = 8
 ZOMBIE_SPEED = 1.4
 ZOMBIE_SPAWN_DELAY_MS = 100
-MAX_ZOMBIES = 300
-INITIAL_ZOMBIES_INSIDE = 10
+MAX_ZOMBIES = 200
+INITIAL_ZOMBIES_INSIDE = 8
 ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
 ZOMBIE_WANDER_SPEED_FACTOR = 0.6
 ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 1.3
@@ -47,7 +47,7 @@ ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 1.3
 # Car settings
 CAR_WIDTH = 30
 CAR_HEIGHT = 50
-CAR_SPEED = 5.5
+CAR_SPEED = 5
 CAR_HEALTH = 100
 CAR_WALL_DAMAGE = 2
 CAR_ZOMBIE_DAMAGE = 1
@@ -57,14 +57,16 @@ OUTER_WALL_MARGIN = 30
 OUTER_WALL_THICKNESS = 25
 GAP_SIZE = 70
 MIN_GAPS_PER_SIDE = 3
-NUM_INTERNAL_WALL_LINES = 240
+NUM_INTERNAL_WALL_LINES = 200
 INTERNAL_WALL_THICKNESS = 18
 INTERNAL_WALL_MIN_LEN = 80
 INTERNAL_WALL_MAX_LEN = 300
 INTERNAL_WALL_GRID_SNAP = 40
 WALL_SEGMENT_LENGTH = 25
-WALL_HEALTH = 30
+INTERNAL_WALL_HELTH = 20
 OUTER_WALL_HEALTH = 9999
+INTERNAL_WALL_COLOR = GRAY
+OUTER_WALL_COLOR = LIGHT_GRAY
 
 
 # --- Camera Class ---
@@ -367,12 +369,12 @@ class Car(pygame.sprite.Sprite):
 
 
 class Wall(pygame.sprite.Sprite):
-    def __init__(self, x, y, width, height, health=WALL_HEALTH):
+    def __init__(self, x, y, width, height, health=INTERNAL_WALL_HELTH, color=INTERNAL_WALL_COLOR):
         super().__init__()
         safe_width = max(1, width)
         safe_height = max(1, height)
         self.image = pygame.Surface((safe_width, safe_height))
-        self.base_color = WALL_COLOR
+        self.base_color = color
         self.health = health
         self.max_health = max(1, health)
         self.update_color()
@@ -388,10 +390,9 @@ class Wall(pygame.sprite.Sprite):
             self.image.fill((40, 40, 40))
         else:
             health_ratio = max(0, self.health / self.max_health)
-            d = (200 - self.base_color[0]) * (1 - health_ratio)
-            r = int(self.base_color[0] + d)
+            r = int(self.base_color[0])
             g = int(self.base_color[1] * health_ratio)
-            b = int(self.base_color[2] + d)
+            b = int(self.base_color[2])
             self.image.fill((r, g, b))
 
 
@@ -435,9 +436,9 @@ def generate_outer_walls(level_w, level_h, margin, thickness, gap_size, min_gaps
                     seg_len = min(WALL_SEGMENT_LENGTH, gap_start - coord)
                     if seg_len > 0:
                         if is_horizontal:
-                            wall_segments.add(Wall(coord, wall_y_or_x, seg_len, thickness, health=OUTER_WALL_HEALTH))
+                            wall_segments.add(Wall(coord, wall_y_or_x, seg_len, thickness, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
                         else:
-                            wall_segments.add(Wall(wall_y_or_x, coord, thickness, seg_len, health=OUTER_WALL_HEALTH))
+                            wall_segments.add(Wall(wall_y_or_x, coord, thickness, seg_len, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
             current_pos = gap_start + gap_size
         segment_len = start_coord + length - current_pos
         if segment_len > 0:
@@ -445,9 +446,9 @@ def generate_outer_walls(level_w, level_h, margin, thickness, gap_size, min_gaps
                 seg_len = min(WALL_SEGMENT_LENGTH, start_coord + length - coord)
                 if seg_len > 0:
                     if is_horizontal:
-                        wall_segments.add(Wall(coord, wall_y_or_x, seg_len, thickness, health=OUTER_WALL_HEALTH))
+                        wall_segments.add(Wall(coord, wall_y_or_x, seg_len, thickness, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
                     else:
-                        wall_segments.add(Wall(wall_y_or_x, coord, thickness, seg_len, health=OUTER_WALL_HEALTH))
+                        wall_segments.add(Wall(wall_y_or_x, coord, thickness, seg_len, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
         return wall_segments
 
     walls.add(create_wall_with_gaps(left, width, True, top))
@@ -538,7 +539,7 @@ def show_message(screen, text, size, color, position):
 def draw_level_overview(surface, wall_group, player, car):
     surface.fill(BLACK)
     for wall in wall_group:
-        pygame.draw.rect(surface, WALL_COLOR, wall.rect)
+        pygame.draw.rect(surface, INTERNAL_WALL_COLOR, wall.rect)
     if player:
         pygame.draw.circle(surface, BLUE, player.rect.center, PLAYER_RADIUS * 2)
     if car and car.alive():
@@ -580,7 +581,7 @@ def game():
         sys.exit()
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Zombie Escape v0.2")
+    pygame.display.set_caption("Zombie Escape v0.3")
     clock = pygame.time.Clock()
 
     running = True
