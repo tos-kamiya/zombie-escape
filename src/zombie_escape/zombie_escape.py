@@ -53,21 +53,21 @@ CAR_WALL_DAMAGE = 2
 CAR_ZOMBIE_DAMAGE = 1
 
 # Wall settings
-OUTER_WALL_MARGIN = 30
-OUTER_WALL_THICKNESS = 25
-GAP_SIZE = 70
 MIN_GAPS_PER_SIDE = 3
-NUM_INTERNAL_WALL_LINES = 150
-INTERNAL_WALL_THICKNESS = 18
+NUM_INTERNAL_WALL_LINES = 300
+INTERNAL_WALL_THICKNESS = 20
 INTERNAL_WALL_MIN_LEN = 80
-INTERNAL_WALL_MAX_LEN = 600
+INTERNAL_WALL_MAX_LEN = 400
 INTERNAL_WALL_GRID_SNAP = 100
-WALL_SEGMENT_LENGTH = 25
-INTERNAL_WALL_HELTH = 20
-OUTER_WALL_HEALTH = 9999
+INTERNAL_WALL_SEGMENT_LENGTH = 50
+INTERNAL_WALL_HEALTH = 20
 INTERNAL_WALL_COLOR = GRAY
+OUTER_WALL_MARGIN = 30
+OUTER_WALL_THICKNESS = 30
+OUTER_WALL_SEGMENT_LENGTH = 50
+OUTER_WALL_HEALTH = 9999
 OUTER_WALL_COLOR = LIGHT_GRAY
-
+EXIT_WIDTH = 100
 
 # --- Camera Class ---
 class Camera:
@@ -369,7 +369,7 @@ class Car(pygame.sprite.Sprite):
 
 
 class Wall(pygame.sprite.Sprite):
-    def __init__(self, x, y, width, height, health=INTERNAL_WALL_HELTH, color=INTERNAL_WALL_COLOR):
+    def __init__(self, x, y, width, height, health=INTERNAL_WALL_HEALTH, color=INTERNAL_WALL_COLOR):
         super().__init__()
         safe_width = max(1, width)
         safe_height = max(1, height)
@@ -397,64 +397,34 @@ class Wall(pygame.sprite.Sprite):
 
 
 # --- Wall Generation Functions ---
-def generate_outer_walls(level_w, level_h, margin, thickness, gap_size, min_gaps_per_side):
+def generate_outer_walls_simple(
+    level_w,
+    level_h,
+    margin,
+    thickness,
+    segment_length,
+    exit_width,
+):
     walls = pygame.sprite.Group()
     left = margin
     top = margin
     right = level_w - margin
     bottom = level_h - margin
-    width = right - left
-    height = bottom - top
 
-    def create_wall_with_gaps(start_coord, length, is_horizontal, wall_y_or_x):
-        wall_segments = pygame.sprite.Group()
-        possible_gap_starts = []
-        min_wall_piece = thickness
-        required_wall_space = (min_gaps_per_side + 1) * min_wall_piece
-        available_length_for_gaps = length - required_wall_space
-        num_gaps = min_gaps_per_side
-        if available_length_for_gaps < num_gaps * gap_size:
-            num_gaps = max(0, available_length_for_gaps // (gap_size + min_wall_piece))
-        if num_gaps > 0:
-            available_placement_length = length - num_gaps * gap_size - 2 * min_wall_piece
-            section_len = available_placement_length // num_gaps if num_gaps > 0 else 0
-            current_pos = start_coord + min_wall_piece
-            for i in range(num_gaps):
-                min_gap_start = current_pos
-                max_gap_start = current_pos + section_len
-                if max_gap_start < min_gap_start:
-                    max_gap_start = min_gap_start
-                gap_start = random.randint(min_gap_start, max_gap_start)
-                possible_gap_starts.append(gap_start)
-                current_pos = gap_start + gap_size + min_wall_piece
-            possible_gap_starts.sort()
-        current_pos = start_coord
-        for gap_start in possible_gap_starts:
-            segment_len = gap_start - current_pos
-            if segment_len > 0:
-                for coord in range(current_pos, gap_start, WALL_SEGMENT_LENGTH):
-                    seg_len = min(WALL_SEGMENT_LENGTH, gap_start - coord)
-                    if seg_len > 0:
-                        if is_horizontal:
-                            wall_segments.add(Wall(coord, wall_y_or_x, seg_len, thickness, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
-                        else:
-                            wall_segments.add(Wall(wall_y_or_x, coord, thickness, seg_len, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
-            current_pos = gap_start + gap_size
-        segment_len = start_coord + length - current_pos
-        if segment_len > 0:
-            for coord in range(current_pos, start_coord + length, WALL_SEGMENT_LENGTH):
-                seg_len = min(WALL_SEGMENT_LENGTH, start_coord + length - coord)
-                if seg_len > 0:
-                    if is_horizontal:
-                        wall_segments.add(Wall(coord, wall_y_or_x, seg_len, thickness, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
-                    else:
-                        wall_segments.add(Wall(wall_y_or_x, coord, thickness, seg_len, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
-        return wall_segments
+    for y in [top, bottom]:
+        exit_positions = [random.randrange(left, right - exit_width) for i in range(3)]
+        for x in range(left, right, segment_length):
+            if not any(ex <= x < ex + exit_width for ex in exit_positions):
+                walls.add(Wall(x, y, segment_length, thickness,
+                    health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
 
-    walls.add(create_wall_with_gaps(left, width, True, top))
-    walls.add(create_wall_with_gaps(left, width, True, bottom - thickness))
-    walls.add(create_wall_with_gaps(top, height, False, left))
-    walls.add(create_wall_with_gaps(top, height, False, right - thickness))
+    for x in [left, right]:
+        exit_positions = [random.randrange(top, bottom - exit_width) for i in range(3)]
+        for y in range(top, bottom, segment_length):
+            if not any(ey <= y < ey + exit_width for ey in exit_positions):
+                walls.add(Wall(x, y, thickness, segment_length,
+                    health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
+
     return walls
 
 
@@ -463,7 +433,6 @@ def generate_internal_walls(
     thickness,
     min_len,
     max_len,
-    outer_margin,
     grid_snap,
     segment_length,
     player_rect,
@@ -474,10 +443,10 @@ def generate_internal_walls(
     lines_created = 0
     attempts = 0
     max_attempts = num_lines * 25
-    inner_left = outer_margin + OUTER_WALL_THICKNESS
-    inner_top = outer_margin + OUTER_WALL_THICKNESS
-    inner_right = LEVEL_WIDTH - outer_margin - OUTER_WALL_THICKNESS
-    inner_bottom = LEVEL_HEIGHT - outer_margin - OUTER_WALL_THICKNESS
+    inner_left = OUTER_WALL_THICKNESS
+    inner_top = OUTER_WALL_THICKNESS
+    inner_right = LEVEL_WIDTH - OUTER_WALL_THICKNESS
+    inner_bottom = LEVEL_HEIGHT - OUTER_WALL_THICKNESS
     while lines_created < num_lines and attempts < max_attempts:
         attempts += 1
         total_length = random.randint(min_len, max_len)
@@ -581,7 +550,7 @@ def game():
         sys.exit()
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Zombie Escape v0.4")
+    pygame.display.set_caption("Zombie Escape v0.5.0")
     clock = pygame.time.Clock()
 
     running = True
@@ -614,8 +583,9 @@ def game():
 
     # Generate Walls
     # print(f"Generating walls (Lines: {NUM_INTERNAL_WALL_LINES}, MinGaps: {MIN_GAPS_PER_SIDE})...")
-    outer_walls = generate_outer_walls(
-        LEVEL_WIDTH, LEVEL_HEIGHT, OUTER_WALL_MARGIN, OUTER_WALL_THICKNESS, GAP_SIZE, MIN_GAPS_PER_SIDE
+    outer_walls = generate_outer_walls_simple(
+        LEVEL_WIDTH, LEVEL_HEIGHT, OUTER_WALL_MARGIN, OUTER_WALL_THICKNESS,
+        OUTER_WALL_SEGMENT_LENGTH, EXIT_WIDTH,
     )
     wall_group.add(outer_walls)
     all_sprites.add(outer_walls, layer=0)
@@ -624,9 +594,8 @@ def game():
         INTERNAL_WALL_THICKNESS,
         INTERNAL_WALL_MIN_LEN,
         INTERNAL_WALL_MAX_LEN,
-        OUTER_WALL_MARGIN,
         INTERNAL_WALL_GRID_SNAP,
-        WALL_SEGMENT_LENGTH,
+        INTERNAL_WALL_SEGMENT_LENGTH,
         player_initial_rect,
         car_initial_rect,
         wall_group,
