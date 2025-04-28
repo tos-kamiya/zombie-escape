@@ -550,7 +550,7 @@ def game():
         sys.exit()
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Zombie Escape v0.5.0")
+    pygame.display.set_caption("Zombie Escape v0.5.1")
     clock = pygame.time.Clock()
 
     running = True

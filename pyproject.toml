@@ -28,5 +28,5 @@ dependencies = [
 [tool.hatch.version]
 path = "src/zombie_escape/__about__.py"
 
-[project.scripts]
+[project.gui-scripts]
 zombie-escape = "zombie_escape:main"
