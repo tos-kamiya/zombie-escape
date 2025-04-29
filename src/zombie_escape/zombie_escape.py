@@ -29,7 +29,7 @@ FOG_COLOR_SOFT = (0, 0, 0, 190)
 
 # Player settings
 PLAYER_RADIUS = 10
-PLAYER_SPEED = 4
+PLAYER_SPEED = 3.5
 FOV_RADIUS = 180
 PLAYER_PUSHBACK = 5
 FOV_RADIUS_SOFT_FACTOR = 1.5
@@ -39,32 +39,32 @@ ZOMBIE_RADIUS = 8
 ZOMBIE_SPEED = 1.4
 ZOMBIE_SPAWN_DELAY_MS = 100
 MAX_ZOMBIES = 200
-INITIAL_ZOMBIES_INSIDE = 8
+INITIAL_ZOMBIES_INSIDE = 30
 ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
 ZOMBIE_WANDER_SPEED_FACTOR = 0.6
-ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 1.3
+ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
 
 # Car settings
 CAR_WIDTH = 30
 CAR_HEIGHT = 50
-CAR_SPEED = 5
+CAR_SPEED = 4
 CAR_HEALTH = 60
 CAR_WALL_DAMAGE = 2
 CAR_ZOMBIE_DAMAGE = 1
 
 # Wall settings
 MIN_GAPS_PER_SIDE = 3
-NUM_INTERNAL_WALL_LINES = 300
-INTERNAL_WALL_THICKNESS = 20
-INTERNAL_WALL_MIN_LEN = 80
+NUM_INTERNAL_WALL_LINES = 220
+INTERNAL_WALL_THICKNESS = 24
+INTERNAL_WALL_MIN_LEN = 100
 INTERNAL_WALL_MAX_LEN = 400
 INTERNAL_WALL_GRID_SNAP = 100
 INTERNAL_WALL_SEGMENT_LENGTH = 50
 INTERNAL_WALL_HEALTH = 20
 INTERNAL_WALL_COLOR = GRAY
-OUTER_WALL_MARGIN = 30
-OUTER_WALL_THICKNESS = 30
-OUTER_WALL_SEGMENT_LENGTH = 50
+OUTER_WALL_MARGIN = 100
+OUTER_WALL_THICKNESS = 50
+OUTER_WALL_SEGMENT_LENGTH = 100
 OUTER_WALL_HEALTH = 9999
 OUTER_WALL_COLOR = LIGHT_GRAY
 EXIT_WIDTH = 100
@@ -410,19 +410,20 @@ def generate_outer_walls_simple(
     top = margin
     right = level_w - margin
     bottom = level_h - margin
+    t2 = thickness // 2
 
     for y in [top, bottom]:
         exit_positions = [random.randrange(left, right - exit_width) for i in range(3)]
         for x in range(left, right, segment_length):
             if not any(ex <= x < ex + exit_width for ex in exit_positions):
-                walls.add(Wall(x, y, segment_length, thickness,
+                walls.add(Wall(x - t2, y - t2, segment_length + t2, t2,
                     health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
 
     for x in [left, right]:
         exit_positions = [random.randrange(top, bottom - exit_width) for i in range(3)]
         for y in range(top, bottom, segment_length):
             if not any(ey <= y < ey + exit_width for ey in exit_positions):
-                walls.add(Wall(x, y, thickness, segment_length,
+                walls.add(Wall(x - t2, y - t2, t2, segment_length + t2,
                     health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
 
     return walls
@@ -430,63 +431,57 @@ def generate_outer_walls_simple(
 
 def generate_internal_walls(
     num_lines,
+    level_w,
+    level_h,
+    margin,
     thickness,
+    segment_length,
     min_len,
     max_len,
     grid_snap,
-    segment_length,
-    player_rect,
-    car_rect,
-    existing_walls,
+    avoid_rects,
 ):
     newly_added_walls = pygame.sprite.Group()
     lines_created = 0
     attempts = 0
     max_attempts = num_lines * 25
-    inner_left = OUTER_WALL_THICKNESS
-    inner_top = OUTER_WALL_THICKNESS
-    inner_right = LEVEL_WIDTH - OUTER_WALL_THICKNESS
-    inner_bottom = LEVEL_HEIGHT - OUTER_WALL_THICKNESS
+    inner_left, inner_top = margin, margin
+    inner_right, inner_bottom = level_w - margin, level_h - margin
+    t2 = thickness // 2
+
     while lines_created < num_lines and attempts < max_attempts:
         attempts += 1
         total_length = random.randint(min_len, max_len)
         num_segments = max(1, round(total_length / segment_length))
         is_horizontal = random.choice([True, False])
         if is_horizontal:
-            w, h = segment_length, thickness
+            w, h = segment_length, 0
+            min_start_x, max_start_x = inner_left, inner_right
+            min_start_y, max_start_y = inner_top + grid_snap, inner_bottom - grid_snap
         else:
-            w, h = thickness, segment_length
-        max_start_x = inner_right - w
-        max_start_y = inner_bottom - h
-        if max_start_x < inner_left or max_start_y < inner_top:
-            continue
-        start_x = random.randint(inner_left, max_start_x)
-        start_y = random.randint(inner_top, max_start_y)
-        start_x = round(start_x / grid_snap) * grid_snap
-        start_y = round(start_y / grid_snap) * grid_snap
-        start_x = max(inner_left, min(start_x, inner_right - w))
-        start_y = max(inner_top, min(start_y, inner_bottom - h))
-        current_x, current_y = start_x, start_y
+            w, h = 0, segment_length
+            min_start_x, max_start_x = inner_left + grid_snap, inner_right - grid_snap
+            min_start_y, max_start_y = inner_top, inner_bottom
+        x = random.randint(min_start_x, max_start_x)
+        x = round(x / grid_snap) * grid_snap
+        y = random.randint(min_start_y, max_start_y)
+        y = round(y / grid_snap) * grid_snap
         line_segments = pygame.sprite.Group()
         valid_line = True
-        player_check_rect = player_rect.inflate(thickness * 2, thickness * 2)
-        car_check_rect = car_rect.inflate(thickness * 3, thickness * 3)
+        check_rects = [r.inflate(grid_snap * 3, grid_snap * 3) for r in avoid_rects]
         for i in range(num_segments):
-            segment_rect = pygame.Rect(current_x, current_y, w, h)
-            if segment_rect.right > inner_right or segment_rect.bottom > inner_bottom:
+            segment_rect = pygame.Rect(x - t2, y - t2, w + t2, h + t2)
+            if (
+                segment_rect.right > inner_right or segment_rect.bottom > inner_bottom
+                or any(segment_rect.colliderect(cr) for cr in check_rects)
+            ):
                 valid_line = False
                 break
-            if segment_rect.colliderect(player_check_rect) or segment_rect.colliderect(car_check_rect):
-                valid_line = False
-                break
-            line_segments.add(Wall(current_x, current_y, w, h))
-            if is_horizontal:
-                current_x += w
-            else:
-                current_y += h
+            line_segments.add(Wall(x - t2, y - t2, w + t2, h + t2))
+            x += w
+            y += h
         if valid_line and len(line_segments) > 0:
             newly_added_walls.add(line_segments)
-            existing_walls.add(line_segments)
             lines_created += 1
     return newly_added_walls
 
@@ -550,7 +545,7 @@ def game():
         sys.exit()
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Zombie Escape v0.5.1")
+    pygame.display.set_caption("Zombie Escape v0.5.3")
     clock = pygame.time.Clock()
 
     running = True
@@ -591,15 +586,15 @@ def game():
     all_sprites.add(outer_walls, layer=0)
     internal_walls = generate_internal_walls(
         NUM_INTERNAL_WALL_LINES,
+        LEVEL_WIDTH, LEVEL_HEIGHT, OUTER_WALL_MARGIN,
         INTERNAL_WALL_THICKNESS,
+        INTERNAL_WALL_SEGMENT_LENGTH,
         INTERNAL_WALL_MIN_LEN,
         INTERNAL_WALL_MAX_LEN,
         INTERNAL_WALL_GRID_SNAP,
-        INTERNAL_WALL_SEGMENT_LENGTH,
-        player_initial_rect,
-        car_initial_rect,
-        wall_group,
+        [player_initial_rect, car_initial_rect],
     )
+    wall_group.add(internal_walls)
     all_sprites.add(internal_walls, layer=0)
     # print(f"Wall generation complete. Total wall segments: {len(wall_group)}")
 
@@ -618,8 +613,10 @@ def game():
         temp_zombie = Zombie(start_pos=(z_x, z_y))
         temp_sprite = pygame.sprite.Sprite()
         temp_sprite.rect = temp_zombie.rect.inflate(5, 5)
+
         collides_with_wall = pygame.sprite.spritecollideany(temp_sprite, wall_group)
-        collides_with_player = temp_sprite.rect.colliderect(player.rect.inflate(40, 40))
+        collides_with_player = temp_sprite.rect.colliderect(player.rect.inflate(ZOMBIE_SIGHT_RANGE, ZOMBIE_SIGHT_RANGE))
+
         # Check collision with initial car position
         collides_with_car = temp_sprite.rect.colliderect(car_initial_rect.inflate(40, 40))
         if not collides_with_wall and not collides_with_player and not collides_with_car:
