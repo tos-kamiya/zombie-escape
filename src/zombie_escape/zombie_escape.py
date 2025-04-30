@@ -448,7 +448,7 @@ def generate_internal_walls(
         y = round(y / grid_snap) * grid_snap
         line_segments = pygame.sprite.Group()
         valid_line = True
-        check_rects = [r.inflate(grid_snap * 3, grid_snap * 3) for r in avoid_rects]
+        check_rects = [r.inflate(grid_snap, grid_snap) for r in avoid_rects]
         for i in range(num_segments):
             segment_rect = pygame.Rect(x - t2, y - t2, w + t2, h + t2)
             if (
@@ -494,12 +494,10 @@ def draw_level_overview(surface, wall_group, player, car):
 def place_new_car(wall_group, player):
     max_attempts = 150
     for attempt in range(max_attempts):
-        inner_left = OUTER_WALL_MARGIN + OUTER_WALL_THICKNESS + 50
-        inner_top = OUTER_WALL_MARGIN + OUTER_WALL_THICKNESS + 50
-        inner_right = LEVEL_WIDTH - OUTER_WALL_MARGIN - OUTER_WALL_THICKNESS - 50
-        inner_bottom = LEVEL_HEIGHT - OUTER_WALL_MARGIN - OUTER_WALL_THICKNESS - 50
-        if inner_right <= inner_left or inner_bottom <= inner_top:
-            continue
+        inner_left = OUTER_WALL_MARGIN + INTERNAL_WALL_GRID_SNAP
+        inner_top = OUTER_WALL_MARGIN + INTERNAL_WALL_GRID_SNAP
+        inner_right = LEVEL_WIDTH - OUTER_WALL_MARGIN - INTERNAL_WALL_GRID_SNAP
+        inner_bottom = LEVEL_HEIGHT - OUTER_WALL_MARGIN - INTERNAL_WALL_GRID_SNAP
         c_x = random.randint(inner_left, inner_right)
         c_y = random.randint(inner_top, inner_bottom)
         temp_car = Car(c_x, c_y)
@@ -740,15 +738,14 @@ def game():
                 if player not in all_sprites:
                     all_sprites.add(player, layer=2)
                 print("Car destroyed! Player ejected.")
+
             # Respawn car
-            # print("Attempting to respawn car...")
             new_car = place_new_car(wall_group, player)
-            if new_car:
-                car = new_car  # Update the main car variable
-                all_sprites.add(car, layer=1)
-                print(f"New car respawned at {car.rect.center}")
-            else:
-                print("Failed to find suitable location for new car.")
+            if new_car is None:
+                new_car = Car(car_start_x, car_start_y)
+                print("Failed to find a suitable location for the new car. Falling back to the original car's position.")
+            car = new_car  # Update the main car variable
+            all_sprites.add(car, layer=1)
         if not player.in_car and player in all_sprites:
             if pygame.sprite.spritecollide(player, zombie_group, False, pygame.sprite.collide_circle):
                 game_over = True
