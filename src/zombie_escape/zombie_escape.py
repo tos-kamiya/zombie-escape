@@ -16,6 +16,7 @@ LEVEL_HEIGHT = SCREEN_HEIGHT * LEVEL_SCALE
 # Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+DARK_GRAY = (20, 20, 20)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
@@ -757,10 +758,24 @@ def game():
 
         # Drawing
         screen.fill(BLACK)
+
+        # floor tiles
+        for y in range(OUTER_WALL_MARGIN // INTERNAL_WALL_GRID_SNAP, (LEVEL_HEIGHT - OUTER_WALL_MARGIN) // INTERNAL_WALL_GRID_SNAP):
+            for x in range(OUTER_WALL_MARGIN // INTERNAL_WALL_GRID_SNAP, (LEVEL_WIDTH - OUTER_WALL_MARGIN) // INTERNAL_WALL_GRID_SNAP):
+                if (x + y) % 2 == 0:
+                    lx, ly = x * INTERNAL_WALL_GRID_SNAP, y * INTERNAL_WALL_GRID_SNAP
+                    r = pygame.Rect(lx, ly, INTERNAL_WALL_GRID_SNAP, INTERNAL_WALL_GRID_SNAP)
+                    sr = camera.apply_rect(r)
+                    if sr.colliderect(screen.get_rect()):
+                            pygame.draw.rect(screen, DARK_GRAY, sr)
+
+        # player, car, zombies, walls
         for sprite in all_sprites:
             sprite_screen_rect = camera.apply_rect(sprite.rect)
             if sprite_screen_rect.colliderect(screen.get_rect().inflate(100, 100)):
                 screen.blit(sprite.image, sprite_screen_rect)
+
+        # fog
         if not game_over and not game_won:
             # Soft Fog Layer
             fog_surface_soft.fill(FOG_COLOR_SOFT)
@@ -773,6 +788,7 @@ def game():
             fog_surface_hard.fill(FOG_COLOR)
             pygame.draw.circle(fog_surface_hard, (0, 0, 0, 0), fov_center_on_screen, soft_radius)
             screen.blit(fog_surface_hard, (0, 0))
+
         pygame.display.flip()
 
     pygame.quit()
