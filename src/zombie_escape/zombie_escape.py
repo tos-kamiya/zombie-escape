@@ -307,41 +307,24 @@ class Car(pygame.sprite.Sprite):
         new_x = self.x + dx
         new_y = self.y + dy
 
-        temp_rect_x = self.rect.copy()
-        temp_rect_x.centerx = int(new_x)
-        collided_x = False
-        hit_wall_x = None
-        possible_walls_x = [
+        temp_rect = self.rect.copy()
+        temp_rect.centerx = int(new_x)
+        temp_rect.centery = int(new_y)
+        hit_walls = []
+        possible_walls = [
             w for w in walls if abs(w.rect.centery - self.y) < 100 and abs(w.rect.centerx - new_x) < 100
         ]
-        for wall in possible_walls_x:
-            if temp_rect_x.colliderect(wall.rect):
-                collided_x = True
-                hit_wall_x = wall
-                break
-        if collided_x:
-            new_x -= dx * 1.5
-            if hit_wall_x.health < OUTER_WALL_HEALTH:
-                self.take_damage(CAR_WALL_DAMAGE)
-        self.x = new_x
+        for wall in possible_walls:
+            if temp_rect.colliderect(wall.rect):
+                hit_walls.append(wall)
+        if hit_walls:
+            self.take_damage(CAR_WALL_DAMAGE)
+            hit_walls.sort(key = lambda w: (w.rect.centery - self.y) ** 2 + (w.rect.centerx - self.x) ** 2)
+            nearest_wall = hit_walls[0]
+            new_x += (self.x - nearest_wall.rect.centerx) * 1.2
+            new_y += (self.y - nearest_wall.rect.centery) * 1.2
 
-        temp_rect_y = self.rect.copy()
-        temp_rect_y.centerx = int(self.x)
-        temp_rect_y.centery = int(new_y)
-        collided_y = False
-        hit_wall_y = None
-        possible_walls_y = [
-            w for w in walls if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - new_y) < 100
-        ]
-        for wall in possible_walls_y:
-            if temp_rect_y.colliderect(wall.rect):
-                collided_y = True
-                hit_wall_y = wall
-                break
-        if collided_y:
-            new_y -= dy * 1.5
-            if hit_wall_y.health < OUTER_WALL_HEALTH:
-                self.take_damage(CAR_WALL_DAMAGE)
+        self.x = new_x
         self.y = new_y
         self.rect.center = (int(self.x), int(self.y))
 
