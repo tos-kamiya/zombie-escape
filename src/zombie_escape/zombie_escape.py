@@ -29,14 +29,14 @@ FOG_COLOR = (0, 0, 0, 255)
 FOG_COLOR_SOFT = (0, 0, 0, 190)
 
 # Player settings
-PLAYER_RADIUS = 10
+PLAYER_RADIUS = 11
 PLAYER_SPEED = 3.2
 FOV_RADIUS = 180
 PLAYER_PUSHBACK = 5
 FOV_RADIUS_SOFT_FACTOR = 1.5
 
 # Zombie settings
-ZOMBIE_RADIUS = 8
+ZOMBIE_RADIUS = 11
 ZOMBIE_SPEED = 1.4
 ZOMBIE_SPAWN_DELAY_MS = 100
 MAX_ZOMBIES = 200
@@ -59,7 +59,7 @@ INTERNAL_WALL_MIN_LEN = 100
 INTERNAL_WALL_MAX_LEN = 400
 INTERNAL_WALL_GRID_SNAP = 100
 INTERNAL_WALL_SEGMENT_LENGTH = 50
-INTERNAL_WALL_HEALTH = 20
+INTERNAL_WALL_HEALTH = 40
 INTERNAL_WALL_COLOR = GRAY
 OUTER_WALL_MARGIN = 100
 OUTER_WALL_THICKNESS = 50
@@ -124,13 +124,12 @@ class Player(pygame.sprite.Sprite):
             self.x = min(LEVEL_WIDTH, max(0, self.x))
             self.rect.centerx = int(self.x)
             hit_list_x = pygame.sprite.spritecollide(self, walls, False)
-            push_back = False
-            for wall in hit_list_x:
-                wall.take_damage()
-                if wall.health <= 0:
-                    wall.kill()
-                push_back = True
-            if push_back:
+            if hit_list_x:
+                damage = max(1, 4 // len(hit_list_x))
+                for wall in hit_list_x:
+                    wall.take_damage(damage)
+                    if wall.health <= 0:
+                        wall.kill()
                 self.x -= dx * 1.5
                 self.rect.centerx = int(self.x)
 
@@ -139,14 +138,13 @@ class Player(pygame.sprite.Sprite):
             self.y = min(LEVEL_HEIGHT, max(0, self.y))
             self.rect.centery = int(self.y)
             hit_list_y = pygame.sprite.spritecollide(self, walls, False)
-            push_back = False
-            for wall in hit_list_y:
-                if wall.alive():
-                    wall.take_damage()
-                    if wall.health <= 0:
-                        wall.kill()
-                    push_back = True
-            if push_back:
+            if hit_list_y:
+                damage = max(1, 4 // len(hit_list_y))
+                for wall in hit_list_y:
+                    if wall.alive():
+                        wall.take_damage()
+                        if wall.health <= 0:
+                            wall.kill()
                 self.y -= dy * 1.5
                 self.rect.centery = int(self.y)
 
