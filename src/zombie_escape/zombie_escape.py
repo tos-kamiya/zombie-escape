@@ -41,7 +41,6 @@ ZOMBIE_SPAWN_DELAY_MS = 100
 MAX_ZOMBIES = 200
 INITIAL_ZOMBIES_INSIDE = 30
 ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
-ZOMBIE_WANDER_SPEED_FACTOR = 0.6
 ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
 
 # Car settings
@@ -100,7 +99,6 @@ class ZombieMode(Enum):
     VERTICAL_ONLY = 3
     FLANK_X = 4
     FLANK_Y = 5
-    WANDER = 6
 
 
 # --- Game Classes ---
@@ -125,37 +123,31 @@ class Player(pygame.sprite.Sprite):
             self.x = min(LEVEL_WIDTH, max(0, self.x))
             self.rect.centerx = int(self.x)
             hit_list_x = pygame.sprite.spritecollide(self, walls, False)
+            push_back = False
             for wall in hit_list_x:
                 wall.take_damage()
                 if wall.health <= 0:
                     wall.kill()
-                else:
-                    if dx > 0:
-                        self.rect.right = wall.rect.left
-                        self.x = float(self.rect.centerx) - PLAYER_PUSHBACK
-                    elif dx < 0:
-                        self.rect.left = wall.rect.right
-                        self.x = float(self.rect.centerx) + PLAYER_PUSHBACK
-                    self.rect.centerx = int(self.x)
+                push_back = True
+            if push_back:
+                self.x -= dx * 1.5
+                self.rect.centerx = int(self.x)
 
         if dy != 0:
             self.y += dy
             self.y = min(LEVEL_HEIGHT, max(0, self.y))
             self.rect.centery = int(self.y)
             hit_list_y = pygame.sprite.spritecollide(self, walls, False)
+            push_back = False
             for wall in hit_list_y:
                 if wall.alive():
                     wall.take_damage()
                     if wall.health <= 0:
                         wall.kill()
-                    else:
-                        if dy > 0:
-                            self.rect.bottom = wall.rect.top
-                            self.y = float(self.rect.centery) - PLAYER_PUSHBACK
-                        elif dy < 0:
-                            self.rect.top = wall.rect.bottom
-                            self.y = float(self.rect.centery) + PLAYER_PUSHBACK
-                        self.rect.centery = int(self.y)
+                    push_back = True
+            if push_back:
+                self.y -= dy * 1.5
+                self.rect.centery = int(self.y)
 
         self.rect.center = (int(self.x), int(self.y))
 
@@ -186,7 +178,6 @@ class Zombie(pygame.sprite.Sprite):
         self.mode = random.choice(list(ZombieMode))
         self.last_mode_change_time = pygame.time.get_ticks()
         self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + random.randint(-1000, 1000)
-        self.wander_target_pos = None
         self.was_in_sight = False
 
     def change_mode(self, force_mode=None):
@@ -197,7 +188,6 @@ class Zombie(pygame.sprite.Sprite):
             self.mode = random.choice(possible_modes)
         self.last_mode_change_time = pygame.time.get_ticks()
         self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + random.randint(-1000, 1000)
-        self.wander_target_pos = None
 
     def _calculate_movement(self, player_center):
         move_x, move_y = 0, 0
@@ -223,23 +213,6 @@ class Zombie(pygame.sprite.Sprite):
             move_x = random.uniform(-self.speed * 0.6, self.speed * 0.6)
             if dist > 0:
                 move_y = (dy_target / abs(dy_target) if dy_target != 0 else 0) * self.speed * 0.8
-        elif self.mode == ZombieMode.WANDER:
-            if (
-                self.wander_target_pos is None
-                or math.hypot(self.wander_target_pos[0] - self.x, self.wander_target_pos[1] - self.y) < 20
-            ):
-                wander_dist = 100
-                angle = random.uniform(0, 2 * math.pi)
-                self.wander_target_pos = (
-                    self.x + wander_dist * math.cos(angle),
-                    self.y + wander_dist * math.sin(angle),
-                )
-            dx_wander = self.wander_target_pos[0] - self.x
-            dy_wander = self.wander_target_pos[1] - self.y
-            dist_wander = math.hypot(dx_wander, dy_wander)
-            if dist_wander > 0:
-                ws = self.speed * ZOMBIE_WANDER_SPEED_FACTOR
-                move_x, move_y = (dx_wander / dist_wander) * ws, (dy_wander / dist_wander) * ws
         return move_x, move_y
 
     def _handle_wall_collision(self, next_x, next_y, walls):
@@ -332,6 +305,7 @@ class Car(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=old_center)
         new_x = self.x + dx
         new_y = self.y + dy
+
         temp_rect_x = self.rect.copy()
         temp_rect_x.centerx = int(new_x)
         collided_x = False
@@ -345,13 +319,11 @@ class Car(pygame.sprite.Sprite):
                 hit_wall_x = wall
                 break
         if collided_x:
-            if dx > 0:
-                new_x = float(hit_wall_x.rect.left - temp_rect_x.width / 2 - 1)
-            elif dx < 0:
-                new_x = float(hit_wall_x.rect.right + temp_rect_x.width / 2 + 1)
+            new_x -= dx * 1.5
             if hit_wall_x.health < OUTER_WALL_HEALTH:
                 self.take_damage(CAR_WALL_DAMAGE)
         self.x = new_x
+
         temp_rect_y = self.rect.copy()
         temp_rect_y.centerx = int(self.x)
         temp_rect_y.centery = int(new_y)
@@ -366,10 +338,7 @@ class Car(pygame.sprite.Sprite):
                 hit_wall_y = wall
                 break
         if collided_y:
-            if dy > 0:
-                new_y = float(hit_wall_y.rect.top - temp_rect_y.height / 2 - 1)
-            elif dy < 0:
-                new_y = float(hit_wall_y.rect.bottom + temp_rect_y.height / 2 + 1)
+            new_y -= dy * 1.5
             if hit_wall_y.health < OUTER_WALL_HEALTH:
                 self.take_damage(CAR_WALL_DAMAGE)
         self.y = new_y
