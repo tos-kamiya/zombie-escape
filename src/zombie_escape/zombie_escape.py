@@ -48,8 +48,8 @@ ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
 CAR_WIDTH = 30
 CAR_HEIGHT = 50
 CAR_SPEED = 4
-CAR_HEALTH = 60
-CAR_WALL_DAMAGE = 2
+CAR_HEALTH = 30
+CAR_WALL_DAMAGE = 1
 CAR_ZOMBIE_DAMAGE = 1
 
 # Wall settings
@@ -68,6 +68,7 @@ OUTER_WALL_SEGMENT_LENGTH = 100
 OUTER_WALL_HEALTH = 9999
 OUTER_WALL_COLOR = LIGHT_GRAY
 EXIT_WIDTH = 100
+
 
 # --- Camera Class ---
 class Camera:
@@ -118,37 +119,44 @@ class Player(pygame.sprite.Sprite):
     def move(self, dx, dy, walls):
         if self.in_car:
             return
-        self.x += dx
-        self.rect.centerx = int(self.x)
-        hit_list_x = pygame.sprite.spritecollide(self, walls, False)
-        for wall in hit_list_x:
-            wall.take_damage()
-            if wall.health <= 0:
-                wall.kill()
-            else:
-                if dx > 0:
-                    self.rect.right = wall.rect.left
-                    self.x = float(self.rect.centerx) - PLAYER_PUSHBACK
-                elif dx < 0:
-                    self.rect.left = wall.rect.right
-                    self.x = float(self.rect.centerx) + PLAYER_PUSHBACK
-                self.rect.centerx = int(self.x)
-        self.y += dy
-        self.rect.centery = int(self.y)
-        hit_list_y = pygame.sprite.spritecollide(self, walls, False)
-        for wall in hit_list_y:
-            if wall.alive():
+
+        if dx != 0:
+            self.x += dx
+            self.x = min(LEVEL_WIDTH, max(0, self.x))
+            self.rect.centerx = int(self.x)
+            hit_list_x = pygame.sprite.spritecollide(self, walls, False)
+            for wall in hit_list_x:
                 wall.take_damage()
                 if wall.health <= 0:
                     wall.kill()
                 else:
-                    if dy > 0:
-                        self.rect.bottom = wall.rect.top
-                        self.y = float(self.rect.centery) - PLAYER_PUSHBACK
-                    elif dy < 0:
-                        self.rect.top = wall.rect.bottom
-                        self.y = float(self.rect.centery) + PLAYER_PUSHBACK
-                    self.rect.centery = int(self.y)
+                    if dx > 0:
+                        self.rect.right = wall.rect.left
+                        self.x = float(self.rect.centerx) - PLAYER_PUSHBACK
+                    elif dx < 0:
+                        self.rect.left = wall.rect.right
+                        self.x = float(self.rect.centerx) + PLAYER_PUSHBACK
+                    self.rect.centerx = int(self.x)
+
+        if dy != 0:
+            self.y += dy
+            self.y = min(LEVEL_HEIGHT, max(0, self.y))
+            self.rect.centery = int(self.y)
+            hit_list_y = pygame.sprite.spritecollide(self, walls, False)
+            for wall in hit_list_y:
+                if wall.alive():
+                    wall.take_damage()
+                    if wall.health <= 0:
+                        wall.kill()
+                    else:
+                        if dy > 0:
+                            self.rect.bottom = wall.rect.top
+                            self.y = float(self.rect.centery) - PLAYER_PUSHBACK
+                        elif dy < 0:
+                            self.rect.top = wall.rect.bottom
+                            self.y = float(self.rect.centery) + PLAYER_PUSHBACK
+                        self.rect.centery = int(self.y)
+
         self.rect.center = (int(self.x), int(self.y))
 
 
@@ -416,15 +424,17 @@ def generate_outer_walls_simple(
         exit_positions = [random.randrange(left, right - exit_width) for i in range(3)]
         for x in range(left, right, segment_length):
             if not any(ex <= x < ex + exit_width for ex in exit_positions):
-                walls.add(Wall(x - t2, y - t2, segment_length + t2, t2,
-                    health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
+                walls.add(
+                    Wall(x - t2, y - t2, segment_length + t2, t2, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR)
+                )
 
     for x in [left, right]:
         exit_positions = [random.randrange(top, bottom - exit_width) for i in range(3)]
         for y in range(top, bottom, segment_length):
             if not any(ey <= y < ey + exit_width for ey in exit_positions):
-                walls.add(Wall(x - t2, y - t2, t2, segment_length + t2,
-                    health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR))
+                walls.add(
+                    Wall(x - t2, y - t2, t2, segment_length + t2, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR)
+                )
 
     return walls
 
@@ -472,7 +482,8 @@ def generate_internal_walls(
         for i in range(num_segments):
             segment_rect = pygame.Rect(x - t2, y - t2, w + t2, h + t2)
             if (
-                segment_rect.right > inner_right or segment_rect.bottom > inner_bottom
+                segment_rect.right > inner_right
+                or segment_rect.bottom > inner_bottom
                 or any(segment_rect.colliderect(cr) for cr in check_rects)
             ):
                 valid_line = False
@@ -545,7 +556,7 @@ def game():
         sys.exit()
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Zombie Escape v0.5.3")
+    pygame.display.set_caption("Zombie Escape v0.5.4")
     clock = pygame.time.Clock()
 
     running = True
@@ -579,14 +590,20 @@ def game():
     # Generate Walls
     # print(f"Generating walls (Lines: {NUM_INTERNAL_WALL_LINES}, MinGaps: {MIN_GAPS_PER_SIDE})...")
     outer_walls = generate_outer_walls_simple(
-        LEVEL_WIDTH, LEVEL_HEIGHT, OUTER_WALL_MARGIN, OUTER_WALL_THICKNESS,
-        OUTER_WALL_SEGMENT_LENGTH, EXIT_WIDTH,
+        LEVEL_WIDTH,
+        LEVEL_HEIGHT,
+        OUTER_WALL_MARGIN,
+        OUTER_WALL_THICKNESS,
+        OUTER_WALL_SEGMENT_LENGTH,
+        EXIT_WIDTH,
     )
     wall_group.add(outer_walls)
     all_sprites.add(outer_walls, layer=0)
     internal_walls = generate_internal_walls(
         NUM_INTERNAL_WALL_LINES,
-        LEVEL_WIDTH, LEVEL_HEIGHT, OUTER_WALL_MARGIN,
+        LEVEL_WIDTH,
+        LEVEL_HEIGHT,
+        OUTER_WALL_MARGIN,
         INTERNAL_WALL_THICKNESS,
         INTERNAL_WALL_SEGMENT_LENGTH,
         INTERNAL_WALL_MIN_LEN,
@@ -662,18 +679,7 @@ def game():
             if scaled_overview:
                 screen.blit(scaled_overview, scaled_overview.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)))
             show_message(
-                screen,
-                "GAME OVER",
-                80,
-                RED,
-                (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - (scaled_h // 2 if scaled_overview else 0) - 60),
-            )
-            show_message(
-                screen,
-                "Press 'R' to Restart or ESC to Quit",
-                40,
-                WHITE,
-                (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + (scaled_h // 2 if scaled_overview else 0) + 60),
+                screen, "Press 'R' to Restart or ESC to Quit", 30, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30)
             )
             pygame.display.flip()
             continue
@@ -683,7 +689,7 @@ def game():
             screen.fill(BLACK)
             show_message(screen, "YOU ESCAPED!", 80, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
             show_message(
-                screen, "Press 'R' to Restart or ESC to Quit", 40, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 40)
+                screen, "Press 'R' to Restart or ESC to Quit", 30, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30)
             )
             pygame.display.flip()
             continue
@@ -804,12 +810,6 @@ def game():
             fog_surface_hard.fill(FOG_COLOR)
             pygame.draw.circle(fog_surface_hard, (0, 0, 0, 0), fov_center_on_screen, soft_radius)
             screen.blit(fog_surface_hard, (0, 0))
-        # if car.alive(): # Health bar
-        #     bar_width = 50; bar_height = 8; fill_width = int(bar_width * max(0, car.health / car.max_health))
-        #     outline_rect = pygame.Rect(10, 10, bar_width, bar_height); fill_rect = pygame.Rect(10, 10, fill_width, bar_height)
-        #     health_color = GREEN if car.health/car.max_health > 0.6 else YELLOW if car.health/car.max_health > 0.3 else RED
-        #     pygame.draw.rect(screen, (50,50,50), outline_rect); pygame.draw.rect(screen, health_color, fill_rect); pygame.draw.rect(screen, WHITE, outline_rect, 1)
-        # No game over/win messages here
         pygame.display.flip()
 
     pygame.quit()
