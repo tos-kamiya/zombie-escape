@@ -30,7 +30,7 @@ FOG_COLOR_SOFT = (0, 0, 0, 190)
 
 # Player settings
 PLAYER_RADIUS = 10
-PLAYER_SPEED = 3.5
+PLAYER_SPEED = 3.2
 FOV_RADIUS = 180
 PLAYER_PUSHBACK = 5
 FOV_RADIUS_SOFT_FACTOR = 1.5
@@ -53,7 +53,7 @@ CAR_WALL_DAMAGE = 1
 CAR_ZOMBIE_DAMAGE = 1
 
 # Wall settings
-NUM_INTERNAL_WALL_LINES = 220
+NUM_INTERNAL_WALL_LINES = 240
 INTERNAL_WALL_THICKNESS = 24
 INTERNAL_WALL_MIN_LEN = 100
 INTERNAL_WALL_MAX_LEN = 400
@@ -96,8 +96,8 @@ class Camera:
 # --- Enums ---
 class ZombieMode(Enum):
     CHASE = 1
-    HORIZONTAL_ONLY = 2
-    VERTICAL_ONLY = 3
+    # HORIZONTAL_ONLY = 2
+    # VERTICAL_ONLY = 3
     FLANK_X = 4
     FLANK_Y = 5
 
@@ -153,6 +153,20 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = (int(self.x), int(self.y))
 
 
+def random_position_outside_building():
+    side = random.choice(["top", "bottom", "left", "right"])
+    margin = 0
+    if side == "top":
+        x, y = random.randint(0, LEVEL_WIDTH), -margin
+    elif side == "bottom":
+        x, y = random.randint(0, LEVEL_WIDTH), LEVEL_HEIGHT + margin
+    elif side == "left":
+        x, y = -margin, random.randint(0, LEVEL_HEIGHT)
+    else:
+        x, y = LEVEL_WIDTH + margin, random.randint(0, LEVEL_HEIGHT)
+    return x, y
+
+
 class Zombie(pygame.sprite.Sprite):
     def __init__(self, start_pos=None):
         super().__init__()
@@ -162,16 +176,7 @@ class Zombie(pygame.sprite.Sprite):
         if start_pos:
             x, y = start_pos
         else:
-            side = random.choice(["top", "bottom", "left", "right"])
-            margin = 100
-            if side == "top":
-                x, y = random.randint(0, LEVEL_WIDTH), -margin
-            elif side == "bottom":
-                x, y = random.randint(0, LEVEL_WIDTH), LEVEL_HEIGHT + margin
-            elif side == "left":
-                x, y = -margin, random.randint(0, LEVEL_HEIGHT)
-            else:
-                x, y = LEVEL_WIDTH + margin, random.randint(0, LEVEL_HEIGHT)
+            x, y = random_position_outside_building()
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = ZOMBIE_SPEED + random.uniform(-0.4, 0.4)
         self.x = float(self.rect.centerx)
@@ -198,14 +203,14 @@ class Zombie(pygame.sprite.Sprite):
         if self.mode == ZombieMode.CHASE:
             if dist > 0:
                 move_x, move_y = (dx_target / dist) * self.speed, (dy_target / dist) * self.speed
-        elif self.mode == ZombieMode.HORIZONTAL_ONLY:
-            if dist > 0:
-                move_x = (dx_target / abs(dx_target) if dx_target != 0 else 0) * self.speed
-                move_y = 0
-        elif self.mode == ZombieMode.VERTICAL_ONLY:
-            move_x = 0
-            if dist > 0:
-                move_y = (dy_target / abs(dy_target) if dy_target != 0 else 0) * self.speed
+        # elif self.mode == ZombieMode.HORIZONTAL_ONLY:
+        #     if dist > 0:
+        #         move_x = (dx_target / abs(dx_target) if dx_target != 0 else 0) * self.speed
+        #         move_y = 0
+        # elif self.mode == ZombieMode.VERTICAL_ONLY:
+        #     move_x = 0
+        #     if dist > 0:
+        #         move_y = (dy_target / abs(dy_target) if dy_target != 0 else 0) * self.speed
         elif self.mode == ZombieMode.FLANK_X:
             if dist > 0:
                 move_x = (dx_target / abs(dx_target) if dx_target != 0 else 0) * self.speed * 0.8
@@ -218,16 +223,19 @@ class Zombie(pygame.sprite.Sprite):
 
     def _handle_wall_collision(self, next_x, next_y, walls):
         final_x, final_y = next_x, next_y
+
+        possible_walls = [w for w in walls if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100]
+
         temp_rect = self.rect.copy()
         temp_rect.centerx = int(next_x)
         temp_rect.centery = int(self.y)
         x_collided = False
-        possible_walls = [w for w in walls if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100]
         for wall in possible_walls:
             if temp_rect.colliderect(wall.rect):
                 x_collided = True
                 final_x = self.x
                 break
+
         temp_rect.centerx = int(final_x)
         temp_rect.centery = int(next_y)
         y_collided = False
@@ -236,6 +244,7 @@ class Zombie(pygame.sprite.Sprite):
                 y_collided = True
                 final_y = self.y
                 break
+
         return final_x, final_y
 
     def update(self, player_center, walls):
@@ -255,6 +264,10 @@ class Zombie(pygame.sprite.Sprite):
             self.change_mode()
         move_x, move_y = self._calculate_movement(player_center)
         final_x, final_y = self._handle_wall_collision(self.x + move_x, self.y + move_y, walls)
+
+        if not (0 <= final_x < LEVEL_WIDTH and 0 <= final_y < LEVEL_HEIGHT):
+            final_x, final_y = random_position_outside_building()
+
         self.x = final_x
         self.y = final_y
         self.rect.center = (int(self.x), int(self.y))
