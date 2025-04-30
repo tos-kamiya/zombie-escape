@@ -304,15 +304,13 @@ class Car(pygame.sprite.Sprite):
         temp_rect.centerx = int(new_x)
         temp_rect.centery = int(new_y)
         hit_walls = []
-        possible_walls = [
-            w for w in walls if abs(w.rect.centery - self.y) < 100 and abs(w.rect.centerx - new_x) < 100
-        ]
+        possible_walls = [w for w in walls if abs(w.rect.centery - self.y) < 100 and abs(w.rect.centerx - new_x) < 100]
         for wall in possible_walls:
             if temp_rect.colliderect(wall.rect):
                 hit_walls.append(wall)
         if hit_walls:
             self.take_damage(CAR_WALL_DAMAGE)
-            hit_walls.sort(key = lambda w: (w.rect.centery - self.y) ** 2 + (w.rect.centerx - self.x) ** 2)
+            hit_walls.sort(key=lambda w: (w.rect.centery - self.y) ** 2 + (w.rect.centerx - self.x) ** 2)
             nearest_wall = hit_walls[0]
             new_x += (self.x - nearest_wall.rect.centerx) * 1.2
             new_y += (self.y - nearest_wall.rect.centery) * 1.2
@@ -446,12 +444,17 @@ def show_message(screen, text, size, color, position):
         font = pygame.font.Font(None, size)
         text_surface = font.render(text, True, color)
         text_rect = text_surface.get_rect(center=position)
-        bg_surface = pygame.Surface((text_rect.width + 30, text_rect.height + 15), pygame.SRCALPHA)
-        bg_surface.fill((0, 0, 0, 190))
-        screen.blit(bg_surface, bg_surface.get_rect(center=position))
+
+        # Add a semi-transparent background rectangle for better visibility
+        bg_padding = 15
+        bg_rect = text_rect.inflate(bg_padding * 2, bg_padding * 2)
+        bg_surface = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+        bg_surface.fill((0, 0, 0, 180))  # Black with 180 alpha (out of 255)
+        screen.blit(bg_surface, bg_rect.topleft)
+
         screen.blit(text_surface, text_rect)
     except pygame.error as e:
-        print(f"Error rendering font: {e}")
+        print(f"Error rendering font or surface: {e}")
 
 
 def draw_level_overview(surface, wall_group, player, car):
@@ -497,40 +500,32 @@ def get_shrunk_sprite(sprite, scale_x, scale_y=None):
 
     rect = pygame.Rect(0, 0, shrunk_width, shrunk_height)
     rect.center = original_rect.center
-    
+
     sprite = pygame.sprite.Sprite()
     sprite.rect = rect
 
     return sprite
 
 
-# --- Main Game Function ---
-def game():
-    pygame.init()
-    try:
-        pygame.font.init()
-    except pygame.error as e:
-        print(f"Pygame font failed: {e}")
-        pygame.quit()
-        sys.exit()
-
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Zombie Escape v0.5.5")
-    clock = pygame.time.Clock()
-
-    running = True
+# --- Game State Function (Contains the main game loop) ---
+# Renamed from game()
+def run_game(screen, clock):
+    # Game State Flags
     game_over = False
     game_won = False
     overview_surface = None
     scaled_overview = None
     overview_created = False
+
+    # Groups
     all_sprites = pygame.sprite.LayeredUpdates()
     wall_group = pygame.sprite.Group()
     zombie_group = pygame.sprite.Group()
-    fog_surface_hard = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-    fog_surface_soft = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)  # Soft fog surface
+
+    # Camera
     camera = Camera(LEVEL_WIDTH, LEVEL_HEIGHT)
 
+    # Define Level Areas
     outer_rect = OUTER_WALL_MARGIN, OUTER_WALL_MARGIN, LEVEL_WIDTH - OUTER_WALL_MARGIN, LEVEL_HEIGHT - OUTER_WALL_MARGIN
     inner_left = outer_rect[0] + INTERNAL_WALL_GRID_SNAP * 2
     inner_top = outer_rect[1] + INTERNAL_WALL_GRID_SNAP * 2
@@ -538,6 +533,7 @@ def game():
     inner_bottom = outer_rect[3] - INTERNAL_WALL_GRID_SNAP * 2
     inner_rect = inner_left, inner_top, inner_right, inner_bottom
 
+    # --- Initialization (after splash screen) ---
     # Place Player/Car
     player_start_x = random.randrange(inner_left, inner_right)
     player_start_y = random.randrange(inner_top, inner_bottom)
@@ -605,7 +601,12 @@ def game():
 
     last_zombie_spawn_time = pygame.time.get_ticks() - ZOMBIE_SPAWN_DELAY_MS
 
+    # Fog surfaces
+    fog_surface_hard = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+    fog_surface_soft = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+
     # --- Game Loop ---
+    running = True
     while running:
         dt = clock.tick(FPS) / 1000.0
         player_dx, player_dy, car_dx, car_dy = 0, 0, 0, 0
@@ -613,12 +614,12 @@ def game():
         # Event Handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                return False  # Signal main to quit
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    running = False
+                    return False  # Signal main to quit
                 if (game_over or game_won) and event.key == pygame.K_r:
-                    return
+                    return True  # Signal main to restart the game
 
         # Game Over/Game Won State
         if game_over or game_won:
@@ -633,8 +634,13 @@ def game():
                 else:
                     scaled_h = SCREEN_HEIGHT - 40
                     scaled_w = int(scaled_h * level_aspect)
+                # Ensure scaled dimensions are at least 1
+                scaled_w = max(1, scaled_w)
+                scaled_h = max(1, scaled_h)
+
                 scaled_overview = pygame.transform.smoothscale(overview_surface, (scaled_w, scaled_h))
                 overview_created = True
+
             screen.fill(BLACK)
             if scaled_overview:
                 screen.blit(scaled_overview, scaled_overview.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)))
@@ -679,6 +685,7 @@ def game():
             player.rect.center = car.rect.center
             player.x, player.y = car.x, car.y
         elif not player.in_car:
+            # Ensure player is in all_sprites if not in car
             if player not in all_sprites:
                 all_sprites.add(player, layer=2)
             player.move(player_dx, player_dy, active_walls)
@@ -725,10 +732,14 @@ def game():
             # Respawn car
             new_car = place_new_car(wall_group, player, inner_rect)
             if new_car is None:
-                new_car = Car(car_start_x, car_start_y)
-                print("Failed to find a suitable location for the new car. Falling back to the original car's position.")
-            car = new_car  # Update the main car variable
-            all_sprites.add(car, layer=1)
+                # Fallback: If placing in inner_rect fails, try original car position
+                new_car = Car(car_initial_rect.centerx, car_initial_rect.centery)
+                # print("Failed to find a suitable location for the new car. Falling back to the original car's position.")
+            if new_car is not None:
+                car = new_car  # Update the main car variable
+                all_sprites.add(car, layer=1)
+            else:
+                print("Error: Failed to respawn car anywhere!")  # Should not happen often
 
         if not player.in_car and player in all_sprites:
             shrunk_player = get_shrunk_sprite(player, 0.8)
@@ -755,7 +766,7 @@ def game():
                     r = pygame.Rect(lx, ly, INTERNAL_WALL_GRID_SNAP, INTERNAL_WALL_GRID_SNAP)
                     sr = camera.apply_rect(r)
                     if sr.colliderect(screen.get_rect()):
-                            pygame.draw.rect(screen, DARK_GRAY, sr)
+                        pygame.draw.rect(screen, DARK_GRAY, sr)
 
         # player, car, zombies, walls
         for sprite in all_sprites:
@@ -779,22 +790,71 @@ def game():
 
         pygame.display.flip()
 
-    pygame.quit()
-    sys.exit()
+    # Return False if game loop exited normally (e.g., by quitting)
+    return False
 
 
-# --- Run ---
+# --- Splash Screen Function ---
+def splash_screen(screen, clock):
+    splash_active = True
+    print("Showing Splash Screen...")
+
+    while splash_active:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False  # Quit the application
+            if event.type == pygame.KEYDOWN:
+                # Any key press starts the game
+                print("Key pressed, starting game...")
+                return True  # Signal to start the game
+
+        # Drawing the splash screen
+        screen.fill(BLACK)  # Black background
+        show_message(screen, "Zombie Escape", 72, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
+        show_message(screen, "Press any key to start", 36, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30))
+
+        pygame.display.flip()
+        clock.tick(FPS)  # Maintain frame rate
+
+    return False  # Should not be reached unless splash_active is set to False manually
+
+
+# --- Main Entry Point ---
 def main():
-    while True:
-        try:
-            game()
-        except SystemExit:
-            break
-        except Exception as e:
-            print(f"Error: {e}")
-            traceback.print_exc()
-            pygame.quit()
-            break
+    pygame.init()
+    try:
+        pygame.font.init()
+    except pygame.error as e:
+        print(f"Pygame font failed to initialize: {e}")
+        # Font errors are often non-fatal, continue without fonts or handle gracefully
+
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    pygame.display.set_caption("Zombie Escape v0.5.5")
+    clock = pygame.time.Clock()
+
+    restart_game = True
+    while restart_game:
+        # Run splash screen first
+        # splash_screen returns True if game should start/restart, False if quitting
+        should_start_game = splash_screen(screen, clock)
+
+        if should_start_game:
+            # Run the main game loop if splash screen said to start
+            try:
+                # Pass initialized screen and clock to the game function
+                restart_game = run_game(screen, clock)
+            except SystemExit:
+                restart_game = False  # Exit the main loop
+            except Exception as e:
+                print("An unhandled error occurred during game execution:")
+                traceback.print_exc()
+                restart_game = False  # Stop loop on error
+        else:
+            # If splash screen returned False (quit), stop the main loop
+            restart_game = False
+
+    pygame.quit()  # Quit pygame only once at the very end of main
+    sys.exit()  # Exit the script
 
 
 if __name__ == "__main__":
