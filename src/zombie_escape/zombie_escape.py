@@ -660,8 +660,8 @@ def game():
                 if (game_over or game_won) and event.key == pygame.K_r:
                     return
 
-        # Game Over State
-        if game_over:
+        # Game Over/Game Won State
+        if game_over or game_won:
             if not overview_created:
                 overview_surface = pygame.Surface((LEVEL_WIDTH, LEVEL_HEIGHT))
                 draw_level_overview(overview_surface, wall_group, player, car)
@@ -678,16 +678,10 @@ def game():
             screen.fill(BLACK)
             if scaled_overview:
                 screen.blit(scaled_overview, scaled_overview.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)))
-            show_message(
-                screen, "Press 'R' to Restart or ESC to Quit", 30, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30)
-            )
-            pygame.display.flip()
-            continue
 
-        # Game Won State
-        if game_won:
-            screen.fill(BLACK)
-            show_message(screen, "YOU ESCAPED!", 80, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
+            if game_won:
+                show_message(screen, "YOU ESCAPED!", 40, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
+
             show_message(
                 screen, "Press 'R' to Restart or ESC to Quit", 30, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30)
             )
