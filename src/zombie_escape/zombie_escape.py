@@ -40,7 +40,7 @@ ZOMBIE_RADIUS = 8
 ZOMBIE_SPEED = 1.4
 ZOMBIE_SPAWN_DELAY_MS = 100
 MAX_ZOMBIES = 200
-INITIAL_ZOMBIES_INSIDE = 30
+INITIAL_ZOMBIES_INSIDE = 20
 ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
 ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
 
@@ -53,7 +53,6 @@ CAR_WALL_DAMAGE = 1
 CAR_ZOMBIE_DAMAGE = 1
 
 # Wall settings
-MIN_GAPS_PER_SIDE = 3
 NUM_INTERNAL_WALL_LINES = 220
 INTERNAL_WALL_THICKNESS = 24
 INTERNAL_WALL_MIN_LEN = 100
@@ -68,6 +67,7 @@ OUTER_WALL_SEGMENT_LENGTH = 100
 OUTER_WALL_HEALTH = 9999
 OUTER_WALL_COLOR = LIGHT_GRAY
 EXIT_WIDTH = 100
+EXITS_PER_SIDE = 4
 
 
 # --- Camera Class ---
@@ -382,6 +382,7 @@ def generate_outer_walls_simple(
     thickness,
     segment_length,
     exit_width,
+    exists_per_side,
 ):
     walls = pygame.sprite.Group()
     left = margin
@@ -391,7 +392,7 @@ def generate_outer_walls_simple(
     t2 = thickness // 2
 
     for y in [top, bottom]:
-        exit_positions = [random.randrange(left, right - exit_width) for i in range(3)]
+        exit_positions = [random.randrange(left, right - exit_width) for i in range(exists_per_side)]
         for x in range(left, right, segment_length):
             if not any(ex <= x < ex + exit_width for ex in exit_positions):
                 walls.add(
@@ -399,7 +400,7 @@ def generate_outer_walls_simple(
                 )
 
     for x in [left, right]:
-        exit_positions = [random.randrange(top, bottom - exit_width) for i in range(3)]
+        exit_positions = [random.randrange(top, bottom - exit_width) for i in range(exists_per_side)]
         for y in range(top, bottom, segment_length):
             if not any(ey <= y < ey + exit_width for ey in exit_positions):
                 walls.add(
@@ -442,10 +443,12 @@ def generate_internal_walls(
             w, h = 0, segment_length
             min_start_x, max_start_x = inner_left + grid_snap, inner_right - grid_snap
             min_start_y, max_start_y = inner_top, inner_bottom
-        x = random.randint(min_start_x, max_start_x)
+        x = random.randint(0, level_w)
         x = round(x / grid_snap) * grid_snap
-        y = random.randint(min_start_y, max_start_y)
+        x = max(min_start_x, min(max_start_x, x))
+        y = random.randint(0, level_h)
         y = round(y / grid_snap) * grid_snap
+        y = max(min_start_y, min(max_start_y, y))
         line_segments = pygame.sprite.Group()
         valid_line = True
         check_rects = [r.inflate(grid_snap, grid_snap) for r in avoid_rects]
@@ -556,7 +559,6 @@ def game():
     all_sprites.add(car, layer=1)
 
     # Generate Walls
-    # print(f"Generating walls (Lines: {NUM_INTERNAL_WALL_LINES}, MinGaps: {MIN_GAPS_PER_SIDE})...")
     outer_walls = generate_outer_walls_simple(
         LEVEL_WIDTH,
         LEVEL_HEIGHT,
@@ -564,6 +566,7 @@ def game():
         OUTER_WALL_THICKNESS,
         OUTER_WALL_SEGMENT_LENGTH,
         EXIT_WIDTH,
+        EXITS_PER_SIDE,
     )
     wall_group.add(outer_walls)
     all_sprites.add(outer_walls, layer=0)
