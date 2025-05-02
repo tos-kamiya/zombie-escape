@@ -1,9 +1,12 @@
-import pygame
+from typing import List, Optional, Self, Tuple, Union
 import random
 import math
 import sys
 import traceback  # For error reporting
 from enum import Enum  # For Zombie Modes
+
+import pygame
+from pygame import rect, sprite, surface, time
 
 # --- Constants ---
 SCREEN_WIDTH = 800
@@ -65,19 +68,49 @@ OUTER_WALL_COLOR = LIGHT_GRAY
 
 
 # --- Camera Class ---
+class Wall(pygame.sprite.Sprite):
+    def __init__(self: Self, x: int, y: int, width: int, height: int, health: int=INTERNAL_WALL_HEALTH, color: Tuple[int, int, int]=INTERNAL_WALL_COLOR) -> None:
+        super().__init__()
+        safe_width = max(1, width)
+        safe_height = max(1, height)
+        self.image = pygame.Surface((safe_width, safe_height))
+        self.base_color = color
+        self.health = health
+        self.max_health = max(1, health)
+        self.update_color()
+        self.rect = self.image.get_rect(topleft=(x, y))
+
+    def take_damage(self: Self, amount: int=1) -> None:
+        if self.health > 0:
+            self.health -= amount
+            self.update_color()
+            if self.health <= 0:
+                self.kill()
+
+    def update_color(self: Self) -> None:
+        if self.health <= 0:
+            self.image.fill((40, 40, 40))
+        else:
+            health_ratio = max(0, self.health / self.max_health)
+            r = int(self.base_color[0])
+            g = int(self.base_color[1] * health_ratio)
+            b = int(self.base_color[2])
+            self.image.fill((r, g, b))
+
+
 class Camera:
-    def __init__(self, width, height):
+    def __init__(self: Self, width: int, height: int) -> None:
         self.camera = pygame.Rect(0, 0, width, height)
         self.width = width
         self.height = height
 
-    def apply(self, entity):
+    def apply(self: Self, entity: pygame.sprite.Sprite) -> rect.Rect:
         return entity.rect.move(self.camera.topleft)
 
-    def apply_rect(self, rect):
+    def apply_rect(self: Self, rect: rect.Rect) -> rect.Rect:
         return rect.move(self.camera.topleft)
 
-    def update(self, target):
+    def update(self: Self, target: pygame.sprite.Sprite) -> None:
         x = -target.rect.centerx + int(SCREEN_WIDTH / 2)
         y = -target.rect.centery + int(SCREEN_HEIGHT / 2)
         x = max(-(self.width - SCREEN_WIDTH), min(0, x))
@@ -94,7 +127,7 @@ class ZombieMode(Enum):
 
 # --- Game Classes ---
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self: Self, x: float, y: float) -> None:
         super().__init__()
         self.radius = PLAYER_RADIUS
         self.image = pygame.Surface((self.radius * 2 + 2, self.radius * 2 + 2), pygame.SRCALPHA)
@@ -105,7 +138,7 @@ class Player(pygame.sprite.Sprite):
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
 
-    def move(self, dx, dy, walls):
+    def move(self: Self, dx: float, dy: float, walls: pygame.sprite.Group) -> None:
         if self.in_car:
             return
 
@@ -137,7 +170,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = (int(self.x), int(self.y))
 
 
-def random_position_outside_building():
+def random_position_outside_building() -> Tuple[int, int]:
     side = random.choice(["top", "bottom", "left", "right"])
     margin = 0
     if side == "top":
@@ -152,7 +185,7 @@ def random_position_outside_building():
 
 
 class Zombie(pygame.sprite.Sprite):
-    def __init__(self, start_pos=None, hint_pos=None):
+    def __init__(self: Self, start_pos: Optional[Tuple[int, int]] = None, hint_pos: Optional[Tuple[float, float]] = None) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
@@ -174,7 +207,7 @@ class Zombie(pygame.sprite.Sprite):
         self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + random.randint(-1000, 1000)
         self.was_in_sight = False
 
-    def change_mode(self, force_mode=None):
+    def change_mode(self: Self, force_mode: Optional[ZombieMode] = None) -> None:
         if force_mode:
             self.mode = force_mode
         else:
@@ -183,7 +216,7 @@ class Zombie(pygame.sprite.Sprite):
         self.last_mode_change_time = pygame.time.get_ticks()
         self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + random.randint(-1000, 1000)
 
-    def _calculate_movement(self, player_center):
+    def _calculate_movement(self: Self, player_center: Tuple[int, int]) -> Tuple[float, float]:
         move_x, move_y = 0, 0
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
@@ -201,7 +234,7 @@ class Zombie(pygame.sprite.Sprite):
                 move_y = (dy_target / abs(dy_target) if dy_target != 0 else 0) * self.speed * 0.8
         return move_x, move_y
 
-    def _handle_wall_collision(self, next_x, next_y, walls):
+    def _handle_wall_collision(self: Self, next_x: float, next_y: float, walls: List[Wall]) -> Tuple[float, float]:
         final_x, final_y = next_x, next_y
 
         possible_walls = [w for w in walls if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100]
@@ -227,7 +260,7 @@ class Zombie(pygame.sprite.Sprite):
 
         return final_x, final_y
 
-    def update(self, player_center, walls):
+    def update(self: Self, player_center: Tuple[int, int], walls: List[Wall]) -> None:
         now = pygame.time.get_ticks()
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
@@ -254,7 +287,7 @@ class Zombie(pygame.sprite.Sprite):
 
 
 class Car(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self: Self, x: int, y: int) -> None:
         super().__init__()
         self.original_image = pygame.Surface((CAR_WIDTH, CAR_HEIGHT), pygame.SRCALPHA)
         self.base_color = YELLOW
@@ -273,7 +306,7 @@ class Car(pygame.sprite.Sprite):
             self.health -= amount
             self.update_color()
 
-    def update_color(self):
+    def update_color(self: Self) -> None:
         health_ratio = max(0, self.health / self.max_health)
         color = YELLOW
         if health_ratio < 0.6:
@@ -320,42 +353,12 @@ class Car(pygame.sprite.Sprite):
         self.rect.center = (int(self.x), int(self.y))
 
 
-class Wall(pygame.sprite.Sprite):
-    def __init__(self, x, y, width, height, health=INTERNAL_WALL_HEALTH, color=INTERNAL_WALL_COLOR):
-        super().__init__()
-        safe_width = max(1, width)
-        safe_height = max(1, height)
-        self.image = pygame.Surface((safe_width, safe_height))
-        self.base_color = color
-        self.health = health
-        self.max_health = max(1, health)
-        self.update_color()
-        self.rect = self.image.get_rect(topleft=(x, y))
-
-    def take_damage(self, amount=1):
-        if self.health > 0:
-            self.health -= amount
-            self.update_color()
-            if self.health <= 0:
-                self.kill()
-
-    def update_color(self):
-        if self.health <= 0:
-            self.image.fill((40, 40, 40))
-        else:
-            health_ratio = max(0, self.health / self.max_health)
-            r = int(self.base_color[0])
-            g = int(self.base_color[1] * health_ratio)
-            b = int(self.base_color[2])
-            self.image.fill((r, g, b))
-
-
 # --- Wall Generation Functions ---
 def generate_outer_walls_simple(
-    outer_rect,
-    exit_width,
-    exits_per_side,
-):
+    outer_rect: Tuple[int, int, int, int],
+    exit_width: int,
+    exits_per_side: int,
+) -> pygame.sprite.Group:
     left, top, right, bottom = outer_rect
     segment_length = OUTER_WALL_SEGMENT_LENGTH
     t2 = OUTER_WALL_THICKNESS // 2
@@ -381,11 +384,11 @@ def generate_outer_walls_simple(
 
 
 def generate_internal_walls(
-    num_lines,
-    outer_rect,
-    len_range,
-    avoid_rects,
-):
+    num_lines: int,
+    outer_rect: Tuple[int, int, int, int],
+    len_range: Tuple[int, int],
+    avoid_rects: list[rect.Rect],
+) -> sprite.Group:
     left, top, right, bottom = outer_rect
     margin_x, margin_y = left, top
     min_len, max_len = len_range
@@ -439,7 +442,7 @@ def generate_internal_walls(
 
 
 # --- Helper Functions ---
-def show_message(screen, text, size, color, position):
+def show_message(screen: surface.Surface, text: str, size: int, color: Tuple[int, int, int], position: Tuple[int, int]) -> None:
     try:
         font = pygame.font.Font(None, size)
         text_surface = font.render(text, True, color)
@@ -457,7 +460,7 @@ def show_message(screen, text, size, color, position):
         print(f"Error rendering font or surface: {e}")
 
 
-def draw_level_overview(surface, wall_group, player, car):
+def draw_level_overview(surface: surface.Surface, wall_group: sprite.Group, player: Player, car: Car) -> None:
     surface.fill(BLACK)
     for wall in wall_group:
         pygame.draw.rect(surface, INTERNAL_WALL_COLOR, wall.rect)
@@ -477,7 +480,8 @@ def place_new_car(wall_group, player, inner_rect):
         temp_car = Car(c_x, c_y)
         temp_rect = temp_car.rect.inflate(30, 30)
         collides_wall = False
-        nearby_walls = [w for w in wall_group if abs(w.rect.centerx - c_x) < 150 and abs(w.rect.centery - c_y) < 150]
+        nearby_walls = pygame.sprite.Group()
+        nearby_walls.add([w for w in wall_group if abs(w.rect.centerx - c_x) < 150 and abs(w.rect.centery - c_y) < 150])
         if pygame.sprite.spritecollideany(temp_car, nearby_walls, collided=lambda s1, s2: s1.rect.colliderect(s2.rect)):
             collides_wall = True
         collides_player = temp_rect.colliderect(player.rect.inflate(50, 50))
@@ -487,7 +491,7 @@ def place_new_car(wall_group, player, inner_rect):
     return None
 
 
-def get_shrunk_sprite(sprite, scale_x, scale_y=None):
+def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Optional[float] = None) -> sprite.Sprite:
     if scale_y is None:
         scale_y = scale_x
 
@@ -509,7 +513,7 @@ def get_shrunk_sprite(sprite, scale_x, scale_y=None):
 
 # --- Game State Function (Contains the main game loop) ---
 # Renamed from game()
-def run_game(screen, clock):
+def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
     # Game State Flags
     game_over = False
     game_won = False
@@ -545,6 +549,7 @@ def run_game(screen, clock):
         car_start_y = random.randrange(inner_top, inner_bottom)
         if math.hypot(car_start_x - player_start_x, car_start_y - player_start_y) < 400:
             car_start_x = None
+    assert car_start_x is not None and car_start_y is not None
     car = Car(car_start_x, car_start_y)
     player_initial_rect = player.rect.copy()
     car_initial_rect = car.rect.copy()
@@ -677,18 +682,16 @@ def run_game(screen, clock):
                 player_dx, player_dy = (dx_input / move_len) * target_speed, (dy_input / move_len) * target_speed
 
         # Updates
-        active_walls = wall_group.sprites()
-
         # player/car
         if player.in_car and car.alive():
-            car.move(car_dx, car_dy, active_walls)
+            car.move(car_dx, car_dy, wall_group)
             player.rect.center = car.rect.center
             player.x, player.y = car.x, car.y
         elif not player.in_car:
             # Ensure player is in all_sprites if not in car
             if player not in all_sprites:
                 all_sprites.add(player, layer=2)
-            player.move(player_dx, player_dy, active_walls)
+            player.move(player_dx, player_dy, wall_group)
 
         # camera
         target_for_camera = car if player.in_car and car.alive() else player
@@ -703,12 +706,14 @@ def run_game(screen, clock):
             last_zombie_spawn_time = current_time
         target_center = car.rect.center if player.in_car and car.alive() else player.rect.center
         for zombie in zombie_group:
-            zombie.update(target_center, active_walls)
+            zombie.update(target_center, wall_group)
 
         # Interactions & State Checks
         shrunk_car = get_shrunk_sprite(car, 0.8)
         if not player.in_car and car.alive() and car.health > 0:
-            if pygame.sprite.spritecollide(shrunk_car, [player], False):
+            g = pygame.sprite.Group()
+            g.add(player)
+            if pygame.sprite.spritecollide(shrunk_car, g, False):
                 player.in_car = True
                 all_sprites.remove(player)
                 print("Player entered car!")
@@ -795,7 +800,7 @@ def run_game(screen, clock):
 
 
 # --- Splash Screen Function ---
-def splash_screen(screen, clock):
+def splash_screen(screen: surface.Surface, clock: time.Clock) -> bool:
     splash_active = True
     print("Showing Splash Screen...")
 
