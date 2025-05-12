@@ -33,7 +33,7 @@ FOG_COLOR_SOFT = (0, 0, 0, 190)
 
 # Player settings
 PLAYER_RADIUS = 11
-PLAYER_SPEED = 3.2
+PLAYER_SPEED = 2.8
 FOV_RADIUS = 180
 FOV_RADIUS_SOFT_FACTOR = 1.5
 
@@ -50,7 +50,7 @@ ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
 CAR_WIDTH = 30
 CAR_HEIGHT = 50
 CAR_SPEED = 4
-CAR_HEALTH = 30
+CAR_HEALTH = 20
 CAR_WALL_DAMAGE = 1
 CAR_ZOMBIE_DAMAGE = 1
 
@@ -511,6 +511,47 @@ def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Opt
     return sprite
 
 
+def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surface_soft, fog_surface_hard):
+    # Drawing
+    screen.fill(BLACK)
+
+    # floor tiles
+    xs, ys, xe, ye = outer_rect
+    xs //= INTERNAL_WALL_GRID_SNAP
+    ys //= INTERNAL_WALL_GRID_SNAP
+    xe //= INTERNAL_WALL_GRID_SNAP
+    ye //= INTERNAL_WALL_GRID_SNAP
+    for y in range(ys, ye):
+        for x in range(xs, xe):
+            if (x + y) % 2 == 0:
+                lx, ly = x * INTERNAL_WALL_GRID_SNAP, y * INTERNAL_WALL_GRID_SNAP
+                r = pygame.Rect(lx, ly, INTERNAL_WALL_GRID_SNAP, INTERNAL_WALL_GRID_SNAP)
+                sr = camera.apply_rect(r)
+                if sr.colliderect(screen.get_rect()):
+                    pygame.draw.rect(screen, DARK_GRAY, sr)
+
+    # player, car, zombies, walls
+    for sprite in all_sprites:
+        sprite_screen_rect = camera.apply_rect(sprite.rect)
+        if sprite_screen_rect.colliderect(screen.get_rect().inflate(100, 100)):
+            screen.blit(sprite.image, sprite_screen_rect)
+
+    # fog
+    if fov_target is not None:
+        # Soft Fog Layer
+        fog_surface_soft.fill(FOG_COLOR_SOFT)
+        fov_center_on_screen = camera.apply(fov_target).center
+        soft_radius = int(FOV_RADIUS * FOV_RADIUS_SOFT_FACTOR)
+        pygame.draw.circle(fog_surface_soft, (0, 0, 0, 0), fov_center_on_screen, FOV_RADIUS)
+        screen.blit(fog_surface_soft, (0, 0))
+        # Hard Fog Layer
+        fog_surface_hard.fill(FOG_COLOR)
+        pygame.draw.circle(fog_surface_hard, (0, 0, 0, 0), fov_center_on_screen, soft_radius)
+        screen.blit(fog_surface_hard, (0, 0))
+
+    pygame.display.flip()
+
+
 # --- Game State Function (Contains the main game loop) ---
 # Renamed from game()
 def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
@@ -561,7 +602,7 @@ def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
     INTERNAL_WALL_MIN_LEN = 100
     INTERNAL_WALL_MAX_LEN = 400
     EXIT_WIDTH = 100
-    EXITS_PER_SIDE = 4
+    EXITS_PER_SIDE = 3
 
     outer_walls = generate_outer_walls_simple(
         outer_rect,
@@ -755,45 +796,11 @@ def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
             if not pygame.Rect(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT).collidepoint(car.rect.center):
                 game_won = True
 
-        # Drawing
-        screen.fill(BLACK)
-
-        # floor tiles
-        xs, ys, xe, ye = outer_rect
-        xs //= INTERNAL_WALL_GRID_SNAP
-        ys //= INTERNAL_WALL_GRID_SNAP
-        xe //= INTERNAL_WALL_GRID_SNAP
-        ye //= INTERNAL_WALL_GRID_SNAP
-        for y in range(ys, ye):
-            for x in range(xs, xe):
-                if (x + y) % 2 == 0:
-                    lx, ly = x * INTERNAL_WALL_GRID_SNAP, y * INTERNAL_WALL_GRID_SNAP
-                    r = pygame.Rect(lx, ly, INTERNAL_WALL_GRID_SNAP, INTERNAL_WALL_GRID_SNAP)
-                    sr = camera.apply_rect(r)
-                    if sr.colliderect(screen.get_rect()):
-                        pygame.draw.rect(screen, DARK_GRAY, sr)
-
-        # player, car, zombies, walls
-        for sprite in all_sprites:
-            sprite_screen_rect = camera.apply_rect(sprite.rect)
-            if sprite_screen_rect.colliderect(screen.get_rect().inflate(100, 100)):
-                screen.blit(sprite.image, sprite_screen_rect)
-
-        # fog
+        fov_target = None
         if not game_over and not game_won:
-            # Soft Fog Layer
-            fog_surface_soft.fill(FOG_COLOR_SOFT)
             fov_target = car if player.in_car and car.alive() else player
-            fov_center_on_screen = camera.apply(fov_target).center
-            soft_radius = int(FOV_RADIUS * FOV_RADIUS_SOFT_FACTOR)
-            pygame.draw.circle(fog_surface_soft, (0, 0, 0, 0), fov_center_on_screen, FOV_RADIUS)
-            screen.blit(fog_surface_soft, (0, 0))
-            # Hard Fog Layer
-            fog_surface_hard.fill(FOG_COLOR)
-            pygame.draw.circle(fog_surface_hard, (0, 0, 0, 0), fov_center_on_screen, soft_radius)
-            screen.blit(fog_surface_hard, (0, 0))
 
-        pygame.display.flip()
+        draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surface_soft, fog_surface_hard)
 
     # Return False if game loop exited normally (e.g., by quitting)
     return False
