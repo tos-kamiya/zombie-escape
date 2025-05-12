@@ -69,7 +69,15 @@ OUTER_WALL_COLOR = LIGHT_GRAY
 
 # --- Camera Class ---
 class Wall(pygame.sprite.Sprite):
-    def __init__(self: Self, x: int, y: int, width: int, height: int, health: int=INTERNAL_WALL_HEALTH, color: Tuple[int, int, int]=INTERNAL_WALL_COLOR) -> None:
+    def __init__(
+        self: Self,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        health: int = INTERNAL_WALL_HEALTH,
+        color: Tuple[int, int, int] = INTERNAL_WALL_COLOR,
+    ) -> None:
         super().__init__()
         safe_width = max(1, width)
         safe_height = max(1, height)
@@ -80,7 +88,7 @@ class Wall(pygame.sprite.Sprite):
         self.update_color()
         self.rect = self.image.get_rect(topleft=(x, y))
 
-    def take_damage(self: Self, amount: int=1) -> None:
+    def take_damage(self: Self, amount: int = 1) -> None:
         if self.health > 0:
             self.health -= amount
             self.update_color()
@@ -185,7 +193,9 @@ def random_position_outside_building() -> Tuple[int, int]:
 
 
 class Zombie(pygame.sprite.Sprite):
-    def __init__(self: Self, start_pos: Optional[Tuple[int, int]] = None, hint_pos: Optional[Tuple[float, float]] = None) -> None:
+    def __init__(
+        self: Self, start_pos: Optional[Tuple[int, int]] = None, hint_pos: Optional[Tuple[float, float]] = None
+    ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
@@ -442,7 +452,9 @@ def generate_internal_walls(
 
 
 # --- Helper Functions ---
-def show_message(screen: surface.Surface, text: str, size: int, color: Tuple[int, int, int], position: Tuple[int, int]) -> None:
+def show_message(
+    screen: surface.Surface, text: str, size: int, color: Tuple[int, int, int], position: Tuple[int, int]
+) -> None:
     try:
         font = pygame.font.Font(None, size)
         text_surface = font.render(text, True, color)
@@ -553,24 +565,26 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surface_soft, 
 
 
 # --- Game State Function (Contains the main game loop) ---
-# Renamed from game()
-def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
-    # Game State Flags
-    game_over = False
-    game_won = False
-    overview_surface = None
-    scaled_overview = None
-    overview_created = False
+def initialize_game_state():
+    """Initialize and return the base game state objects."""
+    game_state = {
+        "game_over": False,
+        "game_won": False,
+        "overview_surface": None,
+        "scaled_overview": None,
+        "overview_created": False,
+        "last_zombie_spawn_time": 0,
+    }
 
-    # Groups
+    # Create sprite groups
     all_sprites = pygame.sprite.LayeredUpdates()
     wall_group = pygame.sprite.Group()
     zombie_group = pygame.sprite.Group()
 
-    # Camera
+    # Create camera
     camera = Camera(LEVEL_WIDTH, LEVEL_HEIGHT)
 
-    # Define Level Areas
+    # Define level areas
     outer_rect = OUTER_WALL_MARGIN, OUTER_WALL_MARGIN, LEVEL_WIDTH - OUTER_WALL_MARGIN, LEVEL_HEIGHT - OUTER_WALL_MARGIN
     inner_left = outer_rect[0] + INTERNAL_WALL_GRID_SNAP * 2
     inner_top = outer_rect[1] + INTERNAL_WALL_GRID_SNAP * 2
@@ -578,32 +592,64 @@ def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
     inner_bottom = outer_rect[3] - INTERNAL_WALL_GRID_SNAP * 2
     inner_rect = inner_left, inner_top, inner_right, inner_bottom
 
-    # --- Initialization (after splash screen) ---
-    # Place Player/Car
+    # Create fog surfaces
+    fog_surface_hard = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+    fog_surface_soft = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+
+    return {
+        "state": game_state,
+        "groups": {"all_sprites": all_sprites, "wall_group": wall_group, "zombie_group": zombie_group},
+        "camera": camera,
+        "areas": {"outer_rect": outer_rect, "inner_rect": inner_rect},
+        "fog": {"hard": fog_surface_hard, "soft": fog_surface_soft},
+    }
+
+
+def setup_player_and_car(game_data):
+    """Create and position the player and car, add them to appropriate sprites groups."""
+    inner_rect = game_data["areas"]["inner_rect"]
+    all_sprites = game_data["groups"]["all_sprites"]
+
+    inner_left, inner_top, inner_right, inner_bottom = inner_rect
+
+    # Place player
     player_start_x = random.randrange(inner_left, inner_right)
     player_start_y = random.randrange(inner_top, inner_bottom)
     player = Player(player_start_x, player_start_y)
 
+    # Place car away from player
     car_start_x, car_start_y = None, None
     while car_start_x is None:
         car_start_x = random.randrange(inner_left, inner_right)
         car_start_y = random.randrange(inner_top, inner_bottom)
         if math.hypot(car_start_x - player_start_x, car_start_y - player_start_y) < 400:
             car_start_x = None
-    assert car_start_x is not None and car_start_y is not None
+
     car = Car(car_start_x, car_start_y)
     player_initial_rect = player.rect.copy()
     car_initial_rect = car.rect.copy()
+
+    # Add to sprite groups
     all_sprites.add(player, layer=2)
     all_sprites.add(car, layer=1)
 
-    # Generate Walls
+    return player, car, player_initial_rect, car_initial_rect
+
+
+def generate_level_walls(game_data, player_rect, car_rect):
+    """Generate outer and inner walls for the level."""
+    outer_rect = game_data["areas"]["outer_rect"]
+    wall_group = game_data["groups"]["wall_group"]
+    all_sprites = game_data["groups"]["all_sprites"]
+
+    # Parameters
     NUM_INTERNAL_WALL_LINES = 240
     INTERNAL_WALL_MIN_LEN = 100
     INTERNAL_WALL_MAX_LEN = 400
     EXIT_WIDTH = 100
     EXITS_PER_SIDE = 3
 
+    # Generate walls
     outer_walls = generate_outer_walls_simple(
         outer_rect,
         EXIT_WIDTH,
@@ -611,20 +657,30 @@ def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
     )
     wall_group.add(outer_walls)
     all_sprites.add(outer_walls, layer=0)
+
     internal_walls = generate_internal_walls(
         NUM_INTERNAL_WALL_LINES,
         outer_rect,
         (INTERNAL_WALL_MIN_LEN, INTERNAL_WALL_MAX_LEN),
-        [player_initial_rect, car_initial_rect],
+        [player_rect, car_rect],
     )
     wall_group.add(internal_walls)
     all_sprites.add(internal_walls, layer=0)
-    # print(f"Wall generation complete. Total wall segments: {len(wall_group)}")
 
-    # Initial Zombies Inside
+
+def spawn_initial_zombies(game_data, player):
+    """Spawn initial zombies inside the level."""
+    inner_rect = game_data["areas"]["inner_rect"]
+    wall_group = game_data["groups"]["wall_group"]
+    zombie_group = game_data["groups"]["zombie_group"]
+    all_sprites = game_data["groups"]["all_sprites"]
+
+    inner_left, inner_top, inner_right, inner_bottom = inner_rect
+
     initial_zombies_placed = 0
     placement_attempts = 0
     max_placement_attempts = INITIAL_ZOMBIES_INSIDE * 20
+
     while initial_zombies_placed < INITIAL_ZOMBIES_INSIDE and placement_attempts < max_placement_attempts:
         placement_attempts += 1
         z_x = random.randint(inner_left, inner_right)
@@ -636,173 +692,260 @@ def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
         collides_with_wall = pygame.sprite.spritecollideany(temp_sprite, wall_group)
         collides_with_player = temp_sprite.rect.colliderect(player.rect.inflate(ZOMBIE_SIGHT_RANGE, ZOMBIE_SIGHT_RANGE))
 
-        # Check collision with initial car position
-        collides_with_car = temp_sprite.rect.colliderect(car_initial_rect.inflate(40, 40))
-        if not collides_with_wall and not collides_with_player and not collides_with_car:
+        if not collides_with_wall and not collides_with_player:
             new_zombie = temp_zombie
             zombie_group.add(new_zombie)
             all_sprites.add(new_zombie, layer=1)
             initial_zombies_placed += 1
-    # if initial_zombies_placed < INITIAL_ZOMBIES_INSIDE: print(f"Warning: Could only place {initial_zombies_placed}/{INITIAL_ZOMBIES_INSIDE} initial zombies.")
 
-    last_zombie_spawn_time = pygame.time.get_ticks() - ZOMBIE_SPAWN_DELAY_MS
+    game_data["state"]["last_zombie_spawn_time"] = pygame.time.get_ticks() - ZOMBIE_SPAWN_DELAY_MS
 
-    # Fog surfaces
-    fog_surface_hard = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-    fog_surface_soft = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
 
-    # --- Game Loop ---
+def handle_game_over_state(screen, game_data):
+    """Handle rendering and input when game is over or won."""
+    state = game_data["state"]
+    wall_group = game_data["groups"]["wall_group"]
+
+    # Create overview map if needed
+    if not state["overview_created"]:
+        state["overview_surface"] = pygame.Surface((LEVEL_WIDTH, LEVEL_HEIGHT))
+        draw_level_overview(state["overview_surface"], wall_group, game_data["player"], game_data["car"])
+
+        level_aspect = LEVEL_WIDTH / LEVEL_HEIGHT
+        screen_aspect = SCREEN_WIDTH / SCREEN_HEIGHT
+        if level_aspect > screen_aspect:
+            scaled_w = SCREEN_WIDTH - 40
+            scaled_h = int(scaled_w / level_aspect)
+        else:
+            scaled_h = SCREEN_HEIGHT - 40
+            scaled_w = int(scaled_h * level_aspect)
+
+        # Ensure scaled dimensions are at least 1
+        scaled_w = max(1, scaled_w)
+        scaled_h = max(1, scaled_h)
+
+        state["scaled_overview"] = pygame.transform.smoothscale(state["overview_surface"], (scaled_w, scaled_h))
+        state["overview_created"] = True
+
+    # Display overview map and messages
+    screen.fill(BLACK)
+    if state["scaled_overview"]:
+        screen.blit(
+            state["scaled_overview"], state["scaled_overview"].get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        )
+
+    if state["game_won"]:
+        show_message(screen, "YOU ESCAPED!", 40, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
+
+    show_message(screen, "Press 'R' to Restart or ESC to Quit", 30, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30))
+
+    pygame.display.flip()
+
+    # Check for restart input
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            return False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                return False
+            if event.key == pygame.K_r:
+                return True
+
+    return None  # Continue in current state
+
+
+def process_player_input(keys, player, car):
+    """Process keyboard input and return movement deltas."""
+    dx_input, dy_input = 0, 0
+    if keys[pygame.K_w] or keys[pygame.K_UP]:
+        dy_input -= 1
+    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+        dy_input += 1
+    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        dx_input -= 1
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        dx_input += 1
+
+    player_dx, player_dy, car_dx, car_dy = 0, 0, 0, 0
+
+    if player.in_car and car.alive():
+        target_speed = CAR_SPEED
+        move_len = math.hypot(dx_input, dy_input)
+        if move_len > 0:
+            car_dx, car_dy = (dx_input / move_len) * target_speed, (dy_input / move_len) * target_speed
+    elif not player.in_car:
+        target_speed = PLAYER_SPEED
+        move_len = math.hypot(dx_input, dy_input)
+        if move_len > 0:
+            player_dx, player_dy = (dx_input / move_len) * target_speed, (dy_input / move_len) * target_speed
+
+    return player_dx, player_dy, car_dx, car_dy
+
+
+def update_entities(game_data, player_dx, player_dy, car_dx, car_dy):
+    """Update positions and states of game entities."""
+    player = game_data["player"]
+    car = game_data["car"]
+    wall_group = game_data["groups"]["wall_group"]
+    all_sprites = game_data["groups"]["all_sprites"]
+    zombie_group = game_data["groups"]["zombie_group"]
+    camera = game_data["camera"]
+
+    # Update player/car movement
+    if player.in_car and car.alive():
+        car.move(car_dx, car_dy, wall_group)
+        player.rect.center = car.rect.center
+        player.x, player.y = car.x, car.y
+    elif not player.in_car:
+        # Ensure player is in all_sprites if not in car
+        if player not in all_sprites:
+            all_sprites.add(player, layer=2)
+        player.move(player_dx, player_dy, wall_group)
+
+    # Update camera
+    target_for_camera = car if player.in_car and car.alive() else player
+    camera.update(target_for_camera)
+
+    # Spawn new zombies if needed
+    current_time = pygame.time.get_ticks()
+    if (
+        len(zombie_group) < MAX_ZOMBIES
+        and current_time - game_data["state"]["last_zombie_spawn_time"] > ZOMBIE_SPAWN_DELAY_MS
+    ):
+        new_zombie = Zombie(hint_pos=(player.x, player.y))
+        zombie_group.add(new_zombie)
+        all_sprites.add(new_zombie, layer=1)
+        game_data["state"]["last_zombie_spawn_time"] = current_time
+
+    # Update zombies
+    target_center = car.rect.center if player.in_car and car.alive() else player.rect.center
+    for zombie in zombie_group:
+        zombie.update(target_center, wall_group)
+
+
+def check_interactions(game_data):
+    """Check and handle interactions between entities."""
+    player = game_data["player"]
+    car = game_data["car"]
+    zombie_group = game_data["groups"]["zombie_group"]
+    wall_group = game_data["groups"]["wall_group"]
+    all_sprites = game_data["groups"]["all_sprites"]
+    inner_rect = game_data["areas"]["inner_rect"]
+    state = game_data["state"]
+
+    # Player entering car
+    shrunk_car = get_shrunk_sprite(car, 0.8)
+    if not player.in_car and car.alive() and car.health > 0:
+        g = pygame.sprite.Group()
+        g.add(player)
+        if pygame.sprite.spritecollide(shrunk_car, g, False):
+            player.in_car = True
+            all_sprites.remove(player)
+            print("Player entered car!")
+
+    # Car hitting zombies
+    if player.in_car and car.alive() and car.health > 0:
+        zombies_hit = pygame.sprite.spritecollide(shrunk_car, zombie_group, True)
+        if zombies_hit:
+            car.take_damage(CAR_ZOMBIE_DAMAGE * len(zombies_hit))
+
+    # Handle car destruction
+    if car.alive() and car.health <= 0:
+        car_destroyed_pos = car.rect.center
+        car.kill()
+        if player.in_car:
+            player.in_car = False
+            player.x, player.y = car_destroyed_pos[0], car_destroyed_pos[1]
+            player.rect.center = (int(player.x), int(player.y))
+            if player not in all_sprites:
+                all_sprites.add(player, layer=2)
+            print("Car destroyed! Player ejected.")
+
+        # Respawn car
+        new_car = place_new_car(wall_group, player, inner_rect)
+        if new_car is None:
+            # Fallback: Try original car position or other strategies
+            new_car = Car(car.rect.centerx, car.rect.centery)
+
+        if new_car is not None:
+            game_data["car"] = new_car  # Update car reference
+            all_sprites.add(new_car, layer=1)
+        else:
+            print("Error: Failed to respawn car anywhere!")
+
+    # Player getting caught by zombies
+    if not player.in_car and player in all_sprites:
+        shrunk_player = get_shrunk_sprite(player, 0.8)
+        if pygame.sprite.spritecollide(shrunk_player, zombie_group, False, pygame.sprite.collide_circle):
+            state["game_over"] = True
+
+    # Player escaping the level
+    if player.in_car and car.alive():
+        if not pygame.Rect(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT).collidepoint(car.rect.center):
+            state["game_won"] = True
+
+    # Return fog of view target
+    if not state["game_over"] and not state["game_won"]:
+        return car if player.in_car and car.alive() else player
+    return None
+
+
+def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
+    """Main game loop function, now using smaller helper functions."""
+    # Initialize game components
+    game_data = initialize_game_state()
+
+    # Set up player and car
+    player, car, player_initial_rect, car_initial_rect = setup_player_and_car(game_data)
+    game_data["player"] = player
+    game_data["car"] = car
+
+    # Generate level
+    generate_level_walls(game_data, player_initial_rect, car_initial_rect)
+
+    # Spawn initial zombies
+    spawn_initial_zombies(game_data, player)
+
+    # Game loop
     running = True
     while running:
         dt = clock.tick(FPS) / 1000.0
-        player_dx, player_dy, car_dx, car_dy = 0, 0, 0, 0
 
-        # Event Handling
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return False  # Signal main to quit
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    return False  # Signal main to quit
-                if (game_over or game_won) and event.key == pygame.K_r:
-                    return True  # Signal main to restart the game
-
-        # Game Over/Game Won State
-        if game_over or game_won:
-            if not overview_created:
-                overview_surface = pygame.Surface((LEVEL_WIDTH, LEVEL_HEIGHT))
-                draw_level_overview(overview_surface, wall_group, player, car)
-                level_aspect = LEVEL_WIDTH / LEVEL_HEIGHT
-                screen_aspect = SCREEN_WIDTH / SCREEN_HEIGHT
-                if level_aspect > screen_aspect:
-                    scaled_w = SCREEN_WIDTH - 40
-                    scaled_h = int(scaled_w / level_aspect)
-                else:
-                    scaled_h = SCREEN_HEIGHT - 40
-                    scaled_w = int(scaled_h * level_aspect)
-                # Ensure scaled dimensions are at least 1
-                scaled_w = max(1, scaled_w)
-                scaled_h = max(1, scaled_h)
-
-                scaled_overview = pygame.transform.smoothscale(overview_surface, (scaled_w, scaled_h))
-                overview_created = True
-
-            screen.fill(BLACK)
-            if scaled_overview:
-                screen.blit(scaled_overview, scaled_overview.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)))
-
-            if game_won:
-                show_message(screen, "YOU ESCAPED!", 40, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
-
-            show_message(
-                screen, "Press 'R' to Restart or ESC to Quit", 30, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30)
-            )
-            pygame.display.flip()
+        # Handle game over state
+        if game_data["state"]["game_over"] or game_data["state"]["game_won"]:
+            result = handle_game_over_state(screen, game_data)
+            if result is not None:  # If restart or quit was selected
+                return result
             continue
 
-        # Normal Game Running State
+        # Check for quit events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return False
+
+        # Process input
         keys = pygame.key.get_pressed()
-        dx_input, dy_input = 0, 0
-        if keys[pygame.K_w] or keys[pygame.K_UP]:
-            dy_input -= 1
-        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-            dy_input += 1
-        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-            dx_input -= 1
-        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-            dx_input += 1
-        if player.in_car and car.alive():
-            target_speed = CAR_SPEED
-            move_len = math.hypot(dx_input, dy_input)
-            if move_len > 0:
-                car_dx, car_dy = (dx_input / move_len) * target_speed, (dy_input / move_len) * target_speed
-        elif not player.in_car:
-            target_speed = PLAYER_SPEED
-            move_len = math.hypot(dx_input, dy_input)
-            if move_len > 0:
-                player_dx, player_dy = (dx_input / move_len) * target_speed, (dy_input / move_len) * target_speed
+        player_dx, player_dy, car_dx, car_dy = process_player_input(keys, player, car)
 
-        # Updates
-        # player/car
-        if player.in_car and car.alive():
-            car.move(car_dx, car_dy, wall_group)
-            player.rect.center = car.rect.center
-            player.x, player.y = car.x, car.y
-        elif not player.in_car:
-            # Ensure player is in all_sprites if not in car
-            if player not in all_sprites:
-                all_sprites.add(player, layer=2)
-            player.move(player_dx, player_dy, wall_group)
+        # Update game entities
+        update_entities(game_data, player_dx, player_dy, car_dx, car_dy)
 
-        # camera
-        target_for_camera = car if player.in_car and car.alive() else player
-        camera.update(target_for_camera)
+        # Handle interactions
+        fov_target = check_interactions(game_data)
 
-        # zombies
-        current_time = pygame.time.get_ticks()
-        if len(zombie_group) < MAX_ZOMBIES and current_time - last_zombie_spawn_time > ZOMBIE_SPAWN_DELAY_MS:
-            new_zombie = Zombie(hint_pos=(player.x, player.y))
-            zombie_group.add(new_zombie)
-            all_sprites.add(new_zombie, layer=1)
-            last_zombie_spawn_time = current_time
-        target_center = car.rect.center if player.in_car and car.alive() else player.rect.center
-        for zombie in zombie_group:
-            zombie.update(target_center, wall_group)
+        # Draw everything
+        draw(
+            screen,
+            game_data["areas"]["outer_rect"],
+            game_data["camera"],
+            game_data["groups"]["all_sprites"],
+            fov_target,
+            game_data["fog"]["soft"],
+            game_data["fog"]["hard"],
+        )
 
-        # Interactions & State Checks
-        shrunk_car = get_shrunk_sprite(car, 0.8)
-        if not player.in_car and car.alive() and car.health > 0:
-            g = pygame.sprite.Group()
-            g.add(player)
-            if pygame.sprite.spritecollide(shrunk_car, g, False):
-                player.in_car = True
-                all_sprites.remove(player)
-                print("Player entered car!")
-
-        if player.in_car and car.alive() and car.health > 0:
-            zombies_hit = pygame.sprite.spritecollide(shrunk_car, zombie_group, True)
-            if zombies_hit:
-                car.take_damage(CAR_ZOMBIE_DAMAGE * len(zombies_hit))
-
-        if car.alive() and car.health <= 0:  # Check if car is alive before checking health
-            car_destroyed_pos = car.rect.center  # Store position before killing
-            car.kill()
-            if player.in_car:
-                player.in_car = False
-                player.x, player.y = car_destroyed_pos[0], car_destroyed_pos[1]
-                player.rect.center = (int(player.x), int(player.y))
-                if player not in all_sprites:
-                    all_sprites.add(player, layer=2)
-                print("Car destroyed! Player ejected.")
-
-            # Respawn car
-            new_car = place_new_car(wall_group, player, inner_rect)
-            if new_car is None:
-                # Fallback: If placing in inner_rect fails, try original car position
-                new_car = Car(car_initial_rect.centerx, car_initial_rect.centery)
-                # print("Failed to find a suitable location for the new car. Falling back to the original car's position.")
-            if new_car is not None:
-                car = new_car  # Update the main car variable
-                all_sprites.add(car, layer=1)
-            else:
-                print("Error: Failed to respawn car anywhere!")  # Should not happen often
-
-        if not player.in_car and player in all_sprites:
-            shrunk_player = get_shrunk_sprite(player, 0.8)
-            if pygame.sprite.spritecollide(shrunk_player, zombie_group, False, pygame.sprite.collide_circle):
-                game_over = True
-
-        if player.in_car and car.alive():
-            if not pygame.Rect(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT).collidepoint(car.rect.center):
-                game_won = True
-
-        fov_target = None
-        if not game_over and not game_won:
-            fov_target = car if player.in_car and car.alive() else player
-
-        draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surface_soft, fog_surface_hard)
-
-    # Return False if game loop exited normally (e.g., by quitting)
     return False
 
 
