@@ -43,6 +43,14 @@ PLAYER_SPEED = 2.8
 FOV_RADIUS = 180
 FOV_RADIUS_SOFT_FACTOR = 1.5
 
+# Footprint settings
+FOOTPRINT_RADIUS = 5
+FOOTPRINT_COLOR = (110, 200, 255)
+FOOTPRINT_STEP_DISTANCE = 80
+FOOTPRINT_LIFETIME_MS = 135000
+FOOTPRINT_MAX = 320
+FOOTPRINT_MIN_FADE = 0.3
+
 # Zombie settings
 ZOMBIE_RADIUS = 11
 ZOMBIE_SPEED = 1.4
@@ -541,10 +549,17 @@ def show_message(
         print(f"Error rendering font or surface: {e}")
 
 
-def draw_level_overview(surface: surface.Surface, wall_group: sprite.Group, player: Player, car: Car) -> None:
+def draw_level_overview(surface: surface.Surface, wall_group: sprite.Group, player: Player, car: Car, footprints) -> None:
     surface.fill(BLACK)
     for wall in wall_group:
         pygame.draw.rect(surface, INTERNAL_WALL_COLOR, wall.rect)
+    now = pygame.time.get_ticks()
+    for fp in footprints:
+        age = now - fp["time"]
+        fade = 1 - (age / FOOTPRINT_LIFETIME_MS)
+        fade = max(FOOTPRINT_MIN_FADE, fade)
+        color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
+        pygame.draw.circle(surface, color, (int(fp["pos"][0]), int(fp["pos"][1])), FOOTPRINT_RADIUS)
     if player:
         pygame.draw.circle(surface, BLUE, player.rect.center, PLAYER_RADIUS * 2)
     if car and car.alive():
@@ -590,7 +605,27 @@ def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Opt
     return sprite
 
 
-def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surface_soft, fog_surface_hard):
+def update_footprints(game_data) -> None:
+    """Record player steps and clean up old footprints."""
+    state = game_data["state"]
+    player: Player = game_data["player"]
+    now = pygame.time.get_ticks()
+
+    footprints = state.get("footprints", [])
+    if not player.in_car:
+        last_pos = state.get("last_footprint_pos")
+        dist = math.hypot(player.x - last_pos[0], player.y - last_pos[1]) if last_pos else None
+        if last_pos is None or (dist is not None and dist >= FOOTPRINT_STEP_DISTANCE):
+            footprints.append({"pos": (player.x, player.y), "time": now})
+            state["last_footprint_pos"] = (player.x, player.y)
+
+    if len(footprints) > FOOTPRINT_MAX:
+        footprints = footprints[-FOOTPRINT_MAX:]
+
+    state["footprints"] = footprints
+
+
+def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surface_soft, fog_surface_hard, footprints):
     # Drawing
     screen.fill(BLACK)
 
@@ -608,6 +643,18 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surface_soft, 
                 sr = camera.apply_rect(r)
                 if sr.colliderect(screen.get_rect()):
                     pygame.draw.rect(screen, DARK_GRAY, sr)
+
+    # footprints
+    now = pygame.time.get_ticks()
+    for fp in footprints:
+        age = now - fp["time"]
+        fade = 1 - (age / FOOTPRINT_LIFETIME_MS)
+        fade = max(FOOTPRINT_MIN_FADE, fade)
+        color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
+        fp_rect = pygame.Rect(fp["pos"][0] - FOOTPRINT_RADIUS, fp["pos"][1] - FOOTPRINT_RADIUS, FOOTPRINT_RADIUS * 2, FOOTPRINT_RADIUS * 2)
+        sr = camera.apply_rect(fp_rect)
+        if sr.colliderect(screen.get_rect().inflate(30, 30)):
+            pygame.draw.circle(screen, color, sr.center, FOOTPRINT_RADIUS)
 
     # player, car, zombies, walls
     for sprite in all_sprites:
@@ -641,6 +688,8 @@ def initialize_game_state():
         "scaled_overview": None,
         "overview_created": False,
         "last_zombie_spawn_time": 0,
+        "footprints": [],
+        "last_footprint_pos": None,
     }
 
     # Create sprite groups
@@ -743,7 +792,7 @@ def handle_game_over_state(screen, game_data):
     # Create overview map if needed
     if not state["overview_created"]:
         state["overview_surface"] = pygame.Surface((LEVEL_WIDTH, LEVEL_HEIGHT))
-        draw_level_overview(state["overview_surface"], wall_group, game_data["player"], game_data["car"])
+        draw_level_overview(state["overview_surface"], wall_group, game_data["player"], game_data["car"], state.get("footprints", []))
 
         level_aspect = LEVEL_WIDTH / LEVEL_HEIGHT
         screen_aspect = SCREEN_WIDTH / SCREEN_HEIGHT
@@ -938,6 +987,7 @@ def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
 
     # Spawn initial zombies
     spawn_initial_zombies(game_data, player, layout_data)
+    update_footprints(game_data)
 
     # Game loop
     running = True
@@ -964,6 +1014,7 @@ def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
 
         # Update game entities
         update_entities(game_data, player_dx, player_dy, car_dx, car_dy)
+        update_footprints(game_data)
 
         # Handle interactions
         fov_target = check_interactions(game_data)
@@ -977,6 +1028,7 @@ def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
             fov_target,
             game_data["fog"]["soft"],
             game_data["fog"]["hard"],
+            game_data["state"]["footprints"],
         )
 
     return False
