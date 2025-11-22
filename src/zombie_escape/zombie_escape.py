@@ -9,6 +9,10 @@ import pygame
 from pygame import rect, sprite, surface, time
 
 from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
+try:
+    from .__about__ import __version__
+except:
+    __version__ = "0.0.0-unknown"
 
 # --- Constants ---
 SCREEN_WIDTH = 800
@@ -1129,7 +1133,7 @@ def main():
         # Font errors are often non-fatal, continue without fonts or handle gracefully
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Zombie Escape v0.5.6")
+    pygame.display.set_caption(f"Zombie Escape v{__version__}")
     clock = pygame.time.Clock()
 
     restart_game = True
