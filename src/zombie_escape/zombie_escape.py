@@ -8,13 +8,19 @@ from enum import Enum  # For Zombie Modes
 import pygame
 from pygame import rect, sprite, surface, time
 
+from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
+
 # --- Constants ---
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 FPS = 60
-LEVEL_SCALE = 4
-LEVEL_WIDTH = SCREEN_WIDTH * LEVEL_SCALE
-LEVEL_HEIGHT = SCREEN_HEIGHT * LEVEL_SCALE
+
+# Level dimensions are driven by the blueprint grid.
+LEVEL_GRID_COLS = GRID_COLS
+LEVEL_GRID_ROWS = GRID_ROWS
+CELL_SIZE = TILE_SIZE
+LEVEL_WIDTH = LEVEL_GRID_COLS * CELL_SIZE
+LEVEL_HEIGHT = LEVEL_GRID_ROWS * CELL_SIZE
 
 # Colors
 WHITE = (255, 255, 255)
@@ -56,7 +62,7 @@ CAR_ZOMBIE_DAMAGE = 1
 
 # Wall settings
 INTERNAL_WALL_THICKNESS = 24
-INTERNAL_WALL_GRID_SNAP = 100
+INTERNAL_WALL_GRID_SNAP = CELL_SIZE
 INTERNAL_WALL_SEGMENT_LENGTH = 50
 INTERNAL_WALL_HEALTH = 40
 INTERNAL_WALL_COLOR = GRAY
@@ -451,6 +457,69 @@ def generate_internal_walls(
     return newly_added_walls
 
 
+def rect_for_cell(x_idx: int, y_idx: int) -> pygame.Rect:
+    return pygame.Rect(x_idx * CELL_SIZE, y_idx * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+
+
+def generate_level_from_blueprint(game_data):
+    """Build walls/spawn candidates/outside area from a blueprint grid."""
+    wall_group = game_data["groups"]["wall_group"]
+    all_sprites = game_data["groups"]["all_sprites"]
+
+    blueprint = choose_blueprint()
+    outside_rects: List[pygame.Rect] = []
+    walkable_cells: List[pygame.Rect] = []
+    player_cells: List[pygame.Rect] = []
+    car_cells: List[pygame.Rect] = []
+    zombie_cells: List[pygame.Rect] = []
+
+    for y, row in enumerate(blueprint):
+        if len(row) != LEVEL_GRID_COLS:
+            raise ValueError(f"Blueprint width mismatch at row {y}: {len(row)} != {LEVEL_GRID_COLS}")
+        for x, ch in enumerate(row):
+            cell_rect = rect_for_cell(x, y)
+            if ch == "O":
+                outside_rects.append(cell_rect)
+                continue
+            if ch == "B":
+                wall = Wall(
+                    cell_rect.x, cell_rect.y, cell_rect.width, cell_rect.height, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR
+                )
+                wall_group.add(wall)
+                all_sprites.add(wall, layer=0)
+                continue
+            if ch == "E":
+                walkable_cells.append(cell_rect)
+            elif ch == "1":
+                wall = Wall(
+                    cell_rect.x, cell_rect.y, cell_rect.width, cell_rect.height, health=INTERNAL_WALL_HEALTH, color=INTERNAL_WALL_COLOR
+                )
+                wall_group.add(wall)
+                all_sprites.add(wall, layer=0)
+            else:
+                walkable_cells.append(cell_rect)
+
+            if ch == "P":
+                player_cells.append(cell_rect)
+            if ch == "C":
+                car_cells.append(cell_rect)
+            if ch == "Z":
+                zombie_cells.append(cell_rect)
+
+    game_data["areas"]["outer_rect"] = (0, 0, LEVEL_WIDTH, LEVEL_HEIGHT)
+    game_data["areas"]["inner_rect"] = (0, 0, LEVEL_WIDTH, LEVEL_HEIGHT)
+    game_data["areas"]["outside_rects"] = outside_rects
+    game_data["areas"]["walkable_cells"] = walkable_cells
+    game_data["areas"]["level_rect"] = pygame.Rect(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT)
+
+    return {
+        "player_cells": player_cells,
+        "car_cells": car_cells,
+        "zombie_cells": zombie_cells,
+        "walkable_cells": walkable_cells,
+    }
+
+
 # --- Helper Functions ---
 def show_message(
     screen: surface.Surface, text: str, size: int, color: Tuple[int, int, int], position: Tuple[int, int]
@@ -482,24 +551,22 @@ def draw_level_overview(surface: surface.Surface, wall_group: sprite.Group, play
         pygame.draw.rect(surface, YELLOW, car.rect)  # Draw car only if it exists
 
 
-def place_new_car(wall_group, player, inner_rect):
-    inner_left, inner_top, inner_right, inner_bottom = inner_rect
+def place_new_car(wall_group, player, walkable_cells: List[pygame.Rect]):
+    if not walkable_cells:
+        return None
 
     max_attempts = 150
     for attempt in range(max_attempts):
-        c_x = random.randint(inner_left, inner_right)
-        c_y = random.randint(inner_top, inner_bottom)
+        cell = random.choice(walkable_cells)
+        c_x, c_y = cell.center
         temp_car = Car(c_x, c_y)
         temp_rect = temp_car.rect.inflate(30, 30)
-        collides_wall = False
         nearby_walls = pygame.sprite.Group()
         nearby_walls.add([w for w in wall_group if abs(w.rect.centerx - c_x) < 150 and abs(w.rect.centery - c_y) < 150])
-        if pygame.sprite.spritecollideany(temp_car, nearby_walls, collided=lambda s1, s2: s1.rect.colliderect(s2.rect)):
-            collides_wall = True
+        collides_wall = pygame.sprite.spritecollideany(temp_car, nearby_walls, collided=lambda s1, s2: s1.rect.colliderect(s2.rect))
         collides_player = temp_rect.colliderect(player.rect.inflate(50, 50))
         if not collides_wall and not collides_player:
             return temp_car
-    # print("Warning: Failed to find suitable location for new car.")
     return None
 
 
@@ -584,13 +651,9 @@ def initialize_game_state():
     # Create camera
     camera = Camera(LEVEL_WIDTH, LEVEL_HEIGHT)
 
-    # Define level areas
-    outer_rect = OUTER_WALL_MARGIN, OUTER_WALL_MARGIN, LEVEL_WIDTH - OUTER_WALL_MARGIN, LEVEL_HEIGHT - OUTER_WALL_MARGIN
-    inner_left = outer_rect[0] + INTERNAL_WALL_GRID_SNAP * 2
-    inner_top = outer_rect[1] + INTERNAL_WALL_GRID_SNAP * 2
-    inner_right = outer_rect[2] - INTERNAL_WALL_GRID_SNAP * 2
-    inner_bottom = outer_rect[3] - INTERNAL_WALL_GRID_SNAP * 2
-    inner_rect = inner_left, inner_top, inner_right, inner_bottom
+    # Define level areas (will be filled by blueprint generation)
+    outer_rect = 0, 0, LEVEL_WIDTH, LEVEL_HEIGHT
+    inner_rect = outer_rect
 
     # Create fog surfaces
     fog_surface_hard = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -605,77 +668,48 @@ def initialize_game_state():
     }
 
 
-def setup_player_and_car(game_data):
-    """Create and position the player and car, add them to appropriate sprites groups."""
-    inner_rect = game_data["areas"]["inner_rect"]
+def setup_player_and_car(game_data, layout_data):
+    """Create and position the player and car using blueprint candidates."""
     all_sprites = game_data["groups"]["all_sprites"]
+    walkable_cells: List[pygame.Rect] = layout_data["walkable_cells"]
 
-    inner_left, inner_top, inner_right, inner_bottom = inner_rect
+    def pick_center(cells: List[pygame.Rect]) -> Tuple[int, int]:
+        return random.choice(cells).center if cells else (LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2)
 
-    # Place player
-    player_start_x = random.randrange(inner_left, inner_right)
-    player_start_y = random.randrange(inner_top, inner_bottom)
-    player = Player(player_start_x, player_start_y)
+    player_pos = pick_center(layout_data["player_cells"] or walkable_cells)
+    player = Player(*player_pos)
 
     # Place car away from player
-    car_start_x, car_start_y = None, None
-    while car_start_x is None:
-        car_start_x = random.randrange(inner_left, inner_right)
-        car_start_y = random.randrange(inner_top, inner_bottom)
-        if math.hypot(car_start_x - player_start_x, car_start_y - player_start_y) < 400:
-            car_start_x = None
+    car_candidates = layout_data["car_cells"] or walkable_cells
+    car_pos = None
+    for _ in range(200):
+        candidate = random.choice(car_candidates)
+        if math.hypot(candidate.centerx - player_pos[0], candidate.centery - player_pos[1]) >= 400:
+            car_pos = candidate.center
+            break
+    if car_pos is None and car_candidates:
+        car_pos = random.choice(car_candidates).center
+    elif car_pos is None:
+        car_pos = (player_pos[0] + 200, player_pos[1])  # Fallback
 
-    car = Car(car_start_x, car_start_y)
-    player_initial_rect = player.rect.copy()
-    car_initial_rect = car.rect.copy()
+    car = Car(*car_pos)
 
     # Add to sprite groups
     all_sprites.add(player, layer=2)
     all_sprites.add(car, layer=1)
 
-    return player, car, player_initial_rect, car_initial_rect
+    return player, car
 
 
-def generate_level_walls(game_data, player_rect, car_rect):
-    """Generate outer and inner walls for the level."""
-    outer_rect = game_data["areas"]["outer_rect"]
-    wall_group = game_data["groups"]["wall_group"]
-    all_sprites = game_data["groups"]["all_sprites"]
-
-    # Parameters
-    NUM_INTERNAL_WALL_LINES = 240
-    INTERNAL_WALL_MIN_LEN = 100
-    INTERNAL_WALL_MAX_LEN = 400
-    EXIT_WIDTH = 100
-    EXITS_PER_SIDE = 3
-
-    # Generate walls
-    outer_walls = generate_outer_walls_simple(
-        outer_rect,
-        EXIT_WIDTH,
-        EXITS_PER_SIDE,
-    )
-    wall_group.add(outer_walls)
-    all_sprites.add(outer_walls, layer=0)
-
-    internal_walls = generate_internal_walls(
-        NUM_INTERNAL_WALL_LINES,
-        outer_rect,
-        (INTERNAL_WALL_MIN_LEN, INTERNAL_WALL_MAX_LEN),
-        [player_rect, car_rect],
-    )
-    wall_group.add(internal_walls)
-    all_sprites.add(internal_walls, layer=0)
-
-
-def spawn_initial_zombies(game_data, player):
-    """Spawn initial zombies inside the level."""
-    inner_rect = game_data["areas"]["inner_rect"]
+def spawn_initial_zombies(game_data, player, layout_data):
+    """Spawn initial zombies using blueprint candidate cells."""
     wall_group = game_data["groups"]["wall_group"]
     zombie_group = game_data["groups"]["zombie_group"]
     all_sprites = game_data["groups"]["all_sprites"]
 
-    inner_left, inner_top, inner_right, inner_bottom = inner_rect
+    spawn_cells = layout_data["zombie_cells"] or layout_data["walkable_cells"]
+    if not spawn_cells:
+        return
 
     initial_zombies_placed = 0
     placement_attempts = 0
@@ -683,9 +717,9 @@ def spawn_initial_zombies(game_data, player):
 
     while initial_zombies_placed < INITIAL_ZOMBIES_INSIDE and placement_attempts < max_placement_attempts:
         placement_attempts += 1
-        z_x = random.randint(inner_left, inner_right)
-        z_y = random.randint(inner_top, inner_bottom)
-        temp_zombie = Zombie(start_pos=(z_x, z_y))
+        cell = random.choice(spawn_cells)
+        z_pos = cell.center
+        temp_zombie = Zombie(start_pos=z_pos)
         temp_sprite = pygame.sprite.Sprite()
         temp_sprite.rect = temp_zombie.rect.inflate(5, 5)
 
@@ -830,8 +864,9 @@ def check_interactions(game_data):
     zombie_group = game_data["groups"]["zombie_group"]
     wall_group = game_data["groups"]["wall_group"]
     all_sprites = game_data["groups"]["all_sprites"]
-    inner_rect = game_data["areas"]["inner_rect"]
     state = game_data["state"]
+    walkable_cells = game_data["areas"].get("walkable_cells", [])
+    outside_rects = game_data["areas"].get("outside_rects", [])
 
     # Player entering car
     shrunk_car = get_shrunk_sprite(car, 0.8)
@@ -862,7 +897,7 @@ def check_interactions(game_data):
             print("Car destroyed! Player ejected.")
 
         # Respawn car
-        new_car = place_new_car(wall_group, player, inner_rect)
+        new_car = place_new_car(wall_group, player, walkable_cells)
         if new_car is None:
             # Fallback: Try original car position or other strategies
             new_car = Car(car.rect.centerx, car.rect.centery)
@@ -881,7 +916,7 @@ def check_interactions(game_data):
 
     # Player escaping the level
     if player.in_car and car.alive():
-        if not pygame.Rect(0, 0, LEVEL_WIDTH, LEVEL_HEIGHT).collidepoint(car.rect.center):
+        if any(outside.collidepoint(car.rect.center) for outside in outside_rects):
             state["game_won"] = True
 
     # Return fog of view target
@@ -895,16 +930,14 @@ def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
     # Initialize game components
     game_data = initialize_game_state()
 
-    # Set up player and car
-    player, car, player_initial_rect, car_initial_rect = setup_player_and_car(game_data)
+    # Generate level from blueprint and set up player/car
+    layout_data = generate_level_from_blueprint(game_data)
+    player, car = setup_player_and_car(game_data, layout_data)
     game_data["player"] = player
     game_data["car"] = car
 
-    # Generate level
-    generate_level_walls(game_data, player_initial_rect, car_initial_rect)
-
     # Spawn initial zombies
-    spawn_initial_zombies(game_data, player)
+    spawn_initial_zombies(game_data, player, layout_data)
 
     # Game loop
     running = True
@@ -984,7 +1017,7 @@ def main():
         # Font errors are often non-fatal, continue without fonts or handle gracefully
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Zombie Escape v0.5.5")
+    pygame.display.set_caption("Zombie Escape v0.5.6")
     clock = pygame.time.Clock()
 
     restart_game = True
