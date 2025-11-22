@@ -42,14 +42,14 @@ PLAYER_RADIUS = 11
 PLAYER_SPEED = 2.8
 FOV_RADIUS = 180
 FOV_RADIUS_SOFT_FACTOR = 1.5
-FOG_MAX_RADIUS_FACTOR = 2.6
-FOG_HATCH_DEFAULT_SPACING = 16
-FOG_HATCH_THICKNESS = 3
+FOG_MAX_RADIUS_FACTOR = 1.55
+FOG_HATCH_DEFAULT_SPACING = 18
+FOG_HATCH_THICKNESS = 7
 FOG_RINGS = [
-    {"radius_factor": 1.15, "alpha": 70, "spacing": 18},
-    {"radius_factor": 1.45, "alpha": 120, "spacing": 14},
-    {"radius_factor": 1.8, "alpha": 170, "spacing": 10},
-    {"radius_factor": 2.2, "alpha": 220, "spacing": 8},
+    {"radius_factor": 0.9, "alpha": 130, "spacing": 20},
+    {"radius_factor": 1.1, "alpha": 190, "spacing": 16},
+    {"radius_factor": 1.3, "alpha": 240, "spacing": 12},
+    {"radius_factor": 1.45, "alpha": 255, "spacing": 10},
 ]
 
 # Footprint settings
@@ -615,20 +615,34 @@ def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Opt
 
 
 def get_hatch_pattern(fog_data, spacing: int, thickness: int) -> surface.Surface:
-    """Return cached diagonal hatch pattern surface."""
+    """Return cached ordered-dither tile surface (Bayer-style)."""
     cache = fog_data.setdefault("hatch_patterns", {})
     key = (spacing, thickness)
     if key in cache:
         return cache[key]
 
     spacing = max(4, spacing)
-    thickness = max(1, thickness)
+    density = max(1, min(thickness, 16))
     pattern = pygame.Surface((spacing, spacing), pygame.SRCALPHA)
-    # Draw diagonal lines across the tile
-    for offset in range(-spacing, spacing * 2, spacing // 2):
-        start = (offset, spacing)
-        end = (offset + spacing, 0)
-        pygame.draw.line(pattern, (0, 0, 0, 255), start, end, thickness)
+
+    # 8x8 Bayer matrix values 0..63 for ordered dithering
+    bayer = [
+        [0, 32, 8, 40, 2, 34, 10, 42],
+        [48, 16, 56, 24, 50, 18, 58, 26],
+        [12, 44, 4, 36, 14, 46, 6, 38],
+        [60, 28, 52, 20, 62, 30, 54, 22],
+        [3, 35, 11, 43, 1, 33, 9, 41],
+        [51, 19, 59, 27, 49, 17, 57, 25],
+        [15, 47, 7, 39, 13, 45, 5, 37],
+        [63, 31, 55, 23, 61, 29, 53, 21],
+    ]
+    # Density controls threshold (higher = more filled)
+    threshold = int((density / 16) * 64)
+    for y in range(spacing):
+        for x in range(spacing):
+            if bayer[y % 8][x % 8] < threshold:
+                pattern.set_at((x, y), (0, 0, 0, 255))
+
     cache[key] = pattern
     return pattern
 
