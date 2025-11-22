@@ -42,6 +42,15 @@ PLAYER_RADIUS = 11
 PLAYER_SPEED = 2.8
 FOV_RADIUS = 180
 FOV_RADIUS_SOFT_FACTOR = 1.5
+FOG_MAX_RADIUS_FACTOR = 2.6
+FOG_HATCH_DEFAULT_SPACING = 16
+FOG_HATCH_THICKNESS = 3
+FOG_RINGS = [
+    {"radius_factor": 1.15, "alpha": 70, "spacing": 18},
+    {"radius_factor": 1.45, "alpha": 120, "spacing": 14},
+    {"radius_factor": 1.8, "alpha": 170, "spacing": 10},
+    {"radius_factor": 2.2, "alpha": 220, "spacing": 8},
+]
 
 # Footprint settings
 FOOTPRINT_RADIUS = 5
@@ -605,6 +614,25 @@ def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Opt
     return sprite
 
 
+def get_hatch_pattern(fog_data, spacing: int, thickness: int) -> surface.Surface:
+    """Return cached diagonal hatch pattern surface."""
+    cache = fog_data.setdefault("hatch_patterns", {})
+    key = (spacing, thickness)
+    if key in cache:
+        return cache[key]
+
+    spacing = max(4, spacing)
+    thickness = max(1, thickness)
+    pattern = pygame.Surface((spacing, spacing), pygame.SRCALPHA)
+    # Draw diagonal lines across the tile
+    for offset in range(-spacing, spacing * 2, spacing // 2):
+        start = (offset, spacing)
+        end = (offset + spacing, 0)
+        pygame.draw.line(pattern, (0, 0, 0, 255), start, end, thickness)
+    cache[key] = pattern
+    return pattern
+
+
 def update_footprints(game_data) -> None:
     """Record player steps and clean up old footprints."""
     state = game_data["state"]
@@ -625,7 +653,19 @@ def update_footprints(game_data) -> None:
     state["footprints"] = footprints
 
 
-def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surface_soft, fog_surface_hard, footprints):
+def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface, alpha: int, clear_center, radius: float):
+    """Draw a single hatched fog ring onto the screen."""
+    overlay.fill((0, 0, 0, 0))
+    p_w, p_h = pattern.get_size()
+    for y in range(0, SCREEN_HEIGHT, p_h):
+        for x in range(0, SCREEN_WIDTH, p_w):
+            overlay.blit(pattern, (x, y))
+    overlay.set_alpha(alpha)
+    pygame.draw.circle(overlay, (0, 0, 0, 0), clear_center, int(radius))
+    screen.blit(overlay, (0, 0))
+
+
+def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints):
     # Drawing
     screen.fill(BLACK)
 
@@ -662,18 +702,25 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surface_soft, 
         if sprite_screen_rect.colliderect(screen.get_rect().inflate(100, 100)):
             screen.blit(sprite.image, sprite_screen_rect)
 
-    # fog
+    # fog with hatched rings
     if fov_target is not None:
-        # Soft Fog Layer
-        fog_surface_soft.fill(FOG_COLOR_SOFT)
         fov_center_on_screen = camera.apply(fov_target).center
-        soft_radius = int(FOV_RADIUS * FOV_RADIUS_SOFT_FACTOR)
-        pygame.draw.circle(fog_surface_soft, (0, 0, 0, 0), fov_center_on_screen, FOV_RADIUS)
-        screen.blit(fog_surface_soft, (0, 0))
-        # Hard Fog Layer
-        fog_surface_hard.fill(FOG_COLOR)
-        pygame.draw.circle(fog_surface_hard, (0, 0, 0, 0), fov_center_on_screen, soft_radius)
-        screen.blit(fog_surface_hard, (0, 0))
+        fog_hard = fog_surfaces["hard"]
+        fog_soft = fog_surfaces["soft"]
+
+        # Base solid darkness outside max radius
+        fog_hard.fill(FOG_COLOR)
+        max_radius = int(FOV_RADIUS * FOG_MAX_RADIUS_FACTOR)
+        pygame.draw.circle(fog_hard, (0, 0, 0, 0), fov_center_on_screen, max_radius)
+        screen.blit(fog_hard, (0, 0))
+
+        # Hatched rings layered from near to far
+        for ring in FOG_RINGS:
+            radius = int(FOV_RADIUS * ring["radius_factor"])
+            alpha = ring["alpha"]
+            spacing = ring.get("spacing", FOG_HATCH_DEFAULT_SPACING)
+            pattern = get_hatch_pattern(fog_surfaces, spacing, FOG_HATCH_THICKNESS)
+            _blit_hatch_ring(screen, fog_soft, pattern, alpha, fov_center_on_screen, radius)
 
     pygame.display.flip()
 
@@ -713,7 +760,7 @@ def initialize_game_state():
         "groups": {"all_sprites": all_sprites, "wall_group": wall_group, "zombie_group": zombie_group},
         "camera": camera,
         "areas": {"outer_rect": outer_rect, "inner_rect": inner_rect},
-        "fog": {"hard": fog_surface_hard, "soft": fog_surface_soft},
+        "fog": {"hard": fog_surface_hard, "soft": fog_surface_soft, "hatch_patterns": {}},
     }
 
 
@@ -1026,8 +1073,7 @@ def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
             game_data["camera"],
             game_data["groups"]["all_sprites"],
             fov_target,
-            game_data["fog"]["soft"],
-            game_data["fog"]["hard"],
+            game_data["fog"],
             game_data["state"]["footprints"],
         )
 
