@@ -17,6 +17,7 @@ Then, escape this nightmare city!
 This game is a simple 2D top-down action game where the player aims to escape by finding and driving a car out of a large building infested with zombies. The player must evade zombies, break through walls to find a path, and then escape the building in a car.
 
 <img src="imgs/screenshot1.png" width="400">
+<img src="imgs/screenshot2.png" width="400">
 
 ## Controls
 
