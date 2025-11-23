@@ -770,17 +770,16 @@ def _draw_car_hint(screen, camera, player: Player, car: "Car") -> None:
     center_y = player_screen[1] + dir_y * ring_radius
     arrow_len = 32
     tip = (center_x + dir_x * arrow_len, center_y + dir_y * arrow_len)
-    tail = (center_x - dir_x * 12, center_y - dir_y * 12)
+    base = (center_x - dir_x * 12, center_y - dir_y * 12)
     left = (
-        tip[0] - dir_x * 12 - dir_y * 8,
-        tip[1] - dir_y * 12 + dir_x * 8,
+        base[0] - dir_y * 10,
+        base[1] + dir_x * 10,
     )
     right = (
-        tip[0] - dir_x * 12 + dir_y * 8,
-        tip[1] - dir_y * 12 - dir_x * 8,
+        base[0] + dir_y * 10,
+        base[1] - dir_x * 10,
     )
     color = YELLOW
-    pygame.draw.line(screen, color, tail, tip, width=3)
     pygame.draw.polygon(screen, color, [tip, left, right])
 
 
