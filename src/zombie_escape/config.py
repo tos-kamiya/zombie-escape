@@ -8,7 +8,10 @@ from platformdirs import user_config_dir
 APP_NAME = "ZombieEscape"
 
 # Defaults for all configurable options
-DEFAULT_CONFIG: Dict[str, Any] = {"footprints": {"enabled": True}}
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "footprints": {"enabled": True},
+    "fast_zombies": {"enabled": True, "ratio": 0.1},
+}
 
 
 def user_config_path() -> Path:
