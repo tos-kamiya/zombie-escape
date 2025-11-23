@@ -1119,6 +1119,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
     game_data = initialize_game_state(config)
     paused_manual = False
     paused_focus = False
+    last_fov_target = None
 
     # Generate level from blueprint and set up player/car
     layout_data = generate_level_from_blueprint(game_data)
@@ -1129,6 +1130,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
     # Spawn initial zombies
     spawn_initial_zombies(game_data, player, layout_data)
     update_footprints(game_data)
+    last_fov_target = player
 
     # Game loop
     running = True
@@ -1150,13 +1152,24 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
                 return False
             if event.type == pygame.WINDOWFOCUSLOST:
                 paused_focus = True
-            if event.type == pygame.WINDOWFOCUSGAINED:
-                paused_focus = False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
                 paused_manual = not paused_manual
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                paused_focus = False
+                paused_manual = False
 
         paused = paused_manual or paused_focus
         if paused:
+            draw(
+                screen,
+                game_data["areas"]["outer_rect"],
+                game_data["camera"],
+                game_data["groups"]["all_sprites"],
+                last_fov_target,
+                game_data["fog"],
+                game_data["state"]["footprints"],
+                config,
+            )
             overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 150))
             pygame.draw.circle(overlay, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), 70, width=6)
@@ -1170,7 +1183,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
             show_message(screen, "PAUSED", 64, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 90))
             show_message(
                 screen,
-                "Press P or focus window to resume",
+                "Press P or click to resume",
                 32,
                 LIGHT_GRAY,
                 (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 140),
