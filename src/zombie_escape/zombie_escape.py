@@ -749,7 +749,7 @@ def _draw_status_bar(screen, config):
         print(f"Error rendering status bar: {e}")
 
 
-def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints, config):
+def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints, config, do_flip: bool = True):
     # Drawing
     screen.fill(BLACK)
 
@@ -808,7 +808,8 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, foot
             _blit_hatch_ring(screen, fog_soft, pattern, alpha, fov_center_on_screen, radius)
 
     _draw_status_bar(screen, config)
-    pygame.display.flip()
+    if do_flip:
+        pygame.display.flip()
 
 
 # --- Game State Function (Contains the main game loop) ---
@@ -1169,6 +1170,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
                 game_data["fog"],
                 game_data["state"]["footprints"],
                 config,
+                do_flip=False,
             )
             overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 150))
