@@ -71,7 +71,8 @@ FOOTPRINT_MIN_FADE = 0.3
 
 # Zombie settings
 ZOMBIE_RADIUS = 11
-ZOMBIE_SPEED = 1.4
+ZOMBIE_SPEED = 1.2
+NORMAL_ZOMBIE_SPEED_JITTER = 0.3
 ZOMBIE_SPAWN_DELAY_MS = 5000
 MAX_ZOMBIES = 200
 INITIAL_ZOMBIES_INSIDE = 15
@@ -261,7 +262,7 @@ class Zombie(pygame.sprite.Sprite):
             x, y = random_position_outside_building()
         self.rect = self.image.get_rect(center=(x, y))
         base_speed = speed_override if speed_override is not None else ZOMBIE_SPEED
-        jitter = FAST_ZOMBIE_SPEED_JITTER if is_fast else 0.4
+        jitter = FAST_ZOMBIE_SPEED_JITTER if is_fast else NORMAL_ZOMBIE_SPEED_JITTER
         self.speed = base_speed + random.uniform(-jitter, jitter)
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
