@@ -1,5 +1,6 @@
 from typing import List, Optional, Self, Tuple, Union
 import random
+import copy
 import math
 import sys
 import traceback  # For error reporting
@@ -9,6 +10,7 @@ import pygame
 from pygame import rect, sprite, surface, time
 
 from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
+from .config import DEFAULT_CONFIG, load_config, save_config
 try:
     from .__about__ import __version__
 except:
@@ -18,6 +20,7 @@ except:
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 FPS = 60
+STATUS_BAR_HEIGHT = 28
 
 # Level dimensions are driven by the blueprint grid.
 LEVEL_GRID_COLS = GRID_COLS
@@ -662,6 +665,14 @@ def update_footprints(game_data) -> None:
     """Record player steps and clean up old footprints."""
     state = game_data["state"]
     player: Player = game_data["player"]
+    config = game_data.get("config", DEFAULT_CONFIG)
+
+    footprints_enabled = config.get("footprints", {}).get("enabled", True)
+    if not footprints_enabled:
+        state["footprints"] = []
+        state["last_footprint_pos"] = None
+        return
+
     now = pygame.time.get_ticks()
 
     footprints = state.get("footprints", [])
@@ -690,7 +701,27 @@ def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface,
     screen.blit(overlay, (0, 0))
 
 
-def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints):
+def _draw_status_bar(screen, config):
+    """Render a compact status bar with current config flags."""
+    bar_rect = pygame.Rect(0, SCREEN_HEIGHT - STATUS_BAR_HEIGHT, SCREEN_WIDTH, STATUS_BAR_HEIGHT)
+    overlay = pygame.Surface((bar_rect.width, bar_rect.height), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 140))
+    screen.blit(overlay, bar_rect.topleft)
+
+    footprints_on = config.get("footprints", {}).get("enabled", True)
+    status_text = f"Footprints: {'ON' if footprints_on else 'OFF'}"
+    color = GREEN if footprints_on else LIGHT_GRAY
+
+    try:
+        font = pygame.font.Font(None, 20)
+        text_surface = font.render(status_text, True, color)
+        text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
+        screen.blit(text_surface, text_rect)
+    except pygame.error as e:
+        print(f"Error rendering status bar: {e}")
+
+
+def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints, config):
     # Drawing
     screen.fill(BLACK)
 
@@ -710,16 +741,17 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, foot
                     pygame.draw.rect(screen, DARK_GRAY, sr)
 
     # footprints
-    now = pygame.time.get_ticks()
-    for fp in footprints:
-        age = now - fp["time"]
-        fade = 1 - (age / FOOTPRINT_LIFETIME_MS)
-        fade = max(FOOTPRINT_MIN_FADE, fade)
-        color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
-        fp_rect = pygame.Rect(fp["pos"][0] - FOOTPRINT_RADIUS, fp["pos"][1] - FOOTPRINT_RADIUS, FOOTPRINT_RADIUS * 2, FOOTPRINT_RADIUS * 2)
-        sr = camera.apply_rect(fp_rect)
-        if sr.colliderect(screen.get_rect().inflate(30, 30)):
-            pygame.draw.circle(screen, color, sr.center, FOOTPRINT_RADIUS)
+    if config.get("footprints", {}).get("enabled", True):
+        now = pygame.time.get_ticks()
+        for fp in footprints:
+            age = now - fp["time"]
+            fade = 1 - (age / FOOTPRINT_LIFETIME_MS)
+            fade = max(FOOTPRINT_MIN_FADE, fade)
+            color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
+            fp_rect = pygame.Rect(fp["pos"][0] - FOOTPRINT_RADIUS, fp["pos"][1] - FOOTPRINT_RADIUS, FOOTPRINT_RADIUS * 2, FOOTPRINT_RADIUS * 2)
+            sr = camera.apply_rect(fp_rect)
+            if sr.colliderect(screen.get_rect().inflate(30, 30)):
+                pygame.draw.circle(screen, color, sr.center, FOOTPRINT_RADIUS)
 
     # player, car, zombies, walls
     for sprite in all_sprites:
@@ -747,11 +779,12 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, foot
             pattern = get_hatch_pattern(fog_surfaces, spacing, FOG_HATCH_THICKNESS, FOG_HATCH_PIXEL_SCALE)
             _blit_hatch_ring(screen, fog_soft, pattern, alpha, fov_center_on_screen, radius)
 
+    _draw_status_bar(screen, config)
     pygame.display.flip()
 
 
 # --- Game State Function (Contains the main game loop) ---
-def initialize_game_state():
+def initialize_game_state(config):
     """Initialize and return the base game state objects."""
     game_state = {
         "game_over": False,
@@ -786,6 +819,7 @@ def initialize_game_state():
         "camera": camera,
         "areas": {"outer_rect": outer_rect, "inner_rect": inner_rect},
         "fog": {"hard": fog_surface_hard, "soft": fog_surface_soft, "hatch_patterns": {}},
+        "config": config,
     }
 
 
@@ -860,11 +894,14 @@ def handle_game_over_state(screen, game_data):
     """Handle rendering and input when game is over or won."""
     state = game_data["state"]
     wall_group = game_data["groups"]["wall_group"]
+    config = game_data.get("config", DEFAULT_CONFIG)
+    footprints_enabled = config.get("footprints", {}).get("enabled", True)
 
     # Create overview map if needed
     if not state["overview_created"]:
         state["overview_surface"] = pygame.Surface((LEVEL_WIDTH, LEVEL_HEIGHT))
-        draw_level_overview(state["overview_surface"], wall_group, game_data["player"], game_data["car"], state.get("footprints", []))
+        footprints_to_draw = state.get("footprints", []) if footprints_enabled else []
+        draw_level_overview(state["overview_surface"], wall_group, game_data["player"], game_data["car"], footprints_to_draw)
 
         level_aspect = LEVEL_WIDTH / LEVEL_HEIGHT
         screen_aspect = SCREEN_WIDTH / SCREEN_HEIGHT
@@ -1046,10 +1083,10 @@ def check_interactions(game_data):
     return None
 
 
-def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
+def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
     """Main game loop function, now using smaller helper functions."""
     # Initialize game components
-    game_data = initialize_game_state()
+    game_data = initialize_game_state(config)
 
     # Generate level from blueprint and set up player/car
     layout_data = generate_level_from_blueprint(game_data)
@@ -1100,34 +1137,126 @@ def run_game(screen: surface.Surface, clock: time.Clock) -> bool:
             fov_target,
             game_data["fog"],
             game_data["state"]["footprints"],
+            config,
         )
 
     return False
 
 
 # --- Splash Screen Function ---
-def splash_screen(screen: surface.Surface, clock: time.Clock) -> bool:
-    splash_active = True
-    print("Showing Splash Screen...")
+def title_screen(screen: surface.Surface, clock: time.Clock, config) -> str:
+    """Simple title menu. Returns 'start', 'settings', or 'quit'."""
+    options = ["Start Game", "Settings", "Quit"]
+    selected = 0
 
-    while splash_active:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return False  # Quit the application
+                return "quit"
             if event.type == pygame.KEYDOWN:
-                # Any key press starts the game
-                print("Key pressed, starting game...")
-                return True  # Signal to start the game
+                if event.key in (pygame.K_UP, pygame.K_w):
+                    selected = (selected - 1) % len(options)
+                elif event.key in (pygame.K_DOWN, pygame.K_s):
+                    selected = (selected + 1) % len(options)
+                elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    return options[selected].lower().split()[0]
 
-        # Drawing the splash screen
-        screen.fill(BLACK)  # Black background
-        show_message(screen, "Zombie Escape", 72, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
-        show_message(screen, "Press any key to start", 36, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30))
+        screen.fill(BLACK)
+        show_message(screen, "Zombie Escape", 72, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 120))
+
+        try:
+            font = pygame.font.Font(None, 36)
+            for idx, label in enumerate(options):
+                color = YELLOW if idx == selected else WHITE
+                text_surface = font.render(label, True, color)
+                text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + idx * 50))
+                screen.blit(text_surface, text_rect)
+
+            # Show a quick config summary
+            small_font = pygame.font.Font(None, 24)
+            fp_on = config.get("footprints", {}).get("enabled", True)
+            summary = f"Footprints: {'ON' if fp_on else 'OFF'}"
+            summary_surface = small_font.render(summary, True, LIGHT_GRAY)
+            summary_rect = summary_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50 * len(options) + 30))
+            screen.blit(summary_surface, summary_rect)
+        except pygame.error as e:
+            print(f"Error rendering title screen: {e}")
 
         pygame.display.flip()
-        clock.tick(FPS)  # Maintain frame rate
+        clock.tick(FPS)
 
-    return False  # Should not be reached unless splash_active is set to False manually
+
+def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_path) -> dict:
+    """Settings menu shown from the title screen."""
+    working = copy.deepcopy(config)
+
+    def toggle_footprints():
+        enabled = working.get("footprints", {}).get("enabled", True)
+        working.setdefault("footprints", {})["enabled"] = not enabled
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return working
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                    save_config(working, config_path)
+                    return working
+                if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_LEFT, pygame.K_RIGHT):
+                    toggle_footprints()
+                if event.key == pygame.K_r:
+                    working = copy.deepcopy(DEFAULT_CONFIG)
+
+        screen.fill(BLACK)
+        show_message(screen, "Settings", 64, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 120))
+
+        try:
+            panel_width = 480
+            panel_height = 220
+            panel_rect = pygame.Rect(0, 0, panel_width, panel_height)
+            panel_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 20)
+            pygame.draw.rect(screen, (20, 20, 20), panel_rect)
+            pygame.draw.rect(screen, LIGHT_GRAY, panel_rect, width=2)
+
+            label_font = pygame.font.Font(None, 28)
+            value_font = pygame.font.Font(None, 28)
+
+            row_y = panel_rect.top + 40
+            row_x_label = panel_rect.left + 30
+            row_x_value = panel_rect.left + panel_width // 2 + 10
+
+            fp_on = working.get("footprints", {}).get("enabled", True)
+            label_surface = label_font.render("Footprints", True, WHITE)
+            label_rect = label_surface.get_rect(topleft=(row_x_label, row_y))
+            screen.blit(label_surface, label_rect)
+
+            value_text = "ON" if fp_on else "OFF"
+            value_color = GREEN if fp_on else LIGHT_GRAY
+            value_surface = value_font.render(value_text, True, value_color)
+            value_rect = value_surface.get_rect(topleft=(row_x_value, row_y))
+            screen.blit(value_surface, value_rect)
+
+            hint_font = pygame.font.Font(None, 22)
+            hint_lines = [
+                "Space/Enter/Left/Right: toggle",
+                "R: reset to defaults",
+                "Esc/Backspace: save and return",
+            ]
+            for i, line in enumerate(hint_lines):
+                hint_surface = hint_font.render(line, True, WHITE)
+                hint_rect = hint_surface.get_rect(topleft=(panel_rect.left + 30, panel_rect.bottom - 90 + i * 26))
+                screen.blit(hint_surface, hint_rect)
+
+            path_font = pygame.font.Font(None, 20)
+            path_text = f"Config: {config_path}"
+            path_surface = path_font.render(path_text, True, LIGHT_GRAY)
+            path_rect = path_surface.get_rect(midtop=(SCREEN_WIDTH // 2, panel_rect.bottom + 24))
+            screen.blit(path_surface, path_rect)
+        except pygame.error as e:
+            print(f"Error rendering settings: {e}")
+
+        pygame.display.flip()
+        clock.tick(FPS)
 
 
 # --- Main Entry Point ---
@@ -1143,25 +1272,32 @@ def main():
     pygame.display.set_caption(f"Zombie Escape v{__version__}")
     clock = pygame.time.Clock()
 
+    config, config_path = load_config()
+    if not config_path.exists():
+        save_config(config, config_path)
+
     restart_game = True
     while restart_game:
-        # Run splash screen first
-        # splash_screen returns True if game should start/restart, False if quitting
-        should_start_game = splash_screen(screen, clock)
+        selection = title_screen(screen, clock, config)
 
-        if should_start_game:
-            # Run the main game loop if splash screen said to start
+        if selection == "quit":
+            restart_game = False
+            break
+
+        if selection == "settings":
+            config = settings_screen(screen, clock, config, config_path)
+            continue
+
+        if selection == "start":
             try:
-                # Pass initialized screen and clock to the game function
-                restart_game = run_game(screen, clock)
+                restart_game = run_game(screen, clock, config)
             except SystemExit:
                 restart_game = False  # Exit the main loop
-            except Exception as e:
+            except Exception:
                 print("An unhandled error occurred during game execution:")
                 traceback.print_exc()
                 restart_game = False  # Stop loop on error
         else:
-            # If splash screen returned False (quit), stop the main loop
             restart_game = False
 
     pygame.quit()  # Quit pygame only once at the very end of main
