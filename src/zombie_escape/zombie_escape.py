@@ -1271,7 +1271,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
 
             row_x_label = panel_rect.left + 40
             row_x_value = panel_rect.left + panel_width // 2 + 20
-            row_height = 48
+            row_height = 52
             start_y = panel_rect.top + 60
 
             rows = [
