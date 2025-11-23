@@ -1153,15 +1153,18 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
                 paused = False
 
         if paused:
-            screen.fill(BLACK)
-            show_message(screen, "PAUSED", 64, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
-            show_message(
-                screen,
-                "Focus the window to resume",
-                32,
-                LIGHT_GRAY,
-                (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20),
-            )
+            overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 150))
+            pygame.draw.circle(overlay, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), 70, width=6)
+            bar_width = 16
+            bar_height = 60
+            gap = 18
+            cx, cy = SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2
+            pygame.draw.rect(overlay, LIGHT_GRAY, (cx - gap - bar_width, cy - bar_height // 2, bar_width, bar_height))
+            pygame.draw.rect(overlay, LIGHT_GRAY, (cx + gap, cy - bar_height // 2, bar_width, bar_height))
+            screen.blit(overlay, (0, 0))
+            show_message(screen, "PAUSED", 64, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 90))
+            show_message(screen, "Focus the window to resume", 32, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 140))
             pygame.display.flip()
             continue
 
