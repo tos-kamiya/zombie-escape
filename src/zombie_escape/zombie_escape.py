@@ -958,7 +958,7 @@ def handle_game_over_state(screen, game_data):
     if state["game_won"]:
         show_message(screen, "YOU ESCAPED!", 40, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
 
-    show_message(screen, "Press 'R' to Restart or ESC to Quit", 30, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30))
+    show_message(screen, "Press SPACE to return to Title or ESC to Quit", 30, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30))
 
     pygame.display.flip()
 
@@ -969,7 +969,7 @@ def handle_game_over_state(screen, game_data):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 return False
-            if event.key == pygame.K_r:
+            if event.key == pygame.K_SPACE:
                 return True
 
     return None  # Continue in current state
@@ -1271,7 +1271,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
 
             row_x_label = panel_rect.left + 40
             row_x_value = panel_rect.left + panel_width // 2 + 20
-            row_height = 52
+            row_height = 28
             start_y = panel_rect.top + 60
 
             rows = [
