@@ -77,6 +77,9 @@ MAX_ZOMBIES = 200
 INITIAL_ZOMBIES_INSIDE = 15
 ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
 ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
+FAST_ZOMBIE_RATIO_DEFAULT = 0.1
+FAST_ZOMBIE_BASE_SPEED = PLAYER_SPEED * 0.9
+FAST_ZOMBIE_SPEED_JITTER = 0.15
 
 # Car settings
 CAR_WIDTH = 30
@@ -224,9 +227,25 @@ def random_position_outside_building() -> Tuple[int, int]:
     return x, y
 
 
+def create_zombie(config, start_pos: Optional[Tuple[int, int]] = None, hint_pos: Optional[Tuple[float, float]] = None) -> "Zombie":
+    """Factory to create zombies with optional fast variants."""
+    fast_conf = config.get("fast_zombies", {}) if config else {}
+    fast_enabled = fast_conf.get("enabled", True)
+    ratio = fast_conf.get("ratio", FAST_ZOMBIE_RATIO_DEFAULT)
+    ratio = max(0.0, min(1.0, ratio))
+    is_fast = fast_enabled and random.random() < ratio
+    base_speed = FAST_ZOMBIE_BASE_SPEED if is_fast else ZOMBIE_SPEED
+    base_speed = min(base_speed, PLAYER_SPEED - 0.05)
+    return Zombie(start_pos=start_pos, hint_pos=hint_pos, speed_override=base_speed, is_fast=is_fast)
+
+
 class Zombie(pygame.sprite.Sprite):
     def __init__(
-        self: Self, start_pos: Optional[Tuple[int, int]] = None, hint_pos: Optional[Tuple[float, float]] = None
+        self: Self,
+        start_pos: Optional[Tuple[int, int]] = None,
+        hint_pos: Optional[Tuple[float, float]] = None,
+        speed_override: Optional[float] = None,
+        is_fast: bool = False,
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
@@ -241,7 +260,9 @@ class Zombie(pygame.sprite.Sprite):
         else:
             x, y = random_position_outside_building()
         self.rect = self.image.get_rect(center=(x, y))
-        self.speed = ZOMBIE_SPEED + random.uniform(-0.4, 0.4)
+        base_speed = speed_override if speed_override is not None else ZOMBIE_SPEED
+        jitter = FAST_ZOMBIE_SPEED_JITTER if is_fast else 0.4
+        self.speed = base_speed + random.uniform(-jitter, jitter)
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
         self.mode = random.choice(list(ZombieMode))
@@ -709,8 +730,14 @@ def _draw_status_bar(screen, config):
     screen.blit(overlay, bar_rect.topleft)
 
     footprints_on = config.get("footprints", {}).get("enabled", True)
-    status_text = f"Footprints: {'ON' if footprints_on else 'OFF'}"
-    color = GREEN if footprints_on else LIGHT_GRAY
+    fast_on = config.get("fast_zombies", {}).get("enabled", True)
+
+    parts = [
+        f"Footprints: {'ON' if footprints_on else 'OFF'}",
+        f"Fast Z: {'ON' if fast_on else 'OFF'}",
+    ]
+    status_text = " | ".join(parts)
+    color = GREEN if footprints_on and fast_on else LIGHT_GRAY
 
     try:
         font = pygame.font.Font(None, 20)
@@ -858,6 +885,7 @@ def setup_player_and_car(game_data, layout_data):
 
 def spawn_initial_zombies(game_data, player, layout_data):
     """Spawn initial zombies using blueprint candidate cells."""
+    config = game_data.get("config", DEFAULT_CONFIG)
     wall_group = game_data["groups"]["wall_group"]
     zombie_group = game_data["groups"]["zombie_group"]
     all_sprites = game_data["groups"]["all_sprites"]
@@ -874,7 +902,7 @@ def spawn_initial_zombies(game_data, player, layout_data):
         placement_attempts += 1
         cell = random.choice(spawn_cells)
         z_pos = cell.center
-        temp_zombie = Zombie(start_pos=z_pos)
+        temp_zombie = create_zombie(config, start_pos=z_pos)
         temp_sprite = pygame.sprite.Sprite()
         temp_sprite.rect = temp_zombie.rect.inflate(5, 5)
 
@@ -982,6 +1010,7 @@ def update_entities(game_data, player_dx, player_dy, car_dx, car_dy):
     all_sprites = game_data["groups"]["all_sprites"]
     zombie_group = game_data["groups"]["zombie_group"]
     camera = game_data["camera"]
+    config = game_data.get("config", DEFAULT_CONFIG)
 
     # Update player/car movement
     if player.in_car and car.alive():
@@ -1004,7 +1033,7 @@ def update_entities(game_data, player_dx, player_dy, car_dx, car_dy):
         len(zombie_group) < MAX_ZOMBIES
         and current_time - game_data["state"]["last_zombie_spawn_time"] > ZOMBIE_SPAWN_DELAY_MS
     ):
-        new_zombie = Zombie(hint_pos=(player.x, player.y))
+        new_zombie = create_zombie(config, hint_pos=(player.x, player.y))
         zombie_group.add(new_zombie)
         all_sprites.add(new_zombie, layer=1)
         game_data["state"]["last_zombie_spawn_time"] = current_time
@@ -1175,7 +1204,12 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> str:
             # Show a quick config summary
             small_font = pygame.font.Font(None, 24)
             fp_on = config.get("footprints", {}).get("enabled", True)
-            summary = f"Footprints: {'ON' if fp_on else 'OFF'}"
+            fast_on = config.get("fast_zombies", {}).get("enabled", True)
+            summary_parts = [
+                f"Footprints: {'ON' if fp_on else 'OFF'}",
+                f"Fast Z: {'ON' if fast_on else 'OFF'}",
+            ]
+            summary = " | ".join(summary_parts)
             summary_surface = small_font.render(summary, True, LIGHT_GRAY)
             summary_rect = summary_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50 * len(options) + 30))
             screen.blit(summary_surface, summary_rect)
@@ -1189,10 +1223,15 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> str:
 def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_path) -> dict:
     """Settings menu shown from the title screen."""
     working = copy.deepcopy(config)
+    selected = 0
 
     def toggle_footprints():
         enabled = working.get("footprints", {}).get("enabled", True)
         working.setdefault("footprints", {})["enabled"] = not enabled
+
+    def toggle_fast_zombies():
+        enabled = working.get("fast_zombies", {}).get("enabled", True)
+        working.setdefault("fast_zombies", {})["enabled"] = not enabled
 
     while True:
         for event in pygame.event.get():
@@ -1202,8 +1241,15 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                 if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
                     save_config(working, config_path)
                     return working
+                if event.key in (pygame.K_UP, pygame.K_w):
+                    selected = (selected - 1) % 2
+                if event.key in (pygame.K_DOWN, pygame.K_s):
+                    selected = (selected + 1) % 2
                 if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_LEFT, pygame.K_RIGHT):
-                    toggle_footprints()
+                    if selected == 0:
+                        toggle_footprints()
+                    else:
+                        toggle_fast_zombies()
                 if event.key == pygame.K_r:
                     working = copy.deepcopy(DEFAULT_CONFIG)
 
@@ -1220,24 +1266,36 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
 
             label_font = pygame.font.Font(None, 28)
             value_font = pygame.font.Font(None, 28)
+            highlight_color = (70, 70, 70)
 
-            row_y = panel_rect.top + 40
             row_x_label = panel_rect.left + 30
             row_x_value = panel_rect.left + panel_width // 2 + 10
+            row_height = 40
+            start_y = panel_rect.top + 40
 
-            fp_on = working.get("footprints", {}).get("enabled", True)
-            label_surface = label_font.render("Footprints", True, WHITE)
-            label_rect = label_surface.get_rect(topleft=(row_x_label, row_y))
-            screen.blit(label_surface, label_rect)
+            rows = [
+                ("Footprints", working.get("footprints", {}).get("enabled", True)),
+                ("Fast zombies", working.get("fast_zombies", {}).get("enabled", True)),
+            ]
+            for idx, (label, enabled) in enumerate(rows):
+                row_y = start_y + idx * row_height
+                if idx == selected:
+                    highlight_rect = pygame.Rect(panel_rect.left + 6, row_y - 6, panel_width - 12, row_height + 12)
+                    pygame.draw.rect(screen, highlight_color, highlight_rect)
 
-            value_text = "ON" if fp_on else "OFF"
-            value_color = GREEN if fp_on else LIGHT_GRAY
-            value_surface = value_font.render(value_text, True, value_color)
-            value_rect = value_surface.get_rect(topleft=(row_x_value, row_y))
-            screen.blit(value_surface, value_rect)
+                label_surface = label_font.render(label, True, WHITE)
+                label_rect = label_surface.get_rect(topleft=(row_x_label, row_y))
+                screen.blit(label_surface, label_rect)
+
+                value_text = "ON" if enabled else "OFF"
+                value_color = GREEN if enabled else LIGHT_GRAY
+                value_surface = value_font.render(value_text, True, value_color)
+                value_rect = value_surface.get_rect(topleft=(row_x_value, row_y))
+                screen.blit(value_surface, value_rect)
 
             hint_font = pygame.font.Font(None, 22)
             hint_lines = [
+                "Up/Down: select",
                 "Space/Enter/Left/Right: toggle",
                 "R: reset to defaults",
                 "Esc/Backspace: save and return",
