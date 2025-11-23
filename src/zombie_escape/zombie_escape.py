@@ -1117,6 +1117,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
     """Main game loop function, now using smaller helper functions."""
     # Initialize game components
     game_data = initialize_game_state(config)
+    paused = False
 
     # Generate level from blueprint and set up player/car
     layout_data = generate_level_from_blueprint(game_data)
@@ -1146,6 +1147,23 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
                 return False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return False
+            if event.type == pygame.WINDOWFOCUSLOST:
+                paused = True
+            if event.type == pygame.WINDOWFOCUSGAINED:
+                paused = False
+
+        if paused:
+            screen.fill(BLACK)
+            show_message(screen, "PAUSED", 64, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
+            show_message(
+                screen,
+                "Focus the window to resume",
+                32,
+                LIGHT_GRAY,
+                (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 20),
+            )
+            pygame.display.flip()
+            continue
 
         # Process input
         keys = pygame.key.get_pressed()
