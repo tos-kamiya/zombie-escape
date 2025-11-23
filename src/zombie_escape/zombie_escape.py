@@ -89,6 +89,7 @@ CAR_SPEED = 4
 CAR_HEALTH = 20
 CAR_WALL_DAMAGE = 1
 CAR_ZOMBIE_DAMAGE = 1
+CAR_HINT_DELAY_MS_DEFAULT = 180000
 
 # Wall settings
 INTERNAL_WALL_THICKNESS = 24
@@ -732,13 +733,15 @@ def _draw_status_bar(screen, config):
 
     footprints_on = config.get("footprints", {}).get("enabled", True)
     fast_on = config.get("fast_zombies", {}).get("enabled", True)
+    hint_on = config.get("car_hint", {}).get("enabled", True)
 
     parts = [
         f"Footprints: {'ON' if footprints_on else 'OFF'}",
         f"Fast Z: {'ON' if fast_on else 'OFF'}",
+        f"Car Hint: {'ON' if hint_on else 'OFF'}",
     ]
     status_text = " | ".join(parts)
-    color = GREEN if footprints_on and fast_on else LIGHT_GRAY
+    color = GREEN if all([footprints_on, fast_on, hint_on]) else LIGHT_GRAY
 
     try:
         font = pygame.font.Font(None, 20)
@@ -749,7 +752,36 @@ def _draw_status_bar(screen, config):
         print(f"Error rendering status bar: {e}")
 
 
-def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints, config, do_flip: bool = True):
+def _draw_car_hint(screen, camera, player: Player, car: "Car") -> None:
+    """Draw a soft directional hint from player to car."""
+    if not car or not car.alive():
+        return
+    player_screen = camera.apply(player).center
+    car_screen = camera.apply(car).center
+    dx = car_screen[0] - player_screen[0]
+    dy = car_screen[1] - player_screen[1]
+    dist = math.hypot(dx, dy)
+    if dist < 10:
+        return
+    dir_x = dx / dist
+    dir_y = dy / dist
+    arrow_len = 38
+    tip = (player_screen[0] + dir_x * arrow_len, player_screen[1] + dir_y * arrow_len)
+    tail = (player_screen[0], player_screen[1])
+    left = (
+        tip[0] - dir_x * 12 - dir_y * 8,
+        tip[1] - dir_y * 12 + dir_x * 8,
+    )
+    right = (
+        tip[0] - dir_x * 12 + dir_y * 8,
+        tip[1] - dir_y * 12 - dir_x * 8,
+    )
+    color = (120, 200, 255)
+    pygame.draw.line(screen, color, tail, tip, width=3)
+    pygame.draw.polygon(screen, color, [tip, left, right])
+
+
+def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints, config, car, player, show_car_hint: bool, do_flip: bool = True):
     # Drawing
     screen.fill(BLACK)
 
@@ -786,6 +818,9 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, foot
         sprite_screen_rect = camera.apply_rect(sprite.rect)
         if sprite_screen_rect.colliderect(screen.get_rect().inflate(100, 100)):
             screen.blit(sprite.image, sprite_screen_rect)
+
+    if show_car_hint and player and car:
+        _draw_car_hint(screen, camera, player, car)
 
     # fog with hatched rings
     if fov_target is not None:
@@ -824,6 +859,7 @@ def initialize_game_state(config):
         "last_zombie_spawn_time": 0,
         "footprints": [],
         "last_footprint_pos": None,
+        "elapsed_play_ms": 0,
     }
 
     # Create sprite groups
@@ -1170,6 +1206,9 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
                 game_data["fog"],
                 game_data["state"]["footprints"],
                 config,
+                game_data["car"],
+                player,
+                False,
                 do_flip=False,
             )
             overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -1200,11 +1239,21 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
         # Update game entities
         update_entities(game_data, player_dx, player_dy, car_dx, car_dy)
         update_footprints(game_data)
+        game_data["state"]["elapsed_play_ms"] += int(dt * 1000)
 
         # Handle interactions
         fov_target = check_interactions(game_data)
+        last_fov_target = fov_target or last_fov_target
 
         # Draw everything
+        car_hint_conf = config.get("car_hint", {})
+        hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
+        show_car_hint = (
+            car_hint_conf.get("enabled", True)
+            and game_data["state"]["elapsed_play_ms"] >= hint_delay
+            and not player.in_car
+            and game_data["car"].alive()
+        )
         draw(
             screen,
             game_data["areas"]["outer_rect"],
@@ -1214,6 +1263,9 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
             game_data["fog"],
             game_data["state"]["footprints"],
             config,
+            game_data["car"],
+            player,
+            show_car_hint,
         )
 
     return False
@@ -1252,9 +1304,11 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> str:
             small_font = pygame.font.Font(None, 24)
             fp_on = config.get("footprints", {}).get("enabled", True)
             fast_on = config.get("fast_zombies", {}).get("enabled", True)
+            hint_on = config.get("car_hint", {}).get("enabled", True)
             summary_parts = [
                 f"Footprints: {'ON' if fp_on else 'OFF'}",
                 f"Fast Z: {'ON' if fast_on else 'OFF'}",
+                f"Car Hint: {'ON' if hint_on else 'OFF'}",
             ]
             summary = " | ".join(summary_parts)
             summary_surface = small_font.render(summary, True, LIGHT_GRAY)
@@ -1280,6 +1334,10 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
         enabled = working.get("fast_zombies", {}).get("enabled", True)
         working.setdefault("fast_zombies", {})["enabled"] = not enabled
 
+    def toggle_car_hint():
+        enabled = working.get("car_hint", {}).get("enabled", True)
+        working.setdefault("car_hint", {})["enabled"] = not enabled
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -1289,14 +1347,16 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                     save_config(working, config_path)
                     return working
                 if event.key in (pygame.K_UP, pygame.K_w):
-                    selected = (selected - 1) % 2
+                    selected = (selected - 1) % 3
                 if event.key in (pygame.K_DOWN, pygame.K_s):
-                    selected = (selected + 1) % 2
+                    selected = (selected + 1) % 3
                 if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_LEFT, pygame.K_RIGHT):
                     if selected == 0:
                         toggle_footprints()
-                    else:
+                    elif selected == 1:
                         toggle_fast_zombies()
+                    else:
+                        toggle_car_hint()
                 if event.key == pygame.K_r:
                     working = copy.deepcopy(DEFAULT_CONFIG)
 
@@ -1323,6 +1383,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             rows = [
                 ("Footprints", working.get("footprints", {}).get("enabled", True)),
                 ("Fast zombies", working.get("fast_zombies", {}).get("enabled", True)),
+                ("Car hint", working.get("car_hint", {}).get("enabled", True)),
             ]
             hint_start_y = start_y + len(rows) * row_height + 40
             for idx, (label, enabled) in enumerate(rows):
