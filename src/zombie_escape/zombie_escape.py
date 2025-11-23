@@ -1152,7 +1152,7 @@ def check_interactions(game_data):
     return None
 
 
-def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
+def run_game(screen: surface.Surface, clock: time.Clock, config, show_pause_overlay: bool = True) -> bool:
     """Main game loop function, now using smaller helper functions."""
     # Initialize game components
     game_data = initialize_game_state(config)
@@ -1211,27 +1211,28 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
                 game_data["car"],
                 player,
                 False,
-                do_flip=False,
+                do_flip=not show_pause_overlay,
             )
-            overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 150))
-            pygame.draw.circle(overlay, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), 70, width=6)
-            bar_width = 16
-            bar_height = 60
-            gap = 18
-            cx, cy = SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2
-            pygame.draw.rect(overlay, LIGHT_GRAY, (cx - gap - bar_width, cy - bar_height // 2, bar_width, bar_height))
-            pygame.draw.rect(overlay, LIGHT_GRAY, (cx + gap, cy - bar_height // 2, bar_width, bar_height))
-            screen.blit(overlay, (0, 0))
-            show_message(screen, "PAUSED", 64, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 90))
-            show_message(
-                screen,
-                "Press P or click to resume",
-                32,
-                LIGHT_GRAY,
-                (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 140),
-            )
-            pygame.display.flip()
+            if show_pause_overlay:
+                overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+                overlay.fill((0, 0, 0, 150))
+                pygame.draw.circle(overlay, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), 70, width=6)
+                bar_width = 16
+                bar_height = 60
+                gap = 18
+                cx, cy = SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2
+                pygame.draw.rect(overlay, LIGHT_GRAY, (cx - gap - bar_width, cy - bar_height // 2, bar_width, bar_height))
+                pygame.draw.rect(overlay, LIGHT_GRAY, (cx + gap, cy - bar_height // 2, bar_width, bar_height))
+                screen.blit(overlay, (0, 0))
+                show_message(screen, "PAUSED", 64, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 90))
+                show_message(
+                    screen,
+                    "Press P or click to resume",
+                    32,
+                    LIGHT_GRAY,
+                    (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 140),
+                )
+                pygame.display.flip()
             continue
 
         # Process input
@@ -1443,6 +1444,8 @@ def main():
     pygame.display.set_caption(f"Zombie Escape v{__version__}")
     clock = pygame.time.Clock()
 
+    hide_pause_overlay = "--hide-pause-overlay" in sys.argv
+
     config, config_path = load_config()
     if not config_path.exists():
         save_config(config, config_path)
@@ -1461,7 +1464,7 @@ def main():
 
         if selection == "start":
             try:
-                restart_game = run_game(screen, clock, config)
+                restart_game = run_game(screen, clock, config, show_pause_overlay=not hide_pause_overlay)
             except SystemExit:
                 restart_game = False  # Exit the main loop
             except Exception:
