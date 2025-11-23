@@ -1273,6 +1273,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             row_x_value = panel_rect.left + panel_width // 2 + 20
             row_height = 48
             start_y = panel_rect.top + 60
+            hint_start_y = start_y + len(rows) * row_height + 40
 
             rows = [
                 ("Footprints", working.get("footprints", {}).get("enabled", True)),
@@ -1281,7 +1282,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             for idx, (label, enabled) in enumerate(rows):
                 row_y = start_y + idx * row_height
                 if idx == selected:
-                    highlight_rect = pygame.Rect(panel_rect.left + 6, row_y - 6, panel_width - 12, row_height + 12)
+                    highlight_rect = pygame.Rect(panel_rect.left + 6, row_y - 4, panel_width - 12, row_height + 4)
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
                 label_surface = label_font.render(label, True, WHITE)
@@ -1303,7 +1304,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             ]
             for i, line in enumerate(hint_lines):
                 hint_surface = hint_font.render(line, True, WHITE)
-                hint_rect = hint_surface.get_rect(topleft=(panel_rect.left + 30, panel_rect.bottom - 90 + i * 26))
+                hint_rect = hint_surface.get_rect(topleft=(panel_rect.left + 30, hint_start_y + i * 26))
                 screen.blit(hint_surface, hint_rect)
 
             path_font = pygame.font.Font(None, 20)
