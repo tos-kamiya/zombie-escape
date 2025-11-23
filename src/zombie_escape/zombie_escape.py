@@ -1273,12 +1273,12 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             row_x_value = panel_rect.left + panel_width // 2 + 20
             row_height = 48
             start_y = panel_rect.top + 60
-            hint_start_y = start_y + len(rows) * row_height + 40
 
             rows = [
                 ("Footprints", working.get("footprints", {}).get("enabled", True)),
                 ("Fast zombies", working.get("fast_zombies", {}).get("enabled", True)),
             ]
+            hint_start_y = start_y + len(rows) * row_height + 40
             for idx, (label, enabled) in enumerate(rows):
                 row_y = start_y + idx * row_height
                 if idx == selected:
