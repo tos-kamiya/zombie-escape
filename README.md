@@ -39,6 +39,7 @@ This game is a simple 2D top-down action game where the player aims to escape by
     -   The car has durability. Durability decreases when colliding with internal walls or hitting zombies.
     -   If durability reaches 0, the car is destroyed, and the player is ejected.
     -   When the car is destroyed, a **new car will respawn** at a random location within the stage.
+    -   After roughly 3 minutes of play, a small triangle near the player points toward the car (it hides once the car is within view).
 -   **Walls:** Gray rectangles.
     -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
     -   **Inner Walls:** Walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
