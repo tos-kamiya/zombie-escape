@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
   "pygame",
+  "platformdirs",
 ]
 
 [tool.hatch.version]
