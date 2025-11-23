@@ -46,9 +46,11 @@ PLAYER_RADIUS = 11
 PLAYER_SPEED = 2.8
 FOV_RADIUS = 180
 FOV_RADIUS_SOFT_FACTOR = 1.5
+FOG_RADIUS_SCALE = 1.2
 FOG_MAX_RADIUS_FACTOR = 1.55
 FOG_HATCH_DEFAULT_SPACING = 18
 FOG_HATCH_THICKNESS = 7
+FOG_HATCH_PIXEL_SCALE = 3
 FOG_RINGS = [
     {"radius_factor": 0.9, "alpha": 130, "spacing": 20},
     {"radius_factor": 1.1, "alpha": 190, "spacing": 16},
@@ -618,10 +620,11 @@ def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Opt
     return sprite
 
 
-def get_hatch_pattern(fog_data, spacing: int, thickness: int) -> surface.Surface:
-    """Return cached ordered-dither tile surface (Bayer-style)."""
+def get_hatch_pattern(fog_data, spacing: int, thickness: int, pixel_scale: int = 1) -> surface.Surface:
+    """Return cached ordered-dither tile surface (Bayer-style, optionally chunky)."""
     cache = fog_data.setdefault("hatch_patterns", {})
-    key = (spacing, thickness)
+    pixel_scale = max(1, pixel_scale)
+    key = (spacing, thickness, pixel_scale)
     if key in cache:
         return cache[key]
 
@@ -646,6 +649,10 @@ def get_hatch_pattern(fog_data, spacing: int, thickness: int) -> surface.Surface
         for x in range(spacing):
             if bayer[y % 8][x % 8] < threshold:
                 pattern.set_at((x, y), (0, 0, 0, 255))
+
+    if pixel_scale > 1:
+        scaled_size = (spacing * pixel_scale, spacing * pixel_scale)
+        pattern = pygame.transform.scale(pattern, scaled_size)
 
     cache[key] = pattern
     return pattern
@@ -728,16 +735,16 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, foot
 
         # Base solid darkness outside max radius
         fog_hard.fill(FOG_COLOR)
-        max_radius = int(FOV_RADIUS * FOG_MAX_RADIUS_FACTOR)
+        max_radius = int(FOV_RADIUS * FOG_MAX_RADIUS_FACTOR * FOG_RADIUS_SCALE)
         pygame.draw.circle(fog_hard, (0, 0, 0, 0), fov_center_on_screen, max_radius)
         screen.blit(fog_hard, (0, 0))
 
         # Hatched rings layered from near to far
         for ring in FOG_RINGS:
-            radius = int(FOV_RADIUS * ring["radius_factor"])
+            radius = int(FOV_RADIUS * ring["radius_factor"] * FOG_RADIUS_SCALE)
             alpha = ring["alpha"]
             spacing = ring.get("spacing", FOG_HATCH_DEFAULT_SPACING)
-            pattern = get_hatch_pattern(fog_surfaces, spacing, FOG_HATCH_THICKNESS)
+            pattern = get_hatch_pattern(fog_surfaces, spacing, FOG_HATCH_THICKNESS, FOG_HATCH_PIXEL_SCALE)
             _blit_hatch_ring(screen, fog_soft, pattern, alpha, fov_center_on_screen, radius)
 
     pygame.display.flip()
