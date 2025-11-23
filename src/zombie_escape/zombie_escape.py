@@ -765,10 +765,10 @@ def _draw_car_hint(screen, camera, player: Player, car: "Car") -> None:
         return
     dir_x = dx / dist
     dir_y = dy / dist
-    ring_radius = FOV_RADIUS * 0.25
+    ring_radius = FOV_RADIUS * 0.5
     center_x = player_screen[0] + dir_x * ring_radius
     center_y = player_screen[1] + dir_y * ring_radius
-    arrow_len = 32
+    arrow_len = 12
     tip = (center_x + dir_x * arrow_len, center_y + dir_y * arrow_len)
     base = (center_x - dir_x * 12, center_y - dir_y * 12)
     left = (
@@ -1255,6 +1255,8 @@ def run_game(screen: surface.Surface, clock: time.Clock, config) -> bool:
             and game_data["state"]["elapsed_play_ms"] >= hint_delay
             and not player.in_car
             and game_data["car"].alive()
+            and math.hypot(player.rect.centerx - game_data["car"].rect.centerx, player.rect.centery - game_data["car"].rect.centery)
+            > FOV_RADIUS * FOG_RADIUS_SCALE
         )
         draw(
             screen,
