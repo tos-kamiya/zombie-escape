@@ -1258,10 +1258,10 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
         show_message(screen, "Settings", 64, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 120))
 
         try:
-            panel_width = 480
-            panel_height = 220
+            panel_width = SCREEN_WIDTH - 140
+            panel_height = SCREEN_HEIGHT - 200
             panel_rect = pygame.Rect(0, 0, panel_width, panel_height)
-            panel_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 20)
+            panel_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
             pygame.draw.rect(screen, (20, 20, 20), panel_rect)
             pygame.draw.rect(screen, LIGHT_GRAY, panel_rect, width=2)
 
@@ -1269,10 +1269,10 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             value_font = pygame.font.Font(None, 28)
             highlight_color = (70, 70, 70)
 
-            row_x_label = panel_rect.left + 30
-            row_x_value = panel_rect.left + panel_width // 2 + 10
-            row_height = 40
-            start_y = panel_rect.top + 40
+            row_x_label = panel_rect.left + 40
+            row_x_value = panel_rect.left + panel_width // 2 + 20
+            row_height = 48
+            start_y = panel_rect.top + 60
 
             rows = [
                 ("Footprints", working.get("footprints", {}).get("enabled", True)),
