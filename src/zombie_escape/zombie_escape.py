@@ -98,12 +98,12 @@ INTERNAL_WALL_THICKNESS = 24
 INTERNAL_WALL_GRID_SNAP = CELL_SIZE
 INTERNAL_WALL_SEGMENT_LENGTH = 50
 INTERNAL_WALL_HEALTH = 40
-INTERNAL_WALL_COLOR = (182, 150, 92)  # warm pop tone for inner walls
+INTERNAL_WALL_COLOR = (90, 78, 72)  # red-leaning tone with restrained brightness
 OUTER_WALL_MARGIN = 100
 OUTER_WALL_THICKNESS = 50
 OUTER_WALL_SEGMENT_LENGTH = 100
 OUTER_WALL_HEALTH = 9999
-OUTER_WALL_COLOR = (206, 172, 112)  # brighter warm tone, lighter than inner
+OUTER_WALL_COLOR = (120, 112, 100)  # red-leaning outer tone, brighter than inner
 
 
 # --- Camera Class ---
