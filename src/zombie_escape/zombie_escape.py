@@ -785,7 +785,7 @@ def _draw_car_hint(screen, camera, player: Player, car: "Car") -> None:
     pygame.draw.polygon(screen, color, [tip, left, right])
 
 
-def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints, config, car, player, show_car_hint: bool, do_flip: bool = True):
+def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints, config, car, player, show_car_hint: bool, do_flip: bool = True, outside_rects: List[pygame.Rect] | None = None):
     # Drawing
     screen.fill(FLOOR_COLOR_OUTSIDE)
 
@@ -801,8 +801,18 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, foot
     play_area_screen_rect = camera.apply_rect(play_area_rect)
     pygame.draw.rect(screen, FLOOR_COLOR_PRIMARY, play_area_screen_rect)
 
+    # Mask out designated outside cells (non-playable) with outside floor color
+    outside_rects = outside_rects or []
+    outside_cells = {(r.x // INTERNAL_WALL_GRID_SNAP, r.y // INTERNAL_WALL_GRID_SNAP) for r in outside_rects}
+    for rect_obj in outside_rects:
+        sr = camera.apply_rect(rect_obj)
+        if sr.colliderect(screen.get_rect()):
+            pygame.draw.rect(screen, FLOOR_COLOR_OUTSIDE, sr)
+
     for y in range(ys, ye):
         for x in range(xs, xe):
+            if (x, y) in outside_cells:
+                continue
             if (x + y) % 2 == 0:
                 lx, ly = x * INTERNAL_WALL_GRID_SNAP, y * INTERNAL_WALL_GRID_SNAP
                 r = pygame.Rect(lx, ly, INTERNAL_WALL_GRID_SNAP, INTERNAL_WALL_GRID_SNAP)
@@ -1220,6 +1230,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, show_pause_over
                 player,
                 False,
                 do_flip=not show_pause_overlay,
+                outside_rects=game_data["areas"].get("outside_rects"),
             )
             if show_pause_overlay:
                 overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -1279,6 +1290,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, show_pause_over
             game_data["car"],
             player,
             show_car_hint,
+            outside_rects=game_data["areas"].get("outside_rects"),
         )
 
     return False
