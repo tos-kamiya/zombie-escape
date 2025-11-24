@@ -65,6 +65,7 @@ FOG_RINGS = [
 
 # Footprint settings
 FOOTPRINT_RADIUS = 5
+FOOTPRINT_OVERVIEW_RADIUS = 8
 FOOTPRINT_COLOR = (110, 200, 255)
 FOOTPRINT_STEP_DISTANCE = 80
 FOOTPRINT_LIFETIME_MS = 135000
@@ -602,7 +603,7 @@ def draw_level_overview(surface: surface.Surface, wall_group: sprite.Group, play
         fade = 1 - (age / FOOTPRINT_LIFETIME_MS)
         fade = max(FOOTPRINT_MIN_FADE, fade)
         color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
-        pygame.draw.circle(surface, color, (int(fp["pos"][0]), int(fp["pos"][1])), FOOTPRINT_RADIUS)
+        pygame.draw.circle(surface, color, (int(fp["pos"][0]), int(fp["pos"][1])), FOOTPRINT_OVERVIEW_RADIUS)
     if player:
         pygame.draw.circle(surface, BLUE, player.rect.center, PLAYER_RADIUS * 2)
     if car and car.alive():
