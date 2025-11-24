@@ -58,14 +58,14 @@ FOV_RADIUS = 180
 FOV_RADIUS_SOFT_FACTOR = 1.5
 FOG_RADIUS_SCALE = 1.2
 FOG_MAX_RADIUS_FACTOR = 1.55
+FOG_HATCH_THICKNESS = 9
 FOG_HATCH_DEFAULT_SPACING = 18
-FOG_HATCH_THICKNESS = 7
 FOG_HATCH_PIXEL_SCALE = 3
 FOG_RINGS = [
-    {"radius_factor": 0.9, "alpha": 130, "spacing": 20},
-    {"radius_factor": 1.1, "alpha": 190, "spacing": 16},
-    {"radius_factor": 1.3, "alpha": 240, "spacing": 12},
-    {"radius_factor": 1.45, "alpha": 255, "spacing": 10},
+    {"radius_factor": 0.9, "thickness": 8, "spacing": 20},
+    {"radius_factor": 1.1, "thickness": 10, "spacing": 16},
+    {"radius_factor": 1.3, "thickness": 12, "spacing": 12},
+    {"radius_factor": 1.45, "thickness": 14, "spacing": 10},
 ]
 
 # Footprint settings
@@ -129,12 +129,14 @@ INTERNAL_WALL_THICKNESS = 24
 INTERNAL_WALL_GRID_SNAP = CELL_SIZE
 INTERNAL_WALL_SEGMENT_LENGTH = 50
 INTERNAL_WALL_HEALTH = 40
-INTERNAL_WALL_COLOR = (90, 78, 72)  # red-leaning tone with restrained brightness
+INTERNAL_WALL_COLOR = (94, 86, 60)
+INTERNAL_WALL_BORDER_COLOR = (97, 89, 62)
 OUTER_WALL_MARGIN = 100
 OUTER_WALL_THICKNESS = 50
 OUTER_WALL_SEGMENT_LENGTH = 100
 OUTER_WALL_HEALTH = 9999
-OUTER_WALL_COLOR = (120, 112, 100)  # red-leaning outer tone, brighter than inner
+OUTER_WALL_COLOR = (120, 112, 100)
+OUTER_WALL_BORDER_COLOR = (122, 114, 102)
 
 
 # --- Window scaling helpers ---
@@ -188,12 +190,14 @@ class Wall(pygame.sprite.Sprite):
         height: int,
         health: int = INTERNAL_WALL_HEALTH,
         color: Tuple[int, int, int] = INTERNAL_WALL_COLOR,
+        border_color: Tuple[int, int, int] = INTERNAL_WALL_BORDER_COLOR,
     ) -> None:
         super().__init__()
         safe_width = max(1, width)
         safe_height = max(1, height)
         self.image = pygame.Surface((safe_width, safe_height))
         self.base_color = color
+        self.border_base_color = border_color
         self.health = health
         self.max_health = max(1, health)
         self.update_color()
@@ -209,12 +213,19 @@ class Wall(pygame.sprite.Sprite):
     def update_color(self: Self) -> None:
         if self.health <= 0:
             self.image.fill((40, 40, 40))
+            health_ratio = 0
         else:
             health_ratio = max(0, self.health / self.max_health)
-            r = int(self.base_color[0])
-            g = int(self.base_color[1] * health_ratio)
-            b = int(self.base_color[2])
+            mix = 0.6 + 0.4 * health_ratio  # keep at least 60% of the base color even when nearly destroyed
+            r = int(self.base_color[0] * mix)
+            g = int(self.base_color[1] * mix)
+            b = int(self.base_color[2] * mix)
             self.image.fill((r, g, b))
+        # Bright edge to separate walls from floor
+        br = int(self.border_base_color[0] * (0.6 + 0.4 * health_ratio))
+        bg = int(self.border_base_color[1] * (0.6 + 0.4 * health_ratio))
+        bb = int(self.border_base_color[2] * (0.6 + 0.4 * health_ratio))
+        pygame.draw.rect(self.image, (br, bg, bb), self.image.get_rect(), width=18)
 
 
 class Camera:
@@ -538,7 +549,15 @@ def generate_outer_walls_simple(
         for x in range(left, right, segment_length):
             if not any(ex <= x < ex + exit_width for ex in exit_positions):
                 walls.add(
-                    Wall(x - t2, y - t2, segment_length + t2, t2, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR)
+                    Wall(
+                        x - t2,
+                        y - t2,
+                        segment_length + t2,
+                        t2,
+                        health=OUTER_WALL_HEALTH,
+                        color=OUTER_WALL_COLOR,
+                        border_color=OUTER_WALL_BORDER_COLOR,
+                    )
                 )
 
     for x in [left, right]:
@@ -546,7 +565,15 @@ def generate_outer_walls_simple(
         for y in range(top, bottom, segment_length):
             if not any(ey <= y < ey + exit_width for ey in exit_positions):
                 walls.add(
-                    Wall(x - t2, y - t2, t2, segment_length + t2, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR)
+                    Wall(
+                        x - t2,
+                        y - t2,
+                        t2,
+                        segment_length + t2,
+                        health=OUTER_WALL_HEALTH,
+                        color=OUTER_WALL_COLOR,
+                        border_color=OUTER_WALL_BORDER_COLOR,
+                    )
                 )
 
     return walls
@@ -636,7 +663,13 @@ def generate_level_from_blueprint(game_data):
                 continue
             if ch == "B":
                 wall = Wall(
-                    cell_rect.x, cell_rect.y, cell_rect.width, cell_rect.height, health=OUTER_WALL_HEALTH, color=OUTER_WALL_COLOR
+                    cell_rect.x,
+                    cell_rect.y,
+                    cell_rect.width,
+                    cell_rect.height,
+                    health=OUTER_WALL_HEALTH,
+                    color=OUTER_WALL_COLOR,
+                    border_color=OUTER_WALL_BORDER_COLOR,
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
@@ -645,7 +678,13 @@ def generate_level_from_blueprint(game_data):
                 walkable_cells.append(cell_rect)
             elif ch == "1":
                 wall = Wall(
-                    cell_rect.x, cell_rect.y, cell_rect.width, cell_rect.height, health=INTERNAL_WALL_HEALTH, color=INTERNAL_WALL_COLOR
+                    cell_rect.x,
+                    cell_rect.y,
+                    cell_rect.width,
+                    cell_rect.height,
+                    health=INTERNAL_WALL_HEALTH,
+                    color=INTERNAL_WALL_COLOR,
+                    border_color=INTERNAL_WALL_BORDER_COLOR,
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
@@ -842,14 +881,13 @@ def update_footprints(game_data) -> None:
     state["footprints"] = footprints
 
 
-def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface, alpha: int, clear_center, radius: float):
-    """Draw a single hatched fog ring onto the screen."""
+def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface, clear_center, radius: float):
+    """Draw a single hatched fog ring using pattern transparency only (no global alpha)."""
     overlay.fill((0, 0, 0, 0))
     p_w, p_h = pattern.get_size()
     for y in range(0, SCREEN_HEIGHT, p_h):
         for x in range(0, SCREEN_WIDTH, p_w):
             overlay.blit(pattern, (x, y))
-    overlay.set_alpha(alpha)
     pygame.draw.circle(overlay, (0, 0, 0, 0), clear_center, int(radius))
     screen.blit(overlay, (0, 0))
 
@@ -1006,10 +1044,10 @@ def draw(
         # Hatched rings layered from near to far
         for ring in FOG_RINGS:
             radius = int(FOV_RADIUS * ring["radius_factor"] * FOG_RADIUS_SCALE)
-            alpha = ring["alpha"]
             spacing = ring.get("spacing", FOG_HATCH_DEFAULT_SPACING)
-            pattern = get_hatch_pattern(fog_surfaces, spacing, FOG_HATCH_THICKNESS, FOG_HATCH_PIXEL_SCALE)
-            _blit_hatch_ring(screen, fog_soft, pattern, alpha, fov_center_on_screen, radius)
+            thickness = ring.get("thickness", FOG_HATCH_THICKNESS)
+            pattern = get_hatch_pattern(fog_surfaces, spacing, thickness, FOG_HATCH_PIXEL_SCALE)
+            _blit_hatch_ring(screen, fog_soft, pattern, fov_center_on_screen, radius)
 
     # HUD prompts for fuel flow
     now = pygame.time.get_ticks()
@@ -1206,9 +1244,15 @@ def handle_game_over_state(screen, game_data):
         )
 
     if state["game_won"]:
-            show_message(screen, "YOU ESCAPED!", 40, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
+        show_message(screen, "YOU ESCAPED!", 40, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
 
-    show_message(screen, "Press SPACE to return to Title or ESC to Quit", 30, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30))
+    show_message(
+        screen,
+        "Press ESC or SPACE to return to Title",
+        30,
+        WHITE,
+        (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30),
+    )
 
     present(screen)
 
@@ -1217,9 +1261,7 @@ def handle_game_over_state(screen, game_data):
         if event.type == pygame.QUIT:
             return False
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                return False
-            if event.key == pygame.K_SPACE:
+            if event.key in (pygame.K_ESCAPE, pygame.K_SPACE):
                 return True
 
     return None  # Continue in current state
