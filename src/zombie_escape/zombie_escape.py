@@ -44,6 +44,7 @@ FOG_COLOR = (0, 0, 0, 255)
 FOG_COLOR_SOFT = (0, 0, 0, 190)
 FLOOR_COLOR_PRIMARY = (47, 52, 58)  # #2f343a
 FLOOR_COLOR_SECONDARY = (58, 65, 73)  # #3a4149
+FLOOR_COLOR_OUTSIDE = (60, 60, 60)  # neutral gray for outside the building
 
 # Player settings
 PLAYER_RADIUS = 11
@@ -97,12 +98,12 @@ INTERNAL_WALL_THICKNESS = 24
 INTERNAL_WALL_GRID_SNAP = CELL_SIZE
 INTERNAL_WALL_SEGMENT_LENGTH = 50
 INTERNAL_WALL_HEALTH = 40
-INTERNAL_WALL_COLOR = (90, 85, 76)  # warm dark tone with lower saturation
+INTERNAL_WALL_COLOR = (112, 103, 78)  # warm tone with moderate saturation
 OUTER_WALL_MARGIN = 100
 OUTER_WALL_THICKNESS = 50
 OUTER_WALL_SEGMENT_LENGTH = 100
 OUTER_WALL_HEALTH = 9999
-OUTER_WALL_COLOR = (135, 129, 118)  # slightly warm gray-brown, lighter than inner, lower saturation
+OUTER_WALL_COLOR = (146, 136, 110)  # warm tone, lighter than inner
 
 
 # --- Camera Class ---
@@ -786,7 +787,7 @@ def _draw_car_hint(screen, camera, player: Player, car: "Car") -> None:
 
 def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints, config, car, player, show_car_hint: bool, do_flip: bool = True):
     # Drawing
-    screen.fill(FLOOR_COLOR_PRIMARY)
+    screen.fill(FLOOR_COLOR_OUTSIDE)
 
     # floor tiles
     xs, ys, xe, ye = outer_rect
@@ -794,6 +795,12 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, foot
     ys //= INTERNAL_WALL_GRID_SNAP
     xe //= INTERNAL_WALL_GRID_SNAP
     ye //= INTERNAL_WALL_GRID_SNAP
+
+    # Base fill for play area
+    play_area_rect = pygame.Rect(xs * INTERNAL_WALL_GRID_SNAP, ys * INTERNAL_WALL_GRID_SNAP, (xe - xs) * INTERNAL_WALL_GRID_SNAP, (ye - ys) * INTERNAL_WALL_GRID_SNAP)
+    play_area_screen_rect = camera.apply_rect(play_area_rect)
+    pygame.draw.rect(screen, FLOOR_COLOR_PRIMARY, play_area_screen_rect)
+
     for y in range(ys, ye):
         for x in range(xs, xe):
             if (x + y) % 2 == 0:
