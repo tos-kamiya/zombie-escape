@@ -97,12 +97,12 @@ INTERNAL_WALL_THICKNESS = 24
 INTERNAL_WALL_GRID_SNAP = CELL_SIZE
 INTERNAL_WALL_SEGMENT_LENGTH = 50
 INTERNAL_WALL_HEALTH = 40
-INTERNAL_WALL_COLOR = (96, 86, 69)  # warm dark tone for stronger contrast
+INTERNAL_WALL_COLOR = (90, 85, 76)  # warm dark tone with lower saturation
 OUTER_WALL_MARGIN = 100
 OUTER_WALL_THICKNESS = 50
 OUTER_WALL_SEGMENT_LENGTH = 100
 OUTER_WALL_HEALTH = 9999
-OUTER_WALL_COLOR = (142, 131, 108)  # slightly warm gray-brown, lighter than inner
+OUTER_WALL_COLOR = (135, 129, 118)  # slightly warm gray-brown, lighter than inner, lower saturation
 
 
 # --- Camera Class ---
