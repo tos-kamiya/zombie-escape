@@ -56,6 +56,7 @@ An objective reminder is shown at the top-left during play.
 ### Win/Lose Conditions
 
 -   **Win Condition:** Escape the stage (level) boundaries while inside the car.
+    - Stage 2 also requires that you have collected the fuel can before driving out.
 -   **Lose Condition:**
     -   The player is touched by a zombie while *not* inside a car.
     -   (Note: In the current implementation, the game does not end immediately when the car is destroyed. The player can search for another car and continue trying to escape.)
