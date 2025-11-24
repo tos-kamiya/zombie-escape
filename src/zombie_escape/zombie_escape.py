@@ -1430,7 +1430,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: dict, sh
                 paused_manual = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    return False
+                    return True
                 if event.key == pygame.K_p:
                     paused_manual = not paused_manual
 
