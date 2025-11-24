@@ -85,6 +85,25 @@ FAST_ZOMBIE_RATIO_DEFAULT = 0.1
 FAST_ZOMBIE_BASE_SPEED = PLAYER_SPEED * 0.85
 FAST_ZOMBIE_SPEED_JITTER = 0.15
 
+# Stage metadata (stage 2 placeholder for fuel flow coming soon)
+STAGES = [
+    {
+        "id": "stage1",
+        "name": "Stage 1: Find the Car",
+        "description": "Locate the car and drive out to escape.",
+        "available": True,
+        "requires_fuel": False,
+    },
+    {
+        "id": "stage2",
+        "name": "Stage 2: Fuel Run",
+        "description": "Find fuel, bring it to the car, then escape.",
+        "available": True,
+        "requires_fuel": True,
+    },
+]
+DEFAULT_STAGE_ID = "stage1"
+
 # Car settings
 CAR_WIDTH = 30
 CAR_HEIGHT = 50
@@ -93,6 +112,12 @@ CAR_HEALTH = 20
 CAR_WALL_DAMAGE = 1
 CAR_ZOMBIE_DAMAGE = 1
 CAR_HINT_DELAY_MS_DEFAULT = 180000
+
+# Fuel settings (Stage 2)
+FUEL_CAN_WIDTH = 22
+FUEL_CAN_HEIGHT = 30
+FUEL_PICKUP_RADIUS = 24
+FUEL_HINT_DURATION_MS = 1600
 
 # Wall settings
 INTERNAL_WALL_THICKNESS = 24
@@ -421,6 +446,36 @@ class Car(pygame.sprite.Sprite):
         self.rect.center = (int(self.x), int(self.y))
 
 
+class FuelCan(pygame.sprite.Sprite):
+    """Simple fuel can collectible used in Stage 2."""
+
+    def __init__(self: Self, x: int, y: int) -> None:
+        super().__init__()
+        self.image = pygame.Surface((FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT), pygame.SRCALPHA)
+
+        body_rect = pygame.Rect(2, 6, FUEL_CAN_WIDTH - 4, FUEL_CAN_HEIGHT - 8)
+        pygame.draw.rect(self.image, YELLOW, body_rect, border_radius=4)
+        pygame.draw.rect(self.image, BLACK, body_rect, width=2, border_radius=4)
+
+        handle_rect = pygame.Rect(FUEL_CAN_WIDTH // 2, 2, FUEL_CAN_WIDTH // 3, 6)
+        pygame.draw.rect(self.image, YELLOW, handle_rect, border_radius=2)
+        pygame.draw.rect(self.image, BLACK, handle_rect, width=1, border_radius=2)
+
+        spout_points = [(4, 8), (9, 3), (14, 6), (9, 10)]
+        pygame.draw.polygon(self.image, YELLOW, spout_points)
+        pygame.draw.lines(self.image, BLACK, False, spout_points, width=2)
+
+        # Diagonal accent to read like a can
+        pygame.draw.line(
+            self.image,
+            (240, 200, 40),
+            (FUEL_CAN_WIDTH // 2 - 4, FUEL_CAN_HEIGHT // 2 + 5),
+            (FUEL_CAN_WIDTH - 6, FUEL_CAN_HEIGHT // 2 - 6),
+            width=3,
+        )
+
+        self.rect = self.image.get_rect(center=(x, y))
+
 # --- Wall Generation Functions ---
 def generate_outer_walls_simple(
     outer_rect: Tuple[int, int, int, int],
@@ -593,7 +648,9 @@ def show_message(
         print(f"Error rendering font or surface: {e}")
 
 
-def draw_level_overview(surface: surface.Surface, wall_group: sprite.Group, player: Player, car: Car, footprints) -> None:
+def draw_level_overview(
+    surface: surface.Surface, wall_group: sprite.Group, player: Player, car: Car, footprints, fuel: FuelCan | None = None, stage: dict | None = None
+) -> None:
     surface.fill(BLACK)
     for wall in wall_group:
         pygame.draw.rect(surface, INTERNAL_WALL_COLOR, wall.rect)
@@ -604,6 +661,9 @@ def draw_level_overview(surface: surface.Surface, wall_group: sprite.Group, play
         fade = max(FOOTPRINT_MIN_FADE, fade)
         color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
         pygame.draw.circle(surface, color, (int(fp["pos"][0]), int(fp["pos"][1])), FOOTPRINT_OVERVIEW_RADIUS)
+    if fuel and fuel.alive():
+        pygame.draw.rect(surface, YELLOW, fuel.rect, border_radius=3)
+        pygame.draw.rect(surface, BLACK, fuel.rect, width=2, border_radius=3)
     if player:
         pygame.draw.circle(surface, BLUE, player.rect.center, PLAYER_RADIUS * 2)
     if car and car.alive():
@@ -627,6 +687,27 @@ def place_new_car(wall_group, player, walkable_cells: List[pygame.Rect]):
         if not collides_wall and not collides_player:
             return temp_car
     return None
+
+
+def place_fuel_can(walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None) -> FuelCan | None:
+    """Pick a spawn spot for the fuel can away from the player (and car if given)."""
+    if not walkable_cells:
+        return None
+
+    min_player_dist = 250
+    min_car_dist = 200
+
+    for _ in range(200):
+        cell = random.choice(walkable_cells)
+        if math.hypot(cell.centerx - player.x, cell.centery - player.y) < min_player_dist:
+            continue
+        if car and math.hypot(cell.centerx - car.rect.centerx, cell.centery - car.rect.centery) < min_car_dist:
+            continue
+        return FuelCan(cell.centerx, cell.centery)
+
+    # Fallback: drop near a random walkable cell
+    cell = random.choice(walkable_cells)
+    return FuelCan(cell.centerx, cell.centery)
 
 
 def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Optional[float] = None) -> sprite.Sprite:
@@ -727,8 +808,8 @@ def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface,
     screen.blit(overlay, (0, 0))
 
 
-def _draw_status_bar(screen, config):
-    """Render a compact status bar with current config flags."""
+def _draw_status_bar(screen, config, stage=None, state=None):
+    """Render a compact status bar with current config flags and stage info."""
     bar_rect = pygame.Rect(0, SCREEN_HEIGHT - STATUS_BAR_HEIGHT, SCREEN_WIDTH, STATUS_BAR_HEIGHT)
     overlay = pygame.Surface((bar_rect.width, bar_rect.height), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 140))
@@ -737,12 +818,15 @@ def _draw_status_bar(screen, config):
     footprints_on = config.get("footprints", {}).get("enabled", True)
     fast_on = config.get("fast_zombies", {}).get("enabled", True)
     hint_on = config.get("car_hint", {}).get("enabled", True)
+    stage_label = stage["name"] if stage else "Stage 1"
 
     parts = [
+        f"Stage: {stage_label}",
         f"Footprints: {'ON' if footprints_on else 'OFF'}",
         f"Fast Z: {'ON' if fast_on else 'OFF'}",
         f"Car Hint: {'ON' if hint_on else 'OFF'}",
     ]
+
     status_text = " | ".join(parts)
     color = GREEN if all([footprints_on, fast_on, hint_on]) else LIGHT_GRAY
 
@@ -755,14 +839,13 @@ def _draw_status_bar(screen, config):
         print(f"Error rendering status bar: {e}")
 
 
-def _draw_car_hint(screen, camera, player: Player, car: "Car") -> None:
-    """Draw a soft directional hint from player to car."""
-    if not car or not car.alive():
-        return
+def _draw_hint_arrow(screen, camera, player: Player, target_pos: Tuple[int, int], color=YELLOW) -> None:
+    """Draw a soft directional hint from player to a target position."""
     player_screen = camera.apply(player).center
-    car_screen = camera.apply(car).center
-    dx = car_screen[0] - player_screen[0]
-    dy = car_screen[1] - player_screen[1]
+    target_rect = pygame.Rect(target_pos[0], target_pos[1], 0, 0)
+    target_screen = camera.apply_rect(target_rect).center
+    dx = target_screen[0] - player_screen[0]
+    dy = target_screen[1] - player_screen[1]
     dist = math.hypot(dx, dy)
     if dist < 10:
         return
@@ -782,13 +865,32 @@ def _draw_car_hint(screen, camera, player: Player, car: "Car") -> None:
         base[0] + dir_y * 10,
         base[1] - dir_x * 10,
     )
-    color = YELLOW
     pygame.draw.polygon(screen, color, [tip, left, right])
 
 
-def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints, config, car, player, show_car_hint: bool, do_flip: bool = True, outside_rects: List[pygame.Rect] | None = None):
+def draw(
+    screen,
+    outer_rect,
+    camera,
+    all_sprites,
+    fov_target,
+    fog_surfaces,
+    footprints,
+    config,
+    car,
+    player,
+    hint_target: Tuple[int, int] | None,
+    hint_color=YELLOW,
+    do_flip: bool = True,
+    outside_rects: List[pygame.Rect] | None = None,
+    fuel: FuelCan | None = None,
+    stage: dict | None = None,
+    state: dict | None = None,
+):
     # Drawing
     screen.fill(FLOOR_COLOR_OUTSIDE)
+    stage_requires_fuel = stage.get("requires_fuel", False) if stage else False
+    has_fuel = bool(state and state.get("has_fuel"))
 
     # floor tiles
     xs, ys, xe, ye = outer_rect
@@ -840,8 +942,8 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, foot
         if sprite_screen_rect.colliderect(screen.get_rect().inflate(100, 100)):
             screen.blit(sprite.image, sprite_screen_rect)
 
-    if show_car_hint and player and car:
-        _draw_car_hint(screen, camera, player, car)
+    if hint_target and player:
+        _draw_hint_arrow(screen, camera, player, hint_target, color=hint_color)
 
     # fog with hatched rings
     if fov_target is not None:
@@ -863,13 +965,43 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, foot
             pattern = get_hatch_pattern(fog_surfaces, spacing, FOG_HATCH_THICKNESS, FOG_HATCH_PIXEL_SCALE)
             _blit_hatch_ring(screen, fog_soft, pattern, alpha, fov_center_on_screen, radius)
 
-    _draw_status_bar(screen, config)
+    # HUD prompts for fuel flow
+    now = pygame.time.get_ticks()
+    if stage_requires_fuel and state:
+        if state.get("fuel_hint_expires_at", 0) > now and not state.get("has_fuel"):
+            show_message(screen, "Need fuel to drive!", 32, ORANGE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+
+    # Objective banner at top (drawn last so it stays above fog/hatch)
+    def _render_objective(text: str):
+        try:
+            font = pygame.font.Font(None, 30)
+            text_surface = font.render(text, True, YELLOW)
+            text_rect = text_surface.get_rect(topleft=(16, 16))
+            screen.blit(text_surface, text_rect)
+        except pygame.error as e:
+            print(f"Error rendering objective: {e}")
+
+    objective_text = None
+    if stage_requires_fuel:
+        if not has_fuel:
+            objective_text = "Find the fuel can"
+        elif not player.in_car:
+            objective_text = "Find the car"
+        else:
+            objective_text = "Escape the building"
+    else:
+        objective_text = "Find the car" if not player.in_car else "Escape the building"
+
+    if objective_text:
+        _render_objective(objective_text)
+
+    _draw_status_bar(screen, config, stage=stage, state=state)
     if do_flip:
         pygame.display.flip()
 
 
 # --- Game State Function (Contains the main game loop) ---
-def initialize_game_state(config):
+def initialize_game_state(config, stage: dict):
     """Initialize and return the base game state objects."""
     game_state = {
         "game_over": False,
@@ -881,6 +1013,10 @@ def initialize_game_state(config):
         "footprints": [],
         "last_footprint_pos": None,
         "elapsed_play_ms": 0,
+        "stage_id": stage.get("id"),
+        "has_fuel": False,
+        "fuel_hint_expires_at": 0,
+        "fuel_acquired_ms": None,
     }
 
     # Create sprite groups
@@ -906,6 +1042,8 @@ def initialize_game_state(config):
         "areas": {"outer_rect": outer_rect, "inner_rect": inner_rect},
         "fog": {"hard": fog_surface_hard, "soft": fog_surface_soft, "hatch_patterns": {}},
         "config": config,
+        "stage": stage,
+        "fuel": None,
     }
 
 
@@ -988,7 +1126,15 @@ def handle_game_over_state(screen, game_data):
     if not state["overview_created"]:
         state["overview_surface"] = pygame.Surface((LEVEL_WIDTH, LEVEL_HEIGHT))
         footprints_to_draw = state.get("footprints", []) if footprints_enabled else []
-        draw_level_overview(state["overview_surface"], wall_group, game_data["player"], game_data["car"], footprints_to_draw)
+        draw_level_overview(
+            state["overview_surface"],
+            wall_group,
+            game_data["player"],
+            game_data["car"],
+            footprints_to_draw,
+            fuel=game_data.get("fuel"),
+            stage=game_data.get("stage"),
+        )
 
         level_aspect = LEVEL_WIDTH / LEVEL_HEIGHT
         screen_aspect = SCREEN_WIDTH / SCREEN_HEIGHT
@@ -1113,6 +1259,19 @@ def check_interactions(game_data):
     state = game_data["state"]
     walkable_cells = game_data["areas"].get("walkable_cells", [])
     outside_rects = game_data["areas"].get("outside_rects", [])
+    stage = game_data.get("stage", {})
+    stage_requires_fuel = stage.get("requires_fuel", False)
+    fuel = game_data.get("fuel")
+
+    # Fuel pickup
+    if fuel and fuel.alive() and not state.get("has_fuel") and not player.in_car:
+        dist_to_fuel = math.hypot(fuel.rect.centerx - player.x, fuel.rect.centery - player.y)
+        if dist_to_fuel <= max(FUEL_PICKUP_RADIUS, PLAYER_RADIUS + 6):
+            state["has_fuel"] = True
+            state["fuel_acquired_ms"] = state.get("elapsed_play_ms", 0)
+            fuel.kill()
+            game_data["fuel"] = None
+            print("Fuel acquired!")
 
     # Player entering car
     shrunk_car = get_shrunk_sprite(car, 0.8)
@@ -1120,9 +1279,12 @@ def check_interactions(game_data):
         g = pygame.sprite.Group()
         g.add(player)
         if pygame.sprite.spritecollide(shrunk_car, g, False):
-            player.in_car = True
-            all_sprites.remove(player)
-            print("Player entered car!")
+            if stage_requires_fuel and not state.get("has_fuel"):
+                state["fuel_hint_expires_at"] = pygame.time.get_ticks() + FUEL_HINT_DURATION_MS
+            else:
+                player.in_car = True
+                all_sprites.remove(player)
+                print("Player entered car!")
 
     # Car hitting zombies
     if player.in_car and car.alive() and car.health > 0:
@@ -1163,7 +1325,8 @@ def check_interactions(game_data):
     # Player escaping the level
     if player.in_car and car.alive():
         if any(outside.collidepoint(car.rect.center) for outside in outside_rects):
-            state["game_won"] = True
+            if not stage_requires_fuel or state.get("has_fuel"):
+                state["game_won"] = True
 
     # Return fog of view target
     if not state["game_over"] and not state["game_won"]:
@@ -1171,10 +1334,10 @@ def check_interactions(game_data):
     return None
 
 
-def run_game(screen: surface.Surface, clock: time.Clock, config, show_pause_overlay: bool = True) -> bool:
+def run_game(screen: surface.Surface, clock: time.Clock, config, stage: dict, show_pause_overlay: bool = True) -> bool:
     """Main game loop function, now using smaller helper functions."""
     # Initialize game components
-    game_data = initialize_game_state(config)
+    game_data = initialize_game_state(config, stage)
     paused_manual = False
     paused_focus = False
     last_fov_target = None
@@ -1184,6 +1347,14 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, show_pause_over
     player, car = setup_player_and_car(game_data, layout_data)
     game_data["player"] = player
     game_data["car"] = car
+
+    # Stage-specific collectibles (fuel for Stage 2)
+    stage_requires_fuel = stage.get("requires_fuel", False)
+    if stage_requires_fuel:
+        fuel_can = place_fuel_can(layout_data["walkable_cells"], player, car)
+        if fuel_can:
+            game_data["fuel"] = fuel_can
+            game_data["groups"]["all_sprites"].add(fuel_can, layer=1)
 
     # Spawn initial zombies
     spawn_initial_zombies(game_data, player, layout_data)
@@ -1229,9 +1400,12 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, show_pause_over
                 config,
                 game_data["car"],
                 player,
-                False,
+                None,
                 do_flip=not show_pause_overlay,
                 outside_rects=game_data["areas"].get("outside_rects"),
+                fuel=game_data.get("fuel"),
+                stage=stage,
+                state=game_data["state"],
             )
             if show_pause_overlay:
                 overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -1271,14 +1445,24 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, show_pause_over
         # Draw everything
         car_hint_conf = config.get("car_hint", {})
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
-        show_car_hint = (
-            car_hint_conf.get("enabled", True)
-            and game_data["state"]["elapsed_play_ms"] >= hint_delay
-            and not player.in_car
-            and game_data["car"].alive()
-            and math.hypot(player.rect.centerx - game_data["car"].rect.centerx, player.rect.centery - game_data["car"].rect.centery)
-            > FOV_RADIUS * FOG_RADIUS_SCALE
-        )
+        elapsed_ms = game_data["state"]["elapsed_play_ms"]
+        stage_requires_fuel = stage.get("requires_fuel", False)
+        has_fuel = game_data["state"].get("has_fuel")
+        fuel_acquired_ms = game_data["state"].get("fuel_acquired_ms")
+        hint_enabled = car_hint_conf.get("enabled", True)
+        hint_target = None
+        hint_color = YELLOW
+
+        if hint_enabled and not player.in_car:
+            # Stage 2: point to fuel first, then car after fuel pickup delay
+            if stage_requires_fuel and not has_fuel:
+                if elapsed_ms >= hint_delay and game_data.get("fuel") and game_data["fuel"].alive():
+                    hint_target = game_data["fuel"].rect.center
+            else:
+                start_ms = fuel_acquired_ms if stage_requires_fuel else 0
+                if elapsed_ms - (start_ms or 0) >= hint_delay and game_data["car"].alive():
+                    hint_target = game_data["car"].rect.center
+
         draw(
             screen,
             game_data["areas"]["outer_rect"],
@@ -1290,44 +1474,77 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, show_pause_over
             config,
             game_data["car"],
             player,
-            show_car_hint,
+            hint_target,
+            hint_color,
             outside_rects=game_data["areas"].get("outside_rects"),
+            fuel=game_data.get("fuel"),
+            stage=stage,
+            state=game_data["state"],
         )
 
     return False
 
 
-# --- Splash Screen Function ---
-def title_screen(screen: surface.Surface, clock: time.Clock, config) -> str:
-    """Simple title menu. Returns 'start', 'settings', or 'quit'."""
-    options = ["Start Game", "Settings", "Quit"]
-    selected = 0
+# --- Splash & Menu Functions ---
+def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
+    """Title menu with inline stage selection. Returns action dict: {'action': 'stage'|'settings'|'quit', 'stage': dict|None}."""
+    options = [{"type": "stage", "stage": s, "available": s.get("available", False)} for s in STAGES]
+    options += [{"type": "settings"}, {"type": "quit"}]
+    selected = next(
+        (i for i, opt in enumerate(options) if opt["type"] == "stage" and opt["stage"]["id"] == DEFAULT_STAGE_ID), 0
+    )
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return "quit"
+                return {"action": "quit", "stage": None}
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_UP, pygame.K_w):
                     selected = (selected - 1) % len(options)
                 elif event.key in (pygame.K_DOWN, pygame.K_s):
                     selected = (selected + 1) % len(options)
                 elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                    return options[selected].lower().split()[0]
+                    current = options[selected]
+                    if current["type"] == "stage" and current.get("available"):
+                        return {"action": "stage", "stage": current["stage"]}
+                    if current["type"] == "settings":
+                        return {"action": "settings", "stage": None}
+                    if current["type"] == "quit":
+                        return {"action": "quit", "stage": None}
 
         screen.fill(BLACK)
-        show_message(screen, "Zombie Escape", 72, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 120))
+        show_message(screen, "Zombie Escape", 72, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 140))
 
         try:
-            font = pygame.font.Font(None, 36)
-            for idx, label in enumerate(options):
-                color = YELLOW if idx == selected else WHITE
+            font = pygame.font.Font(None, 34)
+            for idx, option in enumerate(options):
+                if option["type"] == "stage":
+                    label = option["stage"]["name"]
+                    if not option.get("available"):
+                        label += " [Locked]"
+                    color = YELLOW if idx == selected else (WHITE if option.get("available") else GRAY)
+                elif option["type"] == "settings":
+                    label = "Settings"
+                    color = YELLOW if idx == selected else WHITE
+                else:
+                    label = "Quit"
+                    color = YELLOW if idx == selected else WHITE
+
                 text_surface = font.render(label, True, color)
-                text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + idx * 50))
+                text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 20 + idx * 46))
                 screen.blit(text_surface, text_rect)
 
-            # Show a quick config summary
-            small_font = pygame.font.Font(None, 24)
+            # Selected stage description (if a stage is highlighted)
+            current = options[selected]
+            if current["type"] == "stage":
+                desc_font = pygame.font.Font(None, 24)
+                desc_color = LIGHT_GRAY if current.get("available") else GRAY
+                desc_surface = desc_font.render(current["stage"]["description"], True, desc_color)
+                desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 170))
+                screen.blit(desc_surface, desc_rect)
+
+            # Quick config summary
+            small_font = pygame.font.Font(None, 22)
             fp_on = config.get("footprints", {}).get("enabled", True)
             fast_on = config.get("fast_zombies", {}).get("enabled", True)
             hint_on = config.get("car_hint", {}).get("enabled", True)
@@ -1338,7 +1555,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> str:
             ]
             summary = " | ".join(summary_parts)
             summary_surface = small_font.render(summary, True, LIGHT_GRAY)
-            summary_rect = summary_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50 * len(options) + 30))
+            summary_rect = summary_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 60))
             screen.blit(summary_surface, summary_rect)
         except pygame.error as e:
             print(f"Error rendering title screen: {e}")
@@ -1475,17 +1692,17 @@ def main():
     while restart_game:
         selection = title_screen(screen, clock, config)
 
-        if selection == "quit":
+        if selection["action"] == "quit":
             restart_game = False
             break
 
-        if selection == "settings":
+        if selection["action"] == "settings":
             config = settings_screen(screen, clock, config, config_path)
             continue
 
-        if selection == "start":
+        if selection["action"] == "stage":
             try:
-                restart_game = run_game(screen, clock, config, show_pause_overlay=not hide_pause_overlay)
+                restart_game = run_game(screen, clock, config, selection["stage"], show_pause_overlay=not hide_pause_overlay)
             except SystemExit:
                 restart_game = False  # Exit the main loop
             except Exception:
