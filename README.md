@@ -28,6 +28,15 @@ This game is a simple 2D top-down action game where the player aims to escape by
 
 ## Game Rules
 
+### Stages (new in 0.7.0)
+
+At the title screen you can pick a stage:
+
+- **Stage 1: Find the Car** — locate the car and drive out.
+- **Stage 2: Fuel Run** — find a fuel can first, pick it up, then find the car and escape.
+
+An objective reminder is shown at the top-left during play.
+
 ### Characters/Items
 
 -   **Player:** A blue circle. Controlled with the WASD or arrow keys.
@@ -38,7 +47,8 @@ This game is a simple 2D top-down action game where the player aims to escape by
     -   The car has durability. Durability decreases when colliding with internal walls or hitting zombies.
     -   If durability reaches 0, the car is destroyed, and the player is ejected.
     -   When the car is destroyed, a **new car will respawn** at a random location within the stage.
-    -   After roughly 3 minutes of play, a small triangle near the player points toward the car (it hides once the car is within view).
+    -   After roughly 3 minutes of play, a small triangle near the player points toward the objective: fuel first (Stage 2 before pickup), car after fuel is collected (Stage 2), or car directly (Stage 1).
+-   **Fuel Can (Stage 2):** A yellow jerrycan. Pick it up before driving the car.
 -   **Walls:** Gray rectangles.
     -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
     -   **Inner Walls:** Walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
