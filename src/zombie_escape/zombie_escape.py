@@ -17,8 +17,13 @@ except:
     __version__ = "0.0.0-unknown"
 
 # --- Constants ---
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+DEFAULT_SCREEN_WIDTH = 800
+DEFAULT_SCREEN_HEIGHT = 600
+WINDOW_SCALE_MIN = 0.5
+WINDOW_SCALE_MAX = 2.0
+SCREEN_WIDTH = DEFAULT_SCREEN_WIDTH  # Logical render width
+SCREEN_HEIGHT = DEFAULT_SCREEN_HEIGHT  # Logical render height
+current_window_scale = 1.0  # Applied to the OS window only
 FPS = 60
 STATUS_BAR_HEIGHT = 28
 
@@ -130,6 +135,47 @@ OUTER_WALL_THICKNESS = 50
 OUTER_WALL_SEGMENT_LENGTH = 100
 OUTER_WALL_HEALTH = 9999
 OUTER_WALL_COLOR = (120, 112, 100)  # red-leaning outer tone, brighter than inner
+
+
+# --- Window scaling helpers ---
+def apply_window_scale(scale: float, game_data: Optional[dict] = None) -> surface.Surface:
+    """Resize the OS window; the logical render surface stays at the default size."""
+    global current_window_scale
+
+    clamped_scale = max(WINDOW_SCALE_MIN, min(WINDOW_SCALE_MAX, scale))
+    current_window_scale = clamped_scale
+
+    window_width = max(1, int(DEFAULT_SCREEN_WIDTH * current_window_scale))
+    window_height = max(1, int(DEFAULT_SCREEN_HEIGHT * current_window_scale))
+
+    new_window = pygame.display.set_mode((window_width, window_height))
+    pygame.display.set_caption(f"Zombie Escape v{__version__} ({window_width}x{window_height})")
+
+    if game_data is not None:
+        # Invalidate cached overview so it can be re-scaled next time it's drawn
+        if "state" in game_data:
+            game_data["state"]["overview_created"] = False
+
+    return new_window
+
+
+def nudge_window_scale(multiplier: float, game_data: Optional[dict] = None) -> surface.Surface:
+    """Change window scale relative to the current setting."""
+    target_scale = current_window_scale * multiplier
+    return apply_window_scale(target_scale, game_data)
+
+
+def present(logical_surface: surface.Surface) -> None:
+    """Scale the logical surface to the current window and flip buffers."""
+    window = pygame.display.get_surface()
+    if window is None:
+        return
+    window_size = window.get_size()
+    if window_size == logical_surface.get_size():
+        window.blit(logical_surface, (0, 0))
+    else:
+        pygame.transform.smoothscale(logical_surface, window_size, window)
+    pygame.display.flip()
 
 
 # --- Camera Class ---
@@ -997,7 +1043,7 @@ def draw(
 
     _draw_status_bar(screen, config, stage=stage, state=state)
     if do_flip:
-        pygame.display.flip()
+        present(screen)
 
 
 # --- Game State Function (Contains the main game loop) ---
@@ -1160,11 +1206,11 @@ def handle_game_over_state(screen, game_data):
         )
 
     if state["game_won"]:
-        show_message(screen, "YOU ESCAPED!", 40, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
+            show_message(screen, "YOU ESCAPED!", 40, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
 
     show_message(screen, "Press SPACE to return to Title or ESC to Quit", 30, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30))
 
-    pygame.display.flip()
+    present(screen)
 
     # Check for restart input
     for event in pygame.event.get():
@@ -1377,15 +1423,16 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: dict, sh
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                return False
             if event.type == pygame.WINDOWFOCUSLOST:
                 paused_focus = True
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
-                paused_manual = not paused_manual
             if event.type == pygame.MOUSEBUTTONDOWN:
                 paused_focus = False
                 paused_manual = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return False
+                if event.key == pygame.K_p:
+                    paused_manual = not paused_manual
 
         paused = paused_manual or paused_focus
         if paused:
@@ -1426,7 +1473,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: dict, sh
                     LIGHT_GRAY,
                     (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 140),
                 )
-                pygame.display.flip()
+                present(screen)
             continue
 
         # Process input
@@ -1499,6 +1546,12 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             if event.type == pygame.QUIT:
                 return {"action": "quit", "stage": None}
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFTBRACKET:
+                    nudge_window_scale(0.5)
+                    continue
+                if event.key == pygame.K_RIGHTBRACKET:
+                    nudge_window_scale(2.0)
+                    continue
                 if event.key in (pygame.K_UP, pygame.K_w):
                     selected = (selected - 1) % len(options)
                 elif event.key in (pygame.K_DOWN, pygame.K_s):
@@ -1548,19 +1601,16 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             fp_on = config.get("footprints", {}).get("enabled", True)
             fast_on = config.get("fast_zombies", {}).get("enabled", True)
             hint_on = config.get("car_hint", {}).get("enabled", True)
-            summary_parts = [
-                f"Footprints: {'ON' if fp_on else 'OFF'}",
-                f"Fast Z: {'ON' if fast_on else 'OFF'}",
-                f"Car Hint: {'ON' if hint_on else 'OFF'}",
-            ]
-            summary = " | ".join(summary_parts)
-            summary_surface = small_font.render(summary, True, LIGHT_GRAY)
-            summary_rect = summary_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 60))
-            screen.blit(summary_surface, summary_rect)
+
+            hint_font = pygame.font.Font(None, 24)
+            hint_text = "Resize window: [ to shrink, ] to enlarge (menu only)"
+            hint_surface = hint_font.render(hint_text, True, LIGHT_GRAY)
+            hint_rect = hint_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50))
+            screen.blit(hint_surface, hint_rect)
         except pygame.error as e:
             print(f"Error rendering title screen: {e}")
 
-        pygame.display.flip()
+        present(screen)
         clock.tick(FPS)
 
 
@@ -1586,6 +1636,12 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             if event.type == pygame.QUIT:
                 return working
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFTBRACKET:
+                    nudge_window_scale(0.5)
+                    continue
+                if event.key == pygame.K_RIGHTBRACKET:
+                    nudge_window_scale(2.0)
+                    continue
                 if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
                     save_config(working, config_path)
                     return working
@@ -1665,7 +1721,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
         except pygame.error as e:
             print(f"Error rendering settings: {e}")
 
-        pygame.display.flip()
+        present(screen)
         clock.tick(FPS)
 
 
@@ -1678,8 +1734,8 @@ def main():
         print(f"Pygame font failed to initialize: {e}")
         # Font errors are often non-fatal, continue without fonts or handle gracefully
 
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption(f"Zombie Escape v{__version__}")
+    apply_window_scale(current_window_scale)
+    screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)).convert_alpha()
     clock = pygame.time.Clock()
 
     hide_pause_overlay = "--hide-pause-overlay" in sys.argv
