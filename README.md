@@ -25,10 +25,11 @@ This game is a simple 2D top-down action game where the player aims to escape by
 -   **Enter Car:** Overlap the player with the car.
 -   **Quit Game:** `ESC` key
 -   **Restart:** `R` key (on Game Over/Clear screen)
+-   **Window Scale (title/settings only):** `[` to shrink, `]` to enlarge
 
 ## Game Rules
 
-### Stages (new in 0.7.0)
+### Stages
 
 At the title screen you can pick a stage:
 
@@ -41,7 +42,6 @@ An objective reminder is shown at the top-left during play.
 
 -   **Player:** A blue circle. Controlled with the WASD or arrow keys.
 -   **Zombie:** A red circle. Will chase the player (or car) once detected.
-    -   Zombies enter a direct pursuit mode when the player enters their line of sight (`ZOMBIE_SIGHT_RANGE`).
     -   When out of sight, the zombie's movement mode will randomly switch every certain time (moving horizontally/vertically only, side-to-side movement, random movement, etc.).
 -   **Car:** A yellow rectangle. The player can enter by making contact with it.
     -   The car has durability. Durability decreases when colliding with internal walls or hitting zombies.
