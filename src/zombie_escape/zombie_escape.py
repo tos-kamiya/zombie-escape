@@ -32,7 +32,6 @@ LEVEL_HEIGHT = LEVEL_GRID_ROWS * CELL_SIZE
 # Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-DARK_GRAY = (20, 20, 20)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
@@ -43,6 +42,8 @@ ORANGE = (255, 165, 0)
 DARK_RED = (139, 0, 0)
 FOG_COLOR = (0, 0, 0, 255)
 FOG_COLOR_SOFT = (0, 0, 0, 190)
+FLOOR_COLOR_PRIMARY = (47, 52, 58)  # #2f343a
+FLOOR_COLOR_SECONDARY = (58, 65, 73)  # #3a4149
 
 # Player settings
 PLAYER_RADIUS = 11
@@ -96,12 +97,12 @@ INTERNAL_WALL_THICKNESS = 24
 INTERNAL_WALL_GRID_SNAP = CELL_SIZE
 INTERNAL_WALL_SEGMENT_LENGTH = 50
 INTERNAL_WALL_HEALTH = 40
-INTERNAL_WALL_COLOR = GRAY
+INTERNAL_WALL_COLOR = (90, 100, 111)  # #5a646f
 OUTER_WALL_MARGIN = 100
 OUTER_WALL_THICKNESS = 50
 OUTER_WALL_SEGMENT_LENGTH = 100
 OUTER_WALL_HEALTH = 9999
-OUTER_WALL_COLOR = LIGHT_GRAY
+OUTER_WALL_COLOR = (106, 117, 130)  # #6a7582
 
 
 # --- Camera Class ---
@@ -785,7 +786,7 @@ def _draw_car_hint(screen, camera, player: Player, car: "Car") -> None:
 
 def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, footprints, config, car, player, show_car_hint: bool, do_flip: bool = True):
     # Drawing
-    screen.fill(BLACK)
+    screen.fill(FLOOR_COLOR_PRIMARY)
 
     # floor tiles
     xs, ys, xe, ye = outer_rect
@@ -800,7 +801,7 @@ def draw(screen, outer_rect, camera, all_sprites, fov_target, fog_surfaces, foot
                 r = pygame.Rect(lx, ly, INTERNAL_WALL_GRID_SNAP, INTERNAL_WALL_GRID_SNAP)
                 sr = camera.apply_rect(r)
                 if sr.colliderect(screen.get_rect()):
-                    pygame.draw.rect(screen, DARK_GRAY, sr)
+                    pygame.draw.rect(screen, FLOOR_COLOR_SECONDARY, sr)
 
     # footprints
     if config.get("footprints", {}).get("enabled", True):
