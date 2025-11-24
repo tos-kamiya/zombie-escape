@@ -1,4 +1,4 @@
-from typing import List, Optional, Self, Tuple, Union
+from typing import Iterable, List, Optional, Self, Tuple, Union
 import random
 import copy
 import math
@@ -89,6 +89,7 @@ ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
 FAST_ZOMBIE_RATIO_DEFAULT = 0.1
 FAST_ZOMBIE_BASE_SPEED = PLAYER_SPEED * 0.85
 FAST_ZOMBIE_SPEED_JITTER = 0.15
+ZOMBIE_SEPARATION_DISTANCE = ZOMBIE_RADIUS * 2.2
 
 # Stage metadata (stage 2 placeholder for fuel flow coming soon)
 STAGES = [
@@ -410,7 +411,43 @@ class Zombie(pygame.sprite.Sprite):
 
         return final_x, final_y
 
-    def update(self: Self, player_center: Tuple[int, int], walls: List[Wall]) -> None:
+    def _avoid_other_zombies(
+        self: Self, move_x: float, move_y: float, zombies: Iterable["Zombie"]
+    ) -> Tuple[float, float]:
+        """If another zombie is too close, steer directly away from the closest one."""
+        next_x = self.x + move_x
+        next_y = self.y + move_y
+
+        closest: Optional["Zombie"] = None
+        closest_dist = ZOMBIE_SEPARATION_DISTANCE
+        for other in zombies:
+            if other is self or not other.alive():
+                continue
+            dx = other.x - next_x
+            dy = other.y - next_y
+            if abs(dx) > ZOMBIE_SEPARATION_DISTANCE or abs(dy) > ZOMBIE_SEPARATION_DISTANCE:
+                continue
+            dist = math.hypot(dx, dy)
+            if dist < closest_dist:
+                closest = other
+                closest_dist = dist
+
+        if closest is None:
+            return move_x, move_y
+
+        away_dx = next_x - closest.x
+        away_dy = next_y - closest.y
+        away_dist = math.hypot(away_dx, away_dy)
+        if away_dist == 0:
+            angle = random.uniform(0, 2 * math.pi)
+            away_dx, away_dy = math.cos(angle), math.sin(angle)
+            away_dist = 1
+
+        move_x = (away_dx / away_dist) * self.speed
+        move_y = (away_dy / away_dist) * self.speed
+        return move_x, move_y
+
+    def update(self: Self, player_center: Tuple[int, int], walls: List[Wall], zombies: Iterable["Zombie"]) -> None:
         now = pygame.time.get_ticks()
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
@@ -426,6 +463,7 @@ class Zombie(pygame.sprite.Sprite):
         elif now - self.last_mode_change_time > self.mode_change_interval:
             self.change_mode()
         move_x, move_y = self._calculate_movement(player_center)
+        move_x, move_y = self._avoid_other_zombies(move_x, move_y, zombies)
         final_x, final_y = self._handle_wall_collision(self.x + move_x, self.y + move_y, walls)
 
         if not (0 <= final_x < LEVEL_WIDTH and 0 <= final_y < LEVEL_HEIGHT):
@@ -1334,7 +1372,7 @@ def update_entities(game_data, player_dx, player_dy, car_dx, car_dy):
     # Update zombies
     target_center = car.rect.center if player.in_car and car.alive() else player.rect.center
     for zombie in zombie_group:
-        zombie.update(target_center, wall_group)
+        zombie.update(target_center, wall_group, zombie_group)
 
 
 def check_interactions(game_data):
