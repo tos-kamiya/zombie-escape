@@ -56,12 +56,12 @@ FOG_MAX_RADIUS_FACTOR = 1.55
 FOG_HATCH_THICKNESS = 9
 FOG_HATCH_PIXEL_SCALE = 3
 
-# Flashlight settings
+# Flashlight settings (defaults pulled from DEFAULT_CONFIG)
 DEFAULT_FLASHLIGHT_BONUS_SCALE = float(DEFAULT_CONFIG.get("flashlight", {}).get("bonus_scale", 1.35))
 FLASHLIGHT_WIDTH = 20
 FLASHLIGHT_HEIGHT = 16
 FLASHLIGHT_PICKUP_RADIUS = 26
-FLASHLIGHT_SPAWN_COUNT = 2
+DEFAULT_FLASHLIGHT_SPAWN_COUNT = 2
 
 
 @dataclass(frozen=True)
@@ -190,7 +190,7 @@ MAX_ZOMBIES = 400
 INITIAL_ZOMBIES_INSIDE = 15
 ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
 ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
-FAST_ZOMBIE_RATIO_DEFAULT = float(DEFAULT_CONFIG.get("fast_zombies", {}).get("ratio", 0.1))
+DEFAULT_FAST_ZOMBIE_RATIO = float(DEFAULT_CONFIG.get("fast_zombies", {}).get("ratio", 0.1))
 FAST_ZOMBIE_BASE_SPEED = PLAYER_SPEED * 0.85
 FAST_ZOMBIE_SPEED_JITTER = 0.15
 ZOMBIE_SEPARATION_DISTANCE = ZOMBIE_RADIUS * 2.2
@@ -429,7 +429,7 @@ def create_zombie(config, start_pos: Optional[Tuple[int, int]] = None, hint_pos:
     """Factory to create zombies with optional fast variants."""
     fast_conf = config.get("fast_zombies", {}) if config else {}
     fast_enabled = fast_conf.get("enabled", True)
-    ratio = fast_conf.get("ratio", FAST_ZOMBIE_RATIO_DEFAULT)
+    ratio = fast_conf.get("ratio", DEFAULT_FAST_ZOMBIE_RATIO)
     ratio = max(0.0, min(1.0, ratio))
     is_fast = fast_enabled and random.random() < ratio
     base_speed = FAST_ZOMBIE_BASE_SPEED if is_fast else ZOMBIE_SPEED
@@ -929,7 +929,7 @@ def place_flashlight(walkable_cells: List[pygame.Rect], player: Player, car: Car
     return Flashlight(cell.centerx, cell.centery)
 
 
-def place_flashlights(walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None, count: int = FLASHLIGHT_SPAWN_COUNT) -> list[Flashlight]:
+def place_flashlights(walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None, count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT) -> list[Flashlight]:
     """Spawn multiple flashlights using the single-place helper to spread them out."""
     placed: list[Flashlight] = []
     attempts = 0
@@ -1635,11 +1635,11 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
 
     flashlight_conf = config.get("flashlight", {})
     flashlights_enabled = flashlight_conf.get("enabled", True)
-    raw_flashlight_count = flashlight_conf.get("count", FLASHLIGHT_SPAWN_COUNT)
+    raw_flashlight_count = flashlight_conf.get("count", DEFAULT_FLASHLIGHT_SPAWN_COUNT)
     try:
         flashlight_count = int(raw_flashlight_count)
     except (TypeError, ValueError):
-        flashlight_count = FLASHLIGHT_SPAWN_COUNT
+        flashlight_count = DEFAULT_FLASHLIGHT_SPAWN_COUNT
 
     # Stage-specific collectibles (fuel for Stage 2)
     if stage.requires_fuel:
