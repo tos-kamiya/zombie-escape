@@ -12,6 +12,7 @@ from pygame import rect, sprite, surface, time
 
 from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
 from .config import DEFAULT_CONFIG, load_config, save_config
+from .render import Colors, FogRing, RenderAssets, draw, draw_level_overview, show_message
 try:
     from .__about__ import __version__
 except:
@@ -53,7 +54,6 @@ PLAYER_SPEED = 2.8
 FOV_RADIUS = 160
 FOG_RADIUS_SCALE = 1.2
 FOG_MAX_RADIUS_FACTOR = 1.55
-FOG_HATCH_THICKNESS = 9
 FOG_HATCH_PIXEL_SCALE = 3
 
 # Flashlight settings (defaults pulled from DEFAULT_CONFIG)
@@ -62,12 +62,6 @@ FLASHLIGHT_WIDTH = 20
 FLASHLIGHT_HEIGHT = 16
 FLASHLIGHT_PICKUP_RADIUS = 26
 DEFAULT_FLASHLIGHT_SPAWN_COUNT = 2
-
-
-@dataclass(frozen=True)
-class FogRing:
-    radius_factor: float
-    thickness: int = FOG_HATCH_THICKNESS
 
 
 class AttrMapMixin:
@@ -163,13 +157,6 @@ class GameData:
         return hasattr(self, key)
 
 
-FOG_RINGS = [
-    FogRing(radius_factor=0.82, thickness=2),
-    FogRing(radius_factor=0.99, thickness=4),
-    FogRing(radius_factor=1.16, thickness=6),
-    FogRing(radius_factor=1.33, thickness=8),
-    FogRing(radius_factor=1.5, thickness=12),
-]
 FOG_COLOR = (0, 0, 0, 255)
 
 # Footprint settings
@@ -249,6 +236,49 @@ OUTER_WALL_BORDER_COLOR = (120, 112, 100)
 FLOOR_COLOR_PRIMARY = (41, 46, 51)
 FLOOR_COLOR_SECONDARY = (48, 54, 61)
 FLOOR_COLOR_OUTSIDE = (30, 45, 30)
+
+# Rendering assets (shared with render module)
+FOG_RINGS = [
+    FogRing(radius_factor=0.82, thickness=2),
+    FogRing(radius_factor=0.99, thickness=4),
+    FogRing(radius_factor=1.16, thickness=6),
+    FogRing(radius_factor=1.33, thickness=8),
+    FogRing(radius_factor=1.5, thickness=12),
+]
+
+RENDER_ASSETS = RenderAssets(
+    screen_width=SCREEN_WIDTH,
+    screen_height=SCREEN_HEIGHT,
+    status_bar_height=STATUS_BAR_HEIGHT,
+    player_radius=PLAYER_RADIUS,
+    fov_radius=FOV_RADIUS,
+    fog_radius_scale=FOG_RADIUS_SCALE,
+    fog_max_radius_factor=FOG_MAX_RADIUS_FACTOR,
+    fog_hatch_pixel_scale=FOG_HATCH_PIXEL_SCALE,
+    fog_color=FOG_COLOR,
+    fog_rings=FOG_RINGS,
+    floor_color_primary=FLOOR_COLOR_PRIMARY,
+    floor_color_secondary=FLOOR_COLOR_SECONDARY,
+    floor_color_outside=FLOOR_COLOR_OUTSIDE,
+    internal_wall_color=INTERNAL_WALL_COLOR,
+    footprint_radius=FOOTPRINT_RADIUS,
+    footprint_overview_radius=FOOTPRINT_OVERVIEW_RADIUS,
+    footprint_color=FOOTPRINT_COLOR,
+    footprint_lifetime_ms=FOOTPRINT_LIFETIME_MS,
+    footprint_min_fade=FOOTPRINT_MIN_FADE,
+    internal_wall_grid_snap=INTERNAL_WALL_GRID_SNAP,
+    default_flashlight_bonus_scale=DEFAULT_FLASHLIGHT_BONUS_SCALE,
+    colors=Colors(
+        black=BLACK,
+        white=WHITE,
+        gray=GRAY,
+        light_gray=LIGHT_GRAY,
+        yellow=YELLOW,
+        orange=ORANGE,
+        green=GREEN,
+        blue=BLUE,
+    ),
+)
 
 
 # --- Window scaling helpers ---
@@ -813,62 +843,6 @@ def generate_level_from_blueprint(game_data):
     }
 
 
-# --- Helper Functions ---
-def show_message(
-    screen: surface.Surface, text: str, size: int, color: Tuple[int, int, int], position: Tuple[int, int]
-) -> None:
-    try:
-        font = pygame.font.Font(None, size)
-        text_surface = font.render(text, True, color)
-        text_rect = text_surface.get_rect(center=position)
-
-        # Add a semi-transparent background rectangle for better visibility
-        bg_padding = 15
-        bg_rect = text_rect.inflate(bg_padding * 2, bg_padding * 2)
-        bg_surface = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
-        bg_surface.fill((0, 0, 0, 180))  # Black with 180 alpha (out of 255)
-        screen.blit(bg_surface, bg_rect.topleft)
-
-        screen.blit(text_surface, text_rect)
-    except pygame.error as e:
-        print(f"Error rendering font or surface: {e}")
-
-
-def draw_level_overview(
-    surface: surface.Surface,
-    wall_group: sprite.Group,
-    player: Player,
-    car: Car,
-    footprints,
-    fuel: FuelCan | None = None,
-    flashlights: list[Flashlight] | None = None,
-    stage: Stage | None = None,
-) -> None:
-    surface.fill(BLACK)
-    for wall in wall_group:
-        pygame.draw.rect(surface, INTERNAL_WALL_COLOR, wall.rect)
-    now = pygame.time.get_ticks()
-    for fp in footprints:
-        age = now - fp["time"]
-        fade = 1 - (age / FOOTPRINT_LIFETIME_MS)
-        fade = max(FOOTPRINT_MIN_FADE, fade)
-        color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
-        pygame.draw.circle(surface, color, (int(fp["pos"][0]), int(fp["pos"][1])), FOOTPRINT_OVERVIEW_RADIUS)
-    if fuel and fuel.alive():
-        pygame.draw.rect(surface, YELLOW, fuel.rect, border_radius=3)
-        pygame.draw.rect(surface, BLACK, fuel.rect, width=2, border_radius=3)
-    if flashlights:
-        for flashlight in flashlights:
-            if flashlight.alive():
-                pygame.draw.rect(surface, (240, 230, 150), flashlight.rect, border_radius=2)
-                pygame.draw.rect(surface, BLACK, flashlight.rect, width=2, border_radius=2)
-    if player:
-        pygame.draw.circle(surface, BLUE, player.rect.center, PLAYER_RADIUS * 2)
-    if car and car.alive():
-        car_rect = car.image.get_rect(center=car.rect.center)
-        surface.blit(car.image, car_rect)
-
-
 def place_new_car(wall_group, player, walkable_cells: List[pygame.Rect]):
     if not walkable_cells:
         return None
@@ -966,44 +940,6 @@ def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Opt
     return sprite
 
 
-def get_hatch_pattern(fog_data, thickness: int, pixel_scale: int = 1) -> surface.Surface:
-    """Return cached ordered-dither tile surface (Bayer-style, optionally chunky)."""
-    cache = fog_data.setdefault("hatch_patterns", {})
-    pixel_scale = max(1, pixel_scale)
-    key = (thickness, pixel_scale)
-    if key in cache:
-        return cache[key]
-
-    spacing = 20
-    density = max(1, min(thickness, 16))
-    pattern = pygame.Surface((spacing, spacing), pygame.SRCALPHA)
-
-    # 8x8 Bayer matrix values 0..63 for ordered dithering
-    bayer = [
-        [0, 32, 8, 40, 2, 34, 10, 42],
-        [48, 16, 56, 24, 50, 18, 58, 26],
-        [12, 44, 4, 36, 14, 46, 6, 38],
-        [60, 28, 52, 20, 62, 30, 54, 22],
-        [3, 35, 11, 43, 1, 33, 9, 41],
-        [51, 19, 59, 27, 49, 17, 57, 25],
-        [15, 47, 7, 39, 13, 45, 5, 37],
-        [63, 31, 55, 23, 61, 29, 53, 21],
-    ]
-    # Density controls threshold (higher = more filled)
-    threshold = int((density / 16) * 64)
-    for y in range(spacing):
-        for x in range(spacing):
-            if bayer[y % 8][x % 8] < threshold:
-                pattern.set_at((x, y), (0, 0, 0, 255))
-
-    if pixel_scale > 1:
-        scaled_size = (spacing * pixel_scale, spacing * pixel_scale)
-        pattern = pygame.transform.scale(pattern, scaled_size)
-
-    cache[key] = pattern
-    return pattern
-
-
 def update_footprints(game_data) -> None:
     """Record player steps and clean up old footprints."""
     state = game_data.state
@@ -1030,227 +966,6 @@ def update_footprints(game_data) -> None:
         footprints = footprints[-FOOTPRINT_MAX:]
 
     state.footprints = footprints
-
-
-def get_fog_scale(stage: Stage | None, has_flashlight: bool, config: dict | None = None) -> float:
-    """Return current fog scale factoring in flashlight bonus."""
-    scale = FOG_RADIUS_SCALE
-    flashlight_conf = (config or {}).get("flashlight", {})
-    flashlight_enabled = flashlight_conf.get("enabled", True)
-    try:
-        bonus_scale = float(flashlight_conf.get("bonus_scale", DEFAULT_FLASHLIGHT_BONUS_SCALE))
-    except (TypeError, ValueError):
-        bonus_scale = DEFAULT_FLASHLIGHT_BONUS_SCALE
-    if flashlight_enabled and has_flashlight:
-        scale *= max(1.0, bonus_scale)
-    return scale
-
-
-def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface, clear_center, radius: float):
-    """Draw a single hatched fog ring using pattern transparency only (no global alpha)."""
-    overlay.fill((0, 0, 0, 0))
-    p_w, p_h = pattern.get_size()
-    for y in range(0, SCREEN_HEIGHT, p_h):
-        for x in range(0, SCREEN_WIDTH, p_w):
-            overlay.blit(pattern, (x, y))
-    pygame.draw.circle(overlay, (0, 0, 0, 0), clear_center, int(radius))
-    screen.blit(overlay, (0, 0))
-
-
-def _draw_status_bar(screen, config, stage: Stage | None = None):
-    """Render a compact status bar with current config flags and stage info."""
-    bar_rect = pygame.Rect(0, SCREEN_HEIGHT - STATUS_BAR_HEIGHT, SCREEN_WIDTH, STATUS_BAR_HEIGHT)
-    overlay = pygame.Surface((bar_rect.width, bar_rect.height), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, 140))
-    screen.blit(overlay, bar_rect.topleft)
-
-    footprints_on = config.get("footprints", {}).get("enabled", True)
-    fast_on = config.get("fast_zombies", {}).get("enabled", True)
-    hint_on = config.get("car_hint", {}).get("enabled", True)
-    flashlight_conf = config.get("flashlight", {})
-    flashlight_on = flashlight_conf.get("enabled", True)
-    try:
-        flashlight_scale = float(flashlight_conf.get("bonus_scale", DEFAULT_FLASHLIGHT_BONUS_SCALE))
-    except (TypeError, ValueError):
-        flashlight_scale = DEFAULT_FLASHLIGHT_BONUS_SCALE
-    stage_label = stage.name if stage else "Stage 1"
-
-    parts = [
-        f"Stage: {stage_label}",
-        f"Footprints: {'ON' if footprints_on else 'OFF'}",
-        f"Fast Z: {'ON' if fast_on else 'OFF'}",
-        f"Car Hint: {'ON' if hint_on else 'OFF'}",
-        f"Flashlight: {'ON' if flashlight_on else 'OFF'}{f' ({flashlight_scale:.2f}x)' if flashlight_on else ''}",
-    ]
-
-    status_text = " | ".join(parts)
-    color = GREEN if all([footprints_on, fast_on, hint_on, flashlight_on]) else LIGHT_GRAY
-
-    try:
-        font = pygame.font.Font(None, 20)
-        text_surface = font.render(status_text, True, color)
-        text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
-        screen.blit(text_surface, text_rect)
-    except pygame.error as e:
-        print(f"Error rendering status bar: {e}")
-
-
-def _draw_hint_arrow(screen, camera, player: Player, target_pos: Tuple[int, int], color=YELLOW, ring_radius: float | None = None) -> None:
-    """Draw a soft directional hint from player to a target position."""
-    player_screen = camera.apply(player).center
-    target_rect = pygame.Rect(target_pos[0], target_pos[1], 0, 0)
-    target_screen = camera.apply_rect(target_rect).center
-    dx = target_screen[0] - player_screen[0]
-    dy = target_screen[1] - player_screen[1]
-    dist = math.hypot(dx, dy)
-    if dist < 10:
-        return
-    dir_x = dx / dist
-    dir_y = dy / dist
-    ring_radius = ring_radius if ring_radius is not None else FOV_RADIUS * 0.5 * FOG_RADIUS_SCALE
-    center_x = player_screen[0] + dir_x * ring_radius
-    center_y = player_screen[1] + dir_y * ring_radius
-    arrow_len = 12
-    tip = (center_x + dir_x * arrow_len, center_y + dir_y * arrow_len)
-    base = (center_x - dir_x * 12, center_y - dir_y * 12)
-    left = (
-        base[0] - dir_y * 10,
-        base[1] + dir_x * 10,
-    )
-    right = (
-        base[0] + dir_y * 10,
-        base[1] - dir_x * 10,
-    )
-    pygame.draw.polygon(screen, color, [tip, left, right])
-
-
-def draw(
-    screen,
-    outer_rect,
-    camera,
-    all_sprites,
-    fov_target,
-    fog_surfaces,
-    footprints,
-    config,
-    player,
-    hint_target: Tuple[int, int] | None,
-    hint_color=YELLOW,
-    do_flip: bool = True,
-    outside_rects: List[pygame.Rect] | None = None,
-    stage: Stage | None = None,
-    has_fuel: bool = False,
-    has_flashlight: bool = False,
-    elapsed_play_ms: int = 0,
-    fuel_message_until: int = 0,
-):
-    # Drawing
-    screen.fill(FLOOR_COLOR_OUTSIDE)
-
-    # floor tiles
-    xs, ys, xe, ye = outer_rect
-    xs //= INTERNAL_WALL_GRID_SNAP
-    ys //= INTERNAL_WALL_GRID_SNAP
-    xe //= INTERNAL_WALL_GRID_SNAP
-    ye //= INTERNAL_WALL_GRID_SNAP
-
-    # Base fill for play area
-    play_area_rect = pygame.Rect(xs * INTERNAL_WALL_GRID_SNAP, ys * INTERNAL_WALL_GRID_SNAP, (xe - xs) * INTERNAL_WALL_GRID_SNAP, (ye - ys) * INTERNAL_WALL_GRID_SNAP)
-    play_area_screen_rect = camera.apply_rect(play_area_rect)
-    pygame.draw.rect(screen, FLOOR_COLOR_PRIMARY, play_area_screen_rect)
-
-    # Mask out designated outside cells (non-playable) with outside floor color
-    outside_rects = outside_rects or []
-    outside_cells = {(r.x // INTERNAL_WALL_GRID_SNAP, r.y // INTERNAL_WALL_GRID_SNAP) for r in outside_rects}
-    for rect_obj in outside_rects:
-        sr = camera.apply_rect(rect_obj)
-        if sr.colliderect(screen.get_rect()):
-            pygame.draw.rect(screen, FLOOR_COLOR_OUTSIDE, sr)
-
-    for y in range(ys, ye):
-        for x in range(xs, xe):
-            if (x, y) in outside_cells:
-                continue
-            if (x + y) % 2 == 0:
-                lx, ly = x * INTERNAL_WALL_GRID_SNAP, y * INTERNAL_WALL_GRID_SNAP
-                r = pygame.Rect(lx, ly, INTERNAL_WALL_GRID_SNAP, INTERNAL_WALL_GRID_SNAP)
-                sr = camera.apply_rect(r)
-                if sr.colliderect(screen.get_rect()):
-                    pygame.draw.rect(screen, FLOOR_COLOR_SECONDARY, sr)
-
-    # footprints
-    if config.get("footprints", {}).get("enabled", True):
-        now = pygame.time.get_ticks()
-        for fp in footprints:
-            age = now - fp["time"]
-            fade = 1 - (age / FOOTPRINT_LIFETIME_MS)
-            fade = max(FOOTPRINT_MIN_FADE, fade)
-            color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
-            fp_rect = pygame.Rect(fp["pos"][0] - FOOTPRINT_RADIUS, fp["pos"][1] - FOOTPRINT_RADIUS, FOOTPRINT_RADIUS * 2, FOOTPRINT_RADIUS * 2)
-            sr = camera.apply_rect(fp_rect)
-            if sr.colliderect(screen.get_rect().inflate(30, 30)):
-                pygame.draw.circle(screen, color, sr.center, FOOTPRINT_RADIUS)
-
-    # player, car, zombies, walls
-    for sprite in all_sprites:
-        sprite_screen_rect = camera.apply_rect(sprite.rect)
-        if sprite_screen_rect.colliderect(screen.get_rect().inflate(100, 100)):
-            screen.blit(sprite.image, sprite_screen_rect)
-
-    if hint_target and player:
-        current_fov_scale = get_fog_scale(stage, has_flashlight, config)
-        hint_ring_radius = FOV_RADIUS * 0.5 * current_fov_scale
-        _draw_hint_arrow(screen, camera, player, hint_target, color=hint_color, ring_radius=hint_ring_radius)
-
-    # fog with hatched rings
-    if fov_target is not None:
-        fov_center_on_screen = camera.apply(fov_target).center
-        fog_hard = fog_surfaces["hard"]
-        fog_soft = fog_surfaces["soft"]
-        fog_scale = get_fog_scale(stage, has_flashlight, config)
-
-        # Base solid darkness outside max radius
-        fog_hard.fill(FOG_COLOR)
-        max_radius = int(FOV_RADIUS * FOG_MAX_RADIUS_FACTOR * fog_scale)
-        pygame.draw.circle(fog_hard, (0, 0, 0, 0), fov_center_on_screen, max_radius)
-        screen.blit(fog_hard, (0, 0))
-
-        # Hatched rings layered from near to far
-        for ring in FOG_RINGS:
-            radius = int(FOV_RADIUS * ring.radius_factor * fog_scale)
-            thickness = ring.thickness
-            pattern = get_hatch_pattern(fog_surfaces, thickness, FOG_HATCH_PIXEL_SCALE)
-            _blit_hatch_ring(screen, fog_soft, pattern, fov_center_on_screen, radius)
-
-    # HUD prompts for fuel flow: show immediately after failed car entry, not time-gated hint
-    if not has_fuel:
-        if fuel_message_until > elapsed_play_ms:
-            show_message(screen, "Need fuel to drive!", 32, ORANGE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
-
-    # Objective banner at top (drawn last so it stays above fog/hatch)
-    def _render_objective(text: str):
-        try:
-            font = pygame.font.Font(None, 30)
-            text_surface = font.render(text, True, YELLOW)
-            text_rect = text_surface.get_rect(topleft=(16, 16))
-            screen.blit(text_surface, text_rect)
-        except pygame.error as e:
-            print(f"Error rendering objective: {e}")
-
-    objective_text = None
-    if stage and stage.requires_fuel and not has_fuel:
-        objective_text = "Find the fuel can"
-    elif not player.in_car:
-        objective_text = "Find the car"
-    else:
-        objective_text = "Escape the building"
-
-    if objective_text:
-        _render_objective(objective_text)
-
-    _draw_status_bar(screen, config, stage=stage)
-    if do_flip:
-        present(screen)
 
 
 # --- Game State Function (Contains the main game loop) ---
@@ -1389,6 +1104,7 @@ def handle_game_over_state(screen, game_data):
         state.overview_surface = pygame.Surface((LEVEL_WIDTH, LEVEL_HEIGHT))
         footprints_to_draw = state.footprints if footprints_enabled else []
         draw_level_overview(
+            RENDER_ASSETS,
             state.overview_surface,
             wall_group,
             game_data.player,
@@ -1694,6 +1410,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
         paused = paused_manual or paused_focus
         if paused:
             draw(
+                RENDER_ASSETS,
                 screen,
                 game_data.areas.outer_rect,
                 game_data.camera,
@@ -1711,6 +1428,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
                 has_flashlight=game_data.state.has_flashlight,
                 elapsed_play_ms=game_data.state.elapsed_play_ms,
                 fuel_message_until=game_data.state.fuel_message_until,
+                present_fn=present,
             )
             if show_pause_overlay:
                 overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -1780,6 +1498,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
                     hint_target = game_data.car.rect.center
 
         draw(
+            RENDER_ASSETS,
             screen,
             game_data.areas.outer_rect,
             game_data.camera,
@@ -1797,6 +1516,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
             has_flashlight=game_data.state.has_flashlight,
             elapsed_play_ms=game_data.state.elapsed_play_ms,
             fuel_message_until=game_data.state.fuel_message_until,
+            present_fn=present,
         )
 
     return False
