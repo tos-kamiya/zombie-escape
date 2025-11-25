@@ -17,7 +17,7 @@ try:
 except:
     __version__ = "0.0.0-unknown"
 
-# --- Constants ---
+# --- Constants/Global variables ---
 DEFAULT_SCREEN_WIDTH = 800
 DEFAULT_SCREEN_HEIGHT = 600
 WINDOW_SCALE_MIN = 0.5
@@ -50,11 +50,18 @@ DARK_RED = (139, 0, 0)
 # Player settings
 PLAYER_RADIUS = 11
 PLAYER_SPEED = 2.8
-FOV_RADIUS = 180
+FOV_RADIUS = 160
 FOG_RADIUS_SCALE = 1.2
 FOG_MAX_RADIUS_FACTOR = 1.55
 FOG_HATCH_THICKNESS = 9
 FOG_HATCH_PIXEL_SCALE = 3
+
+# Flashlight settings
+FLASHLIGHT_BONUS_SCALE = 1.35
+FLASHLIGHT_WIDTH = 20
+FLASHLIGHT_HEIGHT = 16
+FLASHLIGHT_PICKUP_RADIUS = 26
+FLASHLIGHT_SPAWN_COUNT = 2
 
 
 @dataclass(frozen=True)
@@ -112,6 +119,7 @@ class ProgressState(AttrMapMixin):
     last_footprint_pos: tuple | None
     elapsed_play_ms: int
     has_fuel: bool
+    has_flashlight: bool
     hint_expires_at: int
     hint_target_type: str | None
     fuel_message_until: int
@@ -138,6 +146,7 @@ class GameData:
     config: dict
     stage: "Stage"
     fuel: Optional["FuelCan"] = None
+    flashlights: List["Flashlight"] | None = None
     player: Optional["Player"] = None
     car: Optional["Car"] = None
 
@@ -177,7 +186,7 @@ ZOMBIE_RADIUS = 11
 ZOMBIE_SPEED = 1.2
 NORMAL_ZOMBIE_SPEED_JITTER = 0.3
 ZOMBIE_SPAWN_DELAY_MS = 5000
-MAX_ZOMBIES = 200
+MAX_ZOMBIES = 400
 INITIAL_ZOMBIES_INSIDE = 15
 ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
 ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
@@ -203,7 +212,6 @@ STAGES = [
         name="#1 Find the Car",
         description="Locate the car and drive out to escape.",
         available=True,
-        requires_fuel=False,
     ),
     Stage(
         id="stage2",
@@ -222,7 +230,7 @@ CAR_SPEED = 4
 CAR_HEALTH = 20
 CAR_WALL_DAMAGE = 1
 CAR_ZOMBIE_DAMAGE = 1
-CAR_HINT_DELAY_MS_DEFAULT = 180000
+CAR_HINT_DELAY_MS_DEFAULT = 300000
 
 # Fuel settings (Stage 2)
 FUEL_CAN_WIDTH = 22
@@ -702,6 +710,34 @@ class FuelCan(pygame.sprite.Sprite):
 
         self.rect = self.image.get_rect(center=(x, y))
 
+
+class Flashlight(pygame.sprite.Sprite):
+    """Flashlight pickup that expands the player's visible radius when collected."""
+
+    def __init__(self: Self, x: int, y: int) -> None:
+        super().__init__()
+        self.image = pygame.Surface((FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT), pygame.SRCALPHA)
+
+        body_rect = pygame.Rect(0, 4, FLASHLIGHT_WIDTH - 4, FLASHLIGHT_HEIGHT - 8)
+        head_rect = pygame.Rect(body_rect.right - 6, body_rect.top - 2, 8, body_rect.height + 4)
+        beam_points = [
+            (head_rect.right, head_rect.centery),
+            (head_rect.right + 8, head_rect.top),
+            (head_rect.right + 8, head_rect.bottom),
+        ]
+
+        body_color = (230, 200, 70)
+        trim_color = (80, 70, 40)
+        beam_color = (255, 240, 180, 180)
+
+        pygame.draw.rect(self.image, body_color, body_rect, border_radius=3)
+        pygame.draw.rect(self.image, trim_color, body_rect, width=2, border_radius=3)
+        pygame.draw.rect(self.image, body_color, head_rect, border_radius=3)
+        pygame.draw.rect(self.image, trim_color, head_rect, width=2, border_radius=3)
+        pygame.draw.polygon(self.image, beam_color, beam_points)
+
+        self.rect = self.image.get_rect(center=(x, y))
+
 def rect_for_cell(x_idx: int, y_idx: int) -> pygame.Rect:
     return pygame.Rect(x_idx * CELL_SIZE, y_idx * CELL_SIZE, CELL_SIZE, CELL_SIZE)
 
@@ -805,6 +841,7 @@ def draw_level_overview(
     car: Car,
     footprints,
     fuel: FuelCan | None = None,
+    flashlights: list[Flashlight] | None = None,
     stage: Stage | None = None,
 ) -> None:
     surface.fill(BLACK)
@@ -820,6 +857,11 @@ def draw_level_overview(
     if fuel and fuel.alive():
         pygame.draw.rect(surface, YELLOW, fuel.rect, border_radius=3)
         pygame.draw.rect(surface, BLACK, fuel.rect, width=2, border_radius=3)
+    if flashlights:
+        for flashlight in flashlights:
+            if flashlight.alive():
+                pygame.draw.rect(surface, (240, 230, 150), flashlight.rect, border_radius=2)
+                pygame.draw.rect(surface, BLACK, flashlight.rect, width=2, border_radius=2)
     if player:
         pygame.draw.circle(surface, BLUE, player.rect.center, PLAYER_RADIUS * 2)
     if car and car.alive():
@@ -865,6 +907,43 @@ def place_fuel_can(walkable_cells: List[pygame.Rect], player: Player, car: Car |
     # Fallback: drop near a random walkable cell
     cell = random.choice(walkable_cells)
     return FuelCan(cell.centerx, cell.centery)
+
+
+def place_flashlight(walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None) -> Flashlight | None:
+    """Pick a spawn spot for the flashlight away from the player (and car if given)."""
+    if not walkable_cells:
+        return None
+
+    min_player_dist = 260
+    min_car_dist = 200
+
+    for _ in range(200):
+        cell = random.choice(walkable_cells)
+        if math.hypot(cell.centerx - player.x, cell.centery - player.y) < min_player_dist:
+            continue
+        if car and math.hypot(cell.centerx - car.rect.centerx, cell.centery - car.rect.centery) < min_car_dist:
+            continue
+        return Flashlight(cell.centerx, cell.centery)
+
+    cell = random.choice(walkable_cells)
+    return Flashlight(cell.centerx, cell.centery)
+
+
+def place_flashlights(walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None, count: int = FLASHLIGHT_SPAWN_COUNT) -> list[Flashlight]:
+    """Spawn multiple flashlights using the single-place helper to spread them out."""
+    placed: list[Flashlight] = []
+    attempts = 0
+    max_attempts = max(200, count * 80)
+    while len(placed) < count and attempts < max_attempts:
+        attempts += 1
+        fl = place_flashlight(walkable_cells, player, car)
+        if not fl:
+            break
+        # Avoid clustering too tightly
+        if any(math.hypot(other.rect.centerx - fl.rect.centerx, other.rect.centery - fl.rect.centery) < 120 for other in placed):
+            continue
+        placed.append(fl)
+    return placed
 
 
 def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Optional[float] = None) -> sprite.Sprite:
@@ -953,6 +1032,20 @@ def update_footprints(game_data) -> None:
     state.footprints = footprints
 
 
+def get_fog_scale(stage: Stage | None, has_flashlight: bool, config: dict | None = None) -> float:
+    """Return current fog scale factoring in flashlight bonus."""
+    scale = FOG_RADIUS_SCALE
+    flashlight_conf = (config or {}).get("flashlight", {})
+    flashlight_enabled = flashlight_conf.get("enabled", True)
+    try:
+        bonus_scale = float(flashlight_conf.get("bonus_scale", FLASHLIGHT_BONUS_SCALE))
+    except (TypeError, ValueError):
+        bonus_scale = FLASHLIGHT_BONUS_SCALE
+    if flashlight_enabled and has_flashlight:
+        scale *= max(1.0, bonus_scale)
+    return scale
+
+
 def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface, clear_center, radius: float):
     """Draw a single hatched fog ring using pattern transparency only (no global alpha)."""
     overlay.fill((0, 0, 0, 0))
@@ -995,7 +1088,7 @@ def _draw_status_bar(screen, config, stage: Stage | None = None):
         print(f"Error rendering status bar: {e}")
 
 
-def _draw_hint_arrow(screen, camera, player: Player, target_pos: Tuple[int, int], color=YELLOW) -> None:
+def _draw_hint_arrow(screen, camera, player: Player, target_pos: Tuple[int, int], color=YELLOW, ring_radius: float | None = None) -> None:
     """Draw a soft directional hint from player to a target position."""
     player_screen = camera.apply(player).center
     target_rect = pygame.Rect(target_pos[0], target_pos[1], 0, 0)
@@ -1007,7 +1100,7 @@ def _draw_hint_arrow(screen, camera, player: Player, target_pos: Tuple[int, int]
         return
     dir_x = dx / dist
     dir_y = dy / dist
-    ring_radius = FOV_RADIUS * 0.5
+    ring_radius = ring_radius if ring_radius is not None else FOV_RADIUS * 0.5 * FOG_RADIUS_SCALE
     center_x = player_screen[0] + dir_x * ring_radius
     center_y = player_screen[1] + dir_y * ring_radius
     arrow_len = 12
@@ -1040,6 +1133,7 @@ def draw(
     outside_rects: List[pygame.Rect] | None = None,
     stage: Stage | None = None,
     has_fuel: bool = False,
+    has_flashlight: bool = False,
     elapsed_play_ms: int = 0,
     fuel_message_until: int = 0,
 ):
@@ -1097,23 +1191,26 @@ def draw(
             screen.blit(sprite.image, sprite_screen_rect)
 
     if hint_target and player:
-        _draw_hint_arrow(screen, camera, player, hint_target, color=hint_color)
+        current_fov_scale = get_fog_scale(stage, has_flashlight, config)
+        hint_ring_radius = FOV_RADIUS * 0.5 * current_fov_scale
+        _draw_hint_arrow(screen, camera, player, hint_target, color=hint_color, ring_radius=hint_ring_radius)
 
     # fog with hatched rings
     if fov_target is not None:
         fov_center_on_screen = camera.apply(fov_target).center
         fog_hard = fog_surfaces["hard"]
         fog_soft = fog_surfaces["soft"]
+        fog_scale = get_fog_scale(stage, has_flashlight, config)
 
         # Base solid darkness outside max radius
         fog_hard.fill(FOG_COLOR)
-        max_radius = int(FOV_RADIUS * FOG_MAX_RADIUS_FACTOR * FOG_RADIUS_SCALE)
+        max_radius = int(FOV_RADIUS * FOG_MAX_RADIUS_FACTOR * fog_scale)
         pygame.draw.circle(fog_hard, (0, 0, 0, 0), fov_center_on_screen, max_radius)
         screen.blit(fog_hard, (0, 0))
 
         # Hatched rings layered from near to far
         for ring in FOG_RINGS:
-            radius = int(FOV_RADIUS * ring.radius_factor * FOG_RADIUS_SCALE)
+            radius = int(FOV_RADIUS * ring.radius_factor * fog_scale)
             thickness = ring.thickness
             pattern = get_hatch_pattern(fog_surfaces, thickness, FOG_HATCH_PIXEL_SCALE)
             _blit_hatch_ring(screen, fog_soft, pattern, fov_center_on_screen, radius)
@@ -1134,7 +1231,7 @@ def draw(
             print(f"Error rendering objective: {e}")
 
     objective_text = None
-    if not has_fuel:
+    if stage and stage.requires_fuel and not has_fuel:
         objective_text = "Find the fuel can"
     elif not player.in_car:
         objective_text = "Find the car"
@@ -1153,6 +1250,7 @@ def draw(
 def initialize_game_state(config, stage: Stage):
     """Initialize and return the base game state objects."""
     starts_with_fuel = not stage.requires_fuel
+    starts_with_flashlight = False
     game_state = ProgressState(
         game_over=False,
         game_won=False,
@@ -1164,6 +1262,7 @@ def initialize_game_state(config, stage: Stage):
         last_footprint_pos=None,
         elapsed_play_ms=0,
         has_fuel=starts_with_fuel,
+        has_flashlight=starts_with_flashlight,
         hint_expires_at=0,
         hint_target_type=None,
         fuel_message_until=0,
@@ -1199,6 +1298,7 @@ def initialize_game_state(config, stage: Stage):
         config=config,
         stage=stage,
         fuel=None,
+        flashlights=[],
     )
 
 
@@ -1288,6 +1388,7 @@ def handle_game_over_state(screen, game_data):
             game_data.car,
             footprints_to_draw,
             fuel=game_data.fuel,
+            flashlights=game_data.flashlights or [],
             stage=game_data.stage,
         )
 
@@ -1414,6 +1515,7 @@ def check_interactions(game_data):
     walkable_cells = game_data.areas.walkable_cells
     outside_rects = game_data.areas.outside_rects
     fuel = game_data.fuel
+    flashlights = game_data.flashlights or []
 
     # Fuel pickup
     if fuel and fuel.alive() and not state.get("has_fuel") and not player.in_car:
@@ -1426,6 +1528,24 @@ def check_interactions(game_data):
             fuel.kill()
             game_data.fuel = None
             print("Fuel acquired!")
+
+    # Flashlight pickup
+    if not state.get("has_flashlight") and not player.in_car:
+        for flashlight in list(flashlights):
+            if not flashlight.alive():
+                continue
+            dist_to_flashlight = math.hypot(flashlight.rect.centerx - player.x, flashlight.rect.centery - player.y)
+            if dist_to_flashlight <= max(FLASHLIGHT_PICKUP_RADIUS, PLAYER_RADIUS + 6):
+                state.has_flashlight = True
+                state.hint_expires_at = 0
+                state.hint_target_type = None
+                flashlight.kill()
+                try:
+                    flashlights.remove(flashlight)
+                except ValueError:
+                    pass
+                print("Flashlight acquired!")
+                break
 
     # Player entering car
     shrunk_car = get_shrunk_sprite(car, 0.8)
@@ -1506,12 +1626,24 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
     game_data.player = player
     game_data.car = car
 
+    flashlight_conf = config.get("flashlight", {})
+    flashlights_enabled = flashlight_conf.get("enabled", True)
+    raw_flashlight_count = flashlight_conf.get("count", FLASHLIGHT_SPAWN_COUNT)
+    try:
+        flashlight_count = int(raw_flashlight_count)
+    except (TypeError, ValueError):
+        flashlight_count = FLASHLIGHT_SPAWN_COUNT
+
     # Stage-specific collectibles (fuel for Stage 2)
     if stage.requires_fuel:
         fuel_can = place_fuel_can(layout_data["walkable_cells"], player, car)
         if fuel_can:
             game_data.fuel = fuel_can
             game_data.groups.all_sprites.add(fuel_can, layer=1)
+    if flashlights_enabled:
+        flashlights = place_flashlights(layout_data["walkable_cells"], player, car, count=max(1, flashlight_count))
+        game_data.flashlights = flashlights
+        game_data.groups.all_sprites.add(flashlights, layer=1)
 
     # Spawn initial zombies
     spawn_initial_zombies(game_data, player, layout_data)
@@ -1569,6 +1701,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
                 outside_rects=game_data.areas.outside_rects,
                 stage=stage,
                 has_fuel=game_data.state.has_fuel,
+                has_flashlight=game_data.state.has_flashlight,
                 elapsed_play_ms=game_data.state.elapsed_play_ms,
                 fuel_message_until=game_data.state.fuel_message_until,
             )
@@ -1612,6 +1745,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
         elapsed_ms = game_data.state.get("elapsed_play_ms", 0)
         has_fuel = game_data.state.get("has_fuel")
+        has_flashlight = game_data.state.get("has_flashlight", False)
         hint_enabled = car_hint_conf.get("enabled", True)
         hint_target = None
         hint_color = YELLOW
@@ -1653,6 +1787,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
             outside_rects=game_data.areas.outside_rects,
             stage=stage,
             has_fuel=game_data.state.has_fuel,
+            has_flashlight=game_data.state.has_flashlight,
             elapsed_play_ms=game_data.state.elapsed_play_ms,
             fuel_message_until=game_data.state.fuel_message_until,
         )
@@ -1744,6 +1879,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
     """Settings menu shown from the title screen."""
     working = copy.deepcopy(config)
     selected = 0
+    row_count = 4
 
     def toggle_footprints():
         enabled = working.get("footprints", {}).get("enabled", True)
@@ -1756,6 +1892,10 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
     def toggle_car_hint():
         enabled = working.get("car_hint", {}).get("enabled", True)
         working.setdefault("car_hint", {})["enabled"] = not enabled
+
+    def toggle_flashlight():
+        enabled = working.get("flashlight", {}).get("enabled", True)
+        working.setdefault("flashlight", {})["enabled"] = not enabled
 
     while True:
         for event in pygame.event.get():
@@ -1772,16 +1912,18 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                     save_config(working, config_path)
                     return working
                 if event.key in (pygame.K_UP, pygame.K_w):
-                    selected = (selected - 1) % 3
+                    selected = (selected - 1) % row_count
                 if event.key in (pygame.K_DOWN, pygame.K_s):
-                    selected = (selected + 1) % 3
+                    selected = (selected + 1) % row_count
                 if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_LEFT, pygame.K_RIGHT):
                     if selected == 0:
                         toggle_footprints()
                     elif selected == 1:
                         toggle_fast_zombies()
-                    else:
+                    elif selected == 2:
                         toggle_car_hint()
+                    else:
+                        toggle_flashlight()
                 if event.key == pygame.K_r:
                     working = copy.deepcopy(DEFAULT_CONFIG)
 
@@ -1809,6 +1951,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                 ("Footprints", working.get("footprints", {}).get("enabled", True)),
                 ("Fast zombies", working.get("fast_zombies", {}).get("enabled", True)),
                 ("Car hint", working.get("car_hint", {}).get("enabled", True)),
+                ("Flashlight pickups", working.get("flashlight", {}).get("enabled", True)),
             ]
             hint_start_y = start_y + len(rows) * row_height + 40
             for idx, (label, enabled) in enumerate(rows):
