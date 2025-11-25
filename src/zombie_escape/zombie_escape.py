@@ -1067,6 +1067,12 @@ def _draw_status_bar(screen, config, stage: Stage | None = None):
     footprints_on = config.get("footprints", {}).get("enabled", True)
     fast_on = config.get("fast_zombies", {}).get("enabled", True)
     hint_on = config.get("car_hint", {}).get("enabled", True)
+    flashlight_conf = config.get("flashlight", {})
+    flashlight_on = flashlight_conf.get("enabled", True)
+    try:
+        flashlight_scale = float(flashlight_conf.get("bonus_scale", FLASHLIGHT_BONUS_SCALE))
+    except (TypeError, ValueError):
+        flashlight_scale = FLASHLIGHT_BONUS_SCALE
     stage_label = stage.name if stage else "Stage 1"
 
     parts = [
@@ -1074,10 +1080,11 @@ def _draw_status_bar(screen, config, stage: Stage | None = None):
         f"Footprints: {'ON' if footprints_on else 'OFF'}",
         f"Fast Z: {'ON' if fast_on else 'OFF'}",
         f"Car Hint: {'ON' if hint_on else 'OFF'}",
+        f"Flashlight: {'ON' if flashlight_on else 'OFF'}{f' ({flashlight_scale:.2f}x)' if flashlight_on else ''}",
     ]
 
     status_text = " | ".join(parts)
-    color = GREEN if all([footprints_on, fast_on, hint_on]) else LIGHT_GRAY
+    color = GREEN if all([footprints_on, fast_on, hint_on, flashlight_on]) else LIGHT_GRAY
 
     try:
         font = pygame.font.Font(None, 20)
