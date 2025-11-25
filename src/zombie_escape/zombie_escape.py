@@ -1,4 +1,5 @@
 from typing import Iterable, List, Optional, Self, Tuple
+from dataclasses import dataclass
 import random
 import copy
 import math
@@ -54,12 +55,20 @@ FOG_RADIUS_SCALE = 1.2
 FOG_MAX_RADIUS_FACTOR = 1.55
 FOG_HATCH_THICKNESS = 9
 FOG_HATCH_PIXEL_SCALE = 3
+
+
+@dataclass(frozen=True)
+class FogRing:
+    radius_factor: float
+    thickness: int = FOG_HATCH_THICKNESS
+
+
 FOG_RINGS = [
-    {"radius_factor": 0.82, "thickness": 2},
-    {"radius_factor": 0.99, "thickness": 4},
-    {"radius_factor": 1.16, "thickness": 6},
-    {"radius_factor": 1.33, "thickness": 8},
-    {"radius_factor": 1.5, "thickness": 12},
+    FogRing(radius_factor=0.82, thickness=2),
+    FogRing(radius_factor=0.99, thickness=4),
+    FogRing(radius_factor=1.16, thickness=6),
+    FogRing(radius_factor=1.33, thickness=8),
+    FogRing(radius_factor=1.5, thickness=12),
 ]
 FOG_COLOR = (0, 0, 0, 255)
 
@@ -86,22 +95,32 @@ FAST_ZOMBIE_BASE_SPEED = PLAYER_SPEED * 0.85
 FAST_ZOMBIE_SPEED_JITTER = 0.15
 ZOMBIE_SEPARATION_DISTANCE = ZOMBIE_RADIUS * 2.2
 
+
+@dataclass(frozen=True)
+class Stage:
+    id: str
+    name: str
+    description: str
+    available: bool = True
+    requires_fuel: bool = False
+
+
 # Stage metadata (stage 2 placeholder for fuel flow coming soon)
 STAGES = [
-    {
-        "id": "stage1",
-        "name": "Stage 1: Find the Car",
-        "description": "Locate the car and drive out to escape.",
-        "available": True,
-        "requires_fuel": False,
-    },
-    {
-        "id": "stage2",
-        "name": "Stage 2: Fuel Run",
-        "description": "Find fuel, bring it to the car, then escape.",
-        "available": True,
-        "requires_fuel": True,
-    },
+    Stage(
+        id="stage1",
+        name="Stage 1: Find the Car",
+        description="Locate the car and drive out to escape.",
+        available=True,
+        requires_fuel=False,
+    ),
+    Stage(
+        id="stage2",
+        name="Stage 2: Fuel Run",
+        description="Find fuel, bring it to the car, then escape.",
+        available=True,
+        requires_fuel=True,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 
@@ -690,7 +709,13 @@ def show_message(
 
 
 def draw_level_overview(
-    surface: surface.Surface, wall_group: sprite.Group, player: Player, car: Car, footprints, fuel: FuelCan | None = None, stage: dict | None = None
+    surface: surface.Surface,
+    wall_group: sprite.Group,
+    player: Player,
+    car: Car,
+    footprints,
+    fuel: FuelCan | None = None,
+    stage: Stage | None = None,
 ) -> None:
     surface.fill(BLACK)
     for wall in wall_group:
@@ -849,7 +874,7 @@ def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface,
     screen.blit(overlay, (0, 0))
 
 
-def _draw_status_bar(screen, config, stage=None, state=None):
+def _draw_status_bar(screen, config, stage: Stage | None = None, state=None):
     """Render a compact status bar with current config flags and stage info."""
     bar_rect = pygame.Rect(0, SCREEN_HEIGHT - STATUS_BAR_HEIGHT, SCREEN_WIDTH, STATUS_BAR_HEIGHT)
     overlay = pygame.Surface((bar_rect.width, bar_rect.height), pygame.SRCALPHA)
@@ -859,7 +884,7 @@ def _draw_status_bar(screen, config, stage=None, state=None):
     footprints_on = config.get("footprints", {}).get("enabled", True)
     fast_on = config.get("fast_zombies", {}).get("enabled", True)
     hint_on = config.get("car_hint", {}).get("enabled", True)
-    stage_label = stage["name"] if stage else "Stage 1"
+    stage_label = stage.name if stage else "Stage 1"
 
     parts = [
         f"Stage: {stage_label}",
@@ -925,12 +950,12 @@ def draw(
     do_flip: bool = True,
     outside_rects: List[pygame.Rect] | None = None,
     fuel: FuelCan | None = None,
-    stage: dict | None = None,
+    stage: Stage | None = None,
     state: dict | None = None,
 ):
     # Drawing
     screen.fill(FLOOR_COLOR_OUTSIDE)
-    stage_requires_fuel = stage.get("requires_fuel", False) if stage else False
+    stage_requires_fuel = stage.requires_fuel if stage else False
     has_fuel = bool(state and state.get("has_fuel"))
 
     # floor tiles
@@ -1000,8 +1025,8 @@ def draw(
 
         # Hatched rings layered from near to far
         for ring in FOG_RINGS:
-            radius = int(FOV_RADIUS * ring["radius_factor"] * FOG_RADIUS_SCALE)
-            thickness = ring.get("thickness", FOG_HATCH_THICKNESS)
+            radius = int(FOV_RADIUS * ring.radius_factor * FOG_RADIUS_SCALE)
+            thickness = ring.thickness
             pattern = get_hatch_pattern(fog_surfaces, thickness, FOG_HATCH_PIXEL_SCALE)
             _blit_hatch_ring(screen, fog_soft, pattern, fov_center_on_screen, radius)
 
@@ -1041,7 +1066,7 @@ def draw(
 
 
 # --- Game State Function (Contains the main game loop) ---
-def initialize_game_state(config, stage: dict):
+def initialize_game_state(config, stage: Stage):
     """Initialize and return the base game state objects."""
     game_state = {
         "game_over": False,
@@ -1053,7 +1078,7 @@ def initialize_game_state(config, stage: dict):
         "footprints": [],
         "last_footprint_pos": None,
         "elapsed_play_ms": 0,
-        "stage_id": stage.get("id"),
+        "stage_id": stage.id,
         "has_fuel": False,
         "fuel_hint_expires_at": 0,
         "fuel_acquired_ms": None,
@@ -1303,8 +1328,8 @@ def check_interactions(game_data):
     state = game_data["state"]
     walkable_cells = game_data["areas"].get("walkable_cells", [])
     outside_rects = game_data["areas"].get("outside_rects", [])
-    stage = game_data.get("stage", {})
-    stage_requires_fuel = stage.get("requires_fuel", False)
+    stage = game_data.get("stage")
+    stage_requires_fuel = stage.requires_fuel if stage else False
     fuel = game_data.get("fuel")
 
     # Fuel pickup
@@ -1378,7 +1403,7 @@ def check_interactions(game_data):
     return None
 
 
-def run_game(screen: surface.Surface, clock: time.Clock, config, stage: dict, show_pause_overlay: bool = True) -> bool:
+def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, show_pause_overlay: bool = True) -> bool:
     """Main game loop function, now using smaller helper functions."""
     # Initialize game components
     game_data = initialize_game_state(config, stage)
@@ -1393,7 +1418,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: dict, sh
     game_data["car"] = car
 
     # Stage-specific collectibles (fuel for Stage 2)
-    stage_requires_fuel = stage.get("requires_fuel", False)
+    stage_requires_fuel = stage.requires_fuel
     if stage_requires_fuel:
         fuel_can = place_fuel_can(layout_data["walkable_cells"], player, car)
         if fuel_can:
@@ -1491,7 +1516,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: dict, sh
         car_hint_conf = config.get("car_hint", {})
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
         elapsed_ms = game_data["state"]["elapsed_play_ms"]
-        stage_requires_fuel = stage.get("requires_fuel", False)
+        stage_requires_fuel = stage.requires_fuel
         has_fuel = game_data["state"].get("has_fuel")
         fuel_acquired_ms = game_data["state"].get("fuel_acquired_ms")
         hint_enabled = car_hint_conf.get("enabled", True)
@@ -1532,11 +1557,11 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: dict, sh
 
 # --- Splash & Menu Functions ---
 def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
-    """Title menu with inline stage selection. Returns action dict: {'action': 'stage'|'settings'|'quit', 'stage': dict|None}."""
-    options = [{"type": "stage", "stage": s, "available": s.get("available", False)} for s in STAGES]
+    """Title menu with inline stage selection. Returns action dict: {'action': 'stage'|'settings'|'quit', 'stage': Stage|None}."""
+    options = [{"type": "stage", "stage": s, "available": s.available} for s in STAGES]
     options += [{"type": "settings"}, {"type": "quit"}]
     selected = next(
-        (i for i, opt in enumerate(options) if opt["type"] == "stage" and opt["stage"]["id"] == DEFAULT_STAGE_ID), 0
+        (i for i, opt in enumerate(options) if opt["type"] == "stage" and opt["stage"].id == DEFAULT_STAGE_ID), 0
     )
 
     while True:
@@ -1570,7 +1595,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             font = pygame.font.Font(None, 34)
             for idx, option in enumerate(options):
                 if option["type"] == "stage":
-                    label = option["stage"]["name"]
+                    label = option["stage"].name
                     if not option.get("available"):
                         label += " [Locked]"
                     color = YELLOW if idx == selected else (WHITE if option.get("available") else GRAY)
@@ -1590,7 +1615,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             if current["type"] == "stage":
                 desc_font = pygame.font.Font(None, 24)
                 desc_color = LIGHT_GRAY if current.get("available") else GRAY
-                desc_surface = desc_font.render(current["stage"]["description"], True, desc_color)
+                desc_surface = desc_font.render(current["stage"].description, True, desc_color)
                 desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 170))
                 screen.blit(desc_surface, desc_rect)
 
