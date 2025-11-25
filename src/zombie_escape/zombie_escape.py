@@ -200,14 +200,14 @@ class Stage:
 STAGES = [
     Stage(
         id="stage1",
-        name="Stage 1: Find the Car",
+        name="#1 Find the Car",
         description="Locate the car and drive out to escape.",
         available=True,
         requires_fuel=False,
     ),
     Stage(
         id="stage2",
-        name="Stage 2: Fuel Run",
+        name="#2 Fuel Run",
         description="Find fuel, bring it to the car, then escape.",
         available=True,
         requires_fuel=True,
