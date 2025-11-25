@@ -10,9 +10,30 @@ from enum import Enum  # For Zombie Modes
 import pygame
 from pygame import rect, sprite, surface, time
 
-from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
 from .config import DEFAULT_CONFIG, load_config, save_config
-from .render import Colors, FogRing, RenderAssets, draw, draw_level_overview, show_message
+from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
+from .colors import (
+    BLACK,
+    BLUE,
+    DARK_RED,
+    FLOOR_COLOR_OUTSIDE,
+    FLOOR_COLOR_PRIMARY,
+    FLOOR_COLOR_SECONDARY,
+    FOG_COLOR,
+    GRAY,
+    GREEN,
+    INTERNAL_WALL_BORDER_COLOR,
+    INTERNAL_WALL_COLOR,
+    LIGHT_GRAY,
+    ORANGE,
+    OUTER_WALL_BORDER_COLOR,
+    OUTER_WALL_COLOR,
+    RED,
+    WHITE,
+    YELLOW,
+    Colors,
+)
+from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
 try:
     from .__about__ import __version__
 except:

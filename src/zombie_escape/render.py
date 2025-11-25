@@ -7,23 +7,13 @@ import math
 import pygame
 from pygame import surface, sprite
 
+from .colors import Colors
+
 
 @dataclass(frozen=True)
 class FogRing:
     radius_factor: float
     thickness: int
-
-
-@dataclass(frozen=True)
-class Colors:
-    black: Tuple[int, int, int]
-    white: Tuple[int, int, int]
-    gray: Tuple[int, int, int]
-    light_gray: Tuple[int, int, int]
-    yellow: Tuple[int, int, int]
-    orange: Tuple[int, int, int]
-    green: Tuple[int, int, int]
-    blue: Tuple[int, int, int]
 
 
 @dataclass(frozen=True)
