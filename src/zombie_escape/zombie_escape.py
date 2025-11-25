@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Self, Tuple, Union
+from typing import Iterable, List, Optional, Self, Tuple
 import random
 import copy
 import math
@@ -50,11 +50,9 @@ DARK_RED = (139, 0, 0)
 PLAYER_RADIUS = 11
 PLAYER_SPEED = 2.8
 FOV_RADIUS = 180
-FOV_RADIUS_SOFT_FACTOR = 1.5
 FOG_RADIUS_SCALE = 1.2
 FOG_MAX_RADIUS_FACTOR = 1.55
 FOG_HATCH_THICKNESS = 9
-FOG_HATCH_DEFAULT_SPACING = 18
 FOG_HATCH_PIXEL_SCALE = 3
 FOG_RINGS = [
     {"radius_factor": 0.82, "thickness": 2},
@@ -123,15 +121,10 @@ FUEL_PICKUP_RADIUS = 24
 FUEL_HINT_DURATION_MS = 1600
 
 # Wall settings
-INTERNAL_WALL_THICKNESS = 24
 INTERNAL_WALL_GRID_SNAP = CELL_SIZE
-INTERNAL_WALL_SEGMENT_LENGTH = 50
 INTERNAL_WALL_HEALTH = 40
 INTERNAL_WALL_COLOR = (99, 88, 70)
 INTERNAL_WALL_BORDER_COLOR = (105, 93, 74)
-OUTER_WALL_MARGIN = 100
-OUTER_WALL_THICKNESS = 50
-OUTER_WALL_SEGMENT_LENGTH = 100
 OUTER_WALL_HEALTH = 9999
 OUTER_WALL_COLOR = (122, 114, 102)
 OUTER_WALL_BORDER_COLOR = (120, 112, 100)
@@ -393,19 +386,15 @@ class Zombie(pygame.sprite.Sprite):
         temp_rect = self.rect.copy()
         temp_rect.centerx = int(next_x)
         temp_rect.centery = int(self.y)
-        x_collided = False
         for wall in possible_walls:
             if temp_rect.colliderect(wall.rect):
-                x_collided = True
                 final_x = self.x
                 break
 
         temp_rect.centerx = int(final_x)
         temp_rect.centery = int(next_y)
-        y_collided = False
         for wall in possible_walls:
             if temp_rect.colliderect(wall.rect):
-                y_collided = True
                 final_y = self.y
                 break
 
@@ -604,110 +593,6 @@ class FuelCan(pygame.sprite.Sprite):
 
         self.rect = self.image.get_rect(center=(x, y))
 
-# --- Wall Generation Functions ---
-def generate_outer_walls_simple(
-    outer_rect: Tuple[int, int, int, int],
-    exit_width: int,
-    exits_per_side: int,
-) -> pygame.sprite.Group:
-    left, top, right, bottom = outer_rect
-    segment_length = OUTER_WALL_SEGMENT_LENGTH
-    t2 = OUTER_WALL_THICKNESS // 2
-    walls = pygame.sprite.Group()
-
-    for y in [top, bottom]:
-        exit_positions = [random.randrange(left, right - exit_width) for i in range(exits_per_side)]
-        for x in range(left, right, segment_length):
-            if not any(ex <= x < ex + exit_width for ex in exit_positions):
-                walls.add(
-                    Wall(
-                        x - t2,
-                        y - t2,
-                        segment_length + t2,
-                        t2,
-                        health=OUTER_WALL_HEALTH,
-                        color=OUTER_WALL_COLOR,
-                        border_color=OUTER_WALL_BORDER_COLOR,
-                    )
-                )
-
-    for x in [left, right]:
-        exit_positions = [random.randrange(top, bottom - exit_width) for i in range(exits_per_side)]
-        for y in range(top, bottom, segment_length):
-            if not any(ey <= y < ey + exit_width for ey in exit_positions):
-                walls.add(
-                    Wall(
-                        x - t2,
-                        y - t2,
-                        t2,
-                        segment_length + t2,
-                        health=OUTER_WALL_HEALTH,
-                        color=OUTER_WALL_COLOR,
-                        border_color=OUTER_WALL_BORDER_COLOR,
-                    )
-                )
-
-    return walls
-
-
-def generate_internal_walls(
-    num_lines: int,
-    outer_rect: Tuple[int, int, int, int],
-    len_range: Tuple[int, int],
-    avoid_rects: list[rect.Rect],
-) -> sprite.Group:
-    left, top, right, bottom = outer_rect
-    margin_x, margin_y = left, top
-    min_len, max_len = len_range
-    t2 = INTERNAL_WALL_THICKNESS // 2
-    segment_length = INTERNAL_WALL_SEGMENT_LENGTH
-    grid_snap = INTERNAL_WALL_GRID_SNAP
-
-    newly_added_walls = pygame.sprite.Group()
-    lines_created = 0
-    max_attempts = num_lines * 25
-    attempts = 0
-    while lines_created < num_lines and attempts < max_attempts:
-        attempts += 1
-        total_length = random.randint(min_len, max_len)
-        num_segments = max(1, round(total_length / segment_length))
-        is_horizontal = random.choice([True, False])
-        if is_horizontal:
-            w, h = segment_length, 0
-            min_start_x, max_start_x = left, right
-            min_start_y, max_start_y = top + grid_snap, bottom - grid_snap
-        else:
-            w, h = 0, segment_length
-            min_start_x, max_start_x = left + grid_snap, right - grid_snap
-            min_start_y, max_start_y = top, bottom
-        x = random.randint(0, right + margin_x)
-        x = round(x / grid_snap) * grid_snap
-        x = max(min_start_x, min(max_start_x, x))
-        y = random.randint(0, bottom + margin_y)
-        y = round(y / grid_snap) * grid_snap
-        y = max(min_start_y, min(max_start_y, y))
-
-        line_segments = pygame.sprite.Group()
-        valid_line = True
-        check_rects = [r.inflate(grid_snap, grid_snap) for r in avoid_rects]
-        for i in range(num_segments):
-            segment_rect = pygame.Rect(x - t2, y - t2, w + t2, h + t2)
-            if (
-                segment_rect.right > right
-                or segment_rect.bottom > bottom
-                or any(segment_rect.colliderect(cr) for cr in check_rects)
-            ):
-                valid_line = False
-                break
-            line_segments.add(Wall(x - t2, y - t2, w + t2, h + t2))
-            x += w
-            y += h
-        if valid_line and len(line_segments) > 0:
-            newly_added_walls.add(line_segments)
-            lines_created += 1
-    return newly_added_walls
-
-
 def rect_for_cell(x_idx: int, y_idx: int) -> pygame.Rect:
     return pygame.Rect(x_idx * CELL_SIZE, y_idx * CELL_SIZE, CELL_SIZE, CELL_SIZE)
 
@@ -832,7 +717,7 @@ def place_new_car(wall_group, player, walkable_cells: List[pygame.Rect]):
         return None
 
     max_attempts = 150
-    for attempt in range(max_attempts):
+    for _ in range(max_attempts):
         cell = random.choice(walkable_cells)
         c_x, c_y = cell.center
         temp_car = Car(c_x, c_y)
@@ -1710,8 +1595,6 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                 screen.blit(desc_surface, desc_rect)
 
             # Quick config summary
-            small_font = pygame.font.Font(None, 22)
-            fp_on = config.get("footprints", {}).get("enabled", True)
             fast_on = config.get("fast_zombies", {}).get("enabled", True)
             hint_on = config.get("car_hint", {}).get("enabled", True)
 
