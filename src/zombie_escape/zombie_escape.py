@@ -955,7 +955,6 @@ def draw(
 ):
     # Drawing
     screen.fill(FLOOR_COLOR_OUTSIDE)
-    stage_requires_fuel = stage.requires_fuel if stage else False
     has_fuel = bool(state and state.get("has_fuel"))
 
     # floor tiles
@@ -1031,10 +1030,12 @@ def draw(
             _blit_hatch_ring(screen, fog_soft, pattern, fov_center_on_screen, radius)
 
     # HUD prompts for fuel flow
-    now = pygame.time.get_ticks()
-    if stage_requires_fuel and state:
-        if state.get("fuel_hint_expires_at", 0) > now and not state.get("has_fuel"):
-            show_message(screen, "Need fuel to drive!", 32, ORANGE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+    if state and not has_fuel:
+        elapsed_ms = state.get("elapsed_play_ms", 0)
+        if state.get("hint_target_type") == "fuel":
+            hint_ready_at = state.get("hint_expires_at", 0)
+            if hint_ready_at and elapsed_ms >= hint_ready_at:
+                show_message(screen, "Need fuel to drive!", 32, ORANGE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
 
     # Objective banner at top (drawn last so it stays above fog/hatch)
     def _render_objective(text: str):
@@ -1047,15 +1048,12 @@ def draw(
             print(f"Error rendering objective: {e}")
 
     objective_text = None
-    if stage_requires_fuel:
-        if not has_fuel:
-            objective_text = "Find the fuel can"
-        elif not player.in_car:
-            objective_text = "Find the car"
-        else:
-            objective_text = "Escape the building"
+    if not has_fuel:
+        objective_text = "Find the fuel can"
+    elif not player.in_car:
+        objective_text = "Find the car"
     else:
-        objective_text = "Find the car" if not player.in_car else "Escape the building"
+        objective_text = "Escape the building"
 
     if objective_text:
         _render_objective(objective_text)
@@ -1068,6 +1066,7 @@ def draw(
 # --- Game State Function (Contains the main game loop) ---
 def initialize_game_state(config, stage: Stage):
     """Initialize and return the base game state objects."""
+    starts_with_fuel = not stage.requires_fuel
     game_state = {
         "game_over": False,
         "game_won": False,
@@ -1079,9 +1078,11 @@ def initialize_game_state(config, stage: Stage):
         "last_footprint_pos": None,
         "elapsed_play_ms": 0,
         "stage_id": stage.id,
-        "has_fuel": False,
-        "fuel_hint_expires_at": 0,
-        "fuel_acquired_ms": None,
+        "has_fuel": starts_with_fuel,
+        "hint_expires_at": 0,
+        "hint_target_type": None,
+        "fuel_acquired_ms": 0 if starts_with_fuel else None,
+        "car_acquired_ms": None,
     }
 
     # Create sprite groups
@@ -1328,8 +1329,6 @@ def check_interactions(game_data):
     state = game_data["state"]
     walkable_cells = game_data["areas"].get("walkable_cells", [])
     outside_rects = game_data["areas"].get("outside_rects", [])
-    stage = game_data.get("stage")
-    stage_requires_fuel = stage.requires_fuel if stage else False
     fuel = game_data.get("fuel")
 
     # Fuel pickup
@@ -1338,6 +1337,8 @@ def check_interactions(game_data):
         if dist_to_fuel <= max(FUEL_PICKUP_RADIUS, PLAYER_RADIUS + 6):
             state["has_fuel"] = True
             state["fuel_acquired_ms"] = state.get("elapsed_play_ms", 0)
+            state["hint_expires_at"] = 0
+            state["hint_target_type"] = None
             fuel.kill()
             game_data["fuel"] = None
             print("Fuel acquired!")
@@ -1348,12 +1349,16 @@ def check_interactions(game_data):
         g = pygame.sprite.Group()
         g.add(player)
         if pygame.sprite.spritecollide(shrunk_car, g, False):
-            if stage_requires_fuel and not state.get("has_fuel"):
-                state["fuel_hint_expires_at"] = pygame.time.get_ticks() + FUEL_HINT_DURATION_MS
-            else:
+            if state.get("has_fuel"):
                 player.in_car = True
                 all_sprites.remove(player)
+                state["car_acquired_ms"] = state.get("elapsed_play_ms", 0)
+                state["hint_expires_at"] = 0
+                state["hint_target_type"] = None
                 print("Player entered car!")
+            else:
+                state["hint_expires_at"] = state.get("elapsed_play_ms", 0) + FUEL_HINT_DURATION_MS
+                state["hint_target_type"] = "fuel"
 
     # Car hitting zombies
     if player.in_car and car.alive() and car.health > 0:
@@ -1392,10 +1397,9 @@ def check_interactions(game_data):
             state["game_over"] = True
 
     # Player escaping the level
-    if player.in_car and car.alive():
+    if player.in_car and car.alive() and state.get("has_fuel"):
         if any(outside.collidepoint(car.rect.center) for outside in outside_rects):
-            if not stage_requires_fuel or state.get("has_fuel"):
-                state["game_won"] = True
+            state["game_won"] = True
 
     # Return fog of view target
     if not state["game_over"] and not state["game_won"]:
@@ -1418,8 +1422,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
     game_data["car"] = car
 
     # Stage-specific collectibles (fuel for Stage 2)
-    stage_requires_fuel = stage.requires_fuel
-    if stage_requires_fuel:
+    if stage.requires_fuel:
         fuel_can = place_fuel_can(layout_data["walkable_cells"], player, car)
         if fuel_can:
             game_data["fuel"] = fuel_can
@@ -1516,21 +1519,32 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
         car_hint_conf = config.get("car_hint", {})
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
         elapsed_ms = game_data["state"]["elapsed_play_ms"]
-        stage_requires_fuel = stage.requires_fuel
         has_fuel = game_data["state"].get("has_fuel")
         fuel_acquired_ms = game_data["state"].get("fuel_acquired_ms")
         hint_enabled = car_hint_conf.get("enabled", True)
         hint_target = None
         hint_color = YELLOW
+        hint_expires_at = game_data["state"].get("hint_expires_at", 0)
+        hint_target_type = game_data["state"].get("hint_target_type")
 
-        if hint_enabled and not player.in_car:
-            # Stage 2: point to fuel first, then car after fuel pickup delay
-            if stage_requires_fuel and not has_fuel:
-                if elapsed_ms >= hint_delay and game_data.get("fuel") and game_data["fuel"].alive():
-                    hint_target = game_data["fuel"].rect.center
+        if hint_enabled:
+            if not has_fuel and game_data.get("fuel") and game_data["fuel"].alive():
+                target_type = "fuel"
+            elif not player.in_car and game_data["car"].alive():
+                target_type = "car"
             else:
-                start_ms = fuel_acquired_ms if stage_requires_fuel else 0
-                if elapsed_ms - (start_ms or 0) >= hint_delay and game_data["car"].alive():
+                target_type = None
+
+            if target_type != hint_target_type:
+                game_data["state"]["hint_target_type"] = target_type
+                game_data["state"]["hint_expires_at"] = elapsed_ms + hint_delay if target_type else 0
+                hint_expires_at = game_data["state"]["hint_expires_at"]
+                hint_target_type = target_type
+
+            if target_type and hint_expires_at and elapsed_ms >= hint_expires_at and not player.in_car:
+                if target_type == "fuel" and game_data.get("fuel") and game_data["fuel"].alive():
+                    hint_target = game_data["fuel"].rect.center
+                elif target_type == "car" and game_data["car"].alive():
                     hint_target = game_data["car"].rect.center
 
         draw(
