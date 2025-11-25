@@ -10,32 +10,29 @@ from enum import Enum  # For Zombie Modes
 import pygame
 from pygame import rect, sprite, surface, time
 
-from .config import DEFAULT_CONFIG, load_config, save_config
-from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
-from .colors import (
-    BLACK,
-    BLUE,
-    DARK_RED,
-    FLOOR_COLOR_OUTSIDE,
-    FLOOR_COLOR_PRIMARY,
-    FLOOR_COLOR_SECONDARY,
-    GRAY,
-    GREEN,
-    INTERNAL_WALL_BORDER_COLOR,
-    INTERNAL_WALL_COLOR,
-    LIGHT_GRAY,
-    ORANGE,
-    OUTER_WALL_BORDER_COLOR,
-    OUTER_WALL_COLOR,
-    RED,
-    WHITE,
-    YELLOW,
-)
-from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
 try:
     from .__about__ import __version__
 except:
     __version__ = "0.0.0-unknown"
+from .config import DEFAULT_CONFIG, load_config, save_config
+from .colors import (
+    BLACK,
+    BLUE,
+    DARK_RED,
+    GRAY,
+    GREEN,
+    LIGHT_GRAY,
+    ORANGE,
+    RED,
+    WHITE,
+    YELLOW,
+    INTERNAL_WALL_BORDER_COLOR,
+    INTERNAL_WALL_COLOR,
+    OUTER_WALL_BORDER_COLOR,
+    OUTER_WALL_COLOR,
+)
+from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
+from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
 
 # --- Constants/Global variables ---
 DEFAULT_SCREEN_WIDTH = 800
@@ -55,18 +52,6 @@ CELL_SIZE = TILE_SIZE
 LEVEL_WIDTH = LEVEL_GRID_COLS * CELL_SIZE
 LEVEL_HEIGHT = LEVEL_GRID_ROWS * CELL_SIZE
 
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255)
-GRAY = (100, 100, 100)
-LIGHT_GRAY = (200, 200, 200)
-YELLOW = (255, 255, 0)
-ORANGE = (255, 165, 0)
-DARK_RED = (139, 0, 0)
-
 # Player settings
 PLAYER_RADIUS = 11
 PLAYER_SPEED = 2.8
@@ -81,6 +66,76 @@ FLASHLIGHT_WIDTH = 20
 FLASHLIGHT_HEIGHT = 16
 FLASHLIGHT_PICKUP_RADIUS = 26
 DEFAULT_FLASHLIGHT_SPAWN_COUNT = 2
+
+# Footprint settings
+FOOTPRINT_RADIUS = 5
+FOOTPRINT_OVERVIEW_RADIUS = 8
+FOOTPRINT_COLOR = (110, 200, 255)
+FOOTPRINT_STEP_DISTANCE = 80
+FOOTPRINT_LIFETIME_MS = 135000
+FOOTPRINT_MAX = 320
+FOOTPRINT_MIN_FADE = 0.3
+
+# Zombie settings
+ZOMBIE_RADIUS = 11
+ZOMBIE_SPEED = 1.2
+NORMAL_ZOMBIE_SPEED_JITTER = 0.3
+ZOMBIE_SPAWN_DELAY_MS = 5000
+MAX_ZOMBIES = 400
+INITIAL_ZOMBIES_INSIDE = 15
+ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
+ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
+DEFAULT_FAST_ZOMBIE_RATIO = float(DEFAULT_CONFIG.get("fast_zombies", {}).get("ratio", 0.1))
+FAST_ZOMBIE_BASE_SPEED = PLAYER_SPEED * 0.85
+FAST_ZOMBIE_SPEED_JITTER = 0.15
+ZOMBIE_SEPARATION_DISTANCE = ZOMBIE_RADIUS * 2.2
+
+# Car settings
+CAR_WIDTH = 30
+CAR_HEIGHT = 50
+CAR_SPEED = 4
+CAR_HEALTH = 20
+CAR_WALL_DAMAGE = 1
+CAR_ZOMBIE_DAMAGE = 1
+CAR_HINT_DELAY_MS_DEFAULT = 300000
+
+# Fuel settings (Stage 2)
+FUEL_CAN_WIDTH = 22
+FUEL_CAN_HEIGHT = 30
+FUEL_PICKUP_RADIUS = 24
+FUEL_HINT_DURATION_MS = 1600
+
+# Wall settings
+INTERNAL_WALL_GRID_SNAP = CELL_SIZE
+INTERNAL_WALL_HEALTH = 40
+OUTER_WALL_HEALTH = 9999
+
+# Rendering assets (shared with render module)
+FOG_RINGS = [
+    FogRing(radius_factor=0.82, thickness=2),
+    FogRing(radius_factor=0.99, thickness=4),
+    FogRing(radius_factor=1.16, thickness=6),
+    FogRing(radius_factor=1.33, thickness=8),
+    FogRing(radius_factor=1.5, thickness=12),
+]
+
+RENDER_ASSETS = RenderAssets(
+    screen_width=SCREEN_WIDTH,
+    screen_height=SCREEN_HEIGHT,
+    status_bar_height=STATUS_BAR_HEIGHT,
+    player_radius=PLAYER_RADIUS,
+    fov_radius=FOV_RADIUS,
+    fog_radius_scale=FOG_RADIUS_SCALE,
+    fog_max_radius_factor=FOG_MAX_RADIUS_FACTOR,
+    fog_hatch_pixel_scale=FOG_HATCH_PIXEL_SCALE,
+    fog_rings=FOG_RINGS,
+    footprint_radius=FOOTPRINT_RADIUS,
+    footprint_overview_radius=FOOTPRINT_OVERVIEW_RADIUS,
+    footprint_lifetime_ms=FOOTPRINT_LIFETIME_MS,
+    footprint_min_fade=FOOTPRINT_MIN_FADE,
+    internal_wall_grid_snap=INTERNAL_WALL_GRID_SNAP,
+    default_flashlight_bonus_scale=DEFAULT_FLASHLIGHT_BONUS_SCALE,
+)
 
 
 class AttrMapMixin:
@@ -176,30 +231,6 @@ class GameData:
         return hasattr(self, key)
 
 
-# Footprint settings
-FOOTPRINT_RADIUS = 5
-FOOTPRINT_OVERVIEW_RADIUS = 8
-FOOTPRINT_COLOR = (110, 200, 255)
-FOOTPRINT_STEP_DISTANCE = 80
-FOOTPRINT_LIFETIME_MS = 135000
-FOOTPRINT_MAX = 320
-FOOTPRINT_MIN_FADE = 0.3
-
-# Zombie settings
-ZOMBIE_RADIUS = 11
-ZOMBIE_SPEED = 1.2
-NORMAL_ZOMBIE_SPEED_JITTER = 0.3
-ZOMBIE_SPAWN_DELAY_MS = 5000
-MAX_ZOMBIES = 400
-INITIAL_ZOMBIES_INSIDE = 15
-ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
-ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
-DEFAULT_FAST_ZOMBIE_RATIO = float(DEFAULT_CONFIG.get("fast_zombies", {}).get("ratio", 0.1))
-FAST_ZOMBIE_BASE_SPEED = PLAYER_SPEED * 0.85
-FAST_ZOMBIE_SPEED_JITTER = 0.15
-ZOMBIE_SEPARATION_DISTANCE = ZOMBIE_RADIUS * 2.2
-
-
 @dataclass(frozen=True)
 class Stage:
     id: str
@@ -226,60 +257,6 @@ STAGES = [
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"
-
-# Car settings
-CAR_WIDTH = 30
-CAR_HEIGHT = 50
-CAR_SPEED = 4
-CAR_HEALTH = 20
-CAR_WALL_DAMAGE = 1
-CAR_ZOMBIE_DAMAGE = 1
-CAR_HINT_DELAY_MS_DEFAULT = 300000
-
-# Fuel settings (Stage 2)
-FUEL_CAN_WIDTH = 22
-FUEL_CAN_HEIGHT = 30
-FUEL_PICKUP_RADIUS = 24
-FUEL_HINT_DURATION_MS = 1600
-
-# Wall settings
-INTERNAL_WALL_GRID_SNAP = CELL_SIZE
-INTERNAL_WALL_HEALTH = 40
-INTERNAL_WALL_COLOR = (99, 88, 70)
-INTERNAL_WALL_BORDER_COLOR = (105, 93, 74)
-OUTER_WALL_HEALTH = 9999
-OUTER_WALL_COLOR = (122, 114, 102)
-OUTER_WALL_BORDER_COLOR = (120, 112, 100)
-FLOOR_COLOR_PRIMARY = (41, 46, 51)
-FLOOR_COLOR_SECONDARY = (48, 54, 61)
-FLOOR_COLOR_OUTSIDE = (30, 45, 30)
-
-# Rendering assets (shared with render module)
-FOG_RINGS = [
-    FogRing(radius_factor=0.82, thickness=2),
-    FogRing(radius_factor=0.99, thickness=4),
-    FogRing(radius_factor=1.16, thickness=6),
-    FogRing(radius_factor=1.33, thickness=8),
-    FogRing(radius_factor=1.5, thickness=12),
-]
-
-RENDER_ASSETS = RenderAssets(
-    screen_width=SCREEN_WIDTH,
-    screen_height=SCREEN_HEIGHT,
-    status_bar_height=STATUS_BAR_HEIGHT,
-    player_radius=PLAYER_RADIUS,
-    fov_radius=FOV_RADIUS,
-    fog_radius_scale=FOG_RADIUS_SCALE,
-    fog_max_radius_factor=FOG_MAX_RADIUS_FACTOR,
-    fog_hatch_pixel_scale=FOG_HATCH_PIXEL_SCALE,
-    fog_rings=FOG_RINGS,
-    footprint_radius=FOOTPRINT_RADIUS,
-    footprint_overview_radius=FOOTPRINT_OVERVIEW_RADIUS,
-    footprint_lifetime_ms=FOOTPRINT_LIFETIME_MS,
-    footprint_min_fade=FOOTPRINT_MIN_FADE,
-    internal_wall_grid_snap=INTERNAL_WALL_GRID_SNAP,
-    default_flashlight_bonus_scale=DEFAULT_FLASHLIGHT_BONUS_SCALE,
-)
 
 
 # --- Window scaling helpers ---

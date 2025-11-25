@@ -87,7 +87,7 @@ def draw_level_overview(
         age = now - fp["time"]
         fade = 1 - (age / assets.footprint_lifetime_ms)
         fade = max(assets.footprint_min_fade, fade)
-        color = tuple(int(c * fade) for c in assets.footprint_color)
+        color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
         pygame.draw.circle(surface, color, (int(fp["pos"][0]), int(fp["pos"][1])), assets.footprint_overview_radius)
     if fuel and fuel.alive():
         pygame.draw.rect(surface, YELLOW, fuel.rect, border_radius=3)
