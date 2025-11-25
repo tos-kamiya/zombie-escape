@@ -708,8 +708,8 @@ def rect_for_cell(x_idx: int, y_idx: int) -> pygame.Rect:
 
 def generate_level_from_blueprint(game_data):
     """Build walls/spawn candidates/outside area from a blueprint grid."""
-    wall_group = game_data.groups["wall_group"]
-    all_sprites = game_data.groups["all_sprites"]
+    wall_group = game_data.groups.wall_group
+    all_sprites = game_data.groups.all_sprites
 
     blueprint = choose_blueprint()
     outside_rects: List[pygame.Rect] = []
@@ -964,7 +964,7 @@ def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface,
     screen.blit(overlay, (0, 0))
 
 
-def _draw_status_bar(screen, config, stage: Stage | None = None, state=None):
+def _draw_status_bar(screen, config, stage: Stage | None = None):
     """Render a compact status bar with current config flags and stage info."""
     bar_rect = pygame.Rect(0, SCREEN_HEIGHT - STATUS_BAR_HEIGHT, SCREEN_WIDTH, STATUS_BAR_HEIGHT)
     overlay = pygame.Surface((bar_rect.width, bar_rect.height), pygame.SRCALPHA)
@@ -1033,19 +1033,18 @@ def draw(
     fog_surfaces,
     footprints,
     config,
-    car,
     player,
     hint_target: Tuple[int, int] | None,
     hint_color=YELLOW,
     do_flip: bool = True,
     outside_rects: List[pygame.Rect] | None = None,
-    fuel: FuelCan | None = None,
     stage: Stage | None = None,
-    state: dict | None = None,
+    has_fuel: bool = False,
+    elapsed_play_ms: int = 0,
+    fuel_message_until: int = 0,
 ):
     # Drawing
     screen.fill(FLOOR_COLOR_OUTSIDE)
-    has_fuel = bool(state and state.get("has_fuel"))
 
     # floor tiles
     xs, ys, xe, ye = outer_rect
@@ -1120,9 +1119,8 @@ def draw(
             _blit_hatch_ring(screen, fog_soft, pattern, fov_center_on_screen, radius)
 
     # HUD prompts for fuel flow: show immediately after failed car entry, not time-gated hint
-    if state and not has_fuel:
-        elapsed_ms = state.get("elapsed_play_ms", 0)
-        if getattr(state, "fuel_message_until", 0) > elapsed_ms:
+    if not has_fuel:
+        if fuel_message_until > elapsed_play_ms:
             show_message(screen, "Need fuel to drive!", 32, ORANGE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
 
     # Objective banner at top (drawn last so it stays above fog/hatch)
@@ -1146,7 +1144,7 @@ def draw(
     if objective_text:
         _render_objective(objective_text)
 
-    _draw_status_bar(screen, config, stage=stage, state=state)
+    _draw_status_bar(screen, config, stage=stage)
     if do_flip:
         present(screen)
 
@@ -1206,7 +1204,7 @@ def initialize_game_state(config, stage: Stage):
 
 def setup_player_and_car(game_data, layout_data):
     """Create and position the player and car using blueprint candidates."""
-    all_sprites = game_data.groups["all_sprites"]
+    all_sprites = game_data.groups.all_sprites
     walkable_cells: List[pygame.Rect] = layout_data["walkable_cells"]
 
     def pick_center(cells: List[pygame.Rect]) -> Tuple[int, int]:
@@ -1240,9 +1238,9 @@ def setup_player_and_car(game_data, layout_data):
 def spawn_initial_zombies(game_data, player, layout_data):
     """Spawn initial zombies using blueprint candidate cells."""
     config = game_data.get("config", DEFAULT_CONFIG)
-    wall_group = game_data.groups["wall_group"]
-    zombie_group = game_data.groups["zombie_group"]
-    all_sprites = game_data.groups["all_sprites"]
+    wall_group = game_data.groups.wall_group
+    zombie_group = game_data.groups.zombie_group
+    all_sprites = game_data.groups.all_sprites
 
     spawn_cells = layout_data["zombie_cells"] or layout_data["walkable_cells"]
     if not spawn_cells:
@@ -1370,9 +1368,9 @@ def update_entities(game_data, player_dx, player_dy, car_dx, car_dy):
     """Update positions and states of game entities."""
     player = game_data.player
     car = game_data.car
-    wall_group = game_data.groups["wall_group"]
-    all_sprites = game_data.groups["all_sprites"]
-    zombie_group = game_data.groups["zombie_group"]
+    wall_group = game_data.groups.wall_group
+    all_sprites = game_data.groups.all_sprites
+    zombie_group = game_data.groups.zombie_group
     camera = game_data.camera
     config = game_data.config
 
@@ -1409,9 +1407,9 @@ def check_interactions(game_data):
     """Check and handle interactions between entities."""
     player = game_data.player
     car = game_data.car
-    zombie_group = game_data.groups["zombie_group"]
-    wall_group = game_data.groups["wall_group"]
-    all_sprites = game_data.groups["all_sprites"]
+    zombie_group = game_data.groups.zombie_group
+    wall_group = game_data.groups.wall_group
+    all_sprites = game_data.groups.all_sprites
     state = game_data.state
     walkable_cells = game_data.areas.walkable_cells
     outside_rects = game_data.areas.outside_rects
@@ -1513,7 +1511,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
         fuel_can = place_fuel_can(layout_data["walkable_cells"], player, car)
         if fuel_can:
             game_data.fuel = fuel_can
-            game_data.groups["all_sprites"].add(fuel_can, layer=1)
+            game_data.groups.all_sprites.add(fuel_can, layer=1)
 
     # Spawn initial zombies
     spawn_initial_zombies(game_data, player, layout_data)
@@ -1560,19 +1558,19 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
                 screen,
                 game_data.areas.outer_rect,
                 game_data.camera,
-                game_data.groups["all_sprites"],
+                game_data.groups.all_sprites,
                 last_fov_target,
                 game_data.fog,
                 game_data.state.footprints,
                 config,
-                game_data.car,
                 player,
                 None,
                 do_flip=not show_pause_overlay,
                 outside_rects=game_data.areas.outside_rects,
-                fuel=game_data.fuel,
                 stage=stage,
-                state=game_data.state,
+                has_fuel=game_data.state.has_fuel,
+                elapsed_play_ms=game_data.state.elapsed_play_ms,
+                fuel_message_until=game_data.state.fuel_message_until,
             )
             if show_pause_overlay:
                 overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
@@ -1644,19 +1642,19 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
             screen,
             game_data.areas.outer_rect,
             game_data.camera,
-            game_data.groups["all_sprites"],
+            game_data.groups.all_sprites,
             fov_target,
             game_data.fog,
             game_data.state.footprints,
             config,
-            game_data.car,
             player,
             hint_target,
             hint_color,
             outside_rects=game_data.areas.outside_rects,
-            fuel=game_data.fuel,
             stage=stage,
-            state=game_data.state,
+            has_fuel=game_data.state.has_fuel,
+            elapsed_play_ms=game_data.state.elapsed_play_ms,
+            fuel_message_until=game_data.state.fuel_message_until,
         )
 
     return False
