@@ -31,7 +31,6 @@ from .colors import (
     RED,
     WHITE,
     YELLOW,
-    Colors,
 )
 from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
 try:
@@ -276,29 +275,13 @@ RENDER_ASSETS = RenderAssets(
     fog_radius_scale=FOG_RADIUS_SCALE,
     fog_max_radius_factor=FOG_MAX_RADIUS_FACTOR,
     fog_hatch_pixel_scale=FOG_HATCH_PIXEL_SCALE,
-    fog_color=FOG_COLOR,
     fog_rings=FOG_RINGS,
-    floor_color_primary=FLOOR_COLOR_PRIMARY,
-    floor_color_secondary=FLOOR_COLOR_SECONDARY,
-    floor_color_outside=FLOOR_COLOR_OUTSIDE,
-    internal_wall_color=INTERNAL_WALL_COLOR,
     footprint_radius=FOOTPRINT_RADIUS,
     footprint_overview_radius=FOOTPRINT_OVERVIEW_RADIUS,
-    footprint_color=FOOTPRINT_COLOR,
     footprint_lifetime_ms=FOOTPRINT_LIFETIME_MS,
     footprint_min_fade=FOOTPRINT_MIN_FADE,
     internal_wall_grid_snap=INTERNAL_WALL_GRID_SNAP,
     default_flashlight_bonus_scale=DEFAULT_FLASHLIGHT_BONUS_SCALE,
-    colors=Colors(
-        black=BLACK,
-        white=WHITE,
-        gray=GRAY,
-        light_gray=LIGHT_GRAY,
-        yellow=YELLOW,
-        orange=ORANGE,
-        green=GREEN,
-        blue=BLUE,
-    ),
 )
 
 

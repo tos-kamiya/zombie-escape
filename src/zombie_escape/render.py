@@ -7,7 +7,20 @@ import math
 import pygame
 from pygame import surface, sprite
 
-from .colors import Colors
+from .colors import (
+    BLACK,
+    BLUE,
+    FOG_COLOR,
+    FLOOR_COLOR_OUTSIDE,
+    FLOOR_COLOR_PRIMARY,
+    FLOOR_COLOR_SECONDARY,
+    FOOTPRINT_COLOR,
+    GREEN,
+    INTERNAL_WALL_COLOR,
+    LIGHT_GRAY,
+    ORANGE,
+    YELLOW,
+)
 
 
 @dataclass(frozen=True)
@@ -26,20 +39,13 @@ class RenderAssets:
     fog_radius_scale: float
     fog_max_radius_factor: float
     fog_hatch_pixel_scale: int
-    fog_color: Tuple[int, int, int, int]
     fog_rings: List[FogRing]
-    floor_color_primary: Tuple[int, int, int]
-    floor_color_secondary: Tuple[int, int, int]
-    floor_color_outside: Tuple[int, int, int]
-    internal_wall_color: Tuple[int, int, int]
     footprint_radius: int
     footprint_overview_radius: int
-    footprint_color: Tuple[int, int, int]
     footprint_lifetime_ms: int
     footprint_min_fade: float
     internal_wall_grid_snap: int
     default_flashlight_bonus_scale: float
-    colors: Colors
 
 
 def show_message(
@@ -73,9 +79,9 @@ def draw_level_overview(
     flashlights=None,
     stage=None,
 ) -> None:
-    surface.fill(assets.colors.black)
+    surface.fill(BLACK)
     for wall in wall_group:
-        pygame.draw.rect(surface, assets.internal_wall_color, wall.rect)
+        pygame.draw.rect(surface, INTERNAL_WALL_COLOR, wall.rect)
     now = pygame.time.get_ticks()
     for fp in footprints:
         age = now - fp["time"]
@@ -84,15 +90,15 @@ def draw_level_overview(
         color = tuple(int(c * fade) for c in assets.footprint_color)
         pygame.draw.circle(surface, color, (int(fp["pos"][0]), int(fp["pos"][1])), assets.footprint_overview_radius)
     if fuel and fuel.alive():
-        pygame.draw.rect(surface, assets.colors.yellow, fuel.rect, border_radius=3)
-        pygame.draw.rect(surface, assets.colors.black, fuel.rect, width=2, border_radius=3)
+        pygame.draw.rect(surface, YELLOW, fuel.rect, border_radius=3)
+        pygame.draw.rect(surface, BLACK, fuel.rect, width=2, border_radius=3)
     if flashlights:
         for flashlight in flashlights:
             if flashlight.alive():
                 pygame.draw.rect(surface, (240, 230, 150), flashlight.rect, border_radius=2)
-                pygame.draw.rect(surface, assets.colors.black, flashlight.rect, width=2, border_radius=2)
+                pygame.draw.rect(surface, BLACK, flashlight.rect, width=2, border_radius=2)
     if player:
-        pygame.draw.circle(surface, assets.colors.blue, player.rect.center, assets.player_radius * 2)
+        pygame.draw.circle(surface, BLUE, player.rect.center, assets.player_radius * 2)
     if car and car.alive():
         car_rect = car.image.get_rect(center=car.rect.center)
         surface.blit(car.image, car_rect)
@@ -162,7 +168,7 @@ def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface,
 
 def _draw_hint_arrow(screen, camera, assets: RenderAssets, player, target_pos: Tuple[int, int], color=None, ring_radius: float | None = None) -> None:
     """Draw a soft directional hint from player to a target position."""
-    color = color or assets.colors.yellow
+    color = color or YELLOW
     player_screen = camera.apply(player).center
     target_rect = pygame.Rect(target_pos[0], target_pos[1], 0, 0)
     target_screen = camera.apply_rect(target_rect).center
@@ -217,7 +223,7 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     ]
 
     status_text = " | ".join(parts)
-    color = assets.colors.green if all([footprints_on, fast_on, hint_on, flashlight_on]) else assets.colors.light_gray
+    color = GREEN if all([footprints_on, fast_on, hint_on, flashlight_on]) else LIGHT_GRAY
 
     try:
         font = pygame.font.Font(None, 20)
@@ -250,8 +256,8 @@ def draw(
     fuel_message_until: int = 0,
     present_fn=None,
 ):
-    hint_color = hint_color or assets.colors.yellow
-    screen.fill(assets.floor_color_outside)
+    hint_color = hint_color or YELLOW
+    screen.fill(FLOOR_COLOR_OUTSIDE)
 
     xs, ys, xe, ye = outer_rect
     xs //= assets.internal_wall_grid_snap
@@ -261,14 +267,14 @@ def draw(
 
     play_area_rect = pygame.Rect(xs * assets.internal_wall_grid_snap, ys * assets.internal_wall_grid_snap, (xe - xs) * assets.internal_wall_grid_snap, (ye - ys) * assets.internal_wall_grid_snap)
     play_area_screen_rect = camera.apply_rect(play_area_rect)
-    pygame.draw.rect(screen, assets.floor_color_primary, play_area_screen_rect)
+    pygame.draw.rect(screen, FLOOR_COLOR_PRIMARY, play_area_screen_rect)
 
     outside_rects = outside_rects or []
     outside_cells = {(r.x // assets.internal_wall_grid_snap, r.y // assets.internal_wall_grid_snap) for r in outside_rects}
     for rect_obj in outside_rects:
         sr = camera.apply_rect(rect_obj)
         if sr.colliderect(screen.get_rect()):
-            pygame.draw.rect(screen, assets.floor_color_outside, sr)
+            pygame.draw.rect(screen, FLOOR_COLOR_OUTSIDE, sr)
 
     for y in range(ys, ye):
         for x in range(xs, xe):
@@ -279,7 +285,7 @@ def draw(
                 r = pygame.Rect(lx, ly, assets.internal_wall_grid_snap, assets.internal_wall_grid_snap)
                 sr = camera.apply_rect(r)
                 if sr.colliderect(screen.get_rect()):
-                    pygame.draw.rect(screen, assets.floor_color_secondary, sr)
+                    pygame.draw.rect(screen, FLOOR_COLOR_SECONDARY, sr)
 
     if config.get("footprints", {}).get("enabled", True):
         now = pygame.time.get_ticks()
@@ -287,7 +293,7 @@ def draw(
             age = now - fp["time"]
             fade = 1 - (age / assets.footprint_lifetime_ms)
             fade = max(assets.footprint_min_fade, fade)
-            color = tuple(int(c * fade) for c in assets.footprint_color)
+            color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
             fp_rect = pygame.Rect(fp["pos"][0] - assets.footprint_radius, fp["pos"][1] - assets.footprint_radius, assets.footprint_radius * 2, assets.footprint_radius * 2)
             sr = camera.apply_rect(fp_rect)
             if sr.colliderect(screen.get_rect().inflate(30, 30)):
@@ -321,12 +327,12 @@ def draw(
             _blit_hatch_ring(screen, fog_soft, pattern, fov_center_on_screen, radius)
 
     if not has_fuel and fuel_message_until > elapsed_play_ms:
-        show_message(screen, "Need fuel to drive!", 32, assets.colors.orange, (assets.screen_width // 2, assets.screen_height // 2))
+        show_message(screen, "Need fuel to drive!", 32, ORANGE, (assets.screen_width // 2, assets.screen_height // 2))
 
     def _render_objective(text: str):
         try:
             font = pygame.font.Font(None, 30)
-            text_surface = font.render(text, True, assets.colors.yellow)
+            text_surface = font.render(text, True, YELLOW)
             text_rect = text_surface.get_rect(topleft=(16, 16))
             screen.blit(text_surface, text_rect)
         except pygame.error as e:

@@ -24,6 +24,7 @@ OUTER_WALL_BORDER_COLOR: Tuple[int, int, int] = (120, 112, 100)
 FLOOR_COLOR_PRIMARY: Tuple[int, int, int] = (41, 46, 51)
 FLOOR_COLOR_SECONDARY: Tuple[int, int, int] = (48, 54, 61)
 FLOOR_COLOR_OUTSIDE: Tuple[int, int, int] = (30, 45, 30)
+FOOTPRINT_COLOR: Tuple[int, int, int] = (110, 200, 255)
 
 
 @dataclass(frozen=True)
