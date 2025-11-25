@@ -57,7 +57,7 @@ FOG_HATCH_THICKNESS = 9
 FOG_HATCH_PIXEL_SCALE = 3
 
 # Flashlight settings
-FLASHLIGHT_BONUS_SCALE = float(DEFAULT_CONFIG.get("flashlight", {}).get("bonus_scale", 1.35))
+DEFAULT_FLASHLIGHT_BONUS_SCALE = float(DEFAULT_CONFIG.get("flashlight", {}).get("bonus_scale", 1.35))
 FLASHLIGHT_WIDTH = 20
 FLASHLIGHT_HEIGHT = 16
 FLASHLIGHT_PICKUP_RADIUS = 26
@@ -1038,9 +1038,9 @@ def get_fog_scale(stage: Stage | None, has_flashlight: bool, config: dict | None
     flashlight_conf = (config or {}).get("flashlight", {})
     flashlight_enabled = flashlight_conf.get("enabled", True)
     try:
-        bonus_scale = float(flashlight_conf.get("bonus_scale", FLASHLIGHT_BONUS_SCALE))
+        bonus_scale = float(flashlight_conf.get("bonus_scale", DEFAULT_FLASHLIGHT_BONUS_SCALE))
     except (TypeError, ValueError):
-        bonus_scale = FLASHLIGHT_BONUS_SCALE
+        bonus_scale = DEFAULT_FLASHLIGHT_BONUS_SCALE
     if flashlight_enabled and has_flashlight:
         scale *= max(1.0, bonus_scale)
     return scale
@@ -1070,9 +1070,9 @@ def _draw_status_bar(screen, config, stage: Stage | None = None):
     flashlight_conf = config.get("flashlight", {})
     flashlight_on = flashlight_conf.get("enabled", True)
     try:
-        flashlight_scale = float(flashlight_conf.get("bonus_scale", FLASHLIGHT_BONUS_SCALE))
+        flashlight_scale = float(flashlight_conf.get("bonus_scale", DEFAULT_FLASHLIGHT_BONUS_SCALE))
     except (TypeError, ValueError):
-        flashlight_scale = FLASHLIGHT_BONUS_SCALE
+        flashlight_scale = DEFAULT_FLASHLIGHT_BONUS_SCALE
     stage_label = stage.name if stage else "Stage 1"
 
     parts = [
