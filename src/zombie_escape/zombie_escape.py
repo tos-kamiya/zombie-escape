@@ -45,11 +45,6 @@ LIGHT_GRAY = (200, 200, 200)
 YELLOW = (255, 255, 0)
 ORANGE = (255, 165, 0)
 DARK_RED = (139, 0, 0)
-FOG_COLOR = (0, 0, 0, 255)
-FOG_COLOR_SOFT = (0, 0, 0, 190)
-FLOOR_COLOR_PRIMARY = (47, 52, 58)  # #2f343a
-FLOOR_COLOR_SECONDARY = (58, 65, 73)  # #3a4149
-FLOOR_COLOR_OUTSIDE = (60, 60, 60)  # neutral gray for outside the building
 
 # Player settings
 PLAYER_RADIUS = 11
@@ -62,11 +57,13 @@ FOG_HATCH_THICKNESS = 9
 FOG_HATCH_DEFAULT_SPACING = 18
 FOG_HATCH_PIXEL_SCALE = 3
 FOG_RINGS = [
-    {"radius_factor": 0.9, "thickness": 8, "spacing": 20},
-    {"radius_factor": 1.1, "thickness": 10, "spacing": 16},
-    {"radius_factor": 1.3, "thickness": 12, "spacing": 12},
-    {"radius_factor": 1.45, "thickness": 14, "spacing": 10},
+    {"radius_factor": 0.82, "thickness": 2},
+    {"radius_factor": 0.99, "thickness": 4},
+    {"radius_factor": 1.16, "thickness": 6},
+    {"radius_factor": 1.33, "thickness": 8},
+    {"radius_factor": 1.5, "thickness": 12},
 ]
+FOG_COLOR = (0, 0, 0, 255)
 
 # Footprint settings
 FOOTPRINT_RADIUS = 5
@@ -130,14 +127,17 @@ INTERNAL_WALL_THICKNESS = 24
 INTERNAL_WALL_GRID_SNAP = CELL_SIZE
 INTERNAL_WALL_SEGMENT_LENGTH = 50
 INTERNAL_WALL_HEALTH = 40
-INTERNAL_WALL_COLOR = (94, 86, 60)
-INTERNAL_WALL_BORDER_COLOR = (97, 89, 62)
+INTERNAL_WALL_COLOR = (97, 89, 62)
+INTERNAL_WALL_BORDER_COLOR = (94, 86, 60)
 OUTER_WALL_MARGIN = 100
 OUTER_WALL_THICKNESS = 50
 OUTER_WALL_SEGMENT_LENGTH = 100
 OUTER_WALL_HEALTH = 9999
-OUTER_WALL_COLOR = (120, 112, 100)
-OUTER_WALL_BORDER_COLOR = (122, 114, 102)
+OUTER_WALL_COLOR = (122, 114, 102)
+OUTER_WALL_BORDER_COLOR = (120, 112, 100)
+FLOOR_COLOR_PRIMARY = (47, 52, 58)
+FLOOR_COLOR_SECONDARY = (58, 65, 73)
+FLOOR_COLOR_OUTSIDE = (30, 45, 30)
 
 
 # --- Window scaling helpers ---
@@ -501,8 +501,41 @@ class Car(pygame.sprite.Sprite):
             color = ORANGE
         if health_ratio < 0.3:
             color = DARK_RED
-        self.original_image.fill(color)
-        pygame.draw.rect(self.original_image, BLACK, (CAR_WIDTH * 0.1, 5, CAR_WIDTH * 0.8, 10))
+        self.original_image.fill((0, 0, 0, 0))
+
+        body_rect = pygame.Rect(1, 4, CAR_WIDTH - 2, CAR_HEIGHT - 8)
+        front_cap_height = max(8, body_rect.height // 3)
+        front_cap = pygame.Rect(body_rect.left, body_rect.top, body_rect.width, front_cap_height)
+        windshield_rect = pygame.Rect(body_rect.left + 4, body_rect.top + 3, body_rect.width - 8, front_cap_height - 5)
+
+        trim_color = tuple(int(c * 0.55) for c in color)
+        front_cap_color = tuple(min(255, int(c * 1.08)) for c in color)
+        body_color = color
+        window_color = (70, 110, 150)
+        wheel_color = (35, 35, 35)
+
+        wheel_width = CAR_WIDTH // 3
+        wheel_height = 6
+        for y in (body_rect.top + 4, body_rect.bottom - wheel_height - 4):
+            left_wheel = pygame.Rect(2, y, wheel_width, wheel_height)
+            right_wheel = pygame.Rect(CAR_WIDTH - wheel_width - 2, y, wheel_width, wheel_height)
+            pygame.draw.rect(self.original_image, wheel_color, left_wheel, border_radius=3)
+            pygame.draw.rect(self.original_image, wheel_color, right_wheel, border_radius=3)
+
+        pygame.draw.rect(self.original_image, body_color, body_rect, border_radius=4)
+        pygame.draw.rect(self.original_image, trim_color, body_rect, width=2, border_radius=4)
+        pygame.draw.rect(self.original_image, front_cap_color, front_cap, border_radius=10)
+        pygame.draw.rect(self.original_image, trim_color, front_cap, width=2, border_radius=10)
+        pygame.draw.rect(self.original_image, window_color, windshield_rect, border_radius=4)
+
+        headlight_color = (245, 245, 200)
+        for x in (front_cap.left + 5, front_cap.right - 5):
+            pygame.draw.circle(self.original_image, headlight_color, (x, body_rect.top + 5), 2)
+        grille_rect = pygame.Rect(front_cap.centerx - 6, front_cap.top + 2, 12, 6)
+        pygame.draw.rect(self.original_image, trim_color, grille_rect, border_radius=2)
+        tail_light_color = (255, 80, 50)
+        for x in (body_rect.left + 5, body_rect.right - 5):
+            pygame.draw.rect(self.original_image, tail_light_color, (x - 2, body_rect.bottom - 5, 4, 3), border_radius=1)
         self.image = pygame.transform.rotate(self.original_image, self.angle)
         old_center = self.rect.center
         self.rect = self.image.get_rect(center=old_center)
@@ -790,7 +823,8 @@ def draw_level_overview(
     if player:
         pygame.draw.circle(surface, BLUE, player.rect.center, PLAYER_RADIUS * 2)
     if car and car.alive():
-        pygame.draw.rect(surface, YELLOW, car.rect)  # Draw car only if it exists
+        car_rect = car.image.get_rect(center=car.rect.center)
+        surface.blit(car.image, car_rect)
 
 
 def place_new_car(wall_group, player, walkable_cells: List[pygame.Rect]):
@@ -853,15 +887,15 @@ def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Opt
     return sprite
 
 
-def get_hatch_pattern(fog_data, spacing: int, thickness: int, pixel_scale: int = 1) -> surface.Surface:
+def get_hatch_pattern(fog_data, thickness: int, pixel_scale: int = 1) -> surface.Surface:
     """Return cached ordered-dither tile surface (Bayer-style, optionally chunky)."""
     cache = fog_data.setdefault("hatch_patterns", {})
     pixel_scale = max(1, pixel_scale)
-    key = (spacing, thickness, pixel_scale)
+    key = (thickness, pixel_scale)
     if key in cache:
         return cache[key]
 
-    spacing = max(4, spacing)
+    spacing = 20
     density = max(1, min(thickness, 16))
     pattern = pygame.Surface((spacing, spacing), pygame.SRCALPHA)
 
@@ -1082,9 +1116,8 @@ def draw(
         # Hatched rings layered from near to far
         for ring in FOG_RINGS:
             radius = int(FOV_RADIUS * ring["radius_factor"] * FOG_RADIUS_SCALE)
-            spacing = ring.get("spacing", FOG_HATCH_DEFAULT_SPACING)
             thickness = ring.get("thickness", FOG_HATCH_THICKNESS)
-            pattern = get_hatch_pattern(fog_surfaces, spacing, thickness, FOG_HATCH_PIXEL_SCALE)
+            pattern = get_hatch_pattern(fog_surfaces, thickness, FOG_HATCH_PIXEL_SCALE)
             _blit_hatch_ring(screen, fog_soft, pattern, fov_center_on_screen, radius)
 
     # HUD prompts for fuel flow
