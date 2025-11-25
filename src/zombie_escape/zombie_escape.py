@@ -63,34 +63,6 @@ class FogRing:
     thickness: int = FOG_HATCH_THICKNESS
 
 
-@dataclass
-class GameData:
-    """Lightweight container for game state with dict-like access for compatibility."""
-
-    state: "ProgressState"
-    groups: dict
-    camera: "Camera"
-    areas: "Areas"
-    fog: dict
-    config: dict
-    stage: "Stage"
-    fuel: Optional["FuelCan"] = None
-    player: Optional["Player"] = None
-    car: Optional["Car"] = None
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
-    def get(self, key, default=None):
-        return getattr(self, key, default)
-
-    def __contains__(self, key):
-        return hasattr(self, key)
-
-
 class AttrMapMixin:
     """Mixin to offer dict-like access to dataclass attributes."""
 
@@ -143,6 +115,43 @@ class ProgressState(AttrMapMixin):
     hint_expires_at: int
     hint_target_type: str | None
     fuel_message_until: int
+
+
+@dataclass
+class Groups(AttrMapMixin):
+    """Sprite groups container with dict-like access."""
+
+    all_sprites: sprite.LayeredUpdates
+    wall_group: sprite.Group
+    zombie_group: sprite.Group
+
+
+@dataclass
+class GameData:
+    """Lightweight container for game state with dict-like access for compatibility."""
+
+    state: "ProgressState"
+    groups: Groups
+    camera: "Camera"
+    areas: "Areas"
+    fog: dict
+    config: dict
+    stage: "Stage"
+    fuel: Optional["FuelCan"] = None
+    player: Optional["Player"] = None
+    car: Optional["Car"] = None
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
+    def __contains__(self, key):
+        return hasattr(self, key)
 
 
 FOG_RINGS = [
@@ -1180,7 +1189,7 @@ def initialize_game_state(config, stage: Stage):
 
     return GameData(
         state=game_state,
-        groups={"all_sprites": all_sprites, "wall_group": wall_group, "zombie_group": zombie_group},
+        groups=Groups(all_sprites=all_sprites, wall_group=wall_group, zombie_group=zombie_group),
         camera=camera,
         areas=Areas(
             outer_rect=outer_rect,
