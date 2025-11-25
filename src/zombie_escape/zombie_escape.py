@@ -19,7 +19,6 @@ from .colors import (
     FLOOR_COLOR_OUTSIDE,
     FLOOR_COLOR_PRIMARY,
     FLOOR_COLOR_SECONDARY,
-    FOG_COLOR,
     GRAY,
     GREEN,
     INTERNAL_WALL_BORDER_COLOR,
@@ -176,8 +175,6 @@ class GameData:
     def __contains__(self, key):
         return hasattr(self, key)
 
-
-FOG_COLOR = (0, 0, 0, 255)
 
 # Footprint settings
 FOOTPRINT_RADIUS = 5

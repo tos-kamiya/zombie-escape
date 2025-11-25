@@ -315,7 +315,7 @@ def draw(
         fog_soft = fog_surfaces["soft"]
         fog_scale = get_fog_scale(assets, stage, has_flashlight, config)
 
-        fog_hard.fill(assets.fog_color)
+        fog_hard.fill(FOG_COLOR)
         max_radius = int(assets.fov_radius * assets.fog_max_radius_factor * fog_scale)
         pygame.draw.circle(fog_hard, (0, 0, 0, 0), fov_center_on_screen, max_radius)
         screen.blit(fog_hard, (0, 0))
