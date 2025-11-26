@@ -1263,7 +1263,7 @@ def check_interactions(game_data):
             else:
                 now_ms = state.elapsed_play_ms
                 state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
-                state.hint_expires_at = now_ms + FUEL_HINT_DURATION_MS
+                # Keep hint timing unchanged so the car visit doesn't immediately reveal fuel
                 state.hint_target_type = "fuel"
 
     # Car hitting zombies
