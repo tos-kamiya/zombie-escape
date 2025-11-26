@@ -85,8 +85,7 @@ MAX_ZOMBIES = 400
 INITIAL_ZOMBIES_INSIDE = 15
 ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
 ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
-DEFAULT_FAST_ZOMBIE_RATIO = float(DEFAULT_CONFIG.get("fast_zombies", {}).get("ratio", 0.1))
-FAST_ZOMBIE_BASE_SPEED = PLAYER_SPEED * 0.85
+FAST_ZOMBIE_BASE_SPEED = PLAYER_SPEED * 0.83
 FAST_ZOMBIE_SPEED_JITTER = 0.15
 ZOMBIE_SEPARATION_DISTANCE = ZOMBIE_RADIUS * 2.2
 
@@ -437,10 +436,12 @@ def create_zombie(config, start_pos: Optional[Tuple[int, int]] = None, hint_pos:
     """Factory to create zombies with optional fast variants."""
     fast_conf = config.get("fast_zombies", {}) if config else {}
     fast_enabled = fast_conf.get("enabled", True)
-    ratio = fast_conf.get("ratio", DEFAULT_FAST_ZOMBIE_RATIO)
-    ratio = max(0.0, min(1.0, ratio))
-    is_fast = fast_enabled and random.random() < ratio
-    base_speed = FAST_ZOMBIE_BASE_SPEED if is_fast else ZOMBIE_SPEED
+    if fast_enabled:
+        base_speed = random.uniform(ZOMBIE_SPEED, FAST_ZOMBIE_BASE_SPEED)
+        is_fast = base_speed > ZOMBIE_SPEED
+    else:
+        base_speed = ZOMBIE_SPEED
+        is_fast = False
     base_speed = min(base_speed, PLAYER_SPEED - 0.05)
     return Zombie(start_pos=start_pos, hint_pos=hint_pos, speed_override=base_speed, is_fast=is_fast)
 
