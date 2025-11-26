@@ -27,6 +27,15 @@ This game is a simple 2D top-down action game where the player aims to escape by
 -   **Restart:** `R` key (on Game Over/Clear screen)
 -   **Window Scale (title/settings only):** `[` to shrink, `]` to enlarge
 
+## Settings (Title Screen)
+
+Open **Settings** from the title to toggle gameplay assists:
+
+-   **Footprints:** Leave breadcrumb trails so you can backtrack in the dark.
+-   **Fast zombies:** Allow faster zombie variants; each zombie rolls a random speed between the normal and fast ranges.
+-   **Car hint:** After a delay, show a small triangle pointing toward the fuel (Stage 2 before pickup) or the car.
+-   **Flashlight pickups:** Enable flashlight spawns that expand your visible radius when collected.
+
 ## Game Rules
 
 ### Stages
