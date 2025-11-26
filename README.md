@@ -58,7 +58,7 @@ An objective reminder is shown at the top-left during play.
     -   When the car is destroyed, a **new car will respawn** at a random location within the stage.
     -   After roughly 5 minutes of play, a small triangle near the player points toward the objective: fuel first (Stage 2 before pickup), car after fuel is collected (Stage 2), or car directly (Stage 1).
 -   **Fuel Can (Stage 2):** A yellow jerrycan. Pick it up before driving the car.
--   **Flashlight:** Enabled by default (toggle in Settings). When enabled, flashlights spawn in all stages; picking one up boosts your visible radius by 35%.
+-   **Flashlight:** Picking one up boosts your visible radius by 35%.
 -   **Walls:** Outer walls are gray; inner walls are beige.
     -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
     -   **Inner Walls:** Beige walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
