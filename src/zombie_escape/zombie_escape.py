@@ -228,7 +228,7 @@ class GameData:
         return getattr(self, key, default)
 
     def __contains__(self, key):
-        return hasattr(self, key)
+        return key in self.__dict__
 
 
 @dataclass(frozen=True)
@@ -922,7 +922,7 @@ def update_footprints(game_data) -> None:
     """Record player steps and clean up old footprints."""
     state = game_data.state
     player: Player = game_data.player
-    config = game_data.get("config", DEFAULT_CONFIG)
+    config = game_data.config
 
     footprints_enabled = config.get("footprints", {}).get("enabled", True)
     if not footprints_enabled:
@@ -1037,7 +1037,7 @@ def setup_player_and_car(game_data, layout_data):
 
 def spawn_initial_zombies(game_data, player, layout_data):
     """Spawn initial zombies using blueprint candidate cells."""
-    config = game_data.get("config", DEFAULT_CONFIG)
+    config = game_data.config
     wall_group = game_data.groups.wall_group
     zombie_group = game_data.groups.zombie_group
     all_sprites = game_data.groups.all_sprites
@@ -1114,7 +1114,7 @@ def handle_game_over_state(screen, game_data):
     if state.scaled_overview:
         screen.blit(state.scaled_overview, state.scaled_overview.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)))
 
-        if state.get("game_won"):
+        if state.game_won:
             show_message(screen, "YOU ESCAPED!", 40, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
 
     show_message(
@@ -1219,7 +1219,7 @@ def check_interactions(game_data):
     flashlights = game_data.flashlights or []
 
     # Fuel pickup
-    if fuel and fuel.alive() and not state.get("has_fuel") and not player.in_car:
+    if fuel and fuel.alive() and not state.has_fuel and not player.in_car:
         dist_to_fuel = math.hypot(fuel.rect.centerx - player.x, fuel.rect.centery - player.y)
         if dist_to_fuel <= max(FUEL_PICKUP_RADIUS, PLAYER_RADIUS + 6):
             state.has_fuel = True
@@ -1231,7 +1231,7 @@ def check_interactions(game_data):
             print("Fuel acquired!")
 
     # Flashlight pickup
-    if not state.get("has_flashlight") and not player.in_car:
+    if not state.has_flashlight and not player.in_car:
         for flashlight in list(flashlights):
             if not flashlight.alive():
                 continue
@@ -1303,7 +1303,7 @@ def check_interactions(game_data):
             state.game_over = True
 
     # Player escaping the level
-    if player.in_car and car.alive() and state.get("has_fuel"):
+    if player.in_car and car.alive() and state.has_fuel:
         if any(outside.collidepoint(car.rect.center) for outside in outside_rects):
             state.game_won = True
 
@@ -1360,7 +1360,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
         car = game_data.car
 
         # Handle game over state
-        if game_data.state.get("game_over") or game_data.state.get("game_won"):
+        if game_data.state.game_over or game_data.state.game_won:
             result = handle_game_over_state(screen, game_data)
             if result is not None:  # If restart or quit was selected
                 return result
@@ -1446,14 +1446,14 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
         # Draw everything
         car_hint_conf = config.get("car_hint", {})
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
-        elapsed_ms = game_data.state.get("elapsed_play_ms", 0)
-        has_fuel = game_data.state.get("has_fuel")
-        has_flashlight = game_data.state.get("has_flashlight", False)
+        elapsed_ms = game_data.state.elapsed_play_ms
+        has_fuel = game_data.state.has_fuel
+        has_flashlight = game_data.state.has_flashlight
         hint_enabled = car_hint_conf.get("enabled", True)
         hint_target = None
         hint_color = YELLOW
-        hint_expires_at = game_data.state.get("hint_expires_at", 0)
-        hint_target_type = game_data.state.get("hint_target_type")
+        hint_expires_at = game_data.state.hint_expires_at
+        hint_target_type = game_data.state.hint_target_type
 
         if hint_enabled:
             if not has_fuel and game_data.fuel and game_data.fuel.alive():
