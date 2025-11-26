@@ -137,43 +137,18 @@ RENDER_ASSETS = RenderAssets(
 )
 
 
-class AttrMapMixin:
-    """Mixin to offer dict-like access to dataclass attributes."""
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
-    def get(self, key, default=None):
-        return getattr(self, key, default)
-
-    def items(self):
-        return self.__dict__.items()
-
-
 @dataclass
-class Areas(AttrMapMixin):
-    """Container for level area rectangles with dict-like access."""
+class Areas:
+    """Container for level area rectangles."""
 
     outer_rect: Tuple[int, int, int, int]
     inner_rect: Tuple[int, int, int, int]
     outside_rects: list[pygame.Rect]
     walkable_cells: list[pygame.Rect]
 
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
-    def get(self, key, default=None):
-        return getattr(self, key, default)
-
 
 @dataclass
-class ProgressState(AttrMapMixin):
+class ProgressState:
     """Game progress/state flags."""
 
     game_over: bool
@@ -193,8 +168,8 @@ class ProgressState(AttrMapMixin):
 
 
 @dataclass
-class Groups(AttrMapMixin):
-    """Sprite groups container with dict-like access."""
+class Groups:
+    """Sprite groups container."""
 
     all_sprites: sprite.LayeredUpdates
     wall_group: sprite.Group
@@ -203,7 +178,7 @@ class Groups(AttrMapMixin):
 
 @dataclass
 class GameData:
-    """Lightweight container for game state with dict-like access for compatibility."""
+    """Lightweight container for game state."""
 
     state: "ProgressState"
     groups: Groups
@@ -216,18 +191,6 @@ class GameData:
     flashlights: List["Flashlight"] | None = None
     player: Optional["Player"] = None
     car: Optional["Car"] = None
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
-
-    def get(self, key, default=None):
-        return getattr(self, key, default)
-
-    def __contains__(self, key):
-        return key in self.__dict__
 
 
 @dataclass(frozen=True)
@@ -1074,7 +1037,7 @@ def spawn_initial_zombies(game_data, player, layout_data):
 def handle_game_over_state(screen, game_data):
     """Handle rendering and input when game is over or won."""
     state = game_data.state
-    wall_group = game_data.groups["wall_group"]
+    wall_group = game_data.groups.wall_group
     config = game_data.config
     footprints_enabled = config.get("footprints", {}).get("enabled", True)
 
