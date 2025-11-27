@@ -1548,23 +1548,50 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
     """Settings menu shown from the title screen."""
     working = copy.deepcopy(config)
     selected = 0
-    row_count = 4
+    row_count = 0
 
-    def toggle_footprints():
-        enabled = working.get("footprints", {}).get("enabled", True)
-        working.setdefault("footprints", {})["enabled"] = not enabled
+    def set_value(path: tuple[str, str], value: bool) -> None:
+        """Set a nested boolean flag in the working config."""
+        root_key, child_key = path
+        working.setdefault(root_key, {})[child_key] = value
 
-    def toggle_fast_zombies():
-        enabled = working.get("fast_zombies", {}).get("enabled", True)
-        working.setdefault("fast_zombies", {})["enabled"] = not enabled
+    def toggle_value(path: tuple[str, str]) -> None:
+        """Toggle a nested boolean flag in the working config."""
+        root_key, child_key = path
+        current = working.get(root_key, {}).get(child_key, True)
+        working.setdefault(root_key, {})[child_key] = not current
 
-    def toggle_car_hint():
-        enabled = working.get("car_hint", {}).get("enabled", True)
-        working.setdefault("car_hint", {})["enabled"] = not enabled
-
-    def toggle_flashlight():
-        enabled = working.get("flashlight", {}).get("enabled", True)
-        working.setdefault("flashlight", {})["enabled"] = not enabled
+    rows = [
+        {
+            "label": "Footprints",
+            "path": ("footprints", "enabled"),
+            "easy_value": True,
+            "left_label": "ON (Easy)",
+            "right_label": "OFF (Harder)",
+        },
+        {
+            "label": "Fast zombies",
+            "path": ("fast_zombies", "enabled"),
+            "easy_value": False,
+            "left_label": "OFF (Easy)",
+            "right_label": "ON (Harder)",
+        },
+        {
+            "label": "Car hint",
+            "path": ("car_hint", "enabled"),
+            "easy_value": True,
+            "left_label": "ON (Easy)",
+            "right_label": "OFF (Harder)",
+        },
+        {
+            "label": "Flashlight pickups",
+            "path": ("flashlight", "enabled"),
+            "easy_value": True,
+            "left_label": "ON (Easy)",
+            "right_label": "OFF (Harder)",
+        },
+    ]
+    row_count = len(rows)
 
     while True:
         for event in pygame.event.get():
@@ -1584,77 +1611,81 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                     selected = (selected - 1) % row_count
                 if event.key in (pygame.K_DOWN, pygame.K_s):
                     selected = (selected + 1) % row_count
-                if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_LEFT, pygame.K_RIGHT):
-                    if selected == 0:
-                        toggle_footprints()
-                    elif selected == 1:
-                        toggle_fast_zombies()
-                    elif selected == 2:
-                        toggle_car_hint()
-                    else:
-                        toggle_flashlight()
+                if event.key in (pygame.K_SPACE, pygame.K_RETURN):
+                    toggle_value(rows[selected]["path"])
+                if event.key == pygame.K_LEFT:
+                    set_value(rows[selected]["path"], rows[selected]["easy_value"])
+                if event.key == pygame.K_RIGHT:
+                    set_value(rows[selected]["path"], not rows[selected]["easy_value"])
                 if event.key == pygame.K_r:
                     working = copy.deepcopy(DEFAULT_CONFIG)
 
         screen.fill(BLACK)
-        show_message(screen, "Settings", 64, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 120))
+        show_message(screen, "Settings", 64, LIGHT_GRAY, (SCREEN_WIDTH // 2, 80))
 
         try:
-            panel_width = SCREEN_WIDTH - 140
-            panel_height = SCREEN_HEIGHT - 200
-            panel_rect = pygame.Rect(0, 0, panel_width, panel_height)
-            panel_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
-            pygame.draw.rect(screen, (20, 20, 20), panel_rect)
-            pygame.draw.rect(screen, LIGHT_GRAY, panel_rect, width=2)
-
             label_font = pygame.font.Font(None, 28)
-            value_font = pygame.font.Font(None, 28)
+            value_font = pygame.font.Font(None, 26)
             highlight_color = (70, 70, 70)
 
-            row_x_label = panel_rect.left + 40
-            row_x_value = panel_rect.left + panel_width // 2 + 20
-            row_height = 28
-            start_y = panel_rect.top + 60
+            row_x_label = 90
+            row_x_value = SCREEN_WIDTH // 2 - 20
+            row_height = 64
+            start_y = 140
 
-            rows = [
-                ("Footprints", working.get("footprints", {}).get("enabled", True)),
-                ("Fast zombies", working.get("fast_zombies", {}).get("enabled", True)),
-                ("Car hint", working.get("car_hint", {}).get("enabled", True)),
-                ("Flashlight pickups", working.get("flashlight", {}).get("enabled", True)),
-            ]
-            hint_start_y = start_y + len(rows) * row_height + 40
-            for idx, (label, enabled) in enumerate(rows):
+            segment_width = 150
+            segment_height = 30
+            segment_gap = 12
+
+            hint_start_y = start_y + len(rows) * row_height + 16
+            for idx, row in enumerate(rows):
+                enabled = working.get(row["path"][0], {}).get(row["path"][1], row["easy_value"])
                 row_y = start_y + idx * row_height
                 if idx == selected:
-                    highlight_rect = pygame.Rect(panel_rect.left + 6, row_y - 4, panel_width - 12, row_height + 4)
+                    highlight_rect = pygame.Rect(40, row_y - 6, SCREEN_WIDTH - 80, row_height - 12)
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
-                label_surface = label_font.render(label, True, WHITE)
+                label_surface = label_font.render(row["label"], True, WHITE)
                 label_rect = label_surface.get_rect(topleft=(row_x_label, row_y))
                 screen.blit(label_surface, label_rect)
 
-                value_text = "ON" if enabled else "OFF"
-                value_color = GREEN if enabled else LIGHT_GRAY
-                value_surface = value_font.render(value_text, True, value_color)
-                value_rect = value_surface.get_rect(topleft=(row_x_value, row_y))
-                screen.blit(value_surface, value_rect)
+                slider_y = row_y + 18
+                left_rect = pygame.Rect(row_x_value, slider_y, segment_width, segment_height)
+                right_rect = pygame.Rect(left_rect.right + segment_gap, slider_y, segment_width, segment_height)
+
+                left_active = enabled == row["easy_value"]
+                right_active = not left_active
+
+                def draw_segment(rect: pygame.Rect, text: str, active: bool):
+                    base_color = (35, 35, 35)
+                    active_color = (60, 90, 60) if active else base_color
+                    outline_color = GREEN if active else LIGHT_GRAY
+                    pygame.draw.rect(screen, active_color, rect)
+                    pygame.draw.rect(screen, outline_color, rect, width=2)
+                    text_surface = value_font.render(text, True, WHITE)
+                    text_rect = text_surface.get_rect(center=rect.center)
+                    screen.blit(text_surface, text_rect)
+
+                draw_segment(left_rect, row["left_label"], left_active)
+                draw_segment(right_rect, row["right_label"], right_active)
 
             hint_font = pygame.font.Font(None, 22)
             hint_lines = [
-                "Up/Down: select",
-                "Space/Enter/Left/Right: toggle",
+                "Up/Down: select an assist",
+                "Left: Easy default / Right: Harder",
+                "Space/Enter: toggle highlighted assist",
                 "R: reset to defaults",
                 "Esc/Backspace: save and return",
             ]
             for i, line in enumerate(hint_lines):
                 hint_surface = hint_font.render(line, True, WHITE)
-                hint_rect = hint_surface.get_rect(topleft=(panel_rect.left + 30, hint_start_y + i * 26))
+                hint_rect = hint_surface.get_rect(topleft=(60, hint_start_y + i * 26))
                 screen.blit(hint_surface, hint_rect)
 
             path_font = pygame.font.Font(None, 20)
             path_text = f"Config: {config_path}"
             path_surface = path_font.render(path_text, True, LIGHT_GRAY)
-            path_rect = path_surface.get_rect(midtop=(SCREEN_WIDTH // 2, panel_rect.bottom + 24))
+            path_rect = path_surface.get_rect(midtop=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 32))
             screen.blit(path_surface, path_rect)
         except pygame.error as e:
             print(f"Error rendering settings: {e}")
