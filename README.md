@@ -34,6 +34,7 @@ Open **Settings** from the title to toggle gameplay assists:
 -   **Footprints:** Leave breadcrumb trails so you can backtrack in the dark.
 -   **Fast zombies:** Allow faster zombie variants; each zombie rolls a random speed between the normal and fast ranges.
 -   **Car hint:** After a delay, show a small triangle pointing toward the fuel (Stage 2 before pickup) or the car.
+-   **Steel beams (Harder):** Adds tougher single-cell obstacles (5% density) that block movement; hidden when stacked with an inner wall until that wall is destroyed.
 -   **Flashlight pickups:** Enable flashlight spawns that expand your visible radius when collected.
 
 ## Game Rules
@@ -59,6 +60,7 @@ An objective reminder is shown at the top-left during play.
     -   After roughly 5 minutes of play, a small triangle near the player points toward the objective: fuel first (Stage 2 before pickup), car after fuel is collected (Stage 2), or car directly (Stage 1).
 -   **Fuel Can (Stage 2):** A yellow jerrycan. Pick it up before driving the car.
 -   **Flashlight:** Picking one up boosts your visible radius by 35%.
+-   **Steel Beam (optional):** A square post with crossed diagonals; same collision as inner walls but with double durability. Spawns independently of inner walls (may overlap them). If an inner wall covers a beam, the beam appears once the wall is destroyed.
 -   **Walls:** Outer walls are gray; inner walls are beige.
     -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
     -   **Inner Walls:** Beige walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.

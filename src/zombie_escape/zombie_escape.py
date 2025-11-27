@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Self, Tuple
+from typing import Callable, Iterable, List, Optional, Self, Tuple
 from dataclasses import dataclass
 import random
 import copy
@@ -30,6 +30,8 @@ from .colors import (
     INTERNAL_WALL_COLOR,
     OUTER_WALL_BORDER_COLOR,
     OUTER_WALL_COLOR,
+    STEEL_BEAM_COLOR,
+    STEEL_BEAM_LINE_COLOR,
 )
 from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
 from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
@@ -108,6 +110,7 @@ FUEL_HINT_DURATION_MS = 1600
 INTERNAL_WALL_GRID_SNAP = CELL_SIZE
 INTERNAL_WALL_HEALTH = 40
 OUTER_WALL_HEALTH = 9999
+STEEL_BEAM_HEALTH = INTERNAL_WALL_HEALTH * 2
 
 # Rendering assets (shared with render module)
 FOG_RINGS = [
@@ -272,6 +275,7 @@ class Wall(pygame.sprite.Sprite):
         health: int = INTERNAL_WALL_HEALTH,
         color: Tuple[int, int, int] = INTERNAL_WALL_COLOR,
         border_color: Tuple[int, int, int] = INTERNAL_WALL_BORDER_COLOR,
+        on_destroy: Optional[Callable[[Self], None]] = None,
     ) -> None:
         super().__init__()
         safe_width = max(1, width)
@@ -281,6 +285,7 @@ class Wall(pygame.sprite.Sprite):
         self.border_base_color = border_color
         self.health = health
         self.max_health = max(1, health)
+        self.on_destroy = on_destroy
         self.update_color()
         self.rect = self.image.get_rect(topleft=(x, y))
 
@@ -289,6 +294,11 @@ class Wall(pygame.sprite.Sprite):
             self.health -= amount
             self.update_color()
             if self.health <= 0:
+                if self.on_destroy:
+                    try:
+                        self.on_destroy(self)
+                    except Exception as exc:
+                        print(f"Wall destroy callback failed: {exc}")
                 self.kill()
 
     def update_color(self: Self) -> None:
@@ -307,6 +317,46 @@ class Wall(pygame.sprite.Sprite):
         bg = int(self.border_base_color[1] * (0.6 + 0.4 * health_ratio))
         bb = int(self.border_base_color[2] * (0.6 + 0.4 * health_ratio))
         pygame.draw.rect(self.image, (br, bg, bb), self.image.get_rect(), width=18)
+
+
+class SteelBeam(pygame.sprite.Sprite):
+    """Single-cell obstacle that behaves like a tougher internal wall."""
+
+    def __init__(self: Self, x: int, y: int, size: int, health: int = STEEL_BEAM_HEALTH) -> None:
+        super().__init__()
+        # Slightly inset from the cell size so it reads as a separate object.
+        margin = max(3, size // 14)
+        inset_size = max(4, size - margin * 2)
+        self.image = pygame.Surface((inset_size, inset_size), pygame.SRCALPHA)
+        self.health = health
+        self.max_health = max(1, health)
+        self.base_color = STEEL_BEAM_COLOR
+        self.line_color = STEEL_BEAM_LINE_COLOR
+        self.update_color()
+        self.rect = self.image.get_rect(center=(x + size // 2, y + size // 2))
+
+    def take_damage(self: Self, amount: int = 1) -> None:
+        if self.health > 0:
+            self.health -= amount
+            self.update_color()
+            if self.health <= 0:
+                self.kill()
+
+    def update_color(self: Self) -> None:
+        """Render a simple square with crossed diagonals that darkens as damaged."""
+        self.image.fill((0, 0, 0, 0))
+        if self.health <= 0:
+            return
+        health_ratio = max(0, self.health / self.max_health)
+        fill_mix = 0.55 + 0.45 * health_ratio
+        fill_color = tuple(int(c * fill_mix) for c in self.base_color)
+        rect_obj = self.image.get_rect()
+        pygame.draw.rect(self.image, fill_color, rect_obj)
+        line_mix = 0.7 + 0.3 * health_ratio
+        line_color = tuple(int(c * line_mix) for c in self.line_color)
+        pygame.draw.rect(self.image, line_color, rect_obj, width=6)
+        pygame.draw.line(self.image, line_color, rect_obj.topleft, rect_obj.bottomright, width=6)
+        pygame.draw.line(self.image, line_color, rect_obj.topright, rect_obj.bottomleft, width=6)
 
 
 class Camera:
@@ -719,18 +769,39 @@ def generate_level_from_blueprint(game_data):
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
 
-    blueprint = choose_blueprint()
+    config = game_data.config
+    steel_conf = config.get("steel_beams", {})
+    steel_enabled = steel_conf.get("enabled", False)
+
+    blueprint_data = choose_blueprint(config)
+    if isinstance(blueprint_data, dict):
+        blueprint = blueprint_data.get("grid", [])
+        steel_cells_raw = blueprint_data.get("steel_cells", set())
+    else:
+        blueprint = blueprint_data
+        steel_cells_raw = set()
+
+    steel_cells = {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
+
     outside_rects: List[pygame.Rect] = []
     walkable_cells: List[pygame.Rect] = []
     player_cells: List[pygame.Rect] = []
     car_cells: List[pygame.Rect] = []
     zombie_cells: List[pygame.Rect] = []
 
+    def add_beam_to_groups(beam: "SteelBeam") -> None:
+        if getattr(beam, "_added_to_groups", False):
+            return
+        wall_group.add(beam)
+        all_sprites.add(beam, layer=0)
+        beam._added_to_groups = True
+
     for y, row in enumerate(blueprint):
         if len(row) != LEVEL_GRID_COLS:
             raise ValueError(f"Blueprint width mismatch at row {y}: {len(row)} != {LEVEL_GRID_COLS}")
         for x, ch in enumerate(row):
             cell_rect = rect_for_cell(x, y)
+            cell_has_beam = steel_enabled and (x, y) in steel_cells
             if ch == "O":
                 outside_rects.append(cell_rect)
                 continue
@@ -748,8 +819,12 @@ def generate_level_from_blueprint(game_data):
                 all_sprites.add(wall, layer=0)
                 continue
             if ch == "E":
-                walkable_cells.append(cell_rect)
+                if not cell_has_beam:
+                    walkable_cells.append(cell_rect)
             elif ch == "1":
+                beam = None
+                if cell_has_beam:
+                    beam = SteelBeam(cell_rect.x, cell_rect.y, cell_rect.width, health=STEEL_BEAM_HEALTH)
                 wall = Wall(
                     cell_rect.x,
                     cell_rect.y,
@@ -758,11 +833,14 @@ def generate_level_from_blueprint(game_data):
                     health=INTERNAL_WALL_HEALTH,
                     color=INTERNAL_WALL_COLOR,
                     border_color=INTERNAL_WALL_BORDER_COLOR,
+                    on_destroy=(lambda _w, b=beam: add_beam_to_groups(b)) if beam else None,
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
+                # Embedded beams stay hidden until the wall is destroyed
             else:
-                walkable_cells.append(cell_rect)
+                if not cell_has_beam:
+                    walkable_cells.append(cell_rect)
 
             if ch == "P":
                 player_cells.append(cell_rect)
@@ -770,6 +848,11 @@ def generate_level_from_blueprint(game_data):
                 car_cells.append(cell_rect)
             if ch == "Z":
                 zombie_cells.append(cell_rect)
+
+            # Standalone beams (non-wall cells) are placed immediately
+            if cell_has_beam and ch != "1":
+                beam = SteelBeam(cell_rect.x, cell_rect.y, cell_rect.width, health=STEEL_BEAM_HEALTH)
+                add_beam_to_groups(beam)
 
     game_data.areas.outer_rect = (0, 0, LEVEL_WIDTH, LEVEL_HEIGHT)
     game_data.areas.inner_rect = (0, 0, LEVEL_WIDTH, LEVEL_HEIGHT)
@@ -1582,6 +1665,13 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             "easy_value": True,
             "left_label": "ON (Easy)",
             "right_label": "OFF (Harder)",
+        },
+        {
+            "label": "Steel beams",
+            "path": ("steel_beams", "enabled"),
+            "easy_value": False,
+            "left_label": "OFF (Easy)",
+            "right_label": "ON (Harder)",
         },
         {
             "label": "Flashlight pickups",

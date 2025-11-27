@@ -13,6 +13,7 @@ WALL_MIN_LEN = 3
 WALL_MAX_LEN = 10
 SPAWN_MARGIN = 3  # keep spawns away from walls/edges
 SPAWN_ZOMBIES = 3
+STEEL_BEAM_CHANCE = 0.05
 
 # Legend:
 # O: outside area (win when car reaches)
@@ -23,6 +24,20 @@ SPAWN_ZOMBIES = 3
 # P: player spawn candidate
 # C: car spawn candidate
 # Z: zombie spawn candidate
+
+def _collect_exit_adjacent_cells(grid: List[List[str]]) -> set[Tuple[int, int]]:
+    """Return a set of cells that touch any exit (including diagonals)."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = set()
+    for y in range(rows):
+        for x in range(cols):
+            if grid[y][x] == "E":
+                for dy in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        nx, ny = x + dx, y + dy
+                        if 0 <= nx < cols and 0 <= ny < rows:
+                            forbidden.add((nx, ny))
+    return forbidden
 
 
 def _init_grid(cols: int, rows: int) -> List[List[str]]:
@@ -73,15 +88,7 @@ def _place_internal_walls(grid: List[List[str]]) -> None:
     cols, rows = len(grid[0]), len(grid)
     rng = random.randint
     # Avoid placing walls adjacent to exits: collect forbidden cells (exits + neighbors)
-    forbidden = set()
-    for y in range(rows):
-        for x in range(cols):
-            if grid[y][x] == "E":
-                for dy in (-1, 0, 1):
-                    for dx in (-1, 0, 1):
-                        nx, ny = x + dx, y + dy
-                        if 0 <= nx < cols and 0 <= ny < rows:
-                            forbidden.add((nx, ny))
+    forbidden = _collect_exit_adjacent_cells(grid)
 
     for _ in range(NUM_WALL_LINES):
         length = rng(WALL_MIN_LEN, WALL_MAX_LEN)
@@ -104,35 +111,64 @@ def _place_internal_walls(grid: List[List[str]]) -> None:
                     grid[y + i][x] = "1"
 
 
-def _pick_empty_cell(grid: List[List[str]], margin: int) -> Tuple[int, int]:
+def _place_steel_beams(grid: List[List[str]], chance: float = STEEL_BEAM_CHANCE) -> set[Tuple[int, int]]:
+    """Pick individual cells for steel beams, avoiding exits and their neighbors."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    beams: set[Tuple[int, int]] = set()
+    for y in range(2, rows - 2):
+        for x in range(2, cols - 2):
+            if (x, y) in forbidden:
+                continue
+            if grid[y][x] not in (".", "1"):
+                continue
+            if random.random() < chance:
+                beams.add((x, y))
+    return beams
+
+
+def _pick_empty_cell(grid: List[List[str]], margin: int, forbidden: set[Tuple[int, int]] | None = None) -> Tuple[int, int]:
     cols, rows = len(grid[0]), len(grid)
     attempts = 0
+    forbidden = forbidden or set()
     while attempts < 2000:
         attempts += 1
         x = random.randint(margin, cols - margin - 1)
         y = random.randint(margin, rows - margin - 1)
-        if grid[y][x] == ".":
+        if grid[y][x] == "." and (x, y) not in forbidden:
             return x, y
+    # Fallback: scan for any acceptable cell
+    for y in range(margin, rows - margin):
+        for x in range(margin, cols - margin):
+            if grid[y][x] == "." and (x, y) not in forbidden:
+                return x, y
     return cols // 2, rows // 2
 
 
-def generate_random_blueprint() -> List[str]:
+def generate_random_blueprint(steel_chance: float | None = None) -> dict:
     grid = _init_grid(GRID_COLS, GRID_ROWS)
     _place_exits(grid, EXITS_PER_SIDE)
     _place_internal_walls(grid)
+    steel_beams = _place_steel_beams(grid, steel_chance if steel_chance is not None else STEEL_BEAM_CHANCE)
 
     # Spawns: player, car, zombies
-    px, py = _pick_empty_cell(grid, SPAWN_MARGIN)
+    px, py = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden=steel_beams)
     grid[py][px] = "P"
-    cx, cy = _pick_empty_cell(grid, SPAWN_MARGIN)
+    cx, cy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden=steel_beams)
     grid[cy][cx] = "C"
     for _ in range(SPAWN_ZOMBIES):
-        zx, zy = _pick_empty_cell(grid, SPAWN_MARGIN)
+        zx, zy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden=steel_beams)
         grid[zy][zx] = "Z"
 
-    return ["".join(row) for row in grid]
+    blueprint_rows = ["".join(row) for row in grid]
+    return {"grid": blueprint_rows, "steel_cells": steel_beams}
 
 
-def choose_blueprint() -> List[str]:
+def choose_blueprint(config: dict | None = None) -> dict:
     # Currently only random generation; hook for future variants.
-    return generate_random_blueprint()
+    steel_conf = (config or {}).get("steel_beams", {})
+    try:
+        steel_chance = float(steel_conf.get("chance", STEEL_BEAM_CHANCE))
+    except (TypeError, ValueError):
+        steel_chance = STEEL_BEAM_CHANCE
+    return generate_random_blueprint(steel_chance=steel_chance)

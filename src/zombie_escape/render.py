@@ -81,7 +81,8 @@ def draw_level_overview(
 ) -> None:
     surface.fill(BLACK)
     for wall in wall_group:
-        pygame.draw.rect(surface, INTERNAL_WALL_COLOR, wall.rect)
+        color = getattr(wall, "base_color", INTERNAL_WALL_COLOR)
+        pygame.draw.rect(surface, color, wall.rect)
     now = pygame.time.get_ticks()
     for fp in footprints:
         age = now - fp["time"]
@@ -212,6 +213,7 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
         flashlight_scale = float(flashlight_conf.get("bonus_scale", assets.default_flashlight_bonus_scale))
     except (TypeError, ValueError):
         flashlight_scale = assets.default_flashlight_bonus_scale
+    steel_on = config.get("steel_beams", {}).get("enabled", False)
     stage_label = stage.name if stage else "Stage 1"
 
     parts = [
@@ -220,6 +222,7 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
         f"Fast Z: {'ON' if fast_on else 'OFF'}",
         f"Car Hint: {'ON' if hint_on else 'OFF'}",
         f"Flashlight: {'ON' if flashlight_on else 'OFF'}{f' ({flashlight_scale:.2f}x)' if flashlight_on else ''}",
+        f"Steel: {'ON' if steel_on else 'OFF'}",
     ]
 
     status_text = " | ".join(parts)
