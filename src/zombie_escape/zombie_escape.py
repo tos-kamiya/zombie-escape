@@ -1644,43 +1644,55 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
         current = working.get(root_key, {}).get(child_key, True)
         working.setdefault(root_key, {})[child_key] = not current
 
-    rows = [
+    sections = [
         {
-            "label": "Footprints",
-            "path": ("footprints", "enabled"),
-            "easy_value": True,
-            "left_label": "ON (Easy)",
-            "right_label": "OFF (Harder)",
+            "label": "Player support",
+            "rows": [
+                {
+                    "label": "Footprints",
+                    "path": ("footprints", "enabled"),
+                    "easy_value": True,
+                    "left_label": "ON",
+                    "right_label": "OFF",
+                },
+                {
+                    "label": "Car hint",
+                    "path": ("car_hint", "enabled"),
+                    "easy_value": True,
+                    "left_label": "ON",
+                    "right_label": "OFF",
+                },
+                {
+                    "label": "Flashlight pickups",
+                    "path": ("flashlight", "enabled"),
+                    "easy_value": True,
+                    "left_label": "ON",
+                    "right_label": "OFF",
+                },
+            ],
         },
         {
-            "label": "Fast zombies",
-            "path": ("fast_zombies", "enabled"),
-            "easy_value": False,
-            "left_label": "OFF (Easy)",
-            "right_label": "ON (Harder)",
-        },
-        {
-            "label": "Car hint",
-            "path": ("car_hint", "enabled"),
-            "easy_value": True,
-            "left_label": "ON (Easy)",
-            "right_label": "OFF (Harder)",
-        },
-        {
-            "label": "Steel beams",
-            "path": ("steel_beams", "enabled"),
-            "easy_value": False,
-            "left_label": "OFF (Easy)",
-            "right_label": "ON (Harder)",
-        },
-        {
-            "label": "Flashlight pickups",
-            "path": ("flashlight", "enabled"),
-            "easy_value": True,
-            "left_label": "ON (Easy)",
-            "right_label": "OFF (Harder)",
+            "label": "Tougher enemies",
+            "rows": [
+                {
+                    "label": "Fast zombies",
+                    "path": ("fast_zombies", "enabled"),
+                    "easy_value": False,
+                    "left_label": "OFF",
+                    "right_label": "ON",
+                },
+                {
+                    "label": "Steel beams",
+                    "path": ("steel_beams", "enabled"),
+                    "easy_value": False,
+                    "left_label": "OFF",
+                    "right_label": "ON",
+                },
+            ],
         },
     ]
+    rows = [row for section in sections for row in section["rows"]]
+    row_sections = [section["label"] for section in sections for _ in section["rows"]]
     row_count = len(rows)
 
     while True:
@@ -1716,31 +1728,55 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
         try:
             label_font = pygame.font.Font(None, 28)
             value_font = pygame.font.Font(None, 26)
+            section_font = pygame.font.Font(None, 24)
             highlight_color = (70, 70, 70)
 
-            row_x_label = 90
-            row_x_value = SCREEN_WIDTH // 2 - 20
             row_height = 64
             start_y = 140
 
-            segment_width = 150
+            segment_width = 44
             segment_height = 30
             segment_gap = 12
+            segment_total_width = segment_width * 2 + segment_gap
 
-            hint_start_y = start_y + len(rows) * row_height + 16
+            column_margin = 40
+            column_width = SCREEN_WIDTH // 2 - column_margin * 2
+            section_spacing = 12
+
+            section_states = {}
+            y_cursor = start_y
+            for section in sections:
+                header_surface = section_font.render(section["label"], True, LIGHT_GRAY)
+                section_states[section["label"]] = {
+                    "next_y": y_cursor + header_surface.get_height() + 6,
+                    "header_surface": header_surface,
+                    "header_pos": (column_margin, y_cursor),
+                }
+                rows_in_section = len(section["rows"])
+                y_cursor = section_states[section["label"]]["next_y"] + rows_in_section * row_height + section_spacing
+
+            for state in section_states.values():
+                screen.blit(state["header_surface"], state["header_pos"])
+
             for idx, row in enumerate(rows):
+                section_label = row_sections[idx]
+                state = section_states[section_label]
+                col_x = column_margin
                 enabled = working.get(row["path"][0], {}).get(row["path"][1], row["easy_value"])
-                row_y = start_y + idx * row_height
+                row_y_current = state["next_y"]
+                state["next_y"] += row_height
+
+                highlight_rect = pygame.Rect(col_x, row_y_current - 6, column_width, row_height - 12)
                 if idx == selected:
-                    highlight_rect = pygame.Rect(40, row_y - 6, SCREEN_WIDTH - 80, row_height - 12)
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
                 label_surface = label_font.render(row["label"], True, WHITE)
-                label_rect = label_surface.get_rect(topleft=(row_x_label, row_y))
+                label_rect = label_surface.get_rect(midleft=(col_x, row_y_current + row_height // 2))
                 screen.blit(label_surface, label_rect)
 
-                slider_y = row_y + 18
-                left_rect = pygame.Rect(row_x_value, slider_y, segment_width, segment_height)
+                slider_y = row_y_current + (row_height - segment_height) // 2 - 6
+                slider_x = col_x + column_width - segment_total_width
+                left_rect = pygame.Rect(slider_x, slider_y, segment_width, segment_height)
                 right_rect = pygame.Rect(left_rect.right + segment_gap, slider_y, segment_width, segment_height)
 
                 left_active = enabled == row["easy_value"]
@@ -1759,17 +1795,19 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                 draw_segment(left_rect, row["left_label"], left_active)
                 draw_segment(right_rect, row["right_label"], right_active)
 
+            hint_start_y = start_y
+            hint_start_x = SCREEN_WIDTH // 2 + 40
             hint_font = pygame.font.Font(None, 22)
             hint_lines = [
-                "Up/Down: select an assist",
-                "Left: Easy default / Right: Harder",
-                "Space/Enter: toggle highlighted assist",
+                "Up/Down: select a setting",
+                "Left/Right: set value",
+                "Space/Enter: toggle highlighted setting",
                 "R: reset to defaults",
                 "Esc/Backspace: save and return",
             ]
             for i, line in enumerate(hint_lines):
                 hint_surface = hint_font.render(line, True, WHITE)
-                hint_rect = hint_surface.get_rect(topleft=(60, hint_start_y + i * 26))
+                hint_rect = hint_surface.get_rect(topleft=(hint_start_x, hint_start_y + i * 26))
                 screen.blit(hint_surface, hint_rect)
 
             path_font = pygame.font.Font(None, 20)
