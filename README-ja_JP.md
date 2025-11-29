@@ -85,15 +85,13 @@
 pipxでインストールしてください。
 
 ```sh
-pipx install git+https://github.com/tos-kamiya/zombie-escape
+pipx install zombie-escape
 ```
 
-あるいは、gitとpipを利用して次のようにインストールすることもできます。
+あるいは、仮想環境を用意した上でpipでもインストールできます。
 
 ```sh
-git clone https://github.com/tos-kamiya/zombie-escape
-cd zombie-escape
-pip install .
+pip install zombie-escape
 ```
 
 次のコマンドラインにより起動します。
@@ -101,8 +99,6 @@ pip install .
 ```sh
 zombie-escape
 ```
-
-**Windows向けのexeファイル** もあります。[リリースページ](https://github.com/tos-kamiya/zombie-escape/releases)からダウンロード可能です。
 
 ## ライセンス
 

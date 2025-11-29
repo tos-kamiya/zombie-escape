@@ -80,16 +80,13 @@ An objective reminder is shown at the top-left during play.
 Install using pipx:
 
 ```sh
-pipx install git+https://github.com/tos-kamiya/zombie-escape
+pipx install zombie-escape
 ```
 
-Alternatively, you can install using git and pip:
-(Installing in a virtual environment is recommended)
+Alternatively, you can install using pip in a virtual environment:
 
 ```sh
-git clone https://github.com/tos-kamiya/zombie-escape
-cd zombie-escape
-pip install .
+pip install zombie-escape
 ```
 
 Launch using the following command line:
@@ -97,8 +94,6 @@ Launch using the following command line:
 ```sh
 zombie-escape
 ```
-
-**An `.exe` file for Windows** is also available. You can download it from the [Releases page](https://github.com/tos-kamiya/zombie-escape/releases).
 
 ## License
 
