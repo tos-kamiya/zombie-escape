@@ -229,7 +229,7 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     color = GREEN if all([footprints_on, fast_on, hint_on, flashlight_on]) else LIGHT_GRAY
 
     try:
-        font = pygame.font.Font(None, 20)
+        font = pygame.font.Font(None, 24)
         text_surface = font.render(status_text, True, color)
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)

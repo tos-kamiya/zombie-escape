@@ -37,13 +37,16 @@ from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
 from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
 
 # --- Constants/Global variables ---
-DEFAULT_SCREEN_WIDTH = 800
-DEFAULT_SCREEN_HEIGHT = 600
-WINDOW_SCALE_MIN = 0.5
-WINDOW_SCALE_MAX = 2.0
-SCREEN_WIDTH = DEFAULT_SCREEN_WIDTH  # Logical render width
-SCREEN_HEIGHT = DEFAULT_SCREEN_HEIGHT  # Logical render height
-current_window_scale = 1.0  # Applied to the OS window only
+LOGICAL_SCREEN_WIDTH = 800
+LOGICAL_SCREEN_HEIGHT = 600
+RENDER_SCREEN_WIDTH = 400
+RENDER_SCREEN_HEIGHT = 300
+DEFAULT_WINDOW_SCALE = LOGICAL_SCREEN_WIDTH / RENDER_SCREEN_WIDTH  # 2x upscale to keep the on-screen footprint similar
+WINDOW_SCALE_MIN = 1.0
+WINDOW_SCALE_MAX = DEFAULT_WINDOW_SCALE * 2  # Allow up to 1600x1200 windows
+SCREEN_WIDTH = LOGICAL_SCREEN_WIDTH  # Logical render width
+SCREEN_HEIGHT = LOGICAL_SCREEN_HEIGHT  # Logical render height
+current_window_scale = DEFAULT_WINDOW_SCALE  # Applied to the OS window only
 FPS = 60
 STATUS_BAR_HEIGHT = 28
 
@@ -139,6 +142,8 @@ RENDER_ASSETS = RenderAssets(
     default_flashlight_bonus_scale=DEFAULT_FLASHLIGHT_BONUS_SCALE,
 )
 
+render_surface: surface.Surface | None = None
+
 
 @dataclass
 class Areas:
@@ -232,8 +237,8 @@ def apply_window_scale(scale: float, game_data: Optional[GameData] = None) -> su
     clamped_scale = max(WINDOW_SCALE_MIN, min(WINDOW_SCALE_MAX, scale))
     current_window_scale = clamped_scale
 
-    window_width = max(1, int(DEFAULT_SCREEN_WIDTH * current_window_scale))
-    window_height = max(1, int(DEFAULT_SCREEN_HEIGHT * current_window_scale))
+    window_width = max(1, int(RENDER_SCREEN_WIDTH * current_window_scale))
+    window_height = max(1, int(RENDER_SCREEN_HEIGHT * current_window_scale))
 
     new_window = pygame.display.set_mode((window_width, window_height))
     pygame.display.set_caption(f"Zombie Escape v{__version__} ({window_width}x{window_height})")
@@ -251,16 +256,29 @@ def nudge_window_scale(multiplier: float, game_data: Optional[dict] = None) -> s
     return apply_window_scale(target_scale, game_data)
 
 
+def _get_render_surface() -> surface.Surface:
+    """Return the low-res render surface used before upscaling to the OS window."""
+    global render_surface
+    if render_surface is None or render_surface.get_size() != (RENDER_SCREEN_WIDTH, RENDER_SCREEN_HEIGHT):
+        try:
+            render_surface = pygame.Surface((RENDER_SCREEN_WIDTH, RENDER_SCREEN_HEIGHT)).convert_alpha()
+        except pygame.error:
+            render_surface = pygame.Surface((RENDER_SCREEN_WIDTH, RENDER_SCREEN_HEIGHT), pygame.SRCALPHA)
+    return render_surface
+
+
 def present(logical_surface: surface.Surface) -> None:
-    """Scale the logical surface to the current window and flip buffers."""
+    """Downscale the logical surface to the low-res buffer, then scale up to the window and flip buffers."""
     window = pygame.display.get_surface()
     if window is None:
         return
+    render_target = _get_render_surface()
+    pygame.transform.scale(logical_surface, render_target.get_size(), render_target)
     window_size = window.get_size()
-    if window_size == logical_surface.get_size():
-        window.blit(logical_surface, (0, 0))
+    if window_size == render_target.get_size():
+        window.blit(render_target, (0, 0))
     else:
-        pygame.transform.smoothscale(logical_surface, window_size, window)
+        pygame.transform.scale(render_target, window_size, window)
     pygame.display.flip()
 
 
@@ -1605,7 +1623,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             # Selected stage description (if a stage is highlighted)
             current = options[selected]
             if current["type"] == "stage":
-                desc_font = pygame.font.Font(None, 24)
+                desc_font = pygame.font.Font(None, 28)
                 desc_color = LIGHT_GRAY if current.get("available") else GRAY
                 desc_surface = desc_font.render(current["stage"].description, True, desc_color)
                 desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 170))
@@ -1615,7 +1633,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             fast_on = config.get("fast_zombies", {}).get("enabled", True)
             hint_on = config.get("car_hint", {}).get("enabled", True)
 
-            hint_font = pygame.font.Font(None, 24)
+            hint_font = pygame.font.Font(None, 28)
             hint_text = "Resize window: [ to shrink, ] to enlarge (menu only)"
             hint_surface = hint_font.render(hint_text, True, LIGHT_GRAY)
             hint_rect = hint_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50))
@@ -1728,7 +1746,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
         try:
             label_font = pygame.font.Font(None, 28)
             value_font = pygame.font.Font(None, 26)
-            section_font = pygame.font.Font(None, 24)
+            section_font = pygame.font.Font(None, 26)
             highlight_color = (70, 70, 70)
 
             row_height = 64
@@ -1797,7 +1815,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
 
             hint_start_y = start_y
             hint_start_x = SCREEN_WIDTH // 2 + 40
-            hint_font = pygame.font.Font(None, 22)
+            hint_font = pygame.font.Font(None, 26)
             hint_lines = [
                 "Up/Down: select a setting",
                 "Left/Right: set value",
@@ -1810,7 +1828,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                 hint_rect = hint_surface.get_rect(topleft=(hint_start_x, hint_start_y + i * 26))
                 screen.blit(hint_surface, hint_rect)
 
-            path_font = pygame.font.Font(None, 20)
+            path_font = pygame.font.Font(None, 24)
             path_text = f"Config: {config_path}"
             path_surface = path_font.render(path_text, True, LIGHT_GRAY)
             path_rect = path_surface.get_rect(midtop=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 32))
