@@ -16,8 +16,8 @@
 
 このゲームは、ゾンビが徘徊する広大な建物の中から、車を見つけて脱出することを目指す、シンプルな2Dトップダウンビューのアクションゲームです。プレイヤーはゾンビから逃げ回り、壁を破壊しながら活路を見つけ出し、車に乗って建物の外へ脱出します。
 
-<img src="imgs/screenshot1.png" width="400">
-<img src="imgs/screenshot2.png" width="400">
+<img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/screenshot1.png" width="400">
+<img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/screenshot2.png" width="400">
 
 ## 操作方法
 
