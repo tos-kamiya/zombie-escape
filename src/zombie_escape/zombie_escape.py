@@ -1509,7 +1509,7 @@ def check_interactions(game_data):
         # Zombies reaching the companion
         if companion_active and pygame.sprite.spritecollide(companion, zombie_group, False, pygame.sprite.collide_circle):
             if companion_on_screen:
-                state.game_over_message = "Your buddy got caught!"
+                state.game_over_message = "AAAAHHH!!"
                 state.game_over = True
                 state.game_over_at = state.game_over_at or pygame.time.get_ticks()
             else:
@@ -1578,6 +1578,7 @@ def check_interactions(game_data):
             if not state.game_over:
                 state.game_over = True
                 state.game_over_at = pygame.time.get_ticks()
+                state.game_over_message = "AAAHHH!!"
 
     # Player escaping the level
     if player.in_car and car.alive() and state.has_fuel:
@@ -1673,6 +1674,15 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
                         companion_rescued=game_data.state.companion_rescued,
                         present_fn=present,
                     )
+                    if game_data.state.game_over_message:
+                        show_message(
+                            screen,
+                            game_data.state.game_over_message,
+                            18,
+                            RED,
+                            (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 24),
+                        )
+                        present(screen)
                     continue
             result = handle_game_over_state(screen, game_data)
             if result is not None:  # If restart or quit was selected
