@@ -63,7 +63,7 @@ PLAYER_SPEED = 1.4
 FOV_RADIUS = 80
 FOG_RADIUS_SCALE = 1.2
 FOG_MAX_RADIUS_FACTOR = 1.55
-FOG_HATCH_PIXEL_SCALE = 3
+FOG_HATCH_PIXEL_SCALE = 1
 
 # Flashlight settings (defaults pulled from DEFAULT_CONFIG)
 DEFAULT_FLASHLIGHT_BONUS_SCALE = float(DEFAULT_CONFIG.get("flashlight", {}).get("bonus_scale", 1.35))
