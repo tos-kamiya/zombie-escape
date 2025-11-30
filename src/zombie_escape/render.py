@@ -183,16 +183,16 @@ def _draw_hint_arrow(screen, camera, assets: RenderAssets, player, target_pos: T
     ring_radius = ring_radius if ring_radius is not None else assets.fov_radius * 0.5 * assets.fog_radius_scale
     center_x = player_screen[0] + dir_x * ring_radius
     center_y = player_screen[1] + dir_y * ring_radius
-    arrow_len = 12
+    arrow_len = 6
     tip = (center_x + dir_x * arrow_len, center_y + dir_y * arrow_len)
-    base = (center_x - dir_x * 12, center_y - dir_y * 12)
+    base = (center_x - dir_x * 6, center_y - dir_y * 6)
     left = (
-        base[0] - dir_y * 10,
-        base[1] + dir_x * 10,
+        base[0] - dir_y * 5,
+        base[1] + dir_x * 5,
     )
     right = (
-        base[0] + dir_y * 10,
-        base[1] - dir_x * 10,
+        base[0] + dir_y * 5,
+        base[1] - dir_x * 5,
     )
     pygame.draw.polygon(screen, color, [tip, left, right])
 
@@ -233,7 +233,7 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     color = GREEN if all([footprints_on, fast_on, hint_on, flashlight_on]) else LIGHT_GRAY
 
     try:
-        font = pygame.font.Font(None, 16)
+        font = pygame.font.Font(None, 14)
         text_surface = font.render(status_text, True, color)
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)
