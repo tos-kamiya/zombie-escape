@@ -366,14 +366,13 @@ def draw(
         objective_lines.append("Escape the building")
 
     if stage and getattr(stage, "requires_companion", False):
-        if not companion_rescued and player.in_car:
-            # Cannot escape until the buddy is picked up.
-            objective_lines[-1] = "Pick up your buddy"
         if not companion_rescued:
             buddy_following = companion and getattr(companion, "following", False)
-            if not buddy_following:
-                buddy_line = "Find your buddy"
-                objective_lines.append(buddy_line)
+            if player.in_car:
+                # Cannot escape until the buddy is picked up; suppress the redundant find prompt.
+                objective_lines[-1] = "Pick up your buddy"
+            elif not buddy_following:
+                objective_lines.append("Find your buddy")
 
     if objective_lines:
         _render_objective(objective_lines)
