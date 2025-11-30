@@ -228,7 +228,7 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     if hint_on:
         parts.append("CarHint")
     if flashlight_on:
-        parts.append(f"Flashlight {flashlight_scale:.1f}x")
+        parts.append("Flashlight")
     if steel_on:
         parts.append("Steel")
 
