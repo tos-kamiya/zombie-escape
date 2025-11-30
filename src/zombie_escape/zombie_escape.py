@@ -1857,7 +1857,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                 desc_font = pygame.font.Font(None, 16)
                 desc_color = LIGHT_GRAY if current.get("available") else GRAY
                 desc_surface = desc_font.render(current["stage"].description, True, desc_color)
-                desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 52))
+                desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 68))
                 screen.blit(desc_surface, desc_rect)
 
             # Quick config summary
