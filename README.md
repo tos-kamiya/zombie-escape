@@ -77,6 +77,7 @@ An objective reminder is shown at the top-left during play.
     - Stage 3 requires both fuel and having picked up your buddy with the car before driving out.
 -   **Lose Condition:**
     -   The player is touched by a zombie while *not* inside a car.
+    -   In Stage 3, if your buddy is caught (when visible), it's game over.
     -   (Note: In the current implementation, the game does not end immediately when the car is destroyed. The player can search for another car and continue trying to escape.)
 
 ## How to Run
