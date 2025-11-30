@@ -713,21 +713,28 @@ class FuelCan(pygame.sprite.Sprite):
         super().__init__()
         self.image = pygame.Surface((FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT), pygame.SRCALPHA)
 
-        body_rect = pygame.Rect(1, 3, FUEL_CAN_WIDTH - 2, FUEL_CAN_HEIGHT - 4)
-        pygame.draw.rect(self.image, YELLOW, body_rect, border_radius=3)
-        pygame.draw.rect(self.image, BLACK, body_rect, width=2, border_radius=3)
+        # Jerrycan silhouette with cut corner
+        w, h = FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT
+        body_pts = [
+            (1, 4),
+            (w - 2, 4),
+            (w - 2, h - 2),
+            (1, h - 2),
+            (1, 8),
+            (4, 4),
+        ]
+        pygame.draw.polygon(self.image, YELLOW, body_pts)
+        pygame.draw.polygon(self.image, BLACK, body_pts, width=2)
 
-        handle_width = max(3, FUEL_CAN_WIDTH // 3)
-        handle_height = 3
-        handle_rect = pygame.Rect(body_rect.centerx - handle_width // 2, body_rect.top - handle_height, handle_width, handle_height)
-        pygame.draw.rect(self.image, YELLOW, handle_rect, border_radius=2)
-        pygame.draw.rect(self.image, BLACK, handle_rect, width=1, border_radius=2)
+        cap_size = max(2, w // 4)
+        cap_rect = pygame.Rect(w - cap_size - 2, 1, cap_size, 3)
+        pygame.draw.rect(self.image, YELLOW, cap_rect, border_radius=1)
+        pygame.draw.rect(self.image, BLACK, cap_rect, width=1, border_radius=1)
 
-        # Simple accent band for readability
-        band_height = 3
-        band_rect = pygame.Rect(body_rect.left + 2, body_rect.centery - band_height // 2, body_rect.width - 4, band_height)
-        pygame.draw.rect(self.image, (240, 200, 40), band_rect, border_radius=2)
-        pygame.draw.rect(self.image, BLACK, band_rect, width=1, border_radius=2)
+        # Cross brace accent
+        brace_color = (240, 200, 40)
+        pygame.draw.line(self.image, brace_color, (3, h // 2), (w - 4, h // 2), width=2)
+        pygame.draw.line(self.image, BLACK, (3, h // 2), (w - 4, h // 2), width=1)
 
         self.rect = self.image.get_rect(center=(x, y))
 
@@ -739,22 +746,23 @@ class Flashlight(pygame.sprite.Sprite):
         super().__init__()
         self.image = pygame.Surface((FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT), pygame.SRCALPHA)
 
-        body_rect = pygame.Rect(0, 4, FLASHLIGHT_WIDTH - 4, FLASHLIGHT_HEIGHT - 8)
-        head_rect = pygame.Rect(body_rect.right - 6, body_rect.top - 2, 8, body_rect.height + 4)
-        beam_points = [
-            (head_rect.right, head_rect.centery),
-            (head_rect.right + 8, head_rect.top),
-            (head_rect.right + 8, head_rect.bottom),
-        ]
-
         body_color = (230, 200, 70)
         trim_color = (80, 70, 40)
-        beam_color = (255, 240, 180, 180)
+        head_color = (200, 180, 90)
+        beam_color = (255, 240, 180, 150)
 
-        pygame.draw.rect(self.image, body_color, body_rect, border_radius=3)
-        pygame.draw.rect(self.image, trim_color, body_rect, width=2, border_radius=3)
-        pygame.draw.rect(self.image, body_color, head_rect, border_radius=3)
-        pygame.draw.rect(self.image, trim_color, head_rect, width=2, border_radius=3)
+        body_rect = pygame.Rect(1, 2, FLASHLIGHT_WIDTH - 4, FLASHLIGHT_HEIGHT - 4)
+        head_rect = pygame.Rect(body_rect.right - 3, body_rect.top - 1, 4, body_rect.height + 2)
+        beam_points = [
+            (head_rect.right + 4, head_rect.centery),
+            (head_rect.right + 2, head_rect.top),
+            (head_rect.right + 2, head_rect.bottom),
+        ]
+
+        pygame.draw.rect(self.image, body_color, body_rect, border_radius=2)
+        pygame.draw.rect(self.image, trim_color, body_rect, width=1, border_radius=2)
+        pygame.draw.rect(self.image, head_color, head_rect, border_radius=2)
+        pygame.draw.rect(self.image, trim_color, head_rect, width=1, border_radius=2)
         pygame.draw.polygon(self.image, beam_color, beam_points)
 
         self.rect = self.image.get_rect(center=(x, y))
