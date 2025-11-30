@@ -1649,7 +1649,30 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
                 if game_data.state.game_over_at is None:
                     game_data.state.game_over_at = pygame.time.get_ticks()
                 if pygame.time.get_ticks() - game_data.state.game_over_at < 1000:
-                    # Briefly hold the in-game view before showing the game-over screen.
+                    # Keep rendering the current view (with fog) before showing the game-over screen.
+                    draw(
+                        RENDER_ASSETS,
+                        screen,
+                        game_data.areas.outer_rect,
+                        game_data.camera,
+                        game_data.groups.all_sprites,
+                        last_fov_target,
+                        game_data.fog,
+                        game_data.state.footprints,
+                        config,
+                        player,
+                        None,
+                        None,
+                        outside_rects=game_data.areas.outside_rects,
+                        stage=stage,
+                        has_fuel=game_data.state.has_fuel,
+                        has_flashlight=game_data.state.has_flashlight,
+                        elapsed_play_ms=game_data.state.elapsed_play_ms,
+                        fuel_message_until=game_data.state.fuel_message_until,
+                        companion=game_data.companion,
+                        companion_rescued=game_data.state.companion_rescued,
+                        present_fn=present,
+                    )
                     continue
             result = handle_game_over_state(screen, game_data)
             if result is not None:  # If restart or quit was selected
@@ -1857,7 +1880,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                 desc_font = pygame.font.Font(None, 16)
                 desc_color = LIGHT_GRAY if current.get("available") else GRAY
                 desc_surface = desc_font.render(current["stage"].description, True, desc_color)
-                desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 68))
+                desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 74))
                 screen.blit(desc_surface, desc_rect)
 
             # Quick config summary
