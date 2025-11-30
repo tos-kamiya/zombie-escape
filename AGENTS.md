@@ -29,3 +29,10 @@
 ## Security & Configuration Tips
 - User config is stored under the platform-specific path from `platformdirs.user_config_dir`; avoid checking personal `config.json` into the repo.
 - Do not commit large binaries—publish new `.exe` builds via Releases and keep `dev-samples/` aligned with the latest tagged artifact.
+
+## Rendering Pipeline Notes
+- Logical frame is built directly at 400x300; `present()` scales that surface once to the OS window size from `apply_window_scale()` (default 2x for an ~800x600 window) to keep the chunky look while allowing user resizing.
+- The main loop (`run_game`) hands world data to `render.draw()`, which paints floor tiles (outside color + checkerboard play area), fades footprints, and blits sprites from the `LayeredUpdates` group (walls layer 0, car/zombies/items layer 1, player layer 2) through the `Camera.apply*` transforms.
+- Fog-of-war uses `fog_surfaces` (`hard` alpha mask + `soft` hatch overlay) and `FOG_RINGS` to cut a transparent hole around the current FOV target; `get_fog_scale()` boosts radius when the flashlight pickup is active and caches Bayer-dither patterns per ring thickness.
+- Objective/hint overlays: `_draw_hint_arrow()` renders a soft arrow toward car/fuel targets after fog placement; `draw()` also stamps objective text, status bar (config flags), and optional “Need fuel” message.
+- Game-over view builds a full-level overview once via `draw_level_overview()` on a cached surface, then smooth-scales it to fit the logical screen for end-state display.

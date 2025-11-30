@@ -37,18 +37,18 @@ from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
 from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
 
 # --- Constants/Global variables ---
-LOGICAL_SCREEN_WIDTH = 800
-LOGICAL_SCREEN_HEIGHT = 600
+LOGICAL_SCREEN_WIDTH = 400
+LOGICAL_SCREEN_HEIGHT = 300
 RENDER_SCREEN_WIDTH = 400
 RENDER_SCREEN_HEIGHT = 300
-DEFAULT_WINDOW_SCALE = LOGICAL_SCREEN_WIDTH / RENDER_SCREEN_WIDTH  # 2x upscale to keep the on-screen footprint similar
+DEFAULT_WINDOW_SCALE = 2.0  # Keep ~800x600 OS window while rendering at 400x300
 WINDOW_SCALE_MIN = 1.0
 WINDOW_SCALE_MAX = DEFAULT_WINDOW_SCALE * 2  # Allow up to 1600x1200 windows
 SCREEN_WIDTH = LOGICAL_SCREEN_WIDTH  # Logical render width
 SCREEN_HEIGHT = LOGICAL_SCREEN_HEIGHT  # Logical render height
 current_window_scale = DEFAULT_WINDOW_SCALE  # Applied to the OS window only
 FPS = 60
-STATUS_BAR_HEIGHT = 28
+STATUS_BAR_HEIGHT = 18
 
 # Level dimensions are driven by the blueprint grid.
 LEVEL_GRID_COLS = GRID_COLS
@@ -58,55 +58,55 @@ LEVEL_WIDTH = LEVEL_GRID_COLS * CELL_SIZE
 LEVEL_HEIGHT = LEVEL_GRID_ROWS * CELL_SIZE
 
 # Player settings
-PLAYER_RADIUS = 11
-PLAYER_SPEED = 2.8
-FOV_RADIUS = 160
+PLAYER_RADIUS = 6
+PLAYER_SPEED = 1.4
+FOV_RADIUS = 80
 FOG_RADIUS_SCALE = 1.2
 FOG_MAX_RADIUS_FACTOR = 1.55
 FOG_HATCH_PIXEL_SCALE = 3
 
 # Flashlight settings (defaults pulled from DEFAULT_CONFIG)
 DEFAULT_FLASHLIGHT_BONUS_SCALE = float(DEFAULT_CONFIG.get("flashlight", {}).get("bonus_scale", 1.35))
-FLASHLIGHT_WIDTH = 20
-FLASHLIGHT_HEIGHT = 16
-FLASHLIGHT_PICKUP_RADIUS = 26
+FLASHLIGHT_WIDTH = 10
+FLASHLIGHT_HEIGHT = 8
+FLASHLIGHT_PICKUP_RADIUS = 13
 DEFAULT_FLASHLIGHT_SPAWN_COUNT = 2
 
 # Footprint settings
-FOOTPRINT_RADIUS = 5
-FOOTPRINT_OVERVIEW_RADIUS = 8
+FOOTPRINT_RADIUS = 3
+FOOTPRINT_OVERVIEW_RADIUS = 4
 FOOTPRINT_COLOR = (110, 200, 255)
-FOOTPRINT_STEP_DISTANCE = 80
+FOOTPRINT_STEP_DISTANCE = 40
 FOOTPRINT_LIFETIME_MS = 135000
 FOOTPRINT_MAX = 320
 FOOTPRINT_MIN_FADE = 0.3
 
 # Zombie settings
-ZOMBIE_RADIUS = 11
-ZOMBIE_SPEED = 1.2
-NORMAL_ZOMBIE_SPEED_JITTER = 0.3
+ZOMBIE_RADIUS = 6
+ZOMBIE_SPEED = 0.6
+NORMAL_ZOMBIE_SPEED_JITTER = 0.15
 ZOMBIE_SPAWN_DELAY_MS = 5000
 MAX_ZOMBIES = 400
 INITIAL_ZOMBIES_INSIDE = 15
 ZOMBIE_MODE_CHANGE_INTERVAL_MS = 5000
 ZOMBIE_SIGHT_RANGE = FOV_RADIUS * 2.0
 FAST_ZOMBIE_BASE_SPEED = PLAYER_SPEED * 0.83
-FAST_ZOMBIE_SPEED_JITTER = 0.15
+FAST_ZOMBIE_SPEED_JITTER = 0.075
 ZOMBIE_SEPARATION_DISTANCE = ZOMBIE_RADIUS * 2.2
 
 # Car settings
-CAR_WIDTH = 30
-CAR_HEIGHT = 50
-CAR_SPEED = 4
+CAR_WIDTH = 15
+CAR_HEIGHT = 25
+CAR_SPEED = 2
 CAR_HEALTH = 20
 CAR_WALL_DAMAGE = 1
 CAR_ZOMBIE_DAMAGE = 1
 CAR_HINT_DELAY_MS_DEFAULT = 300000
 
 # Fuel settings (Stage 2)
-FUEL_CAN_WIDTH = 22
-FUEL_CAN_HEIGHT = 30
-FUEL_PICKUP_RADIUS = 24
+FUEL_CAN_WIDTH = 11
+FUEL_CAN_HEIGHT = 15
+FUEL_PICKUP_RADIUS = 12
 FUEL_HINT_DURATION_MS = 1600
 
 # Wall settings
@@ -141,8 +141,6 @@ RENDER_ASSETS = RenderAssets(
     internal_wall_grid_snap=INTERNAL_WALL_GRID_SNAP,
     default_flashlight_bonus_scale=DEFAULT_FLASHLIGHT_BONUS_SCALE,
 )
-
-render_surface: surface.Surface | None = None
 
 
 @dataclass
@@ -256,29 +254,17 @@ def nudge_window_scale(multiplier: float, game_data: Optional[dict] = None) -> s
     return apply_window_scale(target_scale, game_data)
 
 
-def _get_render_surface() -> surface.Surface:
-    """Return the low-res render surface used before upscaling to the OS window."""
-    global render_surface
-    if render_surface is None or render_surface.get_size() != (RENDER_SCREEN_WIDTH, RENDER_SCREEN_HEIGHT):
-        try:
-            render_surface = pygame.Surface((RENDER_SCREEN_WIDTH, RENDER_SCREEN_HEIGHT)).convert_alpha()
-        except pygame.error:
-            render_surface = pygame.Surface((RENDER_SCREEN_WIDTH, RENDER_SCREEN_HEIGHT), pygame.SRCALPHA)
-    return render_surface
-
-
 def present(logical_surface: surface.Surface) -> None:
-    """Downscale the logical surface to the low-res buffer, then scale up to the window and flip buffers."""
+    """Scale the logical surface directly to the window and flip buffers."""
     window = pygame.display.get_surface()
     if window is None:
         return
-    render_target = _get_render_surface()
-    pygame.transform.scale(logical_surface, render_target.get_size(), render_target)
     window_size = window.get_size()
-    if window_size == render_target.get_size():
-        window.blit(render_target, (0, 0))
+    logical_size = logical_surface.get_size()
+    if window_size == logical_size:
+        window.blit(logical_surface, (0, 0))
     else:
-        pygame.transform.scale(render_target, window_size, window)
+        pygame.transform.scale(logical_surface, window_size, window)
     pygame.display.flip()
 
 
@@ -1180,14 +1166,14 @@ def handle_game_over_state(screen, game_data):
         screen.blit(state.scaled_overview, state.scaled_overview.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)))
 
         if state.game_won:
-            show_message(screen, "YOU ESCAPED!", 40, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 40))
+            show_message(screen, "YOU ESCAPED!", 22, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 26))
 
     show_message(
         screen,
         "Press ESC or SPACE to return to Title",
-        30,
+        18,
         WHITE,
-        (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30),
+        (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 24),
     )
 
     present(screen)
@@ -1484,7 +1470,7 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
                 pygame.draw.rect(overlay, LIGHT_GRAY, (cx - gap - bar_width, cy - bar_height // 2, bar_width, bar_height))
                 pygame.draw.rect(overlay, LIGHT_GRAY, (cx + gap, cy - bar_height // 2, bar_width, bar_height))
                 screen.blit(overlay, (0, 0))
-                show_message(screen, "PAUSED", 64, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 90))
+                show_message(screen, "PAUSED", 32, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 45))
                 show_message(
                     screen,
                     "Press P or click to resume",
@@ -1599,10 +1585,10 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                         return {"action": "quit", "stage": None}
 
         screen.fill(BLACK)
-        show_message(screen, "Zombie Escape", 72, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 140))
+        show_message(screen, "Zombie Escape", 36, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 70))
 
         try:
-            font = pygame.font.Font(None, 34)
+            font = pygame.font.Font(None, 18)
             for idx, option in enumerate(options):
                 if option["type"] == "stage":
                     label = option["stage"].name
@@ -1617,23 +1603,23 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                     color = YELLOW if idx == selected else WHITE
 
                 text_surface = font.render(label, True, color)
-                text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 20 + idx * 46))
+                text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 12 + idx * 28))
                 screen.blit(text_surface, text_rect)
 
             # Selected stage description (if a stage is highlighted)
             current = options[selected]
             if current["type"] == "stage":
-                desc_font = pygame.font.Font(None, 28)
+                desc_font = pygame.font.Font(None, 16)
                 desc_color = LIGHT_GRAY if current.get("available") else GRAY
                 desc_surface = desc_font.render(current["stage"].description, True, desc_color)
-                desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 170))
+                desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 90))
                 screen.blit(desc_surface, desc_rect)
 
             # Quick config summary
             fast_on = config.get("fast_zombies", {}).get("enabled", True)
             hint_on = config.get("car_hint", {}).get("enabled", True)
 
-            hint_font = pygame.font.Font(None, 28)
+            hint_font = pygame.font.Font(None, 16)
             hint_text = "Resize window: [ to shrink, ] to enlarge (menu only)"
             hint_surface = hint_font.render(hint_text, True, LIGHT_GRAY)
             hint_rect = hint_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50))
@@ -1741,25 +1727,25 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                     working = copy.deepcopy(DEFAULT_CONFIG)
 
         screen.fill(BLACK)
-        show_message(screen, "Settings", 64, LIGHT_GRAY, (SCREEN_WIDTH // 2, 80))
+        show_message(screen, "Settings", 32, LIGHT_GRAY, (SCREEN_WIDTH // 2, 48))
 
         try:
-            label_font = pygame.font.Font(None, 28)
-            value_font = pygame.font.Font(None, 26)
-            section_font = pygame.font.Font(None, 26)
+            label_font = pygame.font.Font(None, 16)
+            value_font = pygame.font.Font(None, 15)
+            section_font = pygame.font.Font(None, 15)
             highlight_color = (70, 70, 70)
 
-            row_height = 64
-            start_y = 140
+            row_height = 18
+            start_y = 24
 
-            segment_width = 44
-            segment_height = 30
-            segment_gap = 12
+            segment_width = 26
+            segment_height = 16
+            segment_gap = 8
             segment_total_width = segment_width * 2 + segment_gap
 
-            column_margin = 40
+            column_margin = 20
             column_width = SCREEN_WIDTH // 2 - column_margin * 2
-            section_spacing = 12
+            section_spacing = 6
 
             section_states = {}
             y_cursor = start_y
@@ -1784,7 +1770,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                 row_y_current = state["next_y"]
                 state["next_y"] += row_height
 
-                highlight_rect = pygame.Rect(col_x, row_y_current - 6, column_width, row_height - 12)
+                highlight_rect = pygame.Rect(col_x, row_y_current - 2, column_width, row_height - 4)
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
@@ -1792,7 +1778,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                 label_rect = label_surface.get_rect(midleft=(col_x, row_y_current + row_height // 2))
                 screen.blit(label_surface, label_rect)
 
-                slider_y = row_y_current + (row_height - segment_height) // 2 - 6
+                slider_y = row_y_current + (row_height - segment_height) // 2 - 2
                 slider_x = col_x + column_width - segment_total_width
                 left_rect = pygame.Rect(slider_x, slider_y, segment_width, segment_height)
                 right_rect = pygame.Rect(left_rect.right + segment_gap, slider_y, segment_width, segment_height)
@@ -1814,8 +1800,8 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                 draw_segment(right_rect, row["right_label"], right_active)
 
             hint_start_y = start_y
-            hint_start_x = SCREEN_WIDTH // 2 + 40
-            hint_font = pygame.font.Font(None, 26)
+            hint_start_x = SCREEN_WIDTH // 2 + 16
+            hint_font = pygame.font.Font(None, 15)
             hint_lines = [
                 "Up/Down: select a setting",
                 "Left/Right: set value",
@@ -1825,10 +1811,10 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             ]
             for i, line in enumerate(hint_lines):
                 hint_surface = hint_font.render(line, True, WHITE)
-                hint_rect = hint_surface.get_rect(topleft=(hint_start_x, hint_start_y + i * 26))
+                hint_rect = hint_surface.get_rect(topleft=(hint_start_x, hint_start_y + i * 18))
                 screen.blit(hint_surface, hint_rect)
 
-            path_font = pygame.font.Font(None, 24)
+            path_font = pygame.font.Font(None, 13)
             path_text = f"Config: {config_path}"
             path_surface = path_font.render(path_text, True, LIGHT_GRAY)
             path_rect = path_surface.get_rect(midtop=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 32))

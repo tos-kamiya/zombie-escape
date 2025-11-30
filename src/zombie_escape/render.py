@@ -229,7 +229,7 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     color = GREEN if all([footprints_on, fast_on, hint_on, flashlight_on]) else LIGHT_GRAY
 
     try:
-        font = pygame.font.Font(None, 24)
+        font = pygame.font.Font(None, 16)
         text_surface = font.render(status_text, True, color)
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)
@@ -330,11 +330,11 @@ def draw(
             _blit_hatch_ring(screen, fog_soft, pattern, fov_center_on_screen, radius)
 
     if not has_fuel and fuel_message_until > elapsed_play_ms:
-        show_message(screen, "Need fuel to drive!", 32, ORANGE, (assets.screen_width // 2, assets.screen_height // 2))
+        show_message(screen, "Need fuel to drive!", 18, ORANGE, (assets.screen_width // 2, assets.screen_height // 2))
 
     def _render_objective(text: str):
         try:
-            font = pygame.font.Font(None, 30)
+            font = pygame.font.Font(None, 18)
             text_surface = font.render(text, True, YELLOW)
             text_rect = text_surface.get_rect(topleft=(16, 16))
             screen.blit(text_surface, text_rect)
