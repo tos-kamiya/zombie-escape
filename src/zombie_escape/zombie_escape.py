@@ -1832,6 +1832,8 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
 
         try:
             font = pygame.font.Font(None, 18)
+            line_height = 22
+            start_y = SCREEN_HEIGHT // 2 - 18
             for idx, option in enumerate(options):
                 if option["type"] == "stage":
                     label = option["stage"].name
@@ -1846,7 +1848,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                     color = YELLOW if idx == selected else WHITE
 
                 text_surface = font.render(label, True, color)
-                text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 12 + idx * 28))
+                text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, start_y + idx * line_height))
                 screen.blit(text_surface, text_rect)
 
             # Selected stage description (if a stage is highlighted)
@@ -1855,7 +1857,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                 desc_font = pygame.font.Font(None, 16)
                 desc_color = LIGHT_GRAY if current.get("available") else GRAY
                 desc_surface = desc_font.render(current["stage"].description, True, desc_color)
-                desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 90))
+                desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 70))
                 screen.blit(desc_surface, desc_rect)
 
             # Quick config summary
