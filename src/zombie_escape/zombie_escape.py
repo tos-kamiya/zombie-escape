@@ -1727,7 +1727,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                     working = copy.deepcopy(DEFAULT_CONFIG)
 
         screen.fill(BLACK)
-        show_message(screen, "Settings", 32, LIGHT_GRAY, (SCREEN_WIDTH // 2, 48))
+        show_message(screen, "Settings", 26, LIGHT_GRAY, (SCREEN_WIDTH // 2, 20))
 
         try:
             label_font = pygame.font.Font(None, 16)
@@ -1736,7 +1736,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             highlight_color = (70, 70, 70)
 
             row_height = 18
-            start_y = 24
+            start_y = 44
 
             segment_width = 26
             segment_height = 16

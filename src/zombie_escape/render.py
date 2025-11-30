@@ -214,7 +214,11 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     except (TypeError, ValueError):
         flashlight_scale = assets.default_flashlight_bonus_scale
     steel_on = config.get("steel_beams", {}).get("enabled", False)
-    stage_label = stage.name if stage else "Stage 1"
+    if stage:
+        # Keep the label compact for the status bar
+        stage_label = f"#{stage.id[-1]}" if stage.id.startswith("stage") else stage.id
+    else:
+        stage_label = "#1"
 
     parts = [
         f"Stage: {stage_label}",
