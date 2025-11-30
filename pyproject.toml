@@ -27,6 +27,9 @@ dependencies = [
   "platformdirs",
 ]
 
+[project.urls]
+Homepage = "https://github.com/tos-kamiya/zombie-escape"
+
 [tool.hatch.version]
 path = "src/zombie_escape/__about__.py"
 
