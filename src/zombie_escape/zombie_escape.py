@@ -713,26 +713,21 @@ class FuelCan(pygame.sprite.Sprite):
         super().__init__()
         self.image = pygame.Surface((FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT), pygame.SRCALPHA)
 
-        body_rect = pygame.Rect(2, 6, FUEL_CAN_WIDTH - 4, FUEL_CAN_HEIGHT - 8)
-        pygame.draw.rect(self.image, YELLOW, body_rect, border_radius=4)
-        pygame.draw.rect(self.image, BLACK, body_rect, width=2, border_radius=4)
+        body_rect = pygame.Rect(1, 3, FUEL_CAN_WIDTH - 2, FUEL_CAN_HEIGHT - 4)
+        pygame.draw.rect(self.image, YELLOW, body_rect, border_radius=3)
+        pygame.draw.rect(self.image, BLACK, body_rect, width=2, border_radius=3)
 
-        handle_rect = pygame.Rect(FUEL_CAN_WIDTH // 2, 2, FUEL_CAN_WIDTH // 3, 6)
+        handle_width = max(3, FUEL_CAN_WIDTH // 3)
+        handle_height = 3
+        handle_rect = pygame.Rect(body_rect.centerx - handle_width // 2, body_rect.top - handle_height, handle_width, handle_height)
         pygame.draw.rect(self.image, YELLOW, handle_rect, border_radius=2)
         pygame.draw.rect(self.image, BLACK, handle_rect, width=1, border_radius=2)
 
-        spout_points = [(4, 8), (9, 3), (14, 6), (9, 10)]
-        pygame.draw.polygon(self.image, YELLOW, spout_points)
-        pygame.draw.lines(self.image, BLACK, False, spout_points, width=2)
-
-        # Diagonal accent to read like a can
-        pygame.draw.line(
-            self.image,
-            (240, 200, 40),
-            (FUEL_CAN_WIDTH // 2 - 4, FUEL_CAN_HEIGHT // 2 + 5),
-            (FUEL_CAN_WIDTH - 6, FUEL_CAN_HEIGHT // 2 - 6),
-            width=3,
-        )
+        # Simple accent band for readability
+        band_height = 3
+        band_rect = pygame.Rect(body_rect.left + 2, body_rect.centery - band_height // 2, body_rect.width - 4, band_height)
+        pygame.draw.rect(self.image, (240, 200, 40), band_rect, border_radius=2)
+        pygame.draw.rect(self.image, BLACK, band_rect, width=1, border_radius=2)
 
         self.rect = self.image.get_rect(center=(x, y))
 
