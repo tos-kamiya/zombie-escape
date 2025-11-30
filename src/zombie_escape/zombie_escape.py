@@ -64,6 +64,10 @@ FOV_RADIUS = 80
 FOG_RADIUS_SCALE = 1.2
 FOG_MAX_RADIUS_FACTOR = 1.55
 FOG_HATCH_PIXEL_SCALE = 1
+# Companion settings (Stage 3)
+COMPANION_RADIUS = PLAYER_RADIUS
+COMPANION_FOLLOW_SPEED = PLAYER_SPEED * 0.7
+COMPANION_COLOR = (0, 200, 70)
 
 # Flashlight settings (defaults pulled from DEFAULT_CONFIG)
 DEFAULT_FLASHLIGHT_BONUS_SCALE = float(DEFAULT_CONFIG.get("flashlight", {}).get("bonus_scale", 1.35))
@@ -159,6 +163,8 @@ class ProgressState:
 
     game_over: bool
     game_won: bool
+    game_over_message: str | None
+    game_over_at: int | None
     overview_surface: surface.Surface | None
     scaled_overview: surface.Surface | None
     overview_created: bool
@@ -171,6 +177,7 @@ class ProgressState:
     hint_expires_at: int
     hint_target_type: str | None
     fuel_message_until: int
+    companion_rescued: bool
 
 
 @dataclass
@@ -197,6 +204,7 @@ class GameData:
     flashlights: List["Flashlight"] | None = None
     player: Optional["Player"] = None
     car: Optional["Car"] = None
+    companion: Optional["Companion"] = None
 
 
 @dataclass(frozen=True)
@@ -206,6 +214,7 @@ class Stage:
     description: str
     available: bool = True
     requires_fuel: bool = False
+    requires_companion: bool = False
 
 
 # Stage metadata (stage 2 placeholder for fuel flow coming soon)
@@ -221,6 +230,14 @@ STAGES = [
         name="#2 Fuel Run",
         description="Find fuel, bring it to the car, then escape.",
         available=True,
+        requires_fuel=True,
+    ),
+    Stage(
+        id="stage3",
+        name="#3 Rescue Buddy",
+        description="Find your stranded buddy, pick up fuel, and escape together.",
+        available=True,
+        requires_companion=True,
         requires_fuel=True,
     ),
 ]
@@ -434,6 +451,78 @@ class Player(pygame.sprite.Sprite):
 
         self.rect.center = (int(self.x), int(self.y))
 
+
+class Companion(pygame.sprite.Sprite):
+    """Simple survivor sprite used in Stage 3."""
+
+    def __init__(self: Self, x: float, y: float) -> None:
+        super().__init__()
+        self.radius = COMPANION_RADIUS
+        self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(self.image, COMPANION_COLOR, (self.radius, self.radius), self.radius)
+        self.rect = self.image.get_rect(center=(int(x), int(y)))
+        self.x = float(self.rect.centerx)
+        self.y = float(self.rect.centery)
+        self.following = False
+        self.rescued = False
+
+    def set_following(self: Self) -> None:
+        if not self.rescued:
+            self.following = True
+
+    def mark_rescued(self: Self) -> None:
+        self.following = False
+        self.rescued = True
+
+    def teleport(self: Self, pos: Tuple[int, int]) -> None:
+        """Reposition the companion (used for quiet respawns)."""
+        self.x, self.y = float(pos[0]), float(pos[1])
+        self.rect.center = (int(self.x), int(self.y))
+        self.following = False
+
+    def update_follow(self: Self, target_pos: Tuple[float, float], walls: pygame.sprite.Group) -> None:
+        """Follow the target at a slightly slower speed than the player."""
+        if self.rescued or not self.following:
+            self.rect.center = (int(self.x), int(self.y))
+            return
+
+        dx = target_pos[0] - self.x
+        dy = target_pos[1] - self.y
+        dist = math.hypot(dx, dy)
+        if dist <= 0:
+            self.rect.center = (int(self.x), int(self.y))
+            return
+
+        move_x = (dx / dist) * COMPANION_FOLLOW_SPEED
+        move_y = (dy / dist) * COMPANION_FOLLOW_SPEED
+
+        if move_x != 0:
+            self.x += move_x
+            self.rect.centerx = int(self.x)
+            if pygame.sprite.spritecollideany(self, walls):
+                self.x -= move_x
+                self.rect.centerx = int(self.x)
+        if move_y != 0:
+            self.y += move_y
+            self.rect.centery = int(self.y)
+            if pygame.sprite.spritecollideany(self, walls):
+                self.y -= move_y
+                self.rect.centery = int(self.y)
+
+        # Avoid fully overlapping the player target
+        overlap_radius = (self.radius + PLAYER_RADIUS) * 1.05
+        dx_after = target_pos[0] - self.x
+        dy_after = target_pos[1] - self.y
+        dist_after = math.hypot(dx_after, dy_after)
+        if dist_after > 0 and dist_after < overlap_radius:
+            push_dist = overlap_radius - dist_after
+            self.x -= (dx_after / dist_after) * push_dist
+            self.y -= (dy_after / dist_after) * push_dist
+            self.rect.center = (int(self.x), int(self.y))
+
+        self.x = min(LEVEL_WIDTH, max(0, self.x))
+        self.y = min(LEVEL_HEIGHT, max(0, self.y))
+        self.rect.center = (int(self.x), int(self.y))
 
 def random_position_outside_building() -> Tuple[int, int]:
     side = random.choice(["top", "bottom", "left", "right"])
@@ -952,6 +1041,56 @@ def place_flashlights(walkable_cells: List[pygame.Rect], player: Player, car: Ca
     return placed
 
 
+def place_companion(walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None) -> Companion | None:
+    """Spawn the stranded buddy somewhere on a walkable tile away from the player and car."""
+    if not walkable_cells:
+        return None
+
+    min_player_dist = 240
+    min_car_dist = 180
+
+    for _ in range(200):
+        cell = random.choice(walkable_cells)
+        if math.hypot(cell.centerx - player.x, cell.centery - player.y) < min_player_dist:
+            continue
+        if car and math.hypot(cell.centerx - car.rect.centerx, cell.centery - car.rect.centery) < min_car_dist:
+            continue
+        return Companion(cell.centerx, cell.centery)
+
+    cell = random.choice(walkable_cells)
+    return Companion(cell.centerx, cell.centery)
+
+
+def respawn_rescued_companion_near_player(game_data) -> None:
+    """Bring back the rescued companion near the player after losing the car."""
+    if not (game_data.stage.requires_companion and game_data.state.companion_rescued):
+        return
+    # If a companion is already active, do nothing
+    if game_data.companion and game_data.companion.alive() and not game_data.companion.rescued:
+        return
+
+    player = game_data.player
+    wall_group = game_data.groups.wall_group
+    offsets = [
+        (COMPANION_RADIUS * 3, 0),
+        (-COMPANION_RADIUS * 3, 0),
+        (0, COMPANION_RADIUS * 3),
+        (0, -COMPANION_RADIUS * 3),
+        (0, 0),
+    ]
+    spawn_pos = (int(player.x), int(player.y))
+    for dx, dy in offsets:
+        candidate = Companion(player.x + dx, player.y + dy)
+        if not pygame.sprite.spritecollideany(candidate, wall_group):
+            spawn_pos = (candidate.x, candidate.y)
+            break
+
+    companion = Companion(*spawn_pos)
+    companion.following = True
+    game_data.companion = companion
+    game_data.groups.all_sprites.add(companion, layer=2)
+
+
 def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Optional[float] = None) -> sprite.Sprite:
     if scale_y is None:
         scale_y = scale_x
@@ -1008,6 +1147,8 @@ def initialize_game_state(config, stage: Stage):
     game_state = ProgressState(
         game_over=False,
         game_won=False,
+        game_over_message=None,
+        game_over_at=None,
         overview_surface=None,
         scaled_overview=None,
         overview_created=False,
@@ -1020,6 +1161,7 @@ def initialize_game_state(config, stage: Stage):
         hint_expires_at=0,
         hint_target_type=None,
         fuel_message_until=0,
+        companion_rescued=False,
     )
 
     # Create sprite groups
@@ -1053,6 +1195,7 @@ def initialize_game_state(config, stage: Stage):
         stage=stage,
         fuel=None,
         flashlights=[],
+        companion=None,
     )
 
 
@@ -1103,19 +1246,26 @@ def spawn_initial_zombies(game_data, player, layout_data):
     initial_zombies_placed = 0
     placement_attempts = 0
     max_placement_attempts = INITIAL_ZOMBIES_INSIDE * 20
+    min_spawn_separation = ZOMBIE_SEPARATION_DISTANCE
 
     while initial_zombies_placed < INITIAL_ZOMBIES_INSIDE and placement_attempts < max_placement_attempts:
         placement_attempts += 1
         cell = random.choice(spawn_cells)
-        z_pos = cell.center
+        jitter_x = random.uniform(-cell.width * 0.4, cell.width * 0.4)
+        jitter_y = random.uniform(-cell.height * 0.4, cell.height * 0.4)
+        z_pos = (cell.centerx + jitter_x, cell.centery + jitter_y)
         temp_zombie = create_zombie(config, start_pos=z_pos)
         temp_sprite = pygame.sprite.Sprite()
         temp_sprite.rect = temp_zombie.rect.inflate(5, 5)
 
         collides_with_wall = pygame.sprite.spritecollideany(temp_sprite, wall_group)
         collides_with_player = temp_sprite.rect.colliderect(player.rect.inflate(ZOMBIE_SIGHT_RANGE, ZOMBIE_SIGHT_RANGE))
+        too_close_to_zombie = any(
+            math.hypot(temp_zombie.rect.centerx - z.x, temp_zombie.rect.centery - z.y) < min_spawn_separation
+            for z in zombie_group
+        )
 
-        if not collides_with_wall and not collides_with_player:
+        if not collides_with_wall and not collides_with_player and not too_close_to_zombie:
             new_zombie = temp_zombie
             zombie_group.add(new_zombie)
             all_sprites.add(new_zombie, layer=1)
@@ -1145,6 +1295,7 @@ def handle_game_over_state(screen, game_data):
             fuel=game_data.fuel,
             flashlights=game_data.flashlights or [],
             stage=game_data.stage,
+            companion=game_data.companion,
         )
 
         level_aspect = LEVEL_WIDTH / LEVEL_HEIGHT
@@ -1170,6 +1321,16 @@ def handle_game_over_state(screen, game_data):
 
         if state.game_won:
             show_message(screen, "YOU ESCAPED!", 22, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 26))
+        else:
+            show_message(screen, "GAME OVER", 22, RED, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 26))
+            if state.game_over_message:
+                show_message(
+                    screen,
+                    state.game_over_message,
+                    18,
+                    LIGHT_GRAY,
+                    (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 6),
+                )
 
     show_message(
         screen,
@@ -1224,6 +1385,7 @@ def update_entities(game_data, player_dx, player_dy, car_dx, car_dy):
     """Update positions and states of game entities."""
     player = game_data.player
     car = game_data.car
+    companion = game_data.companion
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
     zombie_group = game_data.groups.zombie_group
@@ -1245,6 +1407,13 @@ def update_entities(game_data, player_dx, player_dy, car_dx, car_dy):
     target_for_camera = car if player.in_car and car.alive() else player
     camera.update(target_for_camera)
 
+    # Update companion (Stage 3 follow logic)
+    if companion and companion.alive() and not companion.rescued:
+        follow_target = car if player.in_car and car.alive() else player
+        companion.update_follow(follow_target.rect.center, wall_group)
+        if companion not in all_sprites:
+            all_sprites.add(companion, layer=2)
+
     # Spawn new zombies if needed
     current_time = pygame.time.get_ticks()
     if len(zombie_group) < MAX_ZOMBIES and current_time - game_data.state.last_zombie_spawn_time > ZOMBIE_SPAWN_DELAY_MS:
@@ -1255,14 +1424,25 @@ def update_entities(game_data, player_dx, player_dy, car_dx, car_dy):
 
     # Update zombies
     target_center = car.rect.center if player.in_car and car.alive() else player.rect.center
+    companion_on_screen = False
+    screen_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+    if game_data.stage.requires_companion and companion and companion.alive() and not companion.rescued:
+        companion_on_screen = camera.apply_rect(companion.rect).colliderect(screen_rect)
     for zombie in zombie_group:
-        zombie.update(target_center, wall_group, zombie_group)
+        target = target_center
+        if companion_on_screen and companion:
+            dist_to_target = math.hypot(target_center[0] - zombie.x, target_center[1] - zombie.y)
+            dist_to_companion = math.hypot(companion.rect.centerx - zombie.x, companion.rect.centery - zombie.y)
+            if dist_to_companion < dist_to_target:
+                target = companion.rect.center
+        zombie.update(target, wall_group, zombie_group)
 
 
 def check_interactions(game_data):
     """Check and handle interactions between entities."""
     player = game_data.player
     car = game_data.car
+    companion = game_data.companion
     zombie_group = game_data.groups.zombie_group
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
@@ -1271,6 +1451,8 @@ def check_interactions(game_data):
     outside_rects = game_data.areas.outside_rects
     fuel = game_data.fuel
     flashlights = game_data.flashlights or []
+    camera = game_data.camera
+    stage = game_data.stage
 
     # Fuel pickup
     if fuel and fuel.alive() and not state.has_fuel and not player.in_car:
@@ -1301,6 +1483,42 @@ def check_interactions(game_data):
                     pass
                 print("Flashlight acquired!")
                 break
+
+    companion_on_screen = False
+    companion_active = companion and companion.alive() and not getattr(companion, "rescued", False)
+    if companion_active:
+        screen_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+        companion_on_screen = camera.apply_rect(companion.rect).colliderect(screen_rect)
+
+    # Companion interactions (Stage 3)
+    if companion_active and stage.requires_companion:
+        if not player.in_car:
+            if pygame.sprite.collide_circle(companion, player):
+                companion.set_following()
+        elif player.in_car and car.alive():
+            g = pygame.sprite.Group()
+            g.add(companion)
+            if pygame.sprite.spritecollide(get_shrunk_sprite(car, 0.8), g, False):
+                state.companion_rescued = True
+                companion.mark_rescued()
+                companion.kill()
+                game_data.companion = None
+                companion_active = False
+                companion_on_screen = False
+
+        # Zombies reaching the companion
+        if companion_active and pygame.sprite.spritecollide(companion, zombie_group, False, pygame.sprite.collide_circle):
+            if companion_on_screen:
+                state.game_over_message = "Your buddy got caught!"
+                state.game_over = True
+                state.game_over_at = state.game_over_at or pygame.time.get_ticks()
+            else:
+                if walkable_cells:
+                    new_cell = random.choice(walkable_cells)
+                    companion.teleport(new_cell.center)
+                else:
+                    companion.teleport((LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2))
+                companion.following = False
 
     # Player entering car
     shrunk_car = get_shrunk_sprite(car, 0.8)
@@ -1338,6 +1556,9 @@ def check_interactions(game_data):
                 all_sprites.add(player, layer=2)
             print("Car destroyed! Player ejected.")
 
+        # Bring back the rescued companion near the player after losing the car
+        respawn_rescued_companion_near_player(game_data)
+
         # Respawn car
         new_car = place_new_car(wall_group, player, walkable_cells)
         if new_car is None:
@@ -1354,11 +1575,14 @@ def check_interactions(game_data):
     if not player.in_car and player in all_sprites:
         shrunk_player = get_shrunk_sprite(player, 0.8)
         if pygame.sprite.spritecollide(shrunk_player, zombie_group, False, pygame.sprite.collide_circle):
-            state.game_over = True
+            if not state.game_over:
+                state.game_over = True
+                state.game_over_at = pygame.time.get_ticks()
 
     # Player escaping the level
     if player.in_car and car.alive() and state.has_fuel:
-        if any(outside.collidepoint(car.rect.center) for outside in outside_rects):
+        companion_ready = not stage.requires_companion or state.companion_rescued
+        if companion_ready and any(outside.collidepoint(car.rect.center) for outside in outside_rects):
             state.game_won = True
 
     # Return fog of view target
@@ -1400,6 +1624,12 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
         game_data.flashlights = flashlights
         game_data.groups.all_sprites.add(flashlights, layer=1)
 
+    if stage.requires_companion:
+        companion = place_companion(layout_data["walkable_cells"], player, car)
+        if companion:
+            game_data.companion = companion
+            game_data.groups.all_sprites.add(companion, layer=2)
+
     # Spawn initial zombies
     spawn_initial_zombies(game_data, player, layout_data)
     update_footprints(game_data)
@@ -1415,6 +1645,12 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
 
         # Handle game over state
         if game_data.state.game_over or game_data.state.game_won:
+            if game_data.state.game_over and not game_data.state.game_won:
+                if game_data.state.game_over_at is None:
+                    game_data.state.game_over_at = pygame.time.get_ticks()
+                if pygame.time.get_ticks() - game_data.state.game_over_at < 1000:
+                    # Briefly hold the in-game view before showing the game-over screen.
+                    continue
             result = handle_game_over_state(screen, game_data)
             if result is not None:  # If restart or quit was selected
                 return result
@@ -1460,6 +1696,8 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
                 has_flashlight=game_data.state.has_flashlight,
                 elapsed_play_ms=game_data.state.elapsed_play_ms,
                 fuel_message_until=game_data.state.fuel_message_until,
+                companion=game_data.companion,
+                companion_rescued=game_data.state.companion_rescued,
                 present_fn=present,
             )
             if show_pause_overlay:
@@ -1548,6 +1786,8 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
             has_flashlight=game_data.state.has_flashlight,
             elapsed_play_ms=game_data.state.elapsed_play_ms,
             fuel_message_until=game_data.state.fuel_message_until,
+            companion=game_data.companion,
+            companion_rescued=game_data.state.companion_rescued,
             present_fn=present,
         )
 

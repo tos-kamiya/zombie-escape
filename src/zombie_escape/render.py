@@ -78,6 +78,7 @@ def draw_level_overview(
     fuel=None,
     flashlights=None,
     stage=None,
+    companion=None,
 ) -> None:
     surface.fill(BLACK)
     for wall in wall_group:
@@ -100,6 +101,9 @@ def draw_level_overview(
                 pygame.draw.rect(surface, BLACK, flashlight.rect, width=2, border_radius=2)
     if player:
         pygame.draw.circle(surface, BLUE, player.rect.center, assets.player_radius * 2)
+    if companion and hasattr(companion, "alive") and companion.alive() and not getattr(companion, "rescued", False):
+        buddy_color = (0, 200, 70)
+        pygame.draw.circle(surface, buddy_color, companion.rect.center, assets.player_radius * 2)
     if car and car.alive():
         car_rect = car.image.get_rect(center=car.rect.center)
         surface.blit(car.image, car_rect)
@@ -264,6 +268,8 @@ def draw(
     has_flashlight: bool = False,
     elapsed_play_ms: int = 0,
     fuel_message_until: int = 0,
+    companion=None,
+    companion_rescued: bool = False,
     present_fn=None,
 ):
     hint_color = hint_color or YELLOW
@@ -339,25 +345,38 @@ def draw(
     if not has_fuel and fuel_message_until > elapsed_play_ms:
         show_message(screen, "Need fuel to drive!", 18, ORANGE, (assets.screen_width // 2, assets.screen_height // 2))
 
-    def _render_objective(text: str):
+    def _render_objective(lines: list[str]):
         try:
             font = pygame.font.Font(None, 18)
-            text_surface = font.render(text, True, YELLOW)
-            text_rect = text_surface.get_rect(topleft=(16, 16))
-            screen.blit(text_surface, text_rect)
+            y = 16
+            for line in lines:
+                text_surface = font.render(line, True, YELLOW)
+                text_rect = text_surface.get_rect(topleft=(16, y))
+                screen.blit(text_surface, text_rect)
+                y += text_rect.height + 6
         except pygame.error as e:
             print(f"Error rendering objective: {e}")
 
-    objective_text = None
+    objective_lines: list[str] = []
     if stage and stage.requires_fuel and not has_fuel:
-        objective_text = "Find the fuel can"
+        objective_lines.append("Find the fuel can")
     elif not player.in_car:
-        objective_text = "Find the car"
+        objective_lines.append("Find the car")
     else:
-        objective_text = "Escape the building"
+        objective_lines.append("Escape the building")
 
-    if objective_text:
-        _render_objective(objective_text)
+    if stage and getattr(stage, "requires_companion", False):
+        if not companion_rescued and player.in_car:
+            # Cannot escape until the buddy is picked up.
+            objective_lines[-1] = "Pick up your buddy"
+        if not companion_rescued:
+            buddy_following = companion and getattr(companion, "following", False)
+            if not buddy_following:
+                buddy_line = "Find your buddy"
+                objective_lines.append(buddy_line)
+
+    if objective_lines:
+        _render_objective(objective_lines)
 
     _draw_status_bar(screen, assets, config, stage=stage)
     if do_flip:

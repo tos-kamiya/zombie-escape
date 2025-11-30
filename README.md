@@ -45,6 +45,7 @@ At the title screen you can pick a stage:
 
 - **Stage 1: Find the Car** — locate the car and drive out.
 - **Stage 2: Fuel Run** — find a fuel can first, pick it up, then find the car and escape.
+- **Stage 3: Rescue Buddy** — find your stranded buddy, grab fuel, pick them up with the car, then escape together.
 
 An objective reminder is shown at the top-left during play.
 
@@ -58,6 +59,10 @@ An objective reminder is shown at the top-left during play.
     -   If durability reaches 0, the car is destroyed, and the player is ejected.
     -   When the car is destroyed, a **new car will respawn** at a random location within the stage.
     -   After roughly 5 minutes of play, a small triangle near the player points toward the objective: fuel first (Stage 2 before pickup), car after fuel is collected (Stage 2), or car directly (Stage 1).
+-   **Buddy (Stage 3):** A green circle survivor who spawns somewhere in the building and waits.
+    -   Zombies only choose to pursue the buddy if they are on-screen; otherwise they ignore them.
+    -   If a zombie tags the buddy off-screen, the buddy quietly respawns somewhere else instead of ending the run.
+    -   Touch the buddy on foot to make them follow you (at 80% of player speed). Touch them while driving to pick them up.
 -   **Walls:** Outer walls are gray; inner walls are beige.
     -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
     -   **Inner Walls:** Beige walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
@@ -69,6 +74,7 @@ An objective reminder is shown at the top-left during play.
 
 -   **Win Condition:** Escape the stage (level) boundaries while inside the car.
     - Stage 2 also requires that you have collected the fuel can before driving out.
+    - Stage 3 requires both fuel and having picked up your buddy with the car before driving out.
 -   **Lose Condition:**
     -   The player is touched by a zombie while *not* inside a car.
     -   (Note: In the current implementation, the game does not end immediately when the car is destroyed. The player can search for another car and continue trying to escape.)
