@@ -220,14 +220,17 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     else:
         stage_label = "#1"
 
-    parts = [
-        f"Stage: {stage_label}",
-        f"Footprints: {'ON' if footprints_on else 'OFF'}",
-        f"Fast Z: {'ON' if fast_on else 'OFF'}",
-        f"Car Hint: {'ON' if hint_on else 'OFF'}",
-        f"Flashlight: {'ON' if flashlight_on else 'OFF'}{f' ({flashlight_scale:.2f}x)' if flashlight_on else ''}",
-        f"Steel: {'ON' if steel_on else 'OFF'}",
-    ]
+    parts = [f"Stage {stage_label}"]
+    if footprints_on:
+        parts.append("Footprints")
+    if fast_on:
+        parts.append("FastZ")
+    if hint_on:
+        parts.append("CarHint")
+    if flashlight_on:
+        parts.append(f"Flashlight {flashlight_scale:.1f}x")
+    if steel_on:
+        parts.append("Steel")
 
     status_text = " | ".join(parts)
     color = GREEN if all([footprints_on, fast_on, hint_on, flashlight_on]) else LIGHT_GRAY
