@@ -320,7 +320,7 @@ class Wall(pygame.sprite.Sprite):
         br = int(self.border_base_color[0] * (0.6 + 0.4 * health_ratio))
         bg = int(self.border_base_color[1] * (0.6 + 0.4 * health_ratio))
         bb = int(self.border_base_color[2] * (0.6 + 0.4 * health_ratio))
-        pygame.draw.rect(self.image, (br, bg, bb), self.image.get_rect(), width=18)
+        pygame.draw.rect(self.image, (br, bg, bb), self.image.get_rect(), width=9)
 
 
 class SteelBeam(pygame.sprite.Sprite):
@@ -1462,21 +1462,21 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
             if show_pause_overlay:
                 overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
                 overlay.fill((0, 0, 0, 150))
-                pygame.draw.circle(overlay, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), 70, width=6)
-                bar_width = 16
-                bar_height = 60
-                gap = 18
+                pygame.draw.circle(overlay, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), 35, width=3)
+                bar_width = 8
+                bar_height = 30
+                gap = 9
                 cx, cy = SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2
                 pygame.draw.rect(overlay, LIGHT_GRAY, (cx - gap - bar_width, cy - bar_height // 2, bar_width, bar_height))
                 pygame.draw.rect(overlay, LIGHT_GRAY, (cx + gap, cy - bar_height // 2, bar_width, bar_height))
                 screen.blit(overlay, (0, 0))
-                show_message(screen, "PAUSED", 32, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 45))
+                show_message(screen, "PAUSED", 18, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 24))
                 show_message(
                     screen,
                     "Press P or click to resume",
-                    32,
+                    18,
                     LIGHT_GRAY,
-                    (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 140),
+                    (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 70),
                 )
                 present(screen)
             continue
