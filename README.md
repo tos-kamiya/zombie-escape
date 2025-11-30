@@ -59,16 +59,16 @@ An objective reminder is shown at the top-left during play.
     -   If durability reaches 0, the car is destroyed, and the player is ejected.
     -   When the car is destroyed, a **new car will respawn** at a random location within the stage.
     -   After roughly 5 minutes of play, a small triangle near the player points toward the objective: fuel first (Stage 2 before pickup), car after fuel is collected (Stage 2), or car directly (Stage 1).
--   **Buddy (Stage 3):** A green circle survivor who spawns somewhere in the building and waits.
-    -   Zombies only choose to pursue the buddy if they are on-screen; otherwise they ignore them.
-    -   If a zombie tags the buddy off-screen, the buddy quietly respawns somewhere else instead of ending the run.
-    -   Touch the buddy on foot to make them follow you (at 80% of player speed). Touch them while driving to pick them up.
 -   **Walls:** Outer walls are gray; inner walls are beige.
     -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
     -   **Inner Walls:** Beige walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
--   **Fuel Can (Stage 2):** A yellow jerrycan. Pick it up before driving the car.
 -   **Flashlight:** Picking one up boosts your visible radius by 35%.
 -   **Steel Beam (optional):** A square post with crossed diagonals; same collision as inner walls but with triple durability. Spawns independently of inner walls (may overlap them). If an inner wall covers a beam, the beam appears once the wall is destroyed.
+-   **Fuel Can (Stage 2):** A yellow jerrycan. Pick it up before driving the car.
+-   **Buddy (Stage 3):** A green circle survivor who spawns somewhere in the building and waits.
+    -   Zombies only choose to pursue the buddy if they are on-screen; otherwise they ignore them.
+    -   If a zombie tags the buddy off-screen, the buddy quietly respawns somewhere else instead of ending the run.
+    -   Touch the buddy on foot to make them follow you (at 70% of player speed). Touch them while driving to pick them up.
 
 ### Win/Lose Conditions
 
