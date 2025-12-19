@@ -106,11 +106,11 @@ zombie-escape
 
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
 
-The bundled PixelMplus10-Regular.ttf font follows the license terms of its original distribution.
-Please refer to the upstream website for details: http://mplus-fonts.sourceforge.jp/
+The bundled Silkscreen-Regular.ttf font follows the license terms of its original distribution.
+Please refer to the upstream website for details: https://fonts.google.com/specimen/Silkscreen
 
 ## Acknowledgements
 
 Significant assistance for many technical implementation and documentation aspects of this game's development was received from Google's large language model, Gemini (accessed during development), and from OpenAI's GPT-5. This included generating Python/Pygame code, suggesting rule adjustments, providing debugging support, and creating this README. Their rapid coding capabilities and contributions to problem-solving are greatly appreciated.
 
-Thanks to itouhiro, the author of the PixelMplus10-Regular.ttf font used in the game.
+Thanks to Jason Kottke, the author of the Silkscreen-Regular.ttf font used in the game.

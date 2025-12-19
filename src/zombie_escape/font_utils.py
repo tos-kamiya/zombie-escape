@@ -7,7 +7,7 @@ from typing import Iterator
 
 import pygame
 
-FONT_RESOURCE = "PixelMplus10-Regular.ttf"
+FONT_RESOURCE = "Silkscreen-Regular.ttf"
 FONT_SCALE = 0.7
 FONT_SIZE_STEP = 10
 
