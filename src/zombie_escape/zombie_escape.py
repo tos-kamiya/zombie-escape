@@ -1,11 +1,11 @@
-from typing import Callable, Iterable, List, Optional, Self, Tuple
-from dataclasses import dataclass
-import random
 import copy
 import math
+import random
 import sys
 import traceback  # For error reporting
+from dataclasses import dataclass
 from enum import Enum  # For Zombie Modes
+from typing import Callable, Iterable, List, Optional, Self, Tuple
 
 import pygame
 from pygame import rect, sprite, surface, time
@@ -14,28 +14,28 @@ try:
     from .__about__ import __version__
 except:
     __version__ = "0.0.0-unknown"
-from .config import DEFAULT_CONFIG, load_config, save_config
 from .colors import (
     BLACK,
     BLUE,
     DARK_RED,
     GRAY,
     GREEN,
-    LIGHT_GRAY,
-    ORANGE,
-    RED,
-    WHITE,
-    YELLOW,
     INTERNAL_WALL_BORDER_COLOR,
     INTERNAL_WALL_COLOR,
+    LIGHT_GRAY,
+    ORANGE,
     OUTER_WALL_BORDER_COLOR,
     OUTER_WALL_COLOR,
+    RED,
     STEEL_BEAM_COLOR,
     STEEL_BEAM_LINE_COLOR,
+    WHITE,
+    YELLOW,
 )
+from .config import DEFAULT_CONFIG, load_config, save_config
+from .font_utils import load_font
 from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
 from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
-from .font_utils import load_font
 
 # --- Constants/Global variables ---
 LOGICAL_SCREEN_WIDTH = 400
@@ -71,7 +71,9 @@ COMPANION_FOLLOW_SPEED = PLAYER_SPEED * 0.7
 COMPANION_COLOR = (0, 200, 70)
 
 # Flashlight settings (defaults pulled from DEFAULT_CONFIG)
-DEFAULT_FLASHLIGHT_BONUS_SCALE = float(DEFAULT_CONFIG.get("flashlight", {}).get("bonus_scale", 1.35))
+DEFAULT_FLASHLIGHT_BONUS_SCALE = float(
+    DEFAULT_CONFIG.get("flashlight", {}).get("bonus_scale", 1.35)
+)
 FLASHLIGHT_WIDTH = 10
 FLASHLIGHT_HEIGHT = 8
 FLASHLIGHT_PICKUP_RADIUS = 13
@@ -246,7 +248,9 @@ DEFAULT_STAGE_ID = "stage1"
 
 
 # --- Window scaling helpers ---
-def apply_window_scale(scale: float, game_data: Optional[GameData] = None) -> surface.Surface:
+def apply_window_scale(
+    scale: float, game_data: Optional[GameData] = None
+) -> surface.Surface:
     """Resize the OS window; the logical render surface stays at the default size."""
     global current_window_scale
 
@@ -257,7 +261,9 @@ def apply_window_scale(scale: float, game_data: Optional[GameData] = None) -> su
     window_height = max(1, int(RENDER_SCREEN_HEIGHT * current_window_scale))
 
     new_window = pygame.display.set_mode((window_width, window_height))
-    pygame.display.set_caption(f"Zombie Escape v{__version__} ({window_width}x{window_height})")
+    pygame.display.set_caption(
+        f"Zombie Escape v{__version__} ({window_width}x{window_height})"
+    )
 
     if game_data is not None:
         # Invalidate cached overview so it can be re-scaled next time it's drawn
@@ -266,7 +272,9 @@ def apply_window_scale(scale: float, game_data: Optional[GameData] = None) -> su
     return new_window
 
 
-def nudge_window_scale(multiplier: float, game_data: Optional[dict] = None) -> surface.Surface:
+def nudge_window_scale(
+    multiplier: float, game_data: Optional[dict] = None
+) -> surface.Surface:
     """Change window scale relative to the current setting."""
     target_scale = current_window_scale * multiplier
     return apply_window_scale(target_scale, game_data)
@@ -329,7 +337,9 @@ class Wall(pygame.sprite.Sprite):
             health_ratio = 0
         else:
             health_ratio = max(0, self.health / self.max_health)
-            mix = 0.6 + 0.4 * health_ratio  # keep at least 60% of the base color even when nearly destroyed
+            mix = (
+                0.6 + 0.4 * health_ratio
+            )  # keep at least 60% of the base color even when nearly destroyed
             r = int(self.base_color[0] * mix)
             g = int(self.base_color[1] * mix)
             b = int(self.base_color[2] * mix)
@@ -344,7 +354,9 @@ class Wall(pygame.sprite.Sprite):
 class SteelBeam(pygame.sprite.Sprite):
     """Single-cell obstacle that behaves like a tougher internal wall."""
 
-    def __init__(self: Self, x: int, y: int, size: int, health: int = STEEL_BEAM_HEALTH) -> None:
+    def __init__(
+        self: Self, x: int, y: int, size: int, health: int = STEEL_BEAM_HEALTH
+    ) -> None:
         super().__init__()
         # Slightly inset from the cell size so it reads as a separate object.
         margin = max(3, size // 14)
@@ -377,8 +389,12 @@ class SteelBeam(pygame.sprite.Sprite):
         line_mix = 0.7 + 0.3 * health_ratio
         line_color = tuple(int(c * line_mix) for c in self.line_color)
         pygame.draw.rect(self.image, line_color, rect_obj, width=6)
-        pygame.draw.line(self.image, line_color, rect_obj.topleft, rect_obj.bottomright, width=6)
-        pygame.draw.line(self.image, line_color, rect_obj.topright, rect_obj.bottomleft, width=6)
+        pygame.draw.line(
+            self.image, line_color, rect_obj.topleft, rect_obj.bottomright, width=6
+        )
+        pygame.draw.line(
+            self.image, line_color, rect_obj.topright, rect_obj.bottomleft, width=6
+        )
 
 
 class Camera:
@@ -413,8 +429,12 @@ class Player(pygame.sprite.Sprite):
     def __init__(self: Self, x: float, y: float) -> None:
         super().__init__()
         self.radius = PLAYER_RADIUS
-        self.image = pygame.Surface((self.radius * 2 + 2, self.radius * 2 + 2), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, BLUE, (self.radius + 1, self.radius + 1), self.radius)
+        self.image = pygame.Surface(
+            (self.radius * 2 + 2, self.radius * 2 + 2), pygame.SRCALPHA
+        )
+        pygame.draw.circle(
+            self.image, BLUE, (self.radius + 1, self.radius + 1), self.radius
+        )
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = PLAYER_SPEED
         self.in_car = False
@@ -460,7 +480,9 @@ class Companion(pygame.sprite.Sprite):
         super().__init__()
         self.radius = COMPANION_RADIUS
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, COMPANION_COLOR, (self.radius, self.radius), self.radius)
+        pygame.draw.circle(
+            self.image, COMPANION_COLOR, (self.radius, self.radius), self.radius
+        )
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
@@ -481,7 +503,9 @@ class Companion(pygame.sprite.Sprite):
         self.rect.center = (int(self.x), int(self.y))
         self.following = False
 
-    def update_follow(self: Self, target_pos: Tuple[float, float], walls: pygame.sprite.Group) -> None:
+    def update_follow(
+        self: Self, target_pos: Tuple[float, float], walls: pygame.sprite.Group
+    ) -> None:
         """Follow the target at a slightly slower speed than the player."""
         if self.rescued or not self.following:
             self.rect.center = (int(self.x), int(self.y))
@@ -525,6 +549,7 @@ class Companion(pygame.sprite.Sprite):
         self.y = min(LEVEL_HEIGHT, max(0, self.y))
         self.rect.center = (int(self.x), int(self.y))
 
+
 def random_position_outside_building() -> Tuple[int, int]:
     side = random.choice(["top", "bottom", "left", "right"])
     margin = 0
@@ -539,7 +564,11 @@ def random_position_outside_building() -> Tuple[int, int]:
     return x, y
 
 
-def create_zombie(config, start_pos: Optional[Tuple[int, int]] = None, hint_pos: Optional[Tuple[float, float]] = None) -> "Zombie":
+def create_zombie(
+    config,
+    start_pos: Optional[Tuple[int, int]] = None,
+    hint_pos: Optional[Tuple[float, float]] = None,
+) -> "Zombie":
     """Factory to create zombies with optional fast variants."""
     fast_conf = config.get("fast_zombies", {}) if config else {}
     fast_enabled = fast_conf.get("enabled", True)
@@ -550,7 +579,12 @@ def create_zombie(config, start_pos: Optional[Tuple[int, int]] = None, hint_pos:
         base_speed = ZOMBIE_SPEED
         is_fast = False
     base_speed = min(base_speed, PLAYER_SPEED - 0.05)
-    return Zombie(start_pos=start_pos, hint_pos=hint_pos, speed_override=base_speed, is_fast=is_fast)
+    return Zombie(
+        start_pos=start_pos,
+        hint_pos=hint_pos,
+        speed_override=base_speed,
+        is_fast=is_fast,
+    )
 
 
 class Zombie(pygame.sprite.Sprite):
@@ -569,7 +603,9 @@ class Zombie(pygame.sprite.Sprite):
             x, y = start_pos
         elif hint_pos:
             points = [random_position_outside_building() for _ in range(5)]
-            points.sort(key=lambda p: math.hypot(p[0] - hint_pos[0], p[1] - hint_pos[1]))
+            points.sort(
+                key=lambda p: math.hypot(p[0] - hint_pos[0], p[1] - hint_pos[1])
+            )
             x, y = points[0]
         else:
             x, y = random_position_outside_building()
@@ -581,7 +617,9 @@ class Zombie(pygame.sprite.Sprite):
         self.y = float(self.rect.centery)
         self.mode = random.choice(list(ZombieMode))
         self.last_mode_change_time = pygame.time.get_ticks()
-        self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + random.randint(-1000, 1000)
+        self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + random.randint(
+            -1000, 1000
+        )
         self.was_in_sight = False
 
     def change_mode(self: Self, force_mode: Optional[ZombieMode] = None) -> None:
@@ -591,30 +629,51 @@ class Zombie(pygame.sprite.Sprite):
             possible_modes = list(ZombieMode)
             self.mode = random.choice(possible_modes)
         self.last_mode_change_time = pygame.time.get_ticks()
-        self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + random.randint(-1000, 1000)
+        self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + random.randint(
+            -1000, 1000
+        )
 
-    def _calculate_movement(self: Self, player_center: Tuple[int, int]) -> Tuple[float, float]:
+    def _calculate_movement(
+        self: Self, player_center: Tuple[int, int]
+    ) -> Tuple[float, float]:
         move_x, move_y = 0, 0
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
         dist = math.hypot(dx_target, dy_target)
         if self.mode == ZombieMode.CHASE:
             if dist > 0:
-                move_x, move_y = (dx_target / dist) * self.speed, (dy_target / dist) * self.speed
+                move_x, move_y = (
+                    (dx_target / dist) * self.speed,
+                    (dy_target / dist) * self.speed,
+                )
         elif self.mode == ZombieMode.FLANK_X:
             if dist > 0:
-                move_x = (dx_target / abs(dx_target) if dx_target != 0 else 0) * self.speed * 0.8
+                move_x = (
+                    (dx_target / abs(dx_target) if dx_target != 0 else 0)
+                    * self.speed
+                    * 0.8
+                )
             move_y = random.uniform(-self.speed * 0.6, self.speed * 0.6)
         elif self.mode == ZombieMode.FLANK_Y:
             move_x = random.uniform(-self.speed * 0.6, self.speed * 0.6)
             if dist > 0:
-                move_y = (dy_target / abs(dy_target) if dy_target != 0 else 0) * self.speed * 0.8
+                move_y = (
+                    (dy_target / abs(dy_target) if dy_target != 0 else 0)
+                    * self.speed
+                    * 0.8
+                )
         return move_x, move_y
 
-    def _handle_wall_collision(self: Self, next_x: float, next_y: float, walls: List[Wall]) -> Tuple[float, float]:
+    def _handle_wall_collision(
+        self: Self, next_x: float, next_y: float, walls: List[Wall]
+    ) -> Tuple[float, float]:
         final_x, final_y = next_x, next_y
 
-        possible_walls = [w for w in walls if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100]
+        possible_walls = [
+            w
+            for w in walls
+            if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100
+        ]
 
         temp_rect = self.rect.copy()
         temp_rect.centerx = int(next_x)
@@ -647,7 +706,10 @@ class Zombie(pygame.sprite.Sprite):
                 continue
             dx = other.x - next_x
             dy = other.y - next_y
-            if abs(dx) > ZOMBIE_SEPARATION_DISTANCE or abs(dy) > ZOMBIE_SEPARATION_DISTANCE:
+            if (
+                abs(dx) > ZOMBIE_SEPARATION_DISTANCE
+                or abs(dy) > ZOMBIE_SEPARATION_DISTANCE
+            ):
                 continue
             dist = math.hypot(dx, dy)
             if dist < closest_dist:
@@ -669,7 +731,12 @@ class Zombie(pygame.sprite.Sprite):
         move_y = (away_dy / away_dist) * self.speed
         return move_x, move_y
 
-    def update(self: Self, player_center: Tuple[int, int], walls: List[Wall], zombies: Iterable["Zombie"]) -> None:
+    def update(
+        self: Self,
+        player_center: Tuple[int, int],
+        walls: List[Wall],
+        zombies: Iterable["Zombie"],
+    ) -> None:
         now = pygame.time.get_ticks()
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
@@ -686,7 +753,9 @@ class Zombie(pygame.sprite.Sprite):
             self.change_mode()
         move_x, move_y = self._calculate_movement(player_center)
         move_x, move_y = self._avoid_other_zombies(move_x, move_y, zombies)
-        final_x, final_y = self._handle_wall_collision(self.x + move_x, self.y + move_y, walls)
+        final_x, final_y = self._handle_wall_collision(
+            self.x + move_x, self.y + move_y, walls
+        )
 
         if not (0 <= final_x < LEVEL_WIDTH and 0 <= final_y < LEVEL_HEIGHT):
             final_x, final_y = random_position_outside_building()
@@ -727,8 +796,15 @@ class Car(pygame.sprite.Sprite):
 
         body_rect = pygame.Rect(1, 4, CAR_WIDTH - 2, CAR_HEIGHT - 8)
         front_cap_height = max(8, body_rect.height // 3)
-        front_cap = pygame.Rect(body_rect.left, body_rect.top, body_rect.width, front_cap_height)
-        windshield_rect = pygame.Rect(body_rect.left + 4, body_rect.top + 3, body_rect.width - 8, front_cap_height - 5)
+        front_cap = pygame.Rect(
+            body_rect.left, body_rect.top, body_rect.width, front_cap_height
+        )
+        windshield_rect = pygame.Rect(
+            body_rect.left + 4,
+            body_rect.top + 3,
+            body_rect.width - 8,
+            front_cap_height - 5,
+        )
 
         trim_color = tuple(int(c * 0.55) for c in color)
         front_cap_color = tuple(min(255, int(c * 1.08)) for c in color)
@@ -740,24 +816,45 @@ class Car(pygame.sprite.Sprite):
         wheel_height = 6
         for y in (body_rect.top + 4, body_rect.bottom - wheel_height - 4):
             left_wheel = pygame.Rect(2, y, wheel_width, wheel_height)
-            right_wheel = pygame.Rect(CAR_WIDTH - wheel_width - 2, y, wheel_width, wheel_height)
-            pygame.draw.rect(self.original_image, wheel_color, left_wheel, border_radius=3)
-            pygame.draw.rect(self.original_image, wheel_color, right_wheel, border_radius=3)
+            right_wheel = pygame.Rect(
+                CAR_WIDTH - wheel_width - 2, y, wheel_width, wheel_height
+            )
+            pygame.draw.rect(
+                self.original_image, wheel_color, left_wheel, border_radius=3
+            )
+            pygame.draw.rect(
+                self.original_image, wheel_color, right_wheel, border_radius=3
+            )
 
         pygame.draw.rect(self.original_image, body_color, body_rect, border_radius=4)
-        pygame.draw.rect(self.original_image, trim_color, body_rect, width=2, border_radius=4)
-        pygame.draw.rect(self.original_image, front_cap_color, front_cap, border_radius=10)
-        pygame.draw.rect(self.original_image, trim_color, front_cap, width=2, border_radius=10)
-        pygame.draw.rect(self.original_image, window_color, windshield_rect, border_radius=4)
+        pygame.draw.rect(
+            self.original_image, trim_color, body_rect, width=2, border_radius=4
+        )
+        pygame.draw.rect(
+            self.original_image, front_cap_color, front_cap, border_radius=10
+        )
+        pygame.draw.rect(
+            self.original_image, trim_color, front_cap, width=2, border_radius=10
+        )
+        pygame.draw.rect(
+            self.original_image, window_color, windshield_rect, border_radius=4
+        )
 
         headlight_color = (245, 245, 200)
         for x in (front_cap.left + 5, front_cap.right - 5):
-            pygame.draw.circle(self.original_image, headlight_color, (x, body_rect.top + 5), 2)
+            pygame.draw.circle(
+                self.original_image, headlight_color, (x, body_rect.top + 5), 2
+            )
         grille_rect = pygame.Rect(front_cap.centerx - 6, front_cap.top + 2, 12, 6)
         pygame.draw.rect(self.original_image, trim_color, grille_rect, border_radius=2)
         tail_light_color = (255, 80, 50)
         for x in (body_rect.left + 5, body_rect.right - 5):
-            pygame.draw.rect(self.original_image, tail_light_color, (x - 2, body_rect.bottom - 5, 4, 3), border_radius=1)
+            pygame.draw.rect(
+                self.original_image,
+                tail_light_color,
+                (x - 2, body_rect.bottom - 5, 4, 3),
+                border_radius=1,
+            )
         self.image = pygame.transform.rotate(self.original_image, self.angle)
         old_center = self.rect.center
         self.rect = self.image.get_rect(center=old_center)
@@ -780,13 +877,20 @@ class Car(pygame.sprite.Sprite):
         temp_rect.centerx = int(new_x)
         temp_rect.centery = int(new_y)
         hit_walls = []
-        possible_walls = [w for w in walls if abs(w.rect.centery - self.y) < 100 and abs(w.rect.centerx - new_x) < 100]
+        possible_walls = [
+            w
+            for w in walls
+            if abs(w.rect.centery - self.y) < 100 and abs(w.rect.centerx - new_x) < 100
+        ]
         for wall in possible_walls:
             if temp_rect.colliderect(wall.rect):
                 hit_walls.append(wall)
         if hit_walls:
             self.take_damage(CAR_WALL_DAMAGE)
-            hit_walls.sort(key=lambda w: (w.rect.centery - self.y) ** 2 + (w.rect.centerx - self.x) ** 2)
+            hit_walls.sort(
+                key=lambda w: (w.rect.centery - self.y) ** 2
+                + (w.rect.centerx - self.x) ** 2
+            )
             nearest_wall = hit_walls[0]
             new_x += (self.x - nearest_wall.rect.centerx) * 1.2
             new_y += (self.y - nearest_wall.rect.centery) * 1.2
@@ -834,7 +938,9 @@ class Flashlight(pygame.sprite.Sprite):
 
     def __init__(self: Self, x: int, y: int) -> None:
         super().__init__()
-        self.image = pygame.Surface((FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT), pygame.SRCALPHA)
+        self.image = pygame.Surface(
+            (FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT), pygame.SRCALPHA
+        )
 
         body_color = (230, 200, 70)
         trim_color = (80, 70, 40)
@@ -842,7 +948,9 @@ class Flashlight(pygame.sprite.Sprite):
         beam_color = (255, 240, 180, 150)
 
         body_rect = pygame.Rect(1, 2, FLASHLIGHT_WIDTH - 4, FLASHLIGHT_HEIGHT - 4)
-        head_rect = pygame.Rect(body_rect.right - 3, body_rect.top - 1, 4, body_rect.height + 2)
+        head_rect = pygame.Rect(
+            body_rect.right - 3, body_rect.top - 1, 4, body_rect.height + 2
+        )
         beam_points = [
             (head_rect.right + 4, head_rect.centery),
             (head_rect.right + 2, head_rect.top),
@@ -856,6 +964,7 @@ class Flashlight(pygame.sprite.Sprite):
         pygame.draw.polygon(self.image, beam_color, beam_points)
 
         self.rect = self.image.get_rect(center=(x, y))
+
 
 def rect_for_cell(x_idx: int, y_idx: int) -> pygame.Rect:
     return pygame.Rect(x_idx * CELL_SIZE, y_idx * CELL_SIZE, CELL_SIZE, CELL_SIZE)
@@ -878,7 +987,9 @@ def generate_level_from_blueprint(game_data):
         blueprint = blueprint_data
         steel_cells_raw = set()
 
-    steel_cells = {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
+    steel_cells = (
+        {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
+    )
 
     outside_rects: List[pygame.Rect] = []
     walkable_cells: List[pygame.Rect] = []
@@ -895,7 +1006,9 @@ def generate_level_from_blueprint(game_data):
 
     for y, row in enumerate(blueprint):
         if len(row) != LEVEL_GRID_COLS:
-            raise ValueError(f"Blueprint width mismatch at row {y}: {len(row)} != {LEVEL_GRID_COLS}")
+            raise ValueError(
+                f"Blueprint width mismatch at row {y}: {len(row)} != {LEVEL_GRID_COLS}"
+            )
         for x, ch in enumerate(row):
             cell_rect = rect_for_cell(x, y)
             cell_has_beam = steel_enabled and (x, y) in steel_cells
@@ -921,7 +1034,12 @@ def generate_level_from_blueprint(game_data):
             elif ch == "1":
                 beam = None
                 if cell_has_beam:
-                    beam = SteelBeam(cell_rect.x, cell_rect.y, cell_rect.width, health=STEEL_BEAM_HEALTH)
+                    beam = SteelBeam(
+                        cell_rect.x,
+                        cell_rect.y,
+                        cell_rect.width,
+                        health=STEEL_BEAM_HEALTH,
+                    )
                 wall = Wall(
                     cell_rect.x,
                     cell_rect.y,
@@ -930,7 +1048,9 @@ def generate_level_from_blueprint(game_data):
                     health=INTERNAL_WALL_HEALTH,
                     color=INTERNAL_WALL_COLOR,
                     border_color=INTERNAL_WALL_BORDER_COLOR,
-                    on_destroy=(lambda _w, b=beam: add_beam_to_groups(b)) if beam else None,
+                    on_destroy=(lambda _w, b=beam: add_beam_to_groups(b))
+                    if beam
+                    else None,
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
@@ -948,7 +1068,9 @@ def generate_level_from_blueprint(game_data):
 
             # Standalone beams (non-wall cells) are placed immediately
             if cell_has_beam and ch != "1":
-                beam = SteelBeam(cell_rect.x, cell_rect.y, cell_rect.width, health=STEEL_BEAM_HEALTH)
+                beam = SteelBeam(
+                    cell_rect.x, cell_rect.y, cell_rect.width, health=STEEL_BEAM_HEALTH
+                )
                 add_beam_to_groups(beam)
 
     game_data.areas.outer_rect = (0, 0, LEVEL_WIDTH, LEVEL_HEIGHT)
@@ -976,15 +1098,25 @@ def place_new_car(wall_group, player, walkable_cells: List[pygame.Rect]):
         temp_car = Car(c_x, c_y)
         temp_rect = temp_car.rect.inflate(30, 30)
         nearby_walls = pygame.sprite.Group()
-        nearby_walls.add([w for w in wall_group if abs(w.rect.centerx - c_x) < 150 and abs(w.rect.centery - c_y) < 150])
-        collides_wall = pygame.sprite.spritecollideany(temp_car, nearby_walls, collided=lambda s1, s2: s1.rect.colliderect(s2.rect))
+        nearby_walls.add(
+            [
+                w
+                for w in wall_group
+                if abs(w.rect.centerx - c_x) < 150 and abs(w.rect.centery - c_y) < 150
+            ]
+        )
+        collides_wall = pygame.sprite.spritecollideany(
+            temp_car, nearby_walls, collided=lambda s1, s2: s1.rect.colliderect(s2.rect)
+        )
         collides_player = temp_rect.colliderect(player.rect.inflate(50, 50))
         if not collides_wall and not collides_player:
             return temp_car
     return None
 
 
-def place_fuel_can(walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None) -> FuelCan | None:
+def place_fuel_can(
+    walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None
+) -> FuelCan | None:
     """Pick a spawn spot for the fuel can away from the player (and car if given)."""
     if not walkable_cells:
         return None
@@ -994,9 +1126,18 @@ def place_fuel_can(walkable_cells: List[pygame.Rect], player: Player, car: Car |
 
     for _ in range(200):
         cell = random.choice(walkable_cells)
-        if math.hypot(cell.centerx - player.x, cell.centery - player.y) < min_player_dist:
+        if (
+            math.hypot(cell.centerx - player.x, cell.centery - player.y)
+            < min_player_dist
+        ):
             continue
-        if car and math.hypot(cell.centerx - car.rect.centerx, cell.centery - car.rect.centery) < min_car_dist:
+        if (
+            car
+            and math.hypot(
+                cell.centerx - car.rect.centerx, cell.centery - car.rect.centery
+            )
+            < min_car_dist
+        ):
             continue
         return FuelCan(cell.centerx, cell.centery)
 
@@ -1005,7 +1146,9 @@ def place_fuel_can(walkable_cells: List[pygame.Rect], player: Player, car: Car |
     return FuelCan(cell.centerx, cell.centery)
 
 
-def place_flashlight(walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None) -> Flashlight | None:
+def place_flashlight(
+    walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None
+) -> Flashlight | None:
     """Pick a spawn spot for the flashlight away from the player (and car if given)."""
     if not walkable_cells:
         return None
@@ -1015,9 +1158,18 @@ def place_flashlight(walkable_cells: List[pygame.Rect], player: Player, car: Car
 
     for _ in range(200):
         cell = random.choice(walkable_cells)
-        if math.hypot(cell.centerx - player.x, cell.centery - player.y) < min_player_dist:
+        if (
+            math.hypot(cell.centerx - player.x, cell.centery - player.y)
+            < min_player_dist
+        ):
             continue
-        if car and math.hypot(cell.centerx - car.rect.centerx, cell.centery - car.rect.centery) < min_car_dist:
+        if (
+            car
+            and math.hypot(
+                cell.centerx - car.rect.centerx, cell.centery - car.rect.centery
+            )
+            < min_car_dist
+        ):
             continue
         return Flashlight(cell.centerx, cell.centery)
 
@@ -1025,7 +1177,12 @@ def place_flashlight(walkable_cells: List[pygame.Rect], player: Player, car: Car
     return Flashlight(cell.centerx, cell.centery)
 
 
-def place_flashlights(walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None, count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT) -> list[Flashlight]:
+def place_flashlights(
+    walkable_cells: List[pygame.Rect],
+    player: Player,
+    car: Car | None = None,
+    count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT,
+) -> list[Flashlight]:
     """Spawn multiple flashlights using the single-place helper to spread them out."""
     placed: list[Flashlight] = []
     attempts = 0
@@ -1036,13 +1193,22 @@ def place_flashlights(walkable_cells: List[pygame.Rect], player: Player, car: Ca
         if not fl:
             break
         # Avoid clustering too tightly
-        if any(math.hypot(other.rect.centerx - fl.rect.centerx, other.rect.centery - fl.rect.centery) < 120 for other in placed):
+        if any(
+            math.hypot(
+                other.rect.centerx - fl.rect.centerx,
+                other.rect.centery - fl.rect.centery,
+            )
+            < 120
+            for other in placed
+        ):
             continue
         placed.append(fl)
     return placed
 
 
-def place_companion(walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None) -> Companion | None:
+def place_companion(
+    walkable_cells: List[pygame.Rect], player: Player, car: Car | None = None
+) -> Companion | None:
     """Spawn the stranded buddy somewhere on a walkable tile away from the player and car."""
     if not walkable_cells:
         return None
@@ -1052,9 +1218,18 @@ def place_companion(walkable_cells: List[pygame.Rect], player: Player, car: Car 
 
     for _ in range(200):
         cell = random.choice(walkable_cells)
-        if math.hypot(cell.centerx - player.x, cell.centery - player.y) < min_player_dist:
+        if (
+            math.hypot(cell.centerx - player.x, cell.centery - player.y)
+            < min_player_dist
+        ):
             continue
-        if car and math.hypot(cell.centerx - car.rect.centerx, cell.centery - car.rect.centery) < min_car_dist:
+        if (
+            car
+            and math.hypot(
+                cell.centerx - car.rect.centerx, cell.centery - car.rect.centery
+            )
+            < min_car_dist
+        ):
             continue
         return Companion(cell.centerx, cell.centery)
 
@@ -1067,7 +1242,11 @@ def respawn_rescued_companion_near_player(game_data) -> None:
     if not (game_data.stage.requires_companion and game_data.state.companion_rescued):
         return
     # If a companion is already active, do nothing
-    if game_data.companion and game_data.companion.alive() and not game_data.companion.rescued:
+    if (
+        game_data.companion
+        and game_data.companion.alive()
+        and not game_data.companion.rescued
+    ):
         return
 
     player = game_data.player
@@ -1092,7 +1271,9 @@ def respawn_rescued_companion_near_player(game_data) -> None:
     game_data.groups.all_sprites.add(companion, layer=2)
 
 
-def get_shrunk_sprite(sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Optional[float] = None) -> sprite.Sprite:
+def get_shrunk_sprite(
+    sprite: pygame.sprite.Sprite, scale_x: float, scale_y: Optional[float] = None
+) -> sprite.Sprite:
     if scale_y is None:
         scale_y = scale_x
 
@@ -1129,7 +1310,11 @@ def update_footprints(game_data) -> None:
     footprints = state.footprints
     if not player.in_car:
         last_pos = state.last_footprint_pos
-        dist = math.hypot(player.x - last_pos[0], player.y - last_pos[1]) if last_pos else None
+        dist = (
+            math.hypot(player.x - last_pos[0], player.y - last_pos[1])
+            if last_pos
+            else None
+        )
         if last_pos is None or (dist is not None and dist >= FOOTPRINT_STEP_DISTANCE):
             footprints.append({"pos": (player.x, player.y), "time": now})
             state.last_footprint_pos = (player.x, player.y)
@@ -1183,7 +1368,9 @@ def initialize_game_state(config, stage: Stage):
 
     return GameData(
         state=game_state,
-        groups=Groups(all_sprites=all_sprites, wall_group=wall_group, zombie_group=zombie_group),
+        groups=Groups(
+            all_sprites=all_sprites, wall_group=wall_group, zombie_group=zombie_group
+        ),
         camera=camera,
         areas=Areas(
             outer_rect=outer_rect,
@@ -1206,7 +1393,11 @@ def setup_player_and_car(game_data, layout_data):
     walkable_cells: List[pygame.Rect] = layout_data["walkable_cells"]
 
     def pick_center(cells: List[pygame.Rect]) -> Tuple[int, int]:
-        return random.choice(cells).center if cells else (LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2)
+        return (
+            random.choice(cells).center
+            if cells
+            else (LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2)
+        )
 
     player_pos = pick_center(layout_data["player_cells"] or walkable_cells)
     player = Player(*player_pos)
@@ -1216,7 +1407,12 @@ def setup_player_and_car(game_data, layout_data):
     car_pos = None
     for _ in range(200):
         candidate = random.choice(car_candidates)
-        if math.hypot(candidate.centerx - player_pos[0], candidate.centery - player_pos[1]) >= 400:
+        if (
+            math.hypot(
+                candidate.centerx - player_pos[0], candidate.centery - player_pos[1]
+            )
+            >= 400
+        ):
             car_pos = candidate.center
             break
     if car_pos is None and car_candidates:
@@ -1249,7 +1445,10 @@ def spawn_initial_zombies(game_data, player, layout_data):
     max_placement_attempts = INITIAL_ZOMBIES_INSIDE * 20
     min_spawn_separation = ZOMBIE_SEPARATION_DISTANCE
 
-    while initial_zombies_placed < INITIAL_ZOMBIES_INSIDE and placement_attempts < max_placement_attempts:
+    while (
+        initial_zombies_placed < INITIAL_ZOMBIES_INSIDE
+        and placement_attempts < max_placement_attempts
+    ):
         placement_attempts += 1
         cell = random.choice(spawn_cells)
         jitter_x = random.uniform(-cell.width * 0.4, cell.width * 0.4)
@@ -1260,19 +1459,28 @@ def spawn_initial_zombies(game_data, player, layout_data):
         temp_sprite.rect = temp_zombie.rect.inflate(5, 5)
 
         collides_with_wall = pygame.sprite.spritecollideany(temp_sprite, wall_group)
-        collides_with_player = temp_sprite.rect.colliderect(player.rect.inflate(ZOMBIE_SIGHT_RANGE, ZOMBIE_SIGHT_RANGE))
+        collides_with_player = temp_sprite.rect.colliderect(
+            player.rect.inflate(ZOMBIE_SIGHT_RANGE, ZOMBIE_SIGHT_RANGE)
+        )
         too_close_to_zombie = any(
-            math.hypot(temp_zombie.rect.centerx - z.x, temp_zombie.rect.centery - z.y) < min_spawn_separation
+            math.hypot(temp_zombie.rect.centerx - z.x, temp_zombie.rect.centery - z.y)
+            < min_spawn_separation
             for z in zombie_group
         )
 
-        if not collides_with_wall and not collides_with_player and not too_close_to_zombie:
+        if (
+            not collides_with_wall
+            and not collides_with_player
+            and not too_close_to_zombie
+        ):
             new_zombie = temp_zombie
             zombie_group.add(new_zombie)
             all_sprites.add(new_zombie, layer=1)
             initial_zombies_placed += 1
 
-    game_data.state.last_zombie_spawn_time = pygame.time.get_ticks() - ZOMBIE_SPAWN_DELAY_MS
+    game_data.state.last_zombie_spawn_time = (
+        pygame.time.get_ticks() - ZOMBIE_SPAWN_DELAY_MS
+    )
 
 
 def handle_game_over_state(screen, game_data):
@@ -1312,18 +1520,37 @@ def handle_game_over_state(screen, game_data):
         scaled_w = max(1, scaled_w)
         scaled_h = max(1, scaled_h)
 
-        state.scaled_overview = pygame.transform.smoothscale(state.overview_surface, (scaled_w, scaled_h))
+        state.scaled_overview = pygame.transform.smoothscale(
+            state.overview_surface, (scaled_w, scaled_h)
+        )
         state.overview_created = True
 
     # Display overview map and messages
     screen.fill(BLACK)
     if state.scaled_overview:
-        screen.blit(state.scaled_overview, state.scaled_overview.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)))
+        screen.blit(
+            state.scaled_overview,
+            state.scaled_overview.get_rect(
+                center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+            ),
+        )
 
         if state.game_won:
-            show_message(screen, "YOU ESCAPED!", 22, GREEN, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 26))
+            show_message(
+                screen,
+                "YOU ESCAPED!",
+                22,
+                GREEN,
+                (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 26),
+            )
         else:
-            show_message(screen, "GAME OVER", 22, RED, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 26))
+            show_message(
+                screen,
+                "GAME OVER",
+                22,
+                RED,
+                (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 26),
+            )
             if state.game_over_message:
                 show_message(
                     screen,
@@ -1372,12 +1599,18 @@ def process_player_input(keys, player, car):
         target_speed = CAR_SPEED
         move_len = math.hypot(dx_input, dy_input)
         if move_len > 0:
-            car_dx, car_dy = (dx_input / move_len) * target_speed, (dy_input / move_len) * target_speed
+            car_dx, car_dy = (
+                (dx_input / move_len) * target_speed,
+                (dy_input / move_len) * target_speed,
+            )
     elif not player.in_car:
         target_speed = PLAYER_SPEED
         move_len = math.hypot(dx_input, dy_input)
         if move_len > 0:
-            player_dx, player_dy = (dx_input / move_len) * target_speed, (dy_input / move_len) * target_speed
+            player_dx, player_dy = (
+                (dx_input / move_len) * target_speed,
+                (dy_input / move_len) * target_speed,
+            )
 
     return player_dx, player_dy, car_dx, car_dy
 
@@ -1417,23 +1650,38 @@ def update_entities(game_data, player_dx, player_dy, car_dx, car_dy):
 
     # Spawn new zombies if needed
     current_time = pygame.time.get_ticks()
-    if len(zombie_group) < MAX_ZOMBIES and current_time - game_data.state.last_zombie_spawn_time > ZOMBIE_SPAWN_DELAY_MS:
+    if (
+        len(zombie_group) < MAX_ZOMBIES
+        and current_time - game_data.state.last_zombie_spawn_time
+        > ZOMBIE_SPAWN_DELAY_MS
+    ):
         new_zombie = create_zombie(config, hint_pos=(player.x, player.y))
         zombie_group.add(new_zombie)
         all_sprites.add(new_zombie, layer=1)
         game_data.state.last_zombie_spawn_time = current_time
 
     # Update zombies
-    target_center = car.rect.center if player.in_car and car.alive() else player.rect.center
+    target_center = (
+        car.rect.center if player.in_car and car.alive() else player.rect.center
+    )
     companion_on_screen = False
     screen_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
-    if game_data.stage.requires_companion and companion and companion.alive() and not companion.rescued:
+    if (
+        game_data.stage.requires_companion
+        and companion
+        and companion.alive()
+        and not companion.rescued
+    ):
         companion_on_screen = camera.apply_rect(companion.rect).colliderect(screen_rect)
     for zombie in zombie_group:
         target = target_center
         if companion_on_screen and companion:
-            dist_to_target = math.hypot(target_center[0] - zombie.x, target_center[1] - zombie.y)
-            dist_to_companion = math.hypot(companion.rect.centerx - zombie.x, companion.rect.centery - zombie.y)
+            dist_to_target = math.hypot(
+                target_center[0] - zombie.x, target_center[1] - zombie.y
+            )
+            dist_to_companion = math.hypot(
+                companion.rect.centerx - zombie.x, companion.rect.centery - zombie.y
+            )
             if dist_to_companion < dist_to_target:
                 target = companion.rect.center
         zombie.update(target, wall_group, zombie_group)
@@ -1457,7 +1705,9 @@ def check_interactions(game_data):
 
     # Fuel pickup
     if fuel and fuel.alive() and not state.has_fuel and not player.in_car:
-        dist_to_fuel = math.hypot(fuel.rect.centerx - player.x, fuel.rect.centery - player.y)
+        dist_to_fuel = math.hypot(
+            fuel.rect.centerx - player.x, fuel.rect.centery - player.y
+        )
         if dist_to_fuel <= max(FUEL_PICKUP_RADIUS, PLAYER_RADIUS + 6):
             state.has_fuel = True
             state.fuel_message_until = 0
@@ -1472,7 +1722,9 @@ def check_interactions(game_data):
         for flashlight in list(flashlights):
             if not flashlight.alive():
                 continue
-            dist_to_flashlight = math.hypot(flashlight.rect.centerx - player.x, flashlight.rect.centery - player.y)
+            dist_to_flashlight = math.hypot(
+                flashlight.rect.centerx - player.x, flashlight.rect.centery - player.y
+            )
             if dist_to_flashlight <= max(FLASHLIGHT_PICKUP_RADIUS, PLAYER_RADIUS + 6):
                 state.has_flashlight = True
                 state.hint_expires_at = 0
@@ -1486,7 +1738,9 @@ def check_interactions(game_data):
                 break
 
     companion_on_screen = False
-    companion_active = companion and companion.alive() and not getattr(companion, "rescued", False)
+    companion_active = (
+        companion and companion.alive() and not getattr(companion, "rescued", False)
+    )
     if companion_active:
         screen_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
         companion_on_screen = camera.apply_rect(companion.rect).colliderect(screen_rect)
@@ -1508,7 +1762,9 @@ def check_interactions(game_data):
                 companion_on_screen = False
 
         # Zombies reaching the companion
-        if companion_active and pygame.sprite.spritecollide(companion, zombie_group, False, pygame.sprite.collide_circle):
+        if companion_active and pygame.sprite.spritecollide(
+            companion, zombie_group, False, pygame.sprite.collide_circle
+        ):
             if companion_on_screen:
                 state.game_over_message = "AAAAHHH!!"
                 state.game_over = True
@@ -1575,7 +1831,9 @@ def check_interactions(game_data):
     # Player getting caught by zombies
     if not player.in_car and player in all_sprites:
         shrunk_player = get_shrunk_sprite(player, 0.8)
-        if pygame.sprite.spritecollide(shrunk_player, zombie_group, False, pygame.sprite.collide_circle):
+        if pygame.sprite.spritecollide(
+            shrunk_player, zombie_group, False, pygame.sprite.collide_circle
+        ):
             if not state.game_over:
                 state.game_over = True
                 state.game_over_at = pygame.time.get_ticks()
@@ -1584,7 +1842,9 @@ def check_interactions(game_data):
     # Player escaping the level
     if player.in_car and car.alive() and state.has_fuel:
         companion_ready = not stage.requires_companion or state.companion_rescued
-        if companion_ready and any(outside.collidepoint(car.rect.center) for outside in outside_rects):
+        if companion_ready and any(
+            outside.collidepoint(car.rect.center) for outside in outside_rects
+        ):
             state.game_won = True
 
     # Return fog of view target
@@ -1593,7 +1853,13 @@ def check_interactions(game_data):
     return None
 
 
-def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, show_pause_overlay: bool = True) -> bool:
+def run_game(
+    screen: surface.Surface,
+    clock: time.Clock,
+    config,
+    stage: Stage,
+    show_pause_overlay: bool = True,
+) -> bool:
     """Main game loop function, now using smaller helper functions."""
     # Initialize game components
     game_data = initialize_game_state(config, stage)
@@ -1622,7 +1888,9 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
             game_data.fuel = fuel_can
             game_data.groups.all_sprites.add(fuel_can, layer=1)
     if flashlights_enabled:
-        flashlights = place_flashlights(layout_data["walkable_cells"], player, car, count=max(1, flashlight_count))
+        flashlights = place_flashlights(
+            layout_data["walkable_cells"], player, car, count=max(1, flashlight_count)
+        )
         game_data.flashlights = flashlights
         game_data.groups.all_sprites.add(flashlights, layer=1)
 
@@ -1700,8 +1968,12 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
                 paused_focus = False
                 paused_manual = False
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_s and (pygame.key.get_mods() & pygame.KMOD_CTRL):
-                    state_snapshot = {k: v for k, v in game_data.state.items() if k != "footprints"}
+                if event.key == pygame.K_s and (
+                    pygame.key.get_mods() & pygame.KMOD_CTRL
+                ):
+                    state_snapshot = {
+                        k: v for k, v in game_data.state.items() if k != "footprints"
+                    }
                     print("STATE DEBUG:", state_snapshot)
                     continue
                 if event.key == pygame.K_ESCAPE:
@@ -1737,15 +2009,35 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
             if show_pause_overlay:
                 overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
                 overlay.fill((0, 0, 0, 150))
-                pygame.draw.circle(overlay, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2), 35, width=3)
+                pygame.draw.circle(
+                    overlay,
+                    LIGHT_GRAY,
+                    (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2),
+                    35,
+                    width=3,
+                )
                 bar_width = 8
                 bar_height = 30
                 gap = 9
                 cx, cy = SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2
-                pygame.draw.rect(overlay, LIGHT_GRAY, (cx - gap - bar_width, cy - bar_height // 2, bar_width, bar_height))
-                pygame.draw.rect(overlay, LIGHT_GRAY, (cx + gap, cy - bar_height // 2, bar_width, bar_height))
+                pygame.draw.rect(
+                    overlay,
+                    LIGHT_GRAY,
+                    (cx - gap - bar_width, cy - bar_height // 2, bar_width, bar_height),
+                )
+                pygame.draw.rect(
+                    overlay,
+                    LIGHT_GRAY,
+                    (cx + gap, cy - bar_height // 2, bar_width, bar_height),
+                )
                 screen.blit(overlay, (0, 0))
-                show_message(screen, "PAUSED", 18, WHITE, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 24))
+                show_message(
+                    screen,
+                    "PAUSED",
+                    18,
+                    WHITE,
+                    (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 24),
+                )
                 show_message(
                     screen,
                     "Press P or click to resume",
@@ -1791,11 +2083,18 @@ def run_game(screen: surface.Surface, clock: time.Clock, config, stage: Stage, s
 
             if target_type != hint_target_type:
                 game_data.state.hint_target_type = target_type
-                game_data.state.hint_expires_at = elapsed_ms + hint_delay if target_type else 0
+                game_data.state.hint_expires_at = (
+                    elapsed_ms + hint_delay if target_type else 0
+                )
                 hint_expires_at = game_data.state.hint_expires_at
                 hint_target_type = target_type
 
-            if target_type and hint_expires_at and elapsed_ms >= hint_expires_at and not player.in_car:
+            if (
+                target_type
+                and hint_expires_at
+                and elapsed_ms >= hint_expires_at
+                and not player.in_car
+            ):
                 if target_type == "fuel" and game_data.fuel and game_data.fuel.alive():
                     hint_target = game_data.fuel.rect.center
                 elif target_type == "car" and game_data.car.alive():
@@ -1834,7 +2133,12 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
     options = [{"type": "stage", "stage": s, "available": s.available} for s in STAGES]
     options += [{"type": "settings"}, {"type": "quit"}]
     selected = next(
-        (i for i, opt in enumerate(options) if opt["type"] == "stage" and opt["stage"].id == DEFAULT_STAGE_ID), 0
+        (
+            i
+            for i, opt in enumerate(options)
+            if opt["type"] == "stage" and opt["stage"].id == DEFAULT_STAGE_ID
+        ),
+        0,
     )
 
     while True:
@@ -1862,10 +2166,16 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                         return {"action": "quit", "stage": None}
 
         screen.fill(BLACK)
-        show_message(screen, "Zombie Escape", 36, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 88))
+        show_message(
+            screen,
+            "Zombie Escape",
+            36,
+            LIGHT_GRAY,
+            (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 88),
+        )
 
         try:
-            font = load_font(18)
+            font = load_font(20)
             line_height = 22
             start_y = SCREEN_HEIGHT // 2 - 36
             for idx, option in enumerate(options):
@@ -1873,7 +2183,11 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                     label = option["stage"].name
                     if not option.get("available"):
                         label += " [Locked]"
-                    color = YELLOW if idx == selected else (WHITE if option.get("available") else GRAY)
+                    color = (
+                        YELLOW
+                        if idx == selected
+                        else (WHITE if option.get("available") else GRAY)
+                    )
                 elif option["type"] == "settings":
                     label = "Settings"
                     color = YELLOW if idx == selected else WHITE
@@ -1882,26 +2196,34 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                     color = YELLOW if idx == selected else WHITE
 
                 text_surface = font.render(label, False, color)
-                text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, start_y + idx * line_height))
+                text_rect = text_surface.get_rect(
+                    center=(SCREEN_WIDTH // 2, start_y + idx * line_height)
+                )
                 screen.blit(text_surface, text_rect)
 
             # Selected stage description (if a stage is highlighted)
             current = options[selected]
             if current["type"] == "stage":
-                desc_font = load_font(16)
+                desc_font = load_font(12)
                 desc_color = LIGHT_GRAY if current.get("available") else GRAY
-                desc_surface = desc_font.render(current["stage"].description, False, desc_color)
-                desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 74))
+                desc_surface = desc_font.render(
+                    current["stage"].description, False, desc_color
+                )
+                desc_rect = desc_surface.get_rect(
+                    center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 74)
+                )
                 screen.blit(desc_surface, desc_rect)
 
             # Quick config summary
             fast_on = config.get("fast_zombies", {}).get("enabled", True)
             hint_on = config.get("car_hint", {}).get("enabled", True)
 
-            hint_font = load_font(16)
+            hint_font = load_font(12)
             hint_text = "Resize window: [ to shrink, ] to enlarge (menu only)"
             hint_surface = hint_font.render(hint_text, False, LIGHT_GRAY)
-            hint_rect = hint_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50))
+            hint_rect = hint_surface.get_rect(
+                center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50)
+            )
             screen.blit(hint_surface, hint_rect)
         except pygame.error as e:
             print(f"Error rendering title screen: {e}")
@@ -1910,7 +2232,9 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
         clock.tick(FPS)
 
 
-def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_path) -> dict:
+def settings_screen(
+    screen: surface.Surface, clock: time.Clock, config, config_path
+) -> dict:
     """Settings menu shown from the title screen."""
     working = copy.deepcopy(config)
     selected = 0
@@ -2009,9 +2333,9 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
         show_message(screen, "Settings", 26, LIGHT_GRAY, (SCREEN_WIDTH // 2, 20))
 
         try:
-            label_font = load_font(16)
-            value_font = load_font(15)
-            section_font = load_font(15)
+            label_font = load_font(12)
+            value_font = load_font(12)
+            section_font = load_font(12)
             highlight_color = (70, 70, 70)
 
             row_height = 18
@@ -2029,14 +2353,20 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             section_states = {}
             y_cursor = start_y
             for section in sections:
-                header_surface = section_font.render(section["label"], False, LIGHT_GRAY)
+                header_surface = section_font.render(
+                    section["label"], False, LIGHT_GRAY
+                )
                 section_states[section["label"]] = {
                     "next_y": y_cursor + header_surface.get_height() + 6,
                     "header_surface": header_surface,
                     "header_pos": (column_margin, y_cursor),
                 }
                 rows_in_section = len(section["rows"])
-                y_cursor = section_states[section["label"]]["next_y"] + rows_in_section * row_height + section_spacing
+                y_cursor = (
+                    section_states[section["label"]]["next_y"]
+                    + rows_in_section * row_height
+                    + section_spacing
+                )
 
             for state in section_states.values():
                 screen.blit(state["header_surface"], state["header_pos"])
@@ -2045,22 +2375,38 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                 section_label = row_sections[idx]
                 state = section_states[section_label]
                 col_x = column_margin
-                enabled = working.get(row["path"][0], {}).get(row["path"][1], row["easy_value"])
+                enabled = working.get(row["path"][0], {}).get(
+                    row["path"][1], row["easy_value"]
+                )
                 row_y_current = state["next_y"]
                 state["next_y"] += row_height
 
-                highlight_rect = pygame.Rect(col_x, row_y_current - 2, column_width, row_height - 4)
+                highlight_rect = pygame.Rect(
+                    col_x, row_y_current - 2, column_width, row_height - 4
+                )
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
                 label_surface = label_font.render(row["label"], False, WHITE)
-                label_rect = label_surface.get_rect(midleft=(col_x, row_y_current + row_height // 2))
+                label_rect = label_surface.get_rect(
+                    topleft=(
+                        col_x,
+                        row_y_current + (row_height - label_surface.get_height()) // 2,
+                    )
+                )
                 screen.blit(label_surface, label_rect)
 
                 slider_y = row_y_current + (row_height - segment_height) // 2 - 2
                 slider_x = col_x + column_width - segment_total_width
-                left_rect = pygame.Rect(slider_x, slider_y, segment_width, segment_height)
-                right_rect = pygame.Rect(left_rect.right + segment_gap, slider_y, segment_width, segment_height)
+                left_rect = pygame.Rect(
+                    slider_x, slider_y, segment_width, segment_height
+                )
+                right_rect = pygame.Rect(
+                    left_rect.right + segment_gap,
+                    slider_y,
+                    segment_width,
+                    segment_height,
+                )
 
                 left_active = enabled == row["easy_value"]
                 right_active = not left_active
@@ -2080,23 +2426,27 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
 
             hint_start_y = start_y
             hint_start_x = SCREEN_WIDTH // 2 + 16
-            hint_font = load_font(15)
+            hint_font = load_font(12)
             hint_lines = [
                 "Up/Down: select a setting",
                 "Left/Right: set value",
-                "Space/Enter: toggle highlighted setting",
+                "Space/Enter: toggle value",
                 "R: reset to defaults",
                 "Esc/Backspace: save and return",
             ]
             for i, line in enumerate(hint_lines):
                 hint_surface = hint_font.render(line, False, WHITE)
-                hint_rect = hint_surface.get_rect(topleft=(hint_start_x, hint_start_y + i * 18))
+                hint_rect = hint_surface.get_rect(
+                    topleft=(hint_start_x, hint_start_y + i * 18)
+                )
                 screen.blit(hint_surface, hint_rect)
 
-            path_font = load_font(13)
+            path_font = load_font(12)
             path_text = f"Config: {config_path}"
             path_surface = path_font.render(path_text, False, LIGHT_GRAY)
-            path_rect = path_surface.get_rect(midtop=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 32))
+            path_rect = path_surface.get_rect(
+                midtop=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 32)
+            )
             screen.blit(path_surface, path_rect)
         except pygame.error as e:
             print(f"Error rendering settings: {e}")
@@ -2138,7 +2488,13 @@ def main():
 
         if selection["action"] == "stage":
             try:
-                restart_game = run_game(screen, clock, config, selection["stage"], show_pause_overlay=not hide_pause_overlay)
+                restart_game = run_game(
+                    screen,
+                    clock,
+                    config,
+                    selection["stage"],
+                    show_pause_overlay=not hide_pause_overlay,
+                )
             except SystemExit:
                 restart_game = False  # Exit the main loop
             except Exception:
