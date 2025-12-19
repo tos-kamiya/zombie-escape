@@ -35,6 +35,7 @@ from .colors import (
 )
 from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
 from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
+from .font_utils import load_font
 
 # --- Constants/Global variables ---
 LOGICAL_SCREEN_WIDTH = 400
@@ -1864,7 +1865,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
         show_message(screen, "Zombie Escape", 36, LIGHT_GRAY, (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 88))
 
         try:
-            font = pygame.font.Font(None, 18)
+            font = load_font(18)
             line_height = 22
             start_y = SCREEN_HEIGHT // 2 - 36
             for idx, option in enumerate(options):
@@ -1880,16 +1881,16 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                     label = "Quit"
                     color = YELLOW if idx == selected else WHITE
 
-                text_surface = font.render(label, True, color)
+                text_surface = font.render(label, False, color)
                 text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, start_y + idx * line_height))
                 screen.blit(text_surface, text_rect)
 
             # Selected stage description (if a stage is highlighted)
             current = options[selected]
             if current["type"] == "stage":
-                desc_font = pygame.font.Font(None, 16)
+                desc_font = load_font(16)
                 desc_color = LIGHT_GRAY if current.get("available") else GRAY
-                desc_surface = desc_font.render(current["stage"].description, True, desc_color)
+                desc_surface = desc_font.render(current["stage"].description, False, desc_color)
                 desc_rect = desc_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 74))
                 screen.blit(desc_surface, desc_rect)
 
@@ -1897,9 +1898,9 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             fast_on = config.get("fast_zombies", {}).get("enabled", True)
             hint_on = config.get("car_hint", {}).get("enabled", True)
 
-            hint_font = pygame.font.Font(None, 16)
+            hint_font = load_font(16)
             hint_text = "Resize window: [ to shrink, ] to enlarge (menu only)"
-            hint_surface = hint_font.render(hint_text, True, LIGHT_GRAY)
+            hint_surface = hint_font.render(hint_text, False, LIGHT_GRAY)
             hint_rect = hint_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50))
             screen.blit(hint_surface, hint_rect)
         except pygame.error as e:
@@ -2008,9 +2009,9 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
         show_message(screen, "Settings", 26, LIGHT_GRAY, (SCREEN_WIDTH // 2, 20))
 
         try:
-            label_font = pygame.font.Font(None, 16)
-            value_font = pygame.font.Font(None, 15)
-            section_font = pygame.font.Font(None, 15)
+            label_font = load_font(16)
+            value_font = load_font(15)
+            section_font = load_font(15)
             highlight_color = (70, 70, 70)
 
             row_height = 18
@@ -2028,7 +2029,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
             section_states = {}
             y_cursor = start_y
             for section in sections:
-                header_surface = section_font.render(section["label"], True, LIGHT_GRAY)
+                header_surface = section_font.render(section["label"], False, LIGHT_GRAY)
                 section_states[section["label"]] = {
                     "next_y": y_cursor + header_surface.get_height() + 6,
                     "header_surface": header_surface,
@@ -2052,7 +2053,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
-                label_surface = label_font.render(row["label"], True, WHITE)
+                label_surface = label_font.render(row["label"], False, WHITE)
                 label_rect = label_surface.get_rect(midleft=(col_x, row_y_current + row_height // 2))
                 screen.blit(label_surface, label_rect)
 
@@ -2070,7 +2071,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                     outline_color = GREEN if active else LIGHT_GRAY
                     pygame.draw.rect(screen, active_color, rect)
                     pygame.draw.rect(screen, outline_color, rect, width=2)
-                    text_surface = value_font.render(text, True, WHITE)
+                    text_surface = value_font.render(text, False, WHITE)
                     text_rect = text_surface.get_rect(center=rect.center)
                     screen.blit(text_surface, text_rect)
 
@@ -2079,7 +2080,7 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
 
             hint_start_y = start_y
             hint_start_x = SCREEN_WIDTH // 2 + 16
-            hint_font = pygame.font.Font(None, 15)
+            hint_font = load_font(15)
             hint_lines = [
                 "Up/Down: select a setting",
                 "Left/Right: set value",
@@ -2088,13 +2089,13 @@ def settings_screen(screen: surface.Surface, clock: time.Clock, config, config_p
                 "Esc/Backspace: save and return",
             ]
             for i, line in enumerate(hint_lines):
-                hint_surface = hint_font.render(line, True, WHITE)
+                hint_surface = hint_font.render(line, False, WHITE)
                 hint_rect = hint_surface.get_rect(topleft=(hint_start_x, hint_start_y + i * 18))
                 screen.blit(hint_surface, hint_rect)
 
-            path_font = pygame.font.Font(None, 13)
+            path_font = load_font(13)
             path_text = f"Config: {config_path}"
-            path_surface = path_font.render(path_text, True, LIGHT_GRAY)
+            path_surface = path_font.render(path_text, False, LIGHT_GRAY)
             path_rect = path_surface.get_rect(midtop=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 32))
             screen.blit(path_surface, path_rect)
         except pygame.error as e:

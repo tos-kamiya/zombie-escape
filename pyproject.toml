@@ -33,5 +33,12 @@ Homepage = "https://github.com/tos-kamiya/zombie-escape"
 [tool.hatch.version]
 path = "src/zombie_escape/__about__.py"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/zombie_escape"]
+include = ["src/zombie_escape/assets/**"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/zombie_escape/**"]
+
 [project.gui-scripts]
 zombie-escape = "zombie_escape:main"

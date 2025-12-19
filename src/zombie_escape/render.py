@@ -21,6 +21,7 @@ from .colors import (
     ORANGE,
     YELLOW,
 )
+from .font_utils import load_font
 
 
 @dataclass(frozen=True)
@@ -52,8 +53,8 @@ def show_message(
     screen: surface.Surface, text: str, size: int, color: Tuple[int, int, int], position: Tuple[int, int]
 ) -> None:
     try:
-        font = pygame.font.Font(None, size)
-        text_surface = font.render(text, True, color)
+        font = load_font(size)
+        text_surface = font.render(text, False, color)
         text_rect = text_surface.get_rect(center=position)
 
         # Add a semi-transparent background rectangle for better visibility
@@ -240,8 +241,8 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     color = GREEN if all([footprints_on, fast_on, hint_on, flashlight_on]) else LIGHT_GRAY
 
     try:
-        font = pygame.font.Font(None, 14)
-        text_surface = font.render(status_text, True, color)
+        font = load_font(14)
+        text_surface = font.render(status_text, False, color)
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)
     except pygame.error as e:
@@ -347,10 +348,10 @@ def draw(
 
     def _render_objective(lines: list[str]):
         try:
-            font = pygame.font.Font(None, 18)
+            font = load_font(18)
             y = 16
             for line in lines:
-                text_surface = font.render(line, True, YELLOW)
+                text_surface = font.render(line, False, YELLOW)
                 text_rect = text_surface.get_rect(topleft=(16, y))
                 screen.blit(text_surface, text_rect)
                 y += text_rect.height + 6
