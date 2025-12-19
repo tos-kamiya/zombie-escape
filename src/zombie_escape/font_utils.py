@@ -9,7 +9,6 @@ import pygame
 
 FONT_RESOURCE = "Silkscreen-Regular.ttf"
 FONT_SCALE = 0.7
-FONT_SIZE_STEP = 10
 
 
 @contextmanager
@@ -26,10 +25,6 @@ def _font_path() -> Iterator[Path | None]:
 
 def load_font(size: int) -> pygame.font.Font:
     scaled_size = max(1, round(size * FONT_SCALE))
-    scaled_size = max(
-        FONT_SIZE_STEP,
-        int(round(scaled_size / FONT_SIZE_STEP) * FONT_SIZE_STEP),
-    )
     with _font_path() as path:
         if path is None:
             return pygame.font.Font(None, scaled_size)

@@ -1,19 +1,19 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import List, Tuple
-import math
 
 import pygame
-from pygame import surface, sprite
+from pygame import sprite, surface
 
 from .colors import (
     BLACK,
     BLUE,
-    FOG_COLOR,
     FLOOR_COLOR_OUTSIDE,
     FLOOR_COLOR_PRIMARY,
     FLOOR_COLOR_SECONDARY,
+    FOG_COLOR,
     FOOTPRINT_COLOR,
     GREEN,
     INTERNAL_WALL_COLOR,
@@ -50,7 +50,11 @@ class RenderAssets:
 
 
 def show_message(
-    screen: surface.Surface, text: str, size: int, color: Tuple[int, int, int], position: Tuple[int, int]
+    screen: surface.Surface,
+    text: str,
+    size: int,
+    color: Tuple[int, int, int],
+    position: Tuple[int, int],
 ) -> None:
     try:
         font = load_font(size)
@@ -91,32 +95,52 @@ def draw_level_overview(
         fade = 1 - (age / assets.footprint_lifetime_ms)
         fade = max(assets.footprint_min_fade, fade)
         color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
-        pygame.draw.circle(surface, color, (int(fp["pos"][0]), int(fp["pos"][1])), assets.footprint_overview_radius)
+        pygame.draw.circle(
+            surface,
+            color,
+            (int(fp["pos"][0]), int(fp["pos"][1])),
+            assets.footprint_overview_radius,
+        )
     if fuel and fuel.alive():
         pygame.draw.rect(surface, YELLOW, fuel.rect, border_radius=3)
         pygame.draw.rect(surface, BLACK, fuel.rect, width=2, border_radius=3)
     if flashlights:
         for flashlight in flashlights:
             if flashlight.alive():
-                pygame.draw.rect(surface, (240, 230, 150), flashlight.rect, border_radius=2)
-                pygame.draw.rect(surface, BLACK, flashlight.rect, width=2, border_radius=2)
+                pygame.draw.rect(
+                    surface, (240, 230, 150), flashlight.rect, border_radius=2
+                )
+                pygame.draw.rect(
+                    surface, BLACK, flashlight.rect, width=2, border_radius=2
+                )
     if player:
         pygame.draw.circle(surface, BLUE, player.rect.center, assets.player_radius * 2)
-    if companion and hasattr(companion, "alive") and companion.alive() and not getattr(companion, "rescued", False):
+    if (
+        companion
+        and hasattr(companion, "alive")
+        and companion.alive()
+        and not getattr(companion, "rescued", False)
+    ):
         buddy_color = (0, 200, 70)
-        pygame.draw.circle(surface, buddy_color, companion.rect.center, assets.player_radius * 2)
+        pygame.draw.circle(
+            surface, buddy_color, companion.rect.center, assets.player_radius * 2
+        )
     if car and car.alive():
         car_rect = car.image.get_rect(center=car.rect.center)
         surface.blit(car.image, car_rect)
 
 
-def get_fog_scale(assets: RenderAssets, stage, has_flashlight: bool, config: dict | None = None) -> float:
+def get_fog_scale(
+    assets: RenderAssets, stage, has_flashlight: bool, config: dict | None = None
+) -> float:
     """Return current fog scale factoring in flashlight bonus."""
     scale = assets.fog_radius_scale
     flashlight_conf = (config or {}).get("flashlight", {})
     flashlight_enabled = flashlight_conf.get("enabled", True)
     try:
-        bonus_scale = float(flashlight_conf.get("bonus_scale", assets.default_flashlight_bonus_scale))
+        bonus_scale = float(
+            flashlight_conf.get("bonus_scale", assets.default_flashlight_bonus_scale)
+        )
     except (TypeError, ValueError):
         bonus_scale = assets.default_flashlight_bonus_scale
     if flashlight_enabled and has_flashlight:
@@ -124,7 +148,9 @@ def get_fog_scale(assets: RenderAssets, stage, has_flashlight: bool, config: dic
     return scale
 
 
-def get_hatch_pattern(fog_data, thickness: int, pixel_scale: int = 1) -> surface.Surface:
+def get_hatch_pattern(
+    fog_data, thickness: int, pixel_scale: int = 1
+) -> surface.Surface:
     """Return cached ordered-dither tile surface (Bayer-style, optionally chunky)."""
     cache = fog_data.setdefault("hatch_patterns", {})
     pixel_scale = max(1, pixel_scale)
@@ -161,7 +187,13 @@ def get_hatch_pattern(fog_data, thickness: int, pixel_scale: int = 1) -> surface
     return pattern
 
 
-def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface, clear_center, radius: float):
+def _blit_hatch_ring(
+    screen,
+    overlay: surface.Surface,
+    pattern: surface.Surface,
+    clear_center,
+    radius: float,
+):
     """Draw a single hatched fog ring using pattern transparency only (no global alpha)."""
     overlay.fill((0, 0, 0, 0))
     p_w, p_h = pattern.get_size()
@@ -172,7 +204,15 @@ def _blit_hatch_ring(screen, overlay: surface.Surface, pattern: surface.Surface,
     screen.blit(overlay, (0, 0))
 
 
-def _draw_hint_arrow(screen, camera, assets: RenderAssets, player, target_pos: Tuple[int, int], color=None, ring_radius: float | None = None) -> None:
+def _draw_hint_arrow(
+    screen,
+    camera,
+    assets: RenderAssets,
+    player,
+    target_pos: Tuple[int, int],
+    color=None,
+    ring_radius: float | None = None,
+) -> None:
     """Draw a soft directional hint from player to a target position."""
     color = color or YELLOW
     player_screen = camera.apply(player).center
@@ -185,7 +225,11 @@ def _draw_hint_arrow(screen, camera, assets: RenderAssets, player, target_pos: T
         return
     dir_x = dx / dist
     dir_y = dy / dist
-    ring_radius = ring_radius if ring_radius is not None else assets.fov_radius * 0.5 * assets.fog_radius_scale
+    ring_radius = (
+        ring_radius
+        if ring_radius is not None
+        else assets.fov_radius * 0.5 * assets.fog_radius_scale
+    )
     center_x = player_screen[0] + dir_x * ring_radius
     center_y = player_screen[1] + dir_y * ring_radius
     arrow_len = 6
@@ -204,7 +248,12 @@ def _draw_hint_arrow(screen, camera, assets: RenderAssets, player, target_pos: T
 
 def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     """Render a compact status bar with current config flags and stage info."""
-    bar_rect = pygame.Rect(0, assets.screen_height - assets.status_bar_height, assets.screen_width, assets.status_bar_height)
+    bar_rect = pygame.Rect(
+        0,
+        assets.screen_height - assets.status_bar_height,
+        assets.screen_width,
+        assets.status_bar_height,
+    )
     overlay = pygame.Surface((bar_rect.width, bar_rect.height), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 140))
     screen.blit(overlay, bar_rect.topleft)
@@ -215,7 +264,9 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     flashlight_conf = config.get("flashlight", {})
     flashlight_on = flashlight_conf.get("enabled", True)
     try:
-        flashlight_scale = float(flashlight_conf.get("bonus_scale", assets.default_flashlight_bonus_scale))
+        flashlight_scale = float(
+            flashlight_conf.get("bonus_scale", assets.default_flashlight_bonus_scale)
+        )
     except (TypeError, ValueError):
         flashlight_scale = assets.default_flashlight_bonus_scale
     steel_on = config.get("steel_beams", {}).get("enabled", False)
@@ -238,10 +289,12 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
         parts.append("Steel")
 
     status_text = " | ".join(parts)
-    color = GREEN if all([footprints_on, fast_on, hint_on, flashlight_on]) else LIGHT_GRAY
+    color = (
+        GREEN if all([footprints_on, fast_on, hint_on, flashlight_on]) else LIGHT_GRAY
+    )
 
     try:
-        font = load_font(14)
+        font = load_font(12)
         text_surface = font.render(status_text, False, color)
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)
@@ -282,12 +335,20 @@ def draw(
     xe //= assets.internal_wall_grid_snap
     ye //= assets.internal_wall_grid_snap
 
-    play_area_rect = pygame.Rect(xs * assets.internal_wall_grid_snap, ys * assets.internal_wall_grid_snap, (xe - xs) * assets.internal_wall_grid_snap, (ye - ys) * assets.internal_wall_grid_snap)
+    play_area_rect = pygame.Rect(
+        xs * assets.internal_wall_grid_snap,
+        ys * assets.internal_wall_grid_snap,
+        (xe - xs) * assets.internal_wall_grid_snap,
+        (ye - ys) * assets.internal_wall_grid_snap,
+    )
     play_area_screen_rect = camera.apply_rect(play_area_rect)
     pygame.draw.rect(screen, FLOOR_COLOR_PRIMARY, play_area_screen_rect)
 
     outside_rects = outside_rects or []
-    outside_cells = {(r.x // assets.internal_wall_grid_snap, r.y // assets.internal_wall_grid_snap) for r in outside_rects}
+    outside_cells = {
+        (r.x // assets.internal_wall_grid_snap, r.y // assets.internal_wall_grid_snap)
+        for r in outside_rects
+    }
     for rect_obj in outside_rects:
         sr = camera.apply_rect(rect_obj)
         if sr.colliderect(screen.get_rect()):
@@ -298,8 +359,16 @@ def draw(
             if (x, y) in outside_cells:
                 continue
             if (x + y) % 2 == 0:
-                lx, ly = x * assets.internal_wall_grid_snap, y * assets.internal_wall_grid_snap
-                r = pygame.Rect(lx, ly, assets.internal_wall_grid_snap, assets.internal_wall_grid_snap)
+                lx, ly = (
+                    x * assets.internal_wall_grid_snap,
+                    y * assets.internal_wall_grid_snap,
+                )
+                r = pygame.Rect(
+                    lx,
+                    ly,
+                    assets.internal_wall_grid_snap,
+                    assets.internal_wall_grid_snap,
+                )
                 sr = camera.apply_rect(r)
                 if sr.colliderect(screen.get_rect()):
                     pygame.draw.rect(screen, FLOOR_COLOR_SECONDARY, sr)
@@ -311,7 +380,12 @@ def draw(
             fade = 1 - (age / assets.footprint_lifetime_ms)
             fade = max(assets.footprint_min_fade, fade)
             color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
-            fp_rect = pygame.Rect(fp["pos"][0] - assets.footprint_radius, fp["pos"][1] - assets.footprint_radius, assets.footprint_radius * 2, assets.footprint_radius * 2)
+            fp_rect = pygame.Rect(
+                fp["pos"][0] - assets.footprint_radius,
+                fp["pos"][1] - assets.footprint_radius,
+                assets.footprint_radius * 2,
+                assets.footprint_radius * 2,
+            )
             sr = camera.apply_rect(fp_rect)
             if sr.colliderect(screen.get_rect().inflate(30, 30)):
                 pygame.draw.circle(screen, color, sr.center, assets.footprint_radius)
@@ -324,7 +398,15 @@ def draw(
     if hint_target and player:
         current_fov_scale = get_fog_scale(assets, stage, has_flashlight, config)
         hint_ring_radius = assets.fov_radius * 0.5 * current_fov_scale
-        _draw_hint_arrow(screen, camera, assets, player, hint_target, color=hint_color, ring_radius=hint_ring_radius)
+        _draw_hint_arrow(
+            screen,
+            camera,
+            assets,
+            player,
+            hint_target,
+            color=hint_color,
+            ring_radius=hint_ring_radius,
+        )
 
     if fov_target is not None:
         fov_center_on_screen = camera.apply(fov_target).center
@@ -340,11 +422,19 @@ def draw(
         for ring in assets.fog_rings:
             radius = int(assets.fov_radius * ring.radius_factor * fog_scale)
             thickness = ring.thickness
-            pattern = get_hatch_pattern(fog_surfaces, thickness, assets.fog_hatch_pixel_scale)
+            pattern = get_hatch_pattern(
+                fog_surfaces, thickness, assets.fog_hatch_pixel_scale
+            )
             _blit_hatch_ring(screen, fog_soft, pattern, fov_center_on_screen, radius)
 
     if not has_fuel and fuel_message_until > elapsed_play_ms:
-        show_message(screen, "Need fuel to drive!", 18, ORANGE, (assets.screen_width // 2, assets.screen_height // 2))
+        show_message(
+            screen,
+            "Need fuel to drive!",
+            18,
+            ORANGE,
+            (assets.screen_width // 2, assets.screen_height // 2),
+        )
 
     def _render_objective(lines: list[str]):
         try:
