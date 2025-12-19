@@ -106,6 +106,13 @@ zombie-escape
 
 このプロジェクトは MIT License の下で公開されています。詳細は[LICENSEファイル](LICENSE.txt)をご覧ください。
 
+同梱している PixelMplus10-Regular.ttf フォントは M+ BITMAP FONTS 由来です。上流のライセンスは以下の通りです。
+
+これらのフォントはフリー（自由な）ソフトウエアです。あらゆる改変の有無に関わらず、また商業的な利用であっても、自由にご利用、複製、再配布することができますが、全て無保証とさせていただきます。
+http://mplus-fonts.sourceforge.jp/
+
 ## 謝辞
 
 このゲームの開発において、Python/Pygameによるコード生成、ルール調整の提案、デバッグ支援、そしてこのREADMEの作成に至るまで、技術的な実装とドキュメンテーションの多くの部分で Google の大規模言語モデル Gemini (開発時アクセスモデル) と OpenAI の GPT-5 から多大な協力を得ました。その迅速なコーディング能力と問題解決への貢献に深く感謝いたします。
+
+ゲーム内で使用しているドットフォント PixelMplus10-Regular.ttf は M+ BITMAP FONTS (Copyright 2002-2005 COZ および M+ FONTS PROJECT) をもとにしています。
