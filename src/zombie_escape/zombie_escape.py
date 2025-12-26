@@ -1782,7 +1782,7 @@ def check_interactions(game_data):
             companion, zombie_group, False, pygame.sprite.collide_circle
         ):
             if companion_on_screen:
-                state.game_over_message = "AAAAHHH!!"
+                state.game_over_message = _("game_over.scream")
                 state.game_over = True
                 state.game_over_at = state.game_over_at or pygame.time.get_ticks()
             else:
@@ -1853,7 +1853,7 @@ def check_interactions(game_data):
             if not state.game_over:
                 state.game_over = True
                 state.game_over_at = pygame.time.get_ticks()
-                state.game_over_message = "AAAAHHH!!"
+                state.game_over_message = _("game_over.scream")
 
     # Player escaping the level
     if player.in_car and car.alive() and state.has_fuel:

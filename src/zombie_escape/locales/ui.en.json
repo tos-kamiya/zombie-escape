@@ -83,7 +83,8 @@
     "game_over": {
       "win": "YOU ESCAPED!",
       "lose": "GAME OVER",
-      "prompt": "Press ESC or SPACE to return to Title"
+      "prompt": "Press ESC or SPACE to return to Title",
+      "scream": "AAAAHHH!!"
     }
   }
 }
