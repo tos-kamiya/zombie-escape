@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from importlib import resources
 from typing import Any, Tuple
 
+from .font_utils import clear_font_cache
+
 import i18n
 
 DEFAULT_LANGUAGE = "en"
@@ -67,6 +69,7 @@ def set_language(code: str | None) -> str:
     resolved = _normalize_language(code)
     i18n.set("locale", resolved)
     _CURRENT_LANGUAGE = resolved
+    clear_font_cache()
     return resolved
 
 
@@ -95,22 +98,19 @@ def translate(key: str, **kwargs) -> str:
     return i18n.t(qualified_key, default=key, **kwargs)
 
 
-def translate_dict(key: str) -> dict[str, Any]:
-    if not _CONFIGURED:
-        set_language(_CURRENT_LANGUAGE)
-    qualified_key = _qualify_key(key)
-    result = i18n.t(qualified_key, default={})
-    return result if isinstance(result, dict) else {}
-
-
 def get_font_settings(name: str = "primary") -> FontSettings:
-    data = translate_dict(f"fonts.{name}")
-    resource = data.get("resource") or DEFAULT_FONT_RESOURCE
-    scale_raw = data.get("scale", DEFAULT_FONT_SCALE)
+    resource_key = f"fonts.{name}.resource"
+    scale_key = f"fonts.{name}.scale"
+    resource = translate(resource_key)
+    if resource == resource_key:
+        resource = DEFAULT_FONT_RESOURCE
+    scale_raw = translate(scale_key)
+    if scale_raw == scale_key:
+        scale_raw = DEFAULT_FONT_SCALE
     try:
         scale = float(scale_raw)
     except (TypeError, ValueError):
-        scale = 1.0
+        scale = DEFAULT_FONT_SCALE
     return FontSettings(resource=resource, scale=scale)
 
 

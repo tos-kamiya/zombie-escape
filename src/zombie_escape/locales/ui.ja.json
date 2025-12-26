@@ -1,0 +1,89 @@
+{
+  "ja": {
+    "meta": {
+      "language_name": "にほんご"
+    },
+    "game": {
+      "title": "Zombie Escape"
+    },
+    "fonts": {
+      "primary": {
+        "resource": "assets/fonts/AiKonomiLikeLove.otf",
+        "scale": 0.7
+      }
+    },
+    "menu": {
+      "settings": "設定",
+      "quit": "終了",
+      "locked_suffix": "[Locked]",
+      "window_hint": "Resize window: [ to shrink, ] to enlarge (menu only)"
+    },
+    "stages": {
+      "stage1": {
+        "name": "#1 Find the Car",
+        "description": "Locate the car and drive out to escape."
+      },
+      "stage2": {
+        "name": "#2 Fuel Run",
+        "description": "Find fuel, bring it to the car, then escape."
+      },
+      "stage3": {
+        "name": "#3 Rescue Buddy",
+        "description": "Find your stranded buddy, pick up fuel, and escape together."
+      }
+    },
+    "status": {
+      "stage": "Stage %{label}",
+      "footprints": "Footprints",
+      "fast": "FastZ",
+      "car_hint": "CarHint",
+      "flashlight": "Flashlight",
+      "steel": "Steel"
+    },
+    "hud": {
+      "need_fuel": "Need fuel to drive!",
+      "paused": "PAUSED",
+      "resume_hint": "Press P or click to resume"
+    },
+    "objectives": {
+      "find_fuel": "Find the fuel can",
+      "find_car": "Find the car",
+      "escape": "Escape the building",
+      "pickup_buddy": "Pick up your buddy",
+      "find_buddy": "Find your buddy"
+    },
+    "settings": {
+      "title": "Settings",
+      "sections": {
+        "localization": "Localization",
+        "player_support": "Player support",
+        "tougher_enemies": "Tougher enemies"
+      },
+      "rows": {
+        "language": "Language",
+        "footprints": "Footprints",
+        "car_hint": "Car hint",
+        "flashlight": "Flashlight pickups",
+        "fast_zombies": "Fast zombies",
+        "steel_beams": "Steel beams"
+      },
+      "hints": {
+        "navigate": "Up/Down: select a setting",
+        "adjust": "Left/Right: set value",
+        "toggle": "Space/Enter: toggle value",
+        "reset": "R: reset to defaults",
+        "exit": "Esc/Backspace: save and return"
+      },
+      "config_path": "Config: %{path}"
+    },
+    "common": {
+      "on": "ON",
+      "off": "OFF"
+    },
+    "game_over": {
+      "win": "YOU ESCAPED!",
+      "lose": "GAME OVER",
+      "prompt": "Press ESC or SPACE to return to Title"
+    }
+  }
+}
