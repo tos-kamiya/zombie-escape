@@ -109,7 +109,7 @@ zombie-escape
 同梱している Silkscreen-Regular.ttf フォントのライセンスについては配布元に従います。
 https://fonts.google.com/specimen/Silkscreen
 
-同梱している misaki_gothic.ttf（美咲フォント）のライセンスについては Little Limit の配布元に従います。
+同梱している misaki_gothic.ttf（美咲フォント、作者: 門真なむ） のライセンスについては Little Limit の配布元に従います。
 https://littlelimit.net/misaki.htm
 
 ## 謝辞
@@ -117,4 +117,4 @@ https://littlelimit.net/misaki.htm
 このゲームの開発において、Python/Pygameによるコード生成、ルール調整の提案、デバッグ支援、そしてこのREADMEの作成に至るまで、技術的な実装とドキュメンテーションの多くの部分で Google の大規模言語モデル Gemini (開発時アクセスモデル) と OpenAI の GPT-5 から多大な協力を得ました。その迅速なコーディング能力と問題解決への貢献に深く感謝いたします。
 
 ゲーム内で使用しているドットフォント Silkscreen-Regular.ttf の作者である Jason Kottke さんに感謝いたします。
-Little Limit にて配布されている美咲フォント（misaki_gothic.ttf）の作者にも感謝いたします。
+Little Limit にて配布されている美咲フォント（misaki_gothic.ttf）の作者である 門真なむ さんにも感謝いたします。

@@ -109,7 +109,7 @@ This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.t
 The bundled Silkscreen-Regular.ttf font follows the license terms of its original distribution.
 Please refer to the upstream website for details: https://fonts.google.com/specimen/Silkscreen
 
-The bundled misaki_gothic.ttf font follows the license terms provided by Little Limit.
+The bundled misaki_gothic.ttf font (Misaki font by Num Kadoma) follows the license terms provided by Little Limit.
 Please refer to the official site for details: https://littlelimit.net/misaki.htm
 
 ## Acknowledgements
@@ -117,4 +117,4 @@ Please refer to the official site for details: https://littlelimit.net/misaki.ht
 Significant assistance for many technical implementation and documentation aspects of this game's development was received from Google's large language model, Gemini (accessed during development), and from OpenAI's GPT-5. This included generating Python/Pygame code, suggesting rule adjustments, providing debugging support, and creating this README. Their rapid coding capabilities and contributions to problem-solving are greatly appreciated.
 
 Thanks to Jason Kottke, the author of the Silkscreen-Regular.ttf font used in the game.
-Thanks to the creator of the Misaki font (misaki_gothic.ttf) distributed via Little Limit.
+Thanks to Num Kadoma, the author of the Misaki font (misaki_gothic.ttf) distributed via Little Limit.
