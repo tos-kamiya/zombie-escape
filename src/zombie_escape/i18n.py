@@ -3,17 +3,29 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from importlib import resources
-from typing import Iterable, Tuple
+from typing import Any, Tuple
 
 import i18n
 
 DEFAULT_LANGUAGE = "en"
+
+DEFAULT_FONT_RESOURCE = "assets/fonts/Silkscreen-Regular.ttf"
+DEFAULT_FONT_SCALE = 0.7
 
 
 @dataclass(frozen=True)
 class LanguageOption:
     code: str
     name: str
+
+
+@dataclass(frozen=True)
+class FontSettings:
+    resource: str | None
+    scale: float = 1.0
+
+    def scaled_size(self, base_size: int) -> int:
+        return max(1, round(base_size * self.scale))
 
 
 SUPPORTED_LANGUAGES: Tuple[LanguageOption, ...] = (
@@ -80,16 +92,42 @@ def get_language_name(code: str) -> str:
 def translate(key: str, **kwargs) -> str:
     if not _CONFIGURED:
         set_language(_CURRENT_LANGUAGE)
-    qualified_key = key if key.startswith("ui.") else f"ui.{key}"
+    qualified_key = _qualify_key(key)
     return i18n.t(qualified_key, default=key, **kwargs)
+
+
+def translate_dict(key: str) -> dict[str, Any]:
+    if not _CONFIGURED:
+        set_language(_CURRENT_LANGUAGE)
+    qualified_key = _qualify_key(key)
+    result = i18n.t(qualified_key, default={})
+    return result if isinstance(result, dict) else {}
+
+
+def get_font_settings(name: str = "primary") -> FontSettings:
+    data = translate_dict(f"fonts.{name}")
+    resource = data.get("resource") or DEFAULT_FONT_RESOURCE
+    scale_raw = data.get("scale", DEFAULT_FONT_SCALE)
+    try:
+        scale = float(scale_raw)
+    except (TypeError, ValueError):
+        scale = 1.0
+    return FontSettings(resource=resource, scale=scale)
+
+
+def _qualify_key(key: str) -> str:
+    return key if key.startswith("ui.") else f"ui.{key}"
 
 
 __all__ = [
     "DEFAULT_LANGUAGE",
+    "FontSettings",
     "LanguageOption",
+    "get_font_settings",
     "get_language",
     "get_language_name",
     "language_options",
     "set_language",
     "translate",
+    "translate_dict",
 ]

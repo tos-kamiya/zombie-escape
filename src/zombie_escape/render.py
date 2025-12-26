@@ -22,7 +22,7 @@ from .colors import (
     YELLOW,
 )
 from .font_utils import load_font
-from .i18n import translate as _
+from .i18n import get_font_settings, translate as _
 
 
 @dataclass(frozen=True)
@@ -58,7 +58,8 @@ def show_message(
     position: Tuple[int, int],
 ) -> None:
     try:
-        font = load_font(size)
+        font_settings = get_font_settings()
+        font = load_font(font_settings.resource, font_settings.scaled_size(size))
         text_surface = font.render(text, False, color)
         text_rect = text_surface.get_rect(center=position)
 
@@ -295,7 +296,8 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     )
 
     try:
-        font = load_font(12)
+        font_settings = get_font_settings()
+        font = load_font(font_settings.resource, font_settings.scaled_size(12))
         text_surface = font.render(status_text, False, color)
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)
@@ -439,7 +441,8 @@ def draw(
 
     def _render_objective(lines: list[str]):
         try:
-            font = load_font(18)
+            font_settings = get_font_settings()
+            font = load_font(font_settings.resource, font_settings.scaled_size(18))
             y = 16
             for line in lines:
                 text_surface = font.render(line, False, YELLOW)

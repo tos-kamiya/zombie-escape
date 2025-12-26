@@ -7,25 +7,39 @@ from typing import Iterator
 
 import pygame
 
-FONT_RESOURCE = "Silkscreen-Regular.ttf"
-FONT_SCALE = 0.7
+_FONT_CACHE: dict[tuple[str | None, int], pygame.font.Font] = {}
 
 
 @contextmanager
-def _font_path() -> Iterator[Path | None]:
+def _resource_path(resource: str | None) -> Iterator[Path | None]:
+    if not resource:
+        yield None
+        return
+
     try:
-        font = resources.files("zombie_escape").joinpath(
-            "assets", "fonts", FONT_RESOURCE
-        )
+        font = resources.files("zombie_escape")
+        for part in Path(resource).parts:
+            font = font.joinpath(part)
         with resources.as_file(font) as path:
             yield path
     except (FileNotFoundError, ModuleNotFoundError):
         yield None
 
 
-def load_font(size: int) -> pygame.font.Font:
-    scaled_size = max(1, round(size * FONT_SCALE))
-    with _font_path() as path:
-        if path is None:
-            return pygame.font.Font(None, scaled_size)
-        return pygame.font.Font(str(path), scaled_size)
+def load_font(resource: str | None, size: int) -> pygame.font.Font:
+    """Load and cache a pygame font for the given resource and size."""
+    normalized_size = max(1, int(size))
+    cache_key = (resource, normalized_size)
+    cached = _FONT_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    with _resource_path(resource) as path:
+        font = pygame.font.Font(str(path) if path else None, normalized_size)
+
+    _FONT_CACHE[cache_key] = font
+    return font
+
+
+def clear_font_cache() -> None:
+    _FONT_CACHE.clear()

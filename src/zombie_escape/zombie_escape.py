@@ -37,6 +37,7 @@ from .font_utils import load_font
 from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
 from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
 from .i18n import (
+    get_font_settings,
     get_language_name,
     language_options,
     set_language,
@@ -2189,7 +2190,8 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
         )
 
         try:
-            font = load_font(20)
+            font_settings = get_font_settings()
+            font = load_font(font_settings.resource, font_settings.scaled_size(20))
             line_height = 22
             start_y = SCREEN_HEIGHT // 2 - 36
             for idx, option in enumerate(options):
@@ -2219,7 +2221,9 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             # Selected stage description (if a stage is highlighted)
             current = options[selected]
             if current["type"] == "stage":
-                desc_font = load_font(12)
+                desc_font = load_font(
+                    font_settings.resource, font_settings.scaled_size(12)
+                )
                 desc_color = LIGHT_GRAY if current.get("available") else GRAY
                 desc_surface = desc_font.render(
                     current["stage"].description, False, desc_color
@@ -2233,7 +2237,9 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             fast_on = config.get("fast_zombies", {}).get("enabled", True)
             hint_on = config.get("car_hint", {}).get("enabled", True)
 
-            hint_font = load_font(12)
+            hint_font = load_font(
+                font_settings.resource, font_settings.scaled_size(12)
+            )
             hint_text = _("menu.window_hint")
             hint_surface = hint_font.render(hint_text, False, LIGHT_GRAY)
             hint_rect = hint_surface.get_rect(
@@ -2420,9 +2426,16 @@ def settings_screen(
         )
 
         try:
-            label_font = load_font(12)
-            value_font = load_font(12)
-            section_font = load_font(12)
+            font_settings = get_font_settings()
+            label_font = load_font(
+                font_settings.resource, font_settings.scaled_size(12)
+            )
+            value_font = load_font(
+                font_settings.resource, font_settings.scaled_size(12)
+            )
+            section_font = load_font(
+                font_settings.resource, font_settings.scaled_size(12)
+            )
             highlight_color = (70, 70, 70)
 
             row_height = 18
@@ -2526,7 +2539,9 @@ def settings_screen(
 
             hint_start_y = start_y
             hint_start_x = SCREEN_WIDTH // 2 + 16
-            hint_font = load_font(12)
+            hint_font = load_font(
+                font_settings.resource, font_settings.scaled_size(12)
+            )
             hint_lines = [
                 _("settings.hints.navigate"),
                 _("settings.hints.adjust"),
@@ -2541,7 +2556,9 @@ def settings_screen(
                 )
                 screen.blit(hint_surface, hint_rect)
 
-            path_font = load_font(12)
+            path_font = load_font(
+                font_settings.resource, font_settings.scaled_size(12)
+            )
             path_text = _("settings.config_path", path=str(config_path))
             path_surface = path_font.render(path_text, False, LIGHT_GRAY)
             path_rect = path_surface.get_rect(

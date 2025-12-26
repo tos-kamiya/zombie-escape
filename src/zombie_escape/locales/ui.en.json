@@ -3,7 +3,13 @@
     "game": {
       "title": "Zombie Escape"
     },
-    "menu": {
+  "fonts": {
+    "primary": {
+      "resource": "assets/fonts/Silkscreen-Regular.ttf",
+      "scale": 0.7
+    }
+  },
+  "menu": {
       "settings": "Settings",
       "quit": "Quit",
       "locked_suffix": "[Locked]",
