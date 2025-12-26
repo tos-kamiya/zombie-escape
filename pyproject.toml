@@ -25,6 +25,7 @@ classifiers = [
 dependencies = [
   "pygame",
   "platformdirs",
+  "python-i18n",
 ]
 
 [project.urls]
@@ -35,7 +36,10 @@ path = "src/zombie_escape/__about__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/zombie_escape"]
-include = ["src/zombie_escape/assets/**"]
+include = [
+  "src/zombie_escape/assets/**",
+  "src/zombie_escape/locales/**",
+]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/zombie_escape/**"]

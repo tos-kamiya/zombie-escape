@@ -36,6 +36,12 @@ from .config import DEFAULT_CONFIG, load_config, save_config
 from .font_utils import load_font
 from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
 from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
+from .i18n import (
+    get_language_name,
+    language_options,
+    set_language,
+    translate as _,
+)
 
 # --- Constants/Global variables ---
 LOGICAL_SCREEN_WIDTH = 400
@@ -213,32 +219,40 @@ class GameData:
 @dataclass(frozen=True)
 class Stage:
     id: str
-    name: str
-    description: str
+    name_key: str
+    description_key: str
     available: bool = True
     requires_fuel: bool = False
     requires_companion: bool = False
+
+    @property
+    def name(self) -> str:
+        return _(self.name_key)
+
+    @property
+    def description(self) -> str:
+        return _(self.description_key)
 
 
 # Stage metadata (stage 2 placeholder for fuel flow coming soon)
 STAGES = [
     Stage(
         id="stage1",
-        name="#1 Find the Car",
-        description="Locate the car and drive out to escape.",
+        name_key="stages.stage1.name",
+        description_key="stages.stage1.description",
         available=True,
     ),
     Stage(
         id="stage2",
-        name="#2 Fuel Run",
-        description="Find fuel, bring it to the car, then escape.",
+        name_key="stages.stage2.name",
+        description_key="stages.stage2.description",
         available=True,
         requires_fuel=True,
     ),
     Stage(
         id="stage3",
-        name="#3 Rescue Buddy",
-        description="Find your stranded buddy, pick up fuel, and escape together.",
+        name_key="stages.stage3.name",
+        description_key="stages.stage3.description",
         available=True,
         requires_companion=True,
         requires_fuel=True,
@@ -262,7 +276,7 @@ def apply_window_scale(
 
     new_window = pygame.display.set_mode((window_width, window_height))
     pygame.display.set_caption(
-        f"Zombie Escape v{__version__} ({window_width}x{window_height})"
+        f"{_('game.title')} v{__version__} ({window_width}x{window_height})"
     )
 
     if game_data is not None:
@@ -1538,7 +1552,7 @@ def handle_game_over_state(screen, game_data):
         if state.game_won:
             show_message(
                 screen,
-                "YOU ESCAPED!",
+                _("game_over.win"),
                 22,
                 GREEN,
                 (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 26),
@@ -1546,7 +1560,7 @@ def handle_game_over_state(screen, game_data):
         else:
             show_message(
                 screen,
-                "GAME OVER",
+                _("game_over.lose"),
                 22,
                 RED,
                 (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 26),
@@ -1562,7 +1576,7 @@ def handle_game_over_state(screen, game_data):
 
     show_message(
         screen,
-        "Press ESC or SPACE to return to Title",
+        _("game_over.prompt"),
         18,
         WHITE,
         (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 24),
@@ -2033,14 +2047,14 @@ def run_game(
                 screen.blit(overlay, (0, 0))
                 show_message(
                     screen,
-                    "PAUSED",
+                    _("hud.paused"),
                     18,
                     WHITE,
                     (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 24),
                 )
                 show_message(
                     screen,
-                    "Press P or click to resume",
+                    _("hud.resume_hint"),
                     18,
                     LIGHT_GRAY,
                     (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 70),
@@ -2168,7 +2182,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
         screen.fill(BLACK)
         show_message(
             screen,
-            "Zombie Escape",
+            _("game.title"),
             36,
             LIGHT_GRAY,
             (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 88),
@@ -2182,17 +2196,18 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
                 if option["type"] == "stage":
                     label = option["stage"].name
                     if not option.get("available"):
-                        label += " [Locked]"
+                        locked_suffix = _("menu.locked_suffix")
+                        label += f" {locked_suffix}"
                     color = (
                         YELLOW
                         if idx == selected
                         else (WHITE if option.get("available") else GRAY)
                     )
                 elif option["type"] == "settings":
-                    label = "Settings"
+                    label = _("menu.settings")
                     color = YELLOW if idx == selected else WHITE
                 else:
-                    label = "Quit"
+                    label = _("menu.quit")
                     color = YELLOW if idx == selected else WHITE
 
                 text_surface = font.render(label, False, color)
@@ -2219,7 +2234,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             hint_on = config.get("car_hint", {}).get("enabled", True)
 
             hint_font = load_font(12)
-            hint_text = "Resize window: [ to shrink, ] to enlarge (menu only)"
+            hint_text = _("menu.window_hint")
             hint_surface = hint_font.render(hint_text, False, LIGHT_GRAY)
             hint_rect = hint_surface.get_rect(
                 center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50)
@@ -2237,69 +2252,123 @@ def settings_screen(
 ) -> dict:
     """Settings menu shown from the title screen."""
     working = copy.deepcopy(config)
+    set_language(working.get("language"))
     selected = 0
-    row_count = 0
+    languages = language_options()
+    language_codes = [lang.code for lang in languages]
 
-    def set_value(path: tuple[str, str], value: bool) -> None:
-        """Set a nested boolean flag in the working config."""
-        root_key, child_key = path
-        working.setdefault(root_key, {})[child_key] = value
+    def _ensure_parent(path: tuple[str, ...]) -> tuple[dict, str]:
+        node = working
+        for key in path[:-1]:
+            node = node.setdefault(key, {})
+        return node, path[-1]
 
-    def toggle_value(path: tuple[str, str]) -> None:
-        """Toggle a nested boolean flag in the working config."""
-        root_key, child_key = path
-        current = working.get(root_key, {}).get(child_key, True)
-        working.setdefault(root_key, {})[child_key] = not current
+    def _get_value(path: tuple[str, ...], default):
+        node = working
+        for key in path[:-1]:
+            next_node = node.get(key)
+            if not isinstance(next_node, dict):
+                return default
+            node = next_node
+        if isinstance(node, dict):
+            return node.get(path[-1], default)
+        return default
+
+    def set_value(path: tuple[str, ...], value) -> None:
+        node, leaf = _ensure_parent(path)
+        node[leaf] = value
+
+    def toggle_row(row: dict) -> None:
+        current = bool(_get_value(row["path"], row.get("easy_value", True)))
+        set_value(row["path"], not current)
+
+    def set_easy_value(row: dict, use_easy: bool) -> None:
+        target = row.get("easy_value", True)
+        set_value(row["path"], target if use_easy else not target)
+
+    def cycle_choice(row: dict, direction: int) -> None:
+        values = row.get("choices", [])
+        if not values:
+            return
+        current = _get_value(row["path"], values[0])
+        try:
+            idx = values.index(current)
+        except ValueError:
+            idx = 0
+        idx = (idx + direction) % len(values)
+        new_value = values[idx]
+        set_value(row["path"], new_value)
+        on_change = row.get("on_change")
+        if on_change:
+            on_change(new_value)
 
     sections = [
         {
-            "label": "Player support",
+            "label": _("settings.sections.localization"),
             "rows": [
                 {
-                    "label": "Footprints",
+                    "type": "choice",
+                    "label": _("settings.rows.language"),
+                    "path": ("language",),
+                    "choices": language_codes,
+                    "get_display": get_language_name,
+                    "on_change": set_language,
+                }
+            ],
+        },
+        {
+            "label": _("settings.sections.player_support"),
+            "rows": [
+                {
+                    "label": _("settings.rows.footprints"),
                     "path": ("footprints", "enabled"),
                     "easy_value": True,
-                    "left_label": "ON",
-                    "right_label": "OFF",
+                    "left_label": _("common.on"),
+                    "right_label": _("common.off"),
                 },
                 {
-                    "label": "Car hint",
+                    "label": _("settings.rows.car_hint"),
                     "path": ("car_hint", "enabled"),
                     "easy_value": True,
-                    "left_label": "ON",
-                    "right_label": "OFF",
+                    "left_label": _("common.on"),
+                    "right_label": _("common.off"),
                 },
                 {
-                    "label": "Flashlight pickups",
+                    "label": _("settings.rows.flashlight"),
                     "path": ("flashlight", "enabled"),
                     "easy_value": True,
-                    "left_label": "ON",
-                    "right_label": "OFF",
+                    "left_label": _("common.on"),
+                    "right_label": _("common.off"),
                 },
             ],
         },
         {
-            "label": "Tougher enemies",
+            "label": _("settings.sections.tougher_enemies"),
             "rows": [
                 {
-                    "label": "Fast zombies",
+                    "label": _("settings.rows.fast_zombies"),
                     "path": ("fast_zombies", "enabled"),
                     "easy_value": False,
-                    "left_label": "OFF",
-                    "right_label": "ON",
+                    "left_label": _("common.off"),
+                    "right_label": _("common.on"),
                 },
                 {
-                    "label": "Steel beams",
+                    "label": _("settings.rows.steel_beams"),
                     "path": ("steel_beams", "enabled"),
                     "easy_value": False,
-                    "left_label": "OFF",
-                    "right_label": "ON",
+                    "left_label": _("common.off"),
+                    "right_label": _("common.on"),
                 },
             ],
         },
     ]
-    rows = [row for section in sections for row in section["rows"]]
-    row_sections = [section["label"] for section in sections for _ in section["rows"]]
+
+    rows = []
+    row_sections: list[str] = []
+    for section in sections:
+        for row in section["rows"]:
+            rows.append(row)
+            row_sections.append(section["label"])
     row_count = len(rows)
 
     while True:
@@ -2320,17 +2389,35 @@ def settings_screen(
                     selected = (selected - 1) % row_count
                 if event.key in (pygame.K_DOWN, pygame.K_s):
                     selected = (selected + 1) % row_count
+                current_row = rows[selected]
+                row_type = current_row.get("type", "toggle")
                 if event.key in (pygame.K_SPACE, pygame.K_RETURN):
-                    toggle_value(rows[selected]["path"])
+                    if row_type == "toggle":
+                        toggle_row(current_row)
+                    elif row_type == "choice":
+                        cycle_choice(current_row, 1)
                 if event.key == pygame.K_LEFT:
-                    set_value(rows[selected]["path"], rows[selected]["easy_value"])
+                    if row_type == "toggle":
+                        set_easy_value(current_row, True)
+                    elif row_type == "choice":
+                        cycle_choice(current_row, -1)
                 if event.key == pygame.K_RIGHT:
-                    set_value(rows[selected]["path"], not rows[selected]["easy_value"])
+                    if row_type == "toggle":
+                        set_easy_value(current_row, False)
+                    elif row_type == "choice":
+                        cycle_choice(current_row, 1)
                 if event.key == pygame.K_r:
                     working = copy.deepcopy(DEFAULT_CONFIG)
+                    set_language(working.get("language"))
 
         screen.fill(BLACK)
-        show_message(screen, "Settings", 26, LIGHT_GRAY, (SCREEN_WIDTH // 2, 20))
+        show_message(
+            screen,
+            _("settings.title"),
+            26,
+            LIGHT_GRAY,
+            (SCREEN_WIDTH // 2, 20),
+        )
 
         try:
             label_font = load_font(12)
@@ -2375,8 +2462,8 @@ def settings_screen(
                 section_label = row_sections[idx]
                 state = section_states[section_label]
                 col_x = column_margin
-                enabled = working.get(row["path"][0], {}).get(
-                    row["path"][1], row["easy_value"]
+                value = _get_value(
+                    row["path"], row.get("easy_value", row.get("choices", [None])[0])
                 )
                 row_y_current = state["next_y"]
                 state["next_y"] += row_height
@@ -2395,44 +2482,57 @@ def settings_screen(
                     )
                 )
                 screen.blit(label_surface, label_rect)
+                if row.get("type", "toggle") == "choice":
+                    display_fn = row.get("get_display")
+                    display_text = (
+                        display_fn(value) if display_fn and value is not None else str(value)
+                    )
+                    value_surface = value_font.render(display_text, False, WHITE)
+                    value_rect = value_surface.get_rect(
+                        midright=(
+                            col_x + column_width,
+                            row_y_current + row_height // 2,
+                        )
+                    )
+                    screen.blit(value_surface, value_rect)
+                else:
+                    slider_y = row_y_current + (row_height - segment_height) // 2 - 2
+                    slider_x = col_x + column_width - segment_total_width
+                    left_rect = pygame.Rect(
+                        slider_x, slider_y, segment_width, segment_height
+                    )
+                    right_rect = pygame.Rect(
+                        left_rect.right + segment_gap,
+                        slider_y,
+                        segment_width,
+                        segment_height,
+                    )
 
-                slider_y = row_y_current + (row_height - segment_height) // 2 - 2
-                slider_x = col_x + column_width - segment_total_width
-                left_rect = pygame.Rect(
-                    slider_x, slider_y, segment_width, segment_height
-                )
-                right_rect = pygame.Rect(
-                    left_rect.right + segment_gap,
-                    slider_y,
-                    segment_width,
-                    segment_height,
-                )
+                    left_active = value == row["easy_value"]
+                    right_active = not left_active
 
-                left_active = enabled == row["easy_value"]
-                right_active = not left_active
+                    def draw_segment(rect: pygame.Rect, text: str, active: bool):
+                        base_color = (35, 35, 35)
+                        active_color = (60, 90, 60) if active else base_color
+                        outline_color = GREEN if active else LIGHT_GRAY
+                        pygame.draw.rect(screen, active_color, rect)
+                        pygame.draw.rect(screen, outline_color, rect, width=2)
+                        text_surface = value_font.render(text, False, WHITE)
+                        text_rect = text_surface.get_rect(center=rect.center)
+                        screen.blit(text_surface, text_rect)
 
-                def draw_segment(rect: pygame.Rect, text: str, active: bool):
-                    base_color = (35, 35, 35)
-                    active_color = (60, 90, 60) if active else base_color
-                    outline_color = GREEN if active else LIGHT_GRAY
-                    pygame.draw.rect(screen, active_color, rect)
-                    pygame.draw.rect(screen, outline_color, rect, width=2)
-                    text_surface = value_font.render(text, False, WHITE)
-                    text_rect = text_surface.get_rect(center=rect.center)
-                    screen.blit(text_surface, text_rect)
-
-                draw_segment(left_rect, row["left_label"], left_active)
-                draw_segment(right_rect, row["right_label"], right_active)
+                    draw_segment(left_rect, row["left_label"], left_active)
+                    draw_segment(right_rect, row["right_label"], right_active)
 
             hint_start_y = start_y
             hint_start_x = SCREEN_WIDTH // 2 + 16
             hint_font = load_font(12)
             hint_lines = [
-                "Up/Down: select a setting",
-                "Left/Right: set value",
-                "Space/Enter: toggle value",
-                "R: reset to defaults",
-                "Esc/Backspace: save and return",
+                _("settings.hints.navigate"),
+                _("settings.hints.adjust"),
+                _("settings.hints.toggle"),
+                _("settings.hints.reset"),
+                _("settings.hints.exit"),
             ]
             for i, line in enumerate(hint_lines):
                 hint_surface = hint_font.render(line, False, WHITE)
@@ -2442,7 +2542,7 @@ def settings_screen(
                 screen.blit(hint_surface, hint_rect)
 
             path_font = load_font(12)
-            path_text = f"Config: {config_path}"
+            path_text = _("settings.config_path", path=str(config_path))
             path_surface = path_font.render(path_text, False, LIGHT_GRAY)
             path_rect = path_surface.get_rect(
                 midtop=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 32)
@@ -2473,6 +2573,7 @@ def main():
     config, config_path = load_config()
     if not config_path.exists():
         save_config(config, config_path)
+    set_language(config.get("language"))
 
     restart_game = True
     while restart_game:
@@ -2484,6 +2585,7 @@ def main():
 
         if selection["action"] == "settings":
             config = settings_screen(screen, clock, config, config_path)
+            set_language(config.get("language"))
             continue
 
         if selection["action"] == "stage":

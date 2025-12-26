@@ -9,6 +9,7 @@ APP_NAME = "ZombieEscape"
 
 # Defaults for all configurable options
 DEFAULT_CONFIG: Dict[str, Any] = {
+    "language": "en",
     "footprints": {"enabled": True},
     "fast_zombies": {"enabled": False, "ratio": 0.1},
     "car_hint": {"enabled": True, "delay_ms": 180_000},

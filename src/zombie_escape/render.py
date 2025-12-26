@@ -22,6 +22,7 @@ from .colors import (
     YELLOW,
 )
 from .font_utils import load_font
+from .i18n import translate as _
 
 
 @dataclass(frozen=True)
@@ -276,17 +277,17 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     else:
         stage_label = "#1"
 
-    parts = [f"Stage {stage_label}"]
+    parts = [_("status.stage", label=stage_label)]
     if footprints_on:
-        parts.append("Footprints")
+        parts.append(_("status.footprints"))
     if fast_on:
-        parts.append("FastZ")
+        parts.append(_("status.fast"))
     if hint_on:
-        parts.append("CarHint")
+        parts.append(_("status.car_hint"))
     if flashlight_on:
-        parts.append("Flashlight")
+        parts.append(_("status.flashlight"))
     if steel_on:
-        parts.append("Steel")
+        parts.append(_("status.steel"))
 
     status_text = " | ".join(parts)
     color = (
@@ -430,7 +431,7 @@ def draw(
     if not has_fuel and fuel_message_until > elapsed_play_ms:
         show_message(
             screen,
-            "Need fuel to drive!",
+            _("hud.need_fuel"),
             18,
             ORANGE,
             (assets.screen_width // 2, assets.screen_height // 2),
@@ -450,20 +451,20 @@ def draw(
 
     objective_lines: list[str] = []
     if stage and stage.requires_fuel and not has_fuel:
-        objective_lines.append("Find the fuel can")
+        objective_lines.append(_("objectives.find_fuel"))
     elif not player.in_car:
-        objective_lines.append("Find the car")
+        objective_lines.append(_("objectives.find_car"))
     else:
-        objective_lines.append("Escape the building")
+        objective_lines.append(_("objectives.escape"))
 
     if stage and getattr(stage, "requires_companion", False):
         if not companion_rescued:
             buddy_following = companion and getattr(companion, "following", False)
             if player.in_car:
                 # Cannot escape until the buddy is picked up; suppress the redundant find prompt.
-                objective_lines[-1] = "Pick up your buddy"
+                objective_lines[-1] = _("objectives.pickup_buddy")
             elif not buddy_following:
-                objective_lines.append("Find your buddy")
+                objective_lines.append(_("objectives.find_buddy"))
 
     if objective_lines:
         _render_objective(objective_lines)
