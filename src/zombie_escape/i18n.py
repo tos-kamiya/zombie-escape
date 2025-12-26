@@ -1,6 +1,7 @@
 """Lightweight python-i18n wrapper for runtime language switches."""
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from importlib import resources
 from typing import Any, Tuple
@@ -28,9 +29,7 @@ class FontSettings:
         return max(1, round(base_size * self.scale))
 
 
-SUPPORTED_LANGUAGES: Tuple[LanguageOption, ...] = (
-    LanguageOption(code="en", name="English"),
-)
+_LANGUAGE_OPTIONS: Tuple[LanguageOption, ...] | None = None
 
 _CURRENT_LANGUAGE = DEFAULT_LANGUAGE
 _CONFIGURED = False
@@ -55,7 +54,7 @@ def _configure_backend() -> None:
 
 def _normalize_language(code: str | None) -> str:
     if code:
-        for option in SUPPORTED_LANGUAGES:
+        for option in _get_language_options():
             if option.code == code:
                 return option.code
     return DEFAULT_LANGUAGE
@@ -76,14 +75,14 @@ def get_language() -> str:
 
 
 def language_options() -> Tuple[LanguageOption, ...]:
-    return SUPPORTED_LANGUAGES
+    return _get_language_options()
 
 
 def get_language_name(code: str) -> str:
-    for option in SUPPORTED_LANGUAGES:
+    for option in _get_language_options():
         if option.code == code:
             return option.name
-    for option in SUPPORTED_LANGUAGES:
+    for option in _get_language_options():
         if option.code == DEFAULT_LANGUAGE:
             return option.name
     return code or DEFAULT_LANGUAGE
@@ -117,6 +116,46 @@ def get_font_settings(name: str = "primary") -> FontSettings:
 
 def _qualify_key(key: str) -> str:
     return key if key.startswith("ui.") else f"ui.{key}"
+
+
+def _get_language_options() -> Tuple[LanguageOption, ...]:
+    global _LANGUAGE_OPTIONS
+    if _LANGUAGE_OPTIONS is not None:
+        return _LANGUAGE_OPTIONS
+
+    base = resources.files("zombie_escape").joinpath("locales")
+    try:
+        entries = list(base.iterdir())
+    except FileNotFoundError:
+        entries = []
+
+    english_entry = base.joinpath("ui.en.json")
+    if not english_entry.exists():
+        raise FileNotFoundError("Missing required locale file: ui.en.json")
+
+    options: list[LanguageOption] = []
+    for entry in entries:
+        name = entry.name
+        if not name.startswith("ui.") or not name.endswith(".json"):
+            continue
+        code = name[3:-5]
+        try:
+            with resources.as_file(entry) as path:
+                data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+        locale_data = data.get(code, {}) if isinstance(data, dict) else {}
+        lang_name = (
+            locale_data.get("meta", {}).get("language_name") if isinstance(locale_data, dict) else None
+        )
+        options.append(LanguageOption(code=code, name=lang_name or code))
+
+    if not options:
+        options.append(LanguageOption(code=DEFAULT_LANGUAGE, name="English"))
+
+    options.sort(key=lambda opt: (0 if opt.code == "en" else 1, opt.code))
+    _LANGUAGE_OPTIONS = tuple(options)
+    return _LANGUAGE_OPTIONS
 
 
 __all__ = [
