@@ -1,89 +1,89 @@
 {
   "ja": {
     "meta": {
-      "language_name": "にほんご"
+      "language_name": "日本語"
     },
     "game": {
-      "title": "Zombie Escape"
+      "title": "ゾンビ・エスケープ"
     },
     "fonts": {
       "primary": {
-        "resource": "assets/fonts/AiKonomiLikeLove.otf",
-        "scale": 0.7
+        "resource": "assets/fonts/misaki_gothic.ttf",
+        "scale": 0.75
       }
     },
     "menu": {
       "settings": "設定",
       "quit": "終了",
       "locked_suffix": "[Locked]",
-      "window_hint": "Resize window: [ to shrink, ] to enlarge (menu only)"
+      "window_hint": "[キーでウィンドウを小さく、]キーで大きく(メニュー画面のみ)"
     },
     "stages": {
       "stage1": {
-        "name": "#1 Find the Car",
-        "description": "Locate the car and drive out to escape."
+        "name": "#1 車を探せ！",
+        "description": "車を見つけて乗り込み建物から脱出しよう"
       },
       "stage2": {
-        "name": "#2 Fuel Run",
-        "description": "Find fuel, bring it to the car, then escape."
+        "name": "#2 ガソリンを求めて",
+        "description": "ガソリンを見つけて車に持っていき、脱出しよう"
       },
       "stage3": {
-        "name": "#3 Rescue Buddy",
-        "description": "Find your stranded buddy, pick up fuel, and escape together."
+        "name": "#3 相棒を救え",
+        "description": "はぐれた相棒を探し、ガソリンを見つけ、脱出しよう"
       }
     },
     "status": {
-      "stage": "Stage %{label}",
-      "footprints": "Footprints",
-      "fast": "FastZ",
-      "car_hint": "CarHint",
-      "flashlight": "Flashlight",
-      "steel": "Steel"
+      "stage": "ステージ %{label}",
+      "footprints": "足跡",
+      "fast": "足早",
+      "car_hint": "車ヒント",
+      "flashlight": "ライト",
+      "steel": "鉄筋"
     },
     "hud": {
-      "need_fuel": "Need fuel to drive!",
-      "paused": "PAUSED",
-      "resume_hint": "Press P or click to resume"
+      "need_fuel": "ガソリンが必要です！",
+      "paused": "一時停止",
+      "resume_hint": "Pキーかクリックで再開"
     },
     "objectives": {
-      "find_fuel": "Find the fuel can",
-      "find_car": "Find the car",
-      "escape": "Escape the building",
-      "pickup_buddy": "Pick up your buddy",
-      "find_buddy": "Find your buddy"
+      "find_fuel": "ガソリンを見つける",
+      "find_car": "車を見つける",
+      "escape": "建物から脱出する",
+      "pickup_buddy": "相棒を救出する",
+      "find_buddy": "相棒を見つける"
     },
     "settings": {
-      "title": "Settings",
+      "title": "設定",
       "sections": {
-        "localization": "Localization",
-        "player_support": "Player support",
-        "tougher_enemies": "Tougher enemies"
+        "localization": "言語設定",
+        "player_support": "サポート",
+        "tougher_enemies": "強い敵"
       },
       "rows": {
-        "language": "Language",
-        "footprints": "Footprints",
-        "car_hint": "Car hint",
-        "flashlight": "Flashlight pickups",
-        "fast_zombies": "Fast zombies",
-        "steel_beams": "Steel beams"
+        "language": "テキスト言語",
+        "footprints": "足跡",
+        "car_hint": "車ヒント",
+        "flashlight": "ライト",
+        "fast_zombies": "足早ゾンビ",
+        "steel_beams": "鉄筋入りカベ"
       },
       "hints": {
-        "navigate": "Up/Down: select a setting",
-        "adjust": "Left/Right: set value",
-        "toggle": "Space/Enter: toggle value",
-        "reset": "R: reset to defaults",
-        "exit": "Esc/Backspace: save and return"
+        "navigate": "上下: 項目選択",
+        "adjust": "左右: 値の設定",
+        "toggle": "スペース／エンター: 値のトグル",
+        "reset": "R: デフォルト設定に戻す",
+        "exit": "Esc/BS: セーブして戻る"
       },
-      "config_path": "Config: %{path}"
+      "config_path": "設定ファイル: %{path}"
     },
     "common": {
-      "on": "ON",
-      "off": "OFF"
+      "on": "有",
+      "off": "無"
     },
     "game_over": {
-      "win": "YOU ESCAPED!",
-      "lose": "GAME OVER",
-      "prompt": "Press ESC or SPACE to return to Title"
+      "win": "脱出成功！",
+      "lose": "ゲームオーバー",
+      "prompt": "ESCキーかスペースバーでタイトルに戻る"
     }
   }
 }

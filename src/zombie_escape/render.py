@@ -297,7 +297,7 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
 
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(12))
+        font = load_font(font_settings.resource, font_settings.scaled_size(11))
         text_surface = font.render(status_text, False, color)
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)

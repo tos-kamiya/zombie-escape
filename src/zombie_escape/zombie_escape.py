@@ -38,6 +38,7 @@ from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE, choose_blueprint
 from .render import FogRing, RenderAssets, draw, draw_level_overview, show_message
 from .i18n import (
     get_font_settings,
+    get_language,
     get_language_name,
     language_options,
     set_language,
@@ -1852,7 +1853,7 @@ def check_interactions(game_data):
             if not state.game_over:
                 state.game_over = True
                 state.game_over_at = pygame.time.get_ticks()
-                state.game_over_message = "AAAHHH!!"
+                state.game_over_message = "AAAAHHH!!"
 
     # Player escaping the level
     if player.in_car and car.alive() and state.has_fuel:
@@ -2184,14 +2185,14 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
         show_message(
             screen,
             _("game.title"),
-            36,
+            33,
             LIGHT_GRAY,
             (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 88),
         )
 
         try:
             font_settings = get_font_settings()
-            font = load_font(font_settings.resource, font_settings.scaled_size(20))
+            font = load_font(font_settings.resource, font_settings.scaled_size(18))
             line_height = 22
             start_y = SCREEN_HEIGHT // 2 - 36
             for idx, option in enumerate(options):
@@ -2222,7 +2223,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             current = options[selected]
             if current["type"] == "stage":
                 desc_font = load_font(
-                    font_settings.resource, font_settings.scaled_size(12)
+                    font_settings.resource, font_settings.scaled_size(11)
                 )
                 desc_color = LIGHT_GRAY if current.get("available") else GRAY
                 desc_surface = desc_font.render(
@@ -2238,7 +2239,7 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
             hint_on = config.get("car_hint", {}).get("enabled", True)
 
             hint_font = load_font(
-                font_settings.resource, font_settings.scaled_size(12)
+                font_settings.resource, font_settings.scaled_size(11)
             )
             hint_text = _("menu.window_hint")
             hint_surface = hint_font.render(hint_text, False, LIGHT_GRAY)
@@ -2308,74 +2309,81 @@ def settings_screen(
         if on_change:
             on_change(new_value)
 
-    sections = [
-        {
-            "label": _("settings.sections.localization"),
-            "rows": [
-                {
-                    "type": "choice",
-                    "label": _("settings.rows.language"),
-                    "path": ("language",),
-                    "choices": language_codes,
-                    "get_display": get_language_name,
-                    "on_change": set_language,
-                }
-            ],
-        },
-        {
-            "label": _("settings.sections.player_support"),
-            "rows": [
-                {
-                    "label": _("settings.rows.footprints"),
-                    "path": ("footprints", "enabled"),
-                    "easy_value": True,
-                    "left_label": _("common.on"),
-                    "right_label": _("common.off"),
-                },
-                {
-                    "label": _("settings.rows.car_hint"),
-                    "path": ("car_hint", "enabled"),
-                    "easy_value": True,
-                    "left_label": _("common.on"),
-                    "right_label": _("common.off"),
-                },
-                {
-                    "label": _("settings.rows.flashlight"),
-                    "path": ("flashlight", "enabled"),
-                    "easy_value": True,
-                    "left_label": _("common.on"),
-                    "right_label": _("common.off"),
-                },
-            ],
-        },
-        {
-            "label": _("settings.sections.tougher_enemies"),
-            "rows": [
-                {
-                    "label": _("settings.rows.fast_zombies"),
-                    "path": ("fast_zombies", "enabled"),
-                    "easy_value": False,
-                    "left_label": _("common.off"),
-                    "right_label": _("common.on"),
-                },
-                {
-                    "label": _("settings.rows.steel_beams"),
-                    "path": ("steel_beams", "enabled"),
-                    "easy_value": False,
-                    "left_label": _("common.off"),
-                    "right_label": _("common.on"),
-                },
-            ],
-        },
-    ]
+    def build_sections() -> list[dict]:
+        return [
+            {
+                "label": _("settings.sections.localization"),
+                "rows": [
+                    {
+                        "type": "choice",
+                        "label": _("settings.rows.language"),
+                        "path": ("language",),
+                        "choices": language_codes,
+                        "get_display": get_language_name,
+                        "on_change": set_language,
+                    }
+                ],
+            },
+            {
+                "label": _("settings.sections.player_support"),
+                "rows": [
+                    {
+                        "label": _("settings.rows.footprints"),
+                        "path": ("footprints", "enabled"),
+                        "easy_value": True,
+                        "left_label": _("common.on"),
+                        "right_label": _("common.off"),
+                    },
+                    {
+                        "label": _("settings.rows.car_hint"),
+                        "path": ("car_hint", "enabled"),
+                        "easy_value": True,
+                        "left_label": _("common.on"),
+                        "right_label": _("common.off"),
+                    },
+                    {
+                        "label": _("settings.rows.flashlight"),
+                        "path": ("flashlight", "enabled"),
+                        "easy_value": True,
+                        "left_label": _("common.on"),
+                        "right_label": _("common.off"),
+                    },
+                ],
+            },
+            {
+                "label": _("settings.sections.tougher_enemies"),
+                "rows": [
+                    {
+                        "label": _("settings.rows.fast_zombies"),
+                        "path": ("fast_zombies", "enabled"),
+                        "easy_value": False,
+                        "left_label": _("common.off"),
+                        "right_label": _("common.on"),
+                    },
+                    {
+                        "label": _("settings.rows.steel_beams"),
+                        "path": ("steel_beams", "enabled"),
+                        "easy_value": False,
+                        "left_label": _("common.off"),
+                        "right_label": _("common.on"),
+                    },
+                ],
+            },
+        ]
 
-    rows = []
-    row_sections: list[str] = []
-    for section in sections:
-        for row in section["rows"]:
-            rows.append(row)
-            row_sections.append(section["label"])
+    def rebuild_rows() -> tuple[list[dict], list[str]]:
+        current_sections = build_sections()
+        flat_rows: list[dict] = []
+        flat_sections: list[str] = []
+        for section in current_sections:
+            for row in section["rows"]:
+                flat_rows.append(row)
+                flat_sections.append(section["label"])
+        return current_sections, flat_rows, flat_sections
+
+    sections, rows, row_sections = rebuild_rows()
     row_count = len(rows)
+    last_language = get_language()
 
     while True:
         for event in pygame.event.get():
@@ -2416,6 +2424,13 @@ def settings_screen(
                     working = copy.deepcopy(DEFAULT_CONFIG)
                     set_language(working.get("language"))
 
+        current_language = get_language()
+        if current_language != last_language:
+            sections, rows, row_sections = rebuild_rows()
+            row_count = len(rows)
+            selected %= row_count
+            last_language = current_language
+
         screen.fill(BLACK)
         show_message(
             screen,
@@ -2428,13 +2443,13 @@ def settings_screen(
         try:
             font_settings = get_font_settings()
             label_font = load_font(
-                font_settings.resource, font_settings.scaled_size(12)
+                font_settings.resource, font_settings.scaled_size(11)
             )
             value_font = load_font(
-                font_settings.resource, font_settings.scaled_size(12)
+                font_settings.resource, font_settings.scaled_size(11)
             )
             section_font = load_font(
-                font_settings.resource, font_settings.scaled_size(12)
+                font_settings.resource, font_settings.scaled_size(11)
             )
             highlight_color = (70, 70, 70)
 
@@ -2540,7 +2555,7 @@ def settings_screen(
             hint_start_y = start_y
             hint_start_x = SCREEN_WIDTH // 2 + 16
             hint_font = load_font(
-                font_settings.resource, font_settings.scaled_size(12)
+                font_settings.resource, font_settings.scaled_size(11)
             )
             hint_lines = [
                 _("settings.hints.navigate"),
@@ -2557,7 +2572,7 @@ def settings_screen(
                 screen.blit(hint_surface, hint_rect)
 
             path_font = load_font(
-                font_settings.resource, font_settings.scaled_size(12)
+                font_settings.resource, font_settings.scaled_size(11)
             )
             path_text = _("settings.config_path", path=str(config_path))
             path_surface = path_font.render(path_text, False, LIGHT_GRAY)

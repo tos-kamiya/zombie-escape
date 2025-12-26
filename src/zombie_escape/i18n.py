@@ -32,6 +32,7 @@ class FontSettings:
 
 
 _LANGUAGE_OPTIONS: Tuple[LanguageOption, ...] | None = None
+_LOCALE_DATA: dict[str, dict[str, Any]] = {}
 
 _CURRENT_LANGUAGE = DEFAULT_LANGUAGE
 _CONFIGURED = False
@@ -98,15 +99,23 @@ def translate(key: str, **kwargs) -> str:
     return i18n.t(qualified_key, default=key, **kwargs)
 
 
+def translate_dict(key: str) -> dict[str, Any]:
+    if not _CONFIGURED:
+        set_language(_CURRENT_LANGUAGE)
+    qualified_key = _qualify_key(key)
+    result = i18n.t(qualified_key, default={})
+    return result if isinstance(result, dict) else {}
+
+
 def get_font_settings(name: str = "primary") -> FontSettings:
-    resource_key = f"fonts.{name}.resource"
-    scale_key = f"fonts.{name}.scale"
-    resource = translate(resource_key)
-    if resource == resource_key:
-        resource = DEFAULT_FONT_RESOURCE
-    scale_raw = translate(scale_key)
-    if scale_raw == scale_key:
-        scale_raw = DEFAULT_FONT_SCALE
+    _get_language_options()  # ensure locale data is loaded
+    locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(
+        DEFAULT_LANGUAGE, {}
+    )
+    fonts = locale_data.get("fonts", {}) if isinstance(locale_data, dict) else {}
+    data = fonts.get(name, {}) if isinstance(fonts, dict) else {}
+    resource = data.get("resource") or DEFAULT_FONT_RESOURCE
+    scale_raw = data.get("scale", DEFAULT_FONT_SCALE)
     try:
         scale = float(scale_raw)
     except (TypeError, ValueError):
@@ -134,6 +143,7 @@ def _get_language_options() -> Tuple[LanguageOption, ...]:
         raise FileNotFoundError("Missing required locale file: ui.en.json")
 
     options: list[LanguageOption] = []
+    _LOCALE_DATA.clear()
     for entry in entries:
         name = entry.name
         if not name.startswith("ui.") or not name.endswith(".json"):
@@ -145,6 +155,7 @@ def _get_language_options() -> Tuple[LanguageOption, ...]:
         except Exception:
             data = {}
         locale_data = data.get(code, {}) if isinstance(data, dict) else {}
+        _LOCALE_DATA[code] = locale_data if isinstance(locale_data, dict) else {}
         lang_name = (
             locale_data.get("meta", {}).get("language_name") if isinstance(locale_data, dict) else None
         )
