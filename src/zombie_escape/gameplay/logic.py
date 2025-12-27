@@ -102,7 +102,7 @@ def create_zombie(
     config,
     start_pos: Optional[Tuple[int, int]] = None,
     hint_pos: Optional[Tuple[float, float]] = None,
-) -> "Zombie":
+) -> Zombie:
     """Factory to create zombies with optional fast variants."""
     fast_conf = config.get("fast_zombies", {}) if config else {}
     fast_enabled = fast_conf.get("enabled", True)

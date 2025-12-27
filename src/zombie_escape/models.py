@@ -70,7 +70,7 @@ class GameData:
     areas: Areas
     fog: dict
     config: dict
-    stage: "Stage"
+    stage: Stage
     fuel: Optional[FuelCan] = None
     flashlights: List[Flashlight] | None = None
     player: Optional[Player] = None

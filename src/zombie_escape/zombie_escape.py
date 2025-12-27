@@ -1,9 +1,7 @@
 import sys
 import traceback  # For error reporting
-from typing import Optional
 
 import pygame
-from pygame import surface
 
 try:
     from .__about__ import __version__
@@ -14,70 +12,15 @@ from .constants import (
     DEFAULT_WINDOW_SCALE,
     FPS,
     RENDER_ASSETS,
-    RENDER_SCREEN_HEIGHT,
-    RENDER_SCREEN_WIDTH,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
-    WINDOW_SCALE_MAX,
-    WINDOW_SCALE_MIN,
 )
-from .i18n import set_language, translate as _
-from .models import GameData, STAGES, DEFAULT_STAGE_ID
-from .screens import ScreenID, ScreenTransition
+from .i18n import set_language
+from .models import GameData, Stage, STAGES, DEFAULT_STAGE_ID
+from .screens import ScreenID, ScreenTransition, apply_window_scale
 from .screens.game_over import game_over_screen
 from .screens.settings import settings_screen
 from .screens.title import title_screen
-
-current_window_scale = DEFAULT_WINDOW_SCALE  # Applied to the OS window only
-
-# --- Window scaling helpers ---
-def apply_window_scale(
-    scale: float, game_data: Optional[GameData] = None
-) -> surface.Surface:
-    """Resize the OS window; the logical render surface stays at the default size."""
-    global current_window_scale
-
-    clamped_scale = max(WINDOW_SCALE_MIN, min(WINDOW_SCALE_MAX, scale))
-    current_window_scale = clamped_scale
-
-    window_width = max(1, int(RENDER_SCREEN_WIDTH * current_window_scale))
-    window_height = max(1, int(RENDER_SCREEN_HEIGHT * current_window_scale))
-
-    new_window = pygame.display.set_mode((window_width, window_height))
-    pygame.display.set_caption(
-        f"{_('game.title')} v{__version__} ({window_width}x{window_height})"
-    )
-
-    if game_data is not None:
-        # Invalidate cached overview so it can be re-scaled next time it's drawn
-        game_data.state.overview_created = False
-
-    return new_window
-
-def nudge_window_scale(
-    multiplier: float, game_data: Optional[dict] = None
-) -> surface.Surface:
-    """Change window scale relative to the current setting."""
-    target_scale = current_window_scale * multiplier
-    return apply_window_scale(target_scale, game_data)
-
-def present(logical_surface: surface.Surface) -> None:
-    """Scale the logical surface directly to the window and flip buffers."""
-    window = pygame.display.get_surface()
-    if window is None:
-        return
-    window_size = window.get_size()
-    logical_size = logical_surface.get_size()
-    if window_size == logical_size:
-        window.blit(logical_surface, (0, 0))
-    else:
-        pygame.transform.scale(logical_surface, window_size, window)
-    pygame.display.flip()
-
-
-# --- Game State Function (Contains the main game loop) ---
-
-# --- Splash & Menu Functions ---
 
 # --- Main Entry Point ---
 def main():
@@ -90,7 +33,7 @@ def main():
 
     from .screens.gameplay import gameplay_screen
 
-    apply_window_scale(current_window_scale)
+    apply_window_scale(DEFAULT_WINDOW_SCALE)
     screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)).convert_alpha()
     clock = pygame.time.Clock()
 
@@ -102,7 +45,9 @@ def main():
     set_language(config.get("language"))
 
     next_screen = ScreenID.TITLE
-    payload: dict[str, object] = {}
+    pending_stage: Stage | None = None
+    pending_game_data: GameData | None = None
+    pending_config: dict | None = None
     running = True
 
     while running:
@@ -113,28 +58,25 @@ def main():
                 screen,
                 clock,
                 config,
-                STAGES,
-                DEFAULT_STAGE_ID,
+                FPS,
+                stages=STAGES,
+                default_stage_id=DEFAULT_STAGE_ID,
                 screen_size=(SCREEN_WIDTH, SCREEN_HEIGHT),
-                fps=FPS,
-                window_scale_fn=nudge_window_scale,
-                present_fn=present,
             )
         elif next_screen == ScreenID.SETTINGS:
             config = settings_screen(
                 screen,
                 clock,
                 config,
-                config_path,
+                FPS,
+                config_path=config_path,
                 screen_size=(SCREEN_WIDTH, SCREEN_HEIGHT),
-                fps=FPS,
-                present_fn=present,
-                window_scale_fn=nudge_window_scale,
             )
             set_language(config.get("language"))
             transition = ScreenTransition(ScreenID.TITLE)
         elif next_screen == ScreenID.GAMEPLAY:
-            stage = payload.get("stage") if payload else None
+            stage = pending_stage
+            pending_stage = None
             if stage is None:
                 transition = ScreenTransition(ScreenID.TITLE)
             else:
@@ -143,11 +85,10 @@ def main():
                         screen,
                         clock,
                         config,
+                        FPS,
                         stage,
                         show_pause_overlay=not hide_pause_overlay,
-                        fps=FPS,
                         render_assets=RENDER_ASSETS,
-                        present_fn=present,
                     )
                 except SystemExit:
                     running = False
@@ -158,13 +99,20 @@ def main():
                     running = False
                     break
         elif next_screen == ScreenID.GAME_OVER:
+            game_data = pending_game_data
+            stage = pending_stage
+            config_payload = pending_config
+            pending_game_data = None
+            pending_stage = None
+            pending_config = None
             transition = game_over_screen(
                 screen,
                 clock,
-                payload,
+                config_payload,
+                FPS,
+                game_data=game_data,
+                stage=stage,
                 render_assets=RENDER_ASSETS,
-                fps=FPS,
-                present_fn=present,
             )
         elif next_screen == ScreenID.EXIT:
             break
@@ -174,7 +122,9 @@ def main():
         if not transition:
             break
 
-        payload = transition.payload or {}
+        pending_stage = transition.stage
+        pending_game_data = transition.game_data
+        pending_config = transition.config
         next_screen = transition.next_screen
 
     pygame.quit()  # Quit pygame only once at the very end of main

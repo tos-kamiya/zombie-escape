@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pygame
 from pygame import surface, time
@@ -15,7 +15,7 @@ from ..gameplay import logic
 from ..i18n import translate as _
 from ..models import Stage
 from ..render import draw, show_message
-from ..screens import ScreenID, ScreenTransition
+from ..screens import ScreenID, ScreenTransition, present
 
 if TYPE_CHECKING:
     from ..render import RenderAssets
@@ -25,12 +25,11 @@ def gameplay_screen(
     screen: surface.Surface,
     clock: time.Clock,
     config,
-    stage: "Stage",
+    fps: int,
+    stage: Stage,
     *,
     show_pause_overlay: bool,
-    fps: int,
     render_assets: "RenderAssets",
-    present_fn: Callable[[surface.Surface], None],
 ) -> ScreenTransition:
     """Main gameplay loop that returns the next screen transition."""
 
@@ -131,7 +130,7 @@ def gameplay_screen(
                         companion_rescued=game_data.state.companion_rescued,
                         survivor_info=survivor_info,
                         survivor_messages=survivor_messages,
-                        present_fn=present_fn,
+                        present_fn=present,
                     )
                     if game_data.state.game_over_message:
                         show_message(
@@ -141,15 +140,13 @@ def gameplay_screen(
                             RED,
                             (screen_width // 2, screen_height // 2 - 24),
                         )
-                        present_fn(screen)
+                    present(screen)
                     continue
             return ScreenTransition(
                 ScreenID.GAME_OVER,
-                payload={
-                    "game_data": game_data,
-                    "config": config,
-                    "stage": stage,
-                },
+                stage=stage,
+                game_data=game_data,
+                config=config,
             )
 
         for event in pygame.event.get():
@@ -202,7 +199,7 @@ def gameplay_screen(
                 companion_rescued=game_data.state.companion_rescued,
                 survivor_info=survivor_info,
                 survivor_messages=survivor_messages,
-                present_fn=present_fn,
+                present_fn=present,
             )
             if show_pause_overlay:
                 overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
@@ -243,7 +240,7 @@ def gameplay_screen(
                     LIGHT_GRAY,
                     (screen_width // 2, screen_height // 2 + 70),
                 )
-                present_fn(screen)
+                present(screen)
             continue
 
         keys = pygame.key.get_pressed()
@@ -320,7 +317,7 @@ def gameplay_screen(
             companion_rescued=game_data.state.companion_rescued,
             survivor_info=survivor_info,
             survivor_messages=survivor_messages,
-            present_fn=present_fn,
+            present_fn=present,
         )
 
     # Should not reach here, but return to title if it happens

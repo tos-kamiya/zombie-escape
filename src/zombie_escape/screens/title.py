@@ -10,7 +10,7 @@ from ..font_utils import load_font
 from ..i18n import get_font_settings, translate as _
 from ..models import Stage
 from ..render import show_message
-from ..screens import ScreenID, ScreenTransition
+from ..screens import ScreenID, ScreenTransition, nudge_window_scale, present
 
 
 
@@ -18,13 +18,11 @@ def title_screen(
     screen: surface.Surface,
     clock: time.Clock,
     config,
-    stages: Sequence["Stage"],
-    default_stage_id: str,
-    *,
-    screen_size: tuple[int, int],
     fps: int,
-    window_scale_fn,
-    present_fn,
+    *,
+    stages: Sequence[Stage],
+    default_stage_id: str,
+    screen_size: tuple[int, int],
 ) -> ScreenTransition:
     """Display the title menu and return the selected transition."""
 
@@ -50,10 +48,10 @@ def title_screen(
                 return ScreenTransition(ScreenID.EXIT)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
-                    window_scale_fn(0.5)
+                    nudge_window_scale(0.5)
                     continue
                 if event.key == pygame.K_RIGHTBRACKET:
-                    window_scale_fn(2.0)
+                    nudge_window_scale(2.0)
                     continue
                 if event.key in (pygame.K_UP, pygame.K_w):
                     selected = (selected - 1) % len(options)
@@ -63,7 +61,7 @@ def title_screen(
                     current = options[selected]
                     if current["type"] == "stage" and current.get("available"):
                         return ScreenTransition(
-                            ScreenID.GAMEPLAY, payload={"stage": current["stage"]}
+                            ScreenID.GAMEPLAY, stage=current["stage"]
                         )
                     if current["type"] == "settings":
                         return ScreenTransition(ScreenID.SETTINGS)
@@ -132,5 +130,5 @@ def title_screen(
         except pygame.error as e:
             print(f"Error rendering title screen: {e}")
 
-        present_fn(screen)
+        present(screen)
         clock.tick(fps)

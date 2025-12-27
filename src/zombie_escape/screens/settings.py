@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import copy
-from typing import Callable
-
 import pygame
 from pygame import surface, time
 
@@ -18,18 +16,17 @@ from ..i18n import (
     translate as _,
 )
 from ..render import show_message
+from ..screens import nudge_window_scale, present
 
 
 def settings_screen(
     screen: surface.Surface,
     clock: time.Clock,
     config,
-    config_path,
-    *,
-    screen_size: tuple[int, int],
     fps: int,
-    present_fn: Callable[[surface.Surface], None],
-    window_scale_fn: Callable[[float], None],
+    *,
+    config_path,
+    screen_size: tuple[int, int],
 ) -> dict:
     """Settings menu shown from the title screen."""
 
@@ -167,10 +164,10 @@ def settings_screen(
                 return config
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
-                    window_scale_fn(0.5)
+                    nudge_window_scale(0.5)
                     continue
                 if event.key == pygame.K_RIGHTBRACKET:
-                    window_scale_fn(2.0)
+                    nudge_window_scale(2.0)
                     continue
                 if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
                     save_config(working, config_path)
@@ -359,5 +356,5 @@ def settings_screen(
         except pygame.error as e:
             print(f"Error rendering settings: {e}")
 
-        present_fn(screen)
+        present(screen)
         clock.tick(fps)

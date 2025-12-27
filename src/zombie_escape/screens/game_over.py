@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Callable
-
 import pygame
 from pygame import surface, time
 
@@ -9,24 +7,20 @@ from ..colors import BLACK, GREEN, LIGHT_GRAY, RED, WHITE
 from ..i18n import translate as _
 from ..models import GameData, Stage
 from ..render import RenderAssets, draw_level_overview, show_message
-from ..screens import ScreenID, ScreenTransition
-
+from ..screens import ScreenID, ScreenTransition, present
 
 
 def game_over_screen(
     screen: surface.Surface,
     clock: time.Clock,
-    payload: dict,
-    *,
-    render_assets: RenderAssets,
+    config: dict | None,
     fps: int,
-    present_fn: Callable[[surface.Surface], None],
+    *,
+    game_data: GameData | None,
+    stage: Stage | None,
+    render_assets: RenderAssets,
 ) -> ScreenTransition:
     """Display the game-over overview until the player chooses the next step."""
-
-    game_data: GameData | None = payload.get("game_data") if payload else None
-    stage: Stage | None = payload.get("stage") if payload else None
-    config = payload.get("config") if payload else None
 
     if not game_data or config is None:
         return ScreenTransition(ScreenID.TITLE)
@@ -123,7 +117,7 @@ def game_over_screen(
             (screen_width // 2, screen_height // 2 + 24),
         )
 
-        present_fn(screen)
+        present(screen)
         clock.tick(fps)
 
         for event in pygame.event.get():

@@ -469,7 +469,7 @@ class Zombie(pygame.sprite.Sprite):
         self: Self,
         move_x: float,
         move_y: float,
-        zombies: Optional[Iterable["Zombie"]],
+        zombies: Optional[Iterable[Zombie]],
     ) -> Tuple[float, float]:
         """If another zombie is too close, steer directly away from the closest one."""
         next_x = self.x + move_x
@@ -513,7 +513,7 @@ class Zombie(pygame.sprite.Sprite):
         self: Self,
         player_center: Tuple[int, int],
         walls: List[Wall],
-        nearby_zombies: Optional[Iterable["Zombie"]] = None,
+        nearby_zombies: Optional[Iterable[Zombie]] = None,
     ) -> None:
         now = pygame.time.get_ticks()
         dx_target = player_center[0] - self.x
