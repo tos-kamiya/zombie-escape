@@ -307,12 +307,6 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
     hint_on = config.get("car_hint", {}).get("enabled", True)
     flashlight_conf = config.get("flashlight", {})
     flashlight_on = flashlight_conf.get("enabled", True)
-    try:
-        flashlight_scale = float(
-            flashlight_conf.get("bonus_scale", assets.default_flashlight_bonus_scale)
-        )
-    except (TypeError, ValueError):
-        flashlight_scale = assets.default_flashlight_bonus_scale
     steel_on = config.get("steel_beams", {}).get("enabled", False)
     if stage:
         # Keep the label compact for the status bar

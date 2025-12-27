@@ -1,0 +1,327 @@
+from __future__ import annotations
+
+from typing import Callable, TYPE_CHECKING
+
+import pygame
+from pygame import surface, time
+
+from ..colors import LIGHT_GRAY, RED, WHITE, YELLOW
+from ..constants import (
+    CAR_HINT_DELAY_MS_DEFAULT,
+    DEFAULT_FLASHLIGHT_SPAWN_COUNT,
+    SURVIVOR_MAX_SAFE_PASSENGERS,
+)
+from ..gameplay import logic
+from ..i18n import translate as _
+from ..models import Stage
+from ..render import draw, show_message
+from ..screens import ScreenID, ScreenTransition
+
+if TYPE_CHECKING:
+    from ..render import RenderAssets
+
+
+def gameplay_screen(
+    screen: surface.Surface,
+    clock: time.Clock,
+    config,
+    stage: "Stage",
+    *,
+    show_pause_overlay: bool,
+    fps: int,
+    render_assets: "RenderAssets",
+    present_fn: Callable[[surface.Surface], None],
+) -> ScreenTransition:
+    """Main gameplay loop that returns the next screen transition."""
+
+    screen_width = screen.get_width()
+    screen_height = screen.get_height()
+
+    game_data = logic.initialize_game_state(config, stage)
+    paused_manual = False
+    paused_focus = False
+    last_fov_target = None
+
+    layout_data = logic.generate_level_from_blueprint(game_data)
+    player, car = logic.setup_player_and_car(game_data, layout_data)
+    game_data.player = player
+    game_data.car = car
+    logic.apply_passenger_speed_penalty(game_data)
+
+    if stage.survivor_stage:
+        logic.spawn_survivors(game_data, layout_data)
+
+    def current_survivor_ui():
+        if not stage.survivor_stage:
+            return None, None
+        return (
+            {
+                "onboard": game_data.state.survivors_onboard,
+                "limit": SURVIVOR_MAX_SAFE_PASSENGERS,
+                "rescued": game_data.state.survivors_rescued,
+            },
+            list(game_data.state.survivor_messages),
+        )
+
+    flashlight_conf = config.get("flashlight", {})
+    flashlights_enabled = flashlight_conf.get("enabled", True)
+    raw_flashlight_count = flashlight_conf.get(
+        "count", DEFAULT_FLASHLIGHT_SPAWN_COUNT
+    )
+    try:
+        flashlight_count = int(raw_flashlight_count)
+    except (TypeError, ValueError):
+        flashlight_count = DEFAULT_FLASHLIGHT_SPAWN_COUNT
+
+    if stage.requires_fuel:
+        fuel_can = logic.place_fuel_can(layout_data["walkable_cells"], player, car)
+        if fuel_can:
+            game_data.fuel = fuel_can
+            game_data.groups.all_sprites.add(fuel_can, layer=1)
+    if flashlights_enabled:
+        flashlights = logic.place_flashlights(
+            layout_data["walkable_cells"], player, car, count=max(1, flashlight_count)
+        )
+        game_data.flashlights = flashlights
+        game_data.groups.all_sprites.add(flashlights, layer=1)
+
+    if stage.requires_companion:
+        companion = logic.place_companion(
+            layout_data["walkable_cells"], player, car
+        )
+        if companion:
+            game_data.companion = companion
+            game_data.groups.all_sprites.add(companion, layer=2)
+
+    logic.spawn_initial_zombies(game_data, player, layout_data)
+    logic.update_footprints(game_data)
+    last_fov_target = player
+
+    while True:
+        dt = clock.tick(fps) / 1000.0
+        player = game_data.player
+        car = game_data.car
+
+        if game_data.state.game_over or game_data.state.game_won:
+            if game_data.state.game_over and not game_data.state.game_won:
+                if game_data.state.game_over_at is None:
+                    game_data.state.game_over_at = pygame.time.get_ticks()
+                if pygame.time.get_ticks() - game_data.state.game_over_at < 1000:
+                    survivor_info, survivor_messages = current_survivor_ui()
+                    draw(
+                        render_assets,
+                        screen,
+                        game_data.areas.outer_rect,
+                        game_data.camera,
+                        game_data.groups.all_sprites,
+                        last_fov_target,
+                        game_data.fog,
+                        game_data.state.footprints,
+                        config,
+                        player,
+                        None,
+                        None,
+                        outside_rects=game_data.areas.outside_rects,
+                        stage=stage,
+                        has_fuel=game_data.state.has_fuel,
+                        has_flashlight=game_data.state.has_flashlight,
+                        elapsed_play_ms=game_data.state.elapsed_play_ms,
+                        fuel_message_until=game_data.state.fuel_message_until,
+                        companion=game_data.companion,
+                        companion_rescued=game_data.state.companion_rescued,
+                        survivor_info=survivor_info,
+                        survivor_messages=survivor_messages,
+                        present_fn=present_fn,
+                    )
+                    if game_data.state.game_over_message:
+                        show_message(
+                            screen,
+                            game_data.state.game_over_message,
+                            18,
+                            RED,
+                            (screen_width // 2, screen_height // 2 - 24),
+                        )
+                        present_fn(screen)
+                    continue
+            return ScreenTransition(
+                ScreenID.GAME_OVER,
+                payload={
+                    "game_data": game_data,
+                    "config": config,
+                    "stage": stage,
+                },
+            )
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return ScreenTransition(ScreenID.EXIT)
+            if event.type == pygame.WINDOWFOCUSLOST:
+                paused_focus = True
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                paused_focus = False
+                paused_manual = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_s and (
+                    pygame.key.get_mods() & pygame.KMOD_CTRL
+                ):
+                    state_snapshot = {
+                        k: v
+                        for k, v in vars(game_data.state).items()
+                        if k != "footprints"
+                    }
+                    print("STATE DEBUG:", state_snapshot)
+                    continue
+                if event.key == pygame.K_ESCAPE:
+                    return ScreenTransition(ScreenID.TITLE)
+                if event.key == pygame.K_p:
+                    paused_manual = not paused_manual
+
+        paused = paused_manual or paused_focus
+        if paused:
+            survivor_info, survivor_messages = current_survivor_ui()
+            draw(
+                render_assets,
+                screen,
+                game_data.areas.outer_rect,
+                game_data.camera,
+                game_data.groups.all_sprites,
+                last_fov_target,
+                game_data.fog,
+                game_data.state.footprints,
+                config,
+                player,
+                None,
+                do_flip=not show_pause_overlay,
+                outside_rects=game_data.areas.outside_rects,
+                stage=stage,
+                has_fuel=game_data.state.has_fuel,
+                has_flashlight=game_data.state.has_flashlight,
+                elapsed_play_ms=game_data.state.elapsed_play_ms,
+                fuel_message_until=game_data.state.fuel_message_until,
+                companion=game_data.companion,
+                companion_rescued=game_data.state.companion_rescued,
+                survivor_info=survivor_info,
+                survivor_messages=survivor_messages,
+                present_fn=present_fn,
+            )
+            if show_pause_overlay:
+                overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+                overlay.fill((0, 0, 0, 150))
+                pygame.draw.circle(
+                    overlay,
+                    LIGHT_GRAY,
+                    (screen_width // 2, screen_height // 2),
+                    35,
+                    width=3,
+                )
+                bar_width = 8
+                bar_height = 30
+                gap = 9
+                cx, cy = screen_width // 2, screen_height // 2
+                pygame.draw.rect(
+                    overlay,
+                    LIGHT_GRAY,
+                    (cx - gap - bar_width, cy - bar_height // 2, bar_width, bar_height),
+                )
+                pygame.draw.rect(
+                    overlay,
+                    LIGHT_GRAY,
+                    (cx + gap, cy - bar_height // 2, bar_width, bar_height),
+                )
+                screen.blit(overlay, (0, 0))
+                show_message(
+                    screen,
+                    _("hud.paused"),
+                    18,
+                    WHITE,
+                    (screen_width // 2, screen_height // 2 + 24),
+                )
+                show_message(
+                    screen,
+                    _("hud.resume_hint"),
+                    18,
+                    LIGHT_GRAY,
+                    (screen_width // 2, screen_height // 2 + 70),
+                )
+                present_fn(screen)
+            continue
+
+        keys = pygame.key.get_pressed()
+        player_dx, player_dy, car_dx, car_dy = logic.process_player_input(
+            keys, player, car
+        )
+
+        logic.update_entities(game_data, player_dx, player_dy, car_dx, car_dy)
+        logic.update_footprints(game_data)
+        game_data.state.elapsed_play_ms += int(dt * 1000)
+        logic.cleanup_survivor_messages(game_data.state)
+
+        fov_target = logic.check_interactions(game_data)
+        last_fov_target = fov_target or last_fov_target
+
+        car_hint_conf = config.get("car_hint", {})
+        hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
+        elapsed_ms = game_data.state.elapsed_play_ms
+        has_fuel = game_data.state.has_fuel
+        hint_enabled = car_hint_conf.get("enabled", True)
+        hint_target = None
+        hint_color = YELLOW
+        hint_expires_at = game_data.state.hint_expires_at
+        hint_target_type = game_data.state.hint_target_type
+
+        if hint_enabled:
+            if not has_fuel and game_data.fuel and game_data.fuel.alive():
+                target_type = "fuel"
+            elif not player.in_car and game_data.car.alive():
+                target_type = "car"
+            else:
+                target_type = None
+
+            if target_type != hint_target_type:
+                game_data.state.hint_target_type = target_type
+                game_data.state.hint_expires_at = (
+                    elapsed_ms + hint_delay if target_type else 0
+                )
+                hint_expires_at = game_data.state.hint_expires_at
+                hint_target_type = target_type
+
+            if (
+                target_type
+                and hint_expires_at
+                and elapsed_ms >= hint_expires_at
+                and not player.in_car
+            ):
+                if target_type == "fuel" and game_data.fuel and game_data.fuel.alive():
+                    hint_target = game_data.fuel.rect.center
+                elif target_type == "car" and game_data.car.alive():
+                    hint_target = game_data.car.rect.center
+
+        survivor_info, survivor_messages = current_survivor_ui()
+        draw(
+            render_assets,
+            screen,
+            game_data.areas.outer_rect,
+            game_data.camera,
+            game_data.groups.all_sprites,
+            fov_target,
+            game_data.fog,
+            game_data.state.footprints,
+            config,
+            player,
+            hint_target,
+            hint_color,
+            outside_rects=game_data.areas.outside_rects,
+            stage=stage,
+            has_fuel=game_data.state.has_fuel,
+            has_flashlight=game_data.state.has_flashlight,
+            elapsed_play_ms=game_data.state.elapsed_play_ms,
+            fuel_message_until=game_data.state.fuel_message_until,
+            companion=game_data.companion,
+            companion_rescued=game_data.state.companion_rescued,
+            survivor_info=survivor_info,
+            survivor_messages=survivor_messages,
+            present_fn=present_fn,
+        )
+
+    # Should not reach here, but return to title if it happens
+    return ScreenTransition(ScreenID.TITLE)

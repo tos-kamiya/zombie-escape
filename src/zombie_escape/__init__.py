@@ -2,4 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-from .zombie_escape import main
+from .zombie_escape import main as main
+
+__all__ = ["main"]
