@@ -89,10 +89,10 @@ SURVIVOR_SPEED_PENALTY_PER_PASSENGER = 0.104
 SURVIVOR_MIN_SPEED_FACTOR = 0.35
 SURVIVOR_OVERLOAD_DAMAGE_RATIO = 0.2
 SURVIVOR_MESSAGE_DURATION_MS = 2000
-SURVIVOR_CONVERSION_LINES = [
-    "It hurts!",
-    "I can't hold on!",
-    "Stay back!",
+SURVIVOR_CONVERSION_LINE_KEYS = [
+    "stages.stage4.conversion_lines.line1",
+    "stages.stage4.conversion_lines.line2",
+    "stages.stage4.conversion_lines.line3",
 ]
 
 # Flashlight settings (defaults pulled from DEFAULT_CONFIG)
@@ -1447,6 +1447,13 @@ def add_survivor_message(game_data, text: str) -> None:
     game_data.state.survivor_messages.append({"text": text, "expires_at": expires})
 
 
+def random_survivor_conversion_line() -> str:
+    if not SURVIVOR_CONVERSION_LINE_KEYS:
+        return ""
+    key = random.choice(SURVIVOR_CONVERSION_LINE_KEYS)
+    return _(key)
+
+
 def cleanup_survivor_messages(state: ProgressState) -> None:
     now = pygame.time.get_ticks()
     state.survivor_messages = [
@@ -1508,8 +1515,9 @@ def handle_survivor_zombie_collisions(game_data) -> None:
         if not camera.apply_rect(survivor.rect).colliderect(screen_rect):
             continue
         survivor.kill()
-        line = random.choice(SURVIVOR_CONVERSION_LINES)
-        add_survivor_message(game_data, line)
+        line = random_survivor_conversion_line()
+        if line:
+            add_survivor_message(game_data, line)
         new_zombie = create_zombie(game_data.config, start_pos=survivor.rect.center)
         zombie_group.add(new_zombie)
         game_data.groups.all_sprites.add(new_zombie, layer=1)

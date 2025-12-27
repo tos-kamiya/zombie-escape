@@ -33,7 +33,12 @@
       },
       "stage4": {
         "name": "#4 Evacuate Survivors",
-        "description": "Load terrified civilians into the car and escape before they turn."
+        "description": "Load terrified civilians into the car and escape before they turn.",
+        "conversion_lines": {
+          "line1": "It hurts!",
+          "line2": "I can't hold on!",
+          "line3": "Stay back!"
+        }
       }
     },
     "status": {
