@@ -55,13 +55,12 @@
       "resume_hint": "Pキーかクリックで再開"
     },
     "objectives": {
-      "find_fuel": "燃料を見つける",
-      "find_car": "車を見つける",
+      "find_fuel": "燃料を探す",
+      "find_car": "車を探す",
       "escape": "建物から脱出する",
       "pickup_buddy": "相棒を救出する",
-      "find_buddy": "相棒を見つける",
-      "load_survivors": "生存者を車へ誘導する",
-      "escape_with_survivors": "生存者を車に乗せて脱出",
+      "find_buddy": "相棒を探す",
+      "escape_with_survivors": "生存者を車に乗せて脱出する",
       "survivors_onboard": "乗車中: %{count}/%{limit}",
       "survivors_rescued": "避難させた人数: %{count}"
     },
