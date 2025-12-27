@@ -51,14 +51,6 @@ At the title screen you can pick a stage:
 
 An objective reminder is shown at the top-left during play.
 
-#### Stage 4 key rules
-
--   Survivors spawn on random walkable tiles (about 5% density). They stand still until you get close, then shuffle toward you at roughly one-third of player speed.
--   If a zombie reaches a survivor while that survivor is on-screen, the survivor shouts a short line and instantly turns into a zombie.
--   Survivors ignore the player, but touching the car boards them. Up to five passengers ride safely; each slows the car, and going over the limit damages the car and ejects everyone.
--   Cars still spawn and respawn as in other stages, and a few zombies appear inside the building to keep pressure on the player.
--   The HUD tracks survivors aboard and how many you already evacuated so you can decide when to dash for the exit.
-
 ### Characters/Items
 
 -   **Player:** A blue circle. Controlled with the WASD or arrow keys.
@@ -79,6 +71,10 @@ An objective reminder is shown at the top-left during play.
     -   Zombies only choose to pursue the buddy if they are on-screen; otherwise they ignore them.
     -   If a zombie tags the buddy off-screen, the buddy quietly respawns somewhere else instead of ending the run.
     -   Touch the buddy on foot to make them follow you (at 70% of player speed). Touch them while driving to pick them up.
+-   **Survivors (Stage 4):** Light blue civilians scattered indoors.
+    - They stand still until you get close, then shuffle toward you at about one-third of player speed.
+    - Zombies can convert them if both are on-screen; the survivor shouts a line and turns instantly.
+    - They only board the car; up to five ride safely, each slowing the car. Going over the limit damages the car and ejects everyone back into the building.
 
 ### Win/Lose Conditions
 
