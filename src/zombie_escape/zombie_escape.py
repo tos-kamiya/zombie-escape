@@ -2537,16 +2537,16 @@ def title_screen(screen: surface.Surface, clock: time.Clock, config) -> dict:
         show_message(
             screen,
             _("game.title"),
-            30,
+            32,
             LIGHT_GRAY,
-            (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 95),
+            (SCREEN_WIDTH // 2, 40),
         )
 
         try:
             font_settings = get_font_settings()
-            font = load_font(font_settings.resource, font_settings.scaled_size(15))
-            line_height = 20
-            start_y = SCREEN_HEIGHT // 2 - 60
+            font = load_font(font_settings.resource, font_settings.scaled_size(18))
+            line_height = 22
+            start_y = 80
             for idx, option in enumerate(options):
                 if option["type"] == "stage":
                     label = option["stage"].name
