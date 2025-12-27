@@ -199,21 +199,53 @@ def get_hatch_pattern(
     return pattern
 
 
-def _blit_hatch_ring(
-    screen,
-    overlay: surface.Surface,
-    pattern: surface.Surface,
-    clear_center,
-    radius: float,
-):
-    """Draw a single hatched fog ring using pattern transparency only (no global alpha)."""
-    overlay.fill((0, 0, 0, 0))
-    p_w, p_h = pattern.get_size()
-    for y in range(0, overlay.get_height(), p_h):
-        for x in range(0, overlay.get_width(), p_w):
-            overlay.blit(pattern, (x, y))
-    pygame.draw.circle(overlay, (0, 0, 0, 0), clear_center, int(radius))
-    screen.blit(overlay, (0, 0))
+def _get_fog_overlay_surfaces(
+    fog_data,
+    assets: RenderAssets,
+    scale: float,
+) -> dict:
+    overlays = fog_data.setdefault("overlays", {})
+    key = round(scale, 4)
+    if key in overlays:
+        return overlays[key]
+
+    max_radius = int(assets.fov_radius * assets.fog_max_radius_factor * scale)
+    padding = 32
+    coverage_width = max(assets.screen_width * 2, max_radius * 2)
+    coverage_height = max(assets.screen_height * 2, max_radius * 2)
+    width = coverage_width + padding * 2
+    height = coverage_height + padding * 2
+    center = (width // 2, height // 2)
+
+    hard_surface = pygame.Surface((width, height), pygame.SRCALPHA)
+    hard_surface.fill(FOG_COLOR)
+    pygame.draw.circle(hard_surface, (0, 0, 0, 0), center, max_radius)
+
+    ring_surfaces: list[surface.Surface] = []
+    for ring in assets.fog_rings:
+        ring_surface = pygame.Surface((width, height), pygame.SRCALPHA)
+        pattern = get_hatch_pattern(
+            fog_data, ring.thickness, assets.fog_hatch_pixel_scale
+        )
+        p_w, p_h = pattern.get_size()
+        for y in range(0, height, p_h):
+            for x in range(0, width, p_w):
+                ring_surface.blit(pattern, (x, y))
+        radius = int(assets.fov_radius * ring.radius_factor * scale)
+        pygame.draw.circle(ring_surface, (0, 0, 0, 0), center, radius)
+        ring_surfaces.append(ring_surface)
+
+    combined_surface = hard_surface.copy()
+    for ring_surface in ring_surfaces:
+        combined_surface.blit(ring_surface, (0, 0))
+
+    overlay_entry = {
+        "hard": hard_surface,
+        "rings": ring_surfaces,
+        "combined": combined_surface,
+    }
+    overlays[key] = overlay_entry
+    return overlay_entry
 
 
 def _draw_hint_arrow(
@@ -369,8 +401,25 @@ def draw(
         if sr.colliderect(screen.get_rect()):
             pygame.draw.rect(screen, FLOOR_COLOR_OUTSIDE, sr)
 
-    for y in range(ys, ye):
-        for x in range(xs, xe):
+    view_world = pygame.Rect(
+        -camera.camera.x,
+        -camera.camera.y,
+        assets.screen_width,
+        assets.screen_height,
+    )
+    margin = assets.internal_wall_grid_snap * 2
+    view_world.inflate_ip(margin * 2, margin * 2)
+    min_world_x = max(xs * assets.internal_wall_grid_snap, view_world.left)
+    max_world_x = min(xe * assets.internal_wall_grid_snap, view_world.right)
+    min_world_y = max(ys * assets.internal_wall_grid_snap, view_world.top)
+    max_world_y = min(ye * assets.internal_wall_grid_snap, view_world.bottom)
+    start_x = max(xs, int(min_world_x // assets.internal_wall_grid_snap))
+    end_x = min(xe, int(math.ceil(max_world_x / assets.internal_wall_grid_snap)))
+    start_y = max(ys, int(min_world_y // assets.internal_wall_grid_snap))
+    end_y = min(ye, int(math.ceil(max_world_y / assets.internal_wall_grid_snap)))
+
+    for y in range(start_y, end_y):
+        for x in range(start_x, end_x):
             if (x, y) in outside_cells:
                 continue
             if (x + y) % 2 == 0:
@@ -405,9 +454,10 @@ def draw(
             if sr.colliderect(screen.get_rect().inflate(30, 30)):
                 pygame.draw.circle(screen, color, sr.center, assets.footprint_radius)
 
+    screen_rect_inflated = screen.get_rect().inflate(100, 100)
     for entity in all_sprites:
         sprite_screen_rect = camera.apply_rect(entity.rect)
-        if sprite_screen_rect.colliderect(screen.get_rect().inflate(100, 100)):
+        if sprite_screen_rect.colliderect(screen_rect_inflated):
             screen.blit(entity.image, sprite_screen_rect)
 
     if hint_target and player:
@@ -424,23 +474,26 @@ def draw(
         )
 
     if fov_target is not None:
-        fov_center_on_screen = camera.apply(fov_target).center
-        fog_hard = fog_surfaces["hard"]
-        fog_soft = fog_surfaces["soft"]
+        fov_center_on_screen = list(camera.apply(fov_target).center)
+        cam_rect = camera.camera
+        horizontal_span = camera.width - assets.screen_width
+        vertical_span = camera.height - assets.screen_height
+        if horizontal_span <= 0 or (
+            cam_rect.x != 0 and cam_rect.x != -horizontal_span
+        ):
+            fov_center_on_screen[0] = assets.screen_width // 2
+        if vertical_span <= 0 or (
+            cam_rect.y != 0 and cam_rect.y != -vertical_span
+        ):
+            fov_center_on_screen[1] = assets.screen_height // 2
+        fov_center_tuple = (int(fov_center_on_screen[0]), int(fov_center_on_screen[1]))
         fog_scale = get_fog_scale(assets, stage, has_flashlight, config)
-
-        fog_hard.fill(FOG_COLOR)
-        max_radius = int(assets.fov_radius * assets.fog_max_radius_factor * fog_scale)
-        pygame.draw.circle(fog_hard, (0, 0, 0, 0), fov_center_on_screen, max_radius)
-        screen.blit(fog_hard, (0, 0))
-
-        for ring in assets.fog_rings:
-            radius = int(assets.fov_radius * ring.radius_factor * fog_scale)
-            thickness = ring.thickness
-            pattern = get_hatch_pattern(
-                fog_surfaces, thickness, assets.fog_hatch_pixel_scale
-            )
-            _blit_hatch_ring(screen, fog_soft, pattern, fov_center_on_screen, radius)
+        overlay = _get_fog_overlay_surfaces(fog_surfaces, assets, fog_scale)
+        combined_surface: surface.Surface = overlay["combined"]
+        screen.blit(
+            combined_surface,
+            combined_surface.get_rect(center=fov_center_tuple),
+        )
 
     if not has_fuel and fuel_message_until > elapsed_play_ms:
         show_message(
@@ -500,7 +553,6 @@ def draw(
 
     if objective_lines:
         _render_objective(objective_lines)
-
     if survivor_messages:
         try:
             font_settings = get_font_settings()
@@ -517,7 +569,6 @@ def draw(
                 screen.blit(msg_surface, msg_rect)
         except pygame.error as e:
             print(f"Error rendering survivor message: {e}")
-
     _draw_status_bar(screen, assets, config, stage=stage)
     if do_flip:
         if present_fn:

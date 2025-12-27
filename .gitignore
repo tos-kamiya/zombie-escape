@@ -1,2 +1,8 @@
 .codex/
 node_modules/
+__pycache__/
+dist/
+
+package-lock.json
+package.json
+uv.lock

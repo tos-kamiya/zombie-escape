@@ -3,6 +3,7 @@ import math
 import random
 import sys
 import traceback  # For error reporting
+from bisect import bisect_left
 from dataclasses import dataclass
 from enum import Enum  # For Zombie Modes
 from typing import Callable, Iterable, List, Optional, Self, Tuple
@@ -105,8 +106,8 @@ FLASHLIGHT_PICKUP_RADIUS = 13
 DEFAULT_FLASHLIGHT_SPAWN_COUNT = 2
 
 # Footprint settings
-FOOTPRINT_RADIUS = 3
-FOOTPRINT_OVERVIEW_RADIUS = 4
+FOOTPRINT_RADIUS = 2
+FOOTPRINT_OVERVIEW_RADIUS = 3
 FOOTPRINT_COLOR = (110, 200, 255)
 FOOTPRINT_STEP_DISTANCE = 40
 FOOTPRINT_LIFETIME_MS = 135000
@@ -781,7 +782,10 @@ class Zombie(pygame.sprite.Sprite):
         return final_x, final_y
 
     def _avoid_other_zombies(
-        self: Self, move_x: float, move_y: float, zombies: Iterable["Zombie"]
+        self: Self,
+        move_x: float,
+        move_y: float,
+        zombies: Optional[Iterable["Zombie"]],
     ) -> Tuple[float, float]:
         """If another zombie is too close, steer directly away from the closest one."""
         next_x = self.x + move_x
@@ -789,6 +793,8 @@ class Zombie(pygame.sprite.Sprite):
 
         closest: Optional["Zombie"] = None
         closest_dist = ZOMBIE_SEPARATION_DISTANCE
+        if not zombies:
+            return move_x, move_y
         for other in zombies:
             if other is self or not other.alive():
                 continue
@@ -823,7 +829,7 @@ class Zombie(pygame.sprite.Sprite):
         self: Self,
         player_center: Tuple[int, int],
         walls: List[Wall],
-        zombies: Iterable["Zombie"],
+        nearby_zombies: Optional[Iterable["Zombie"]] = None,
     ) -> None:
         now = pygame.time.get_ticks()
         dx_target = player_center[0] - self.x
@@ -840,7 +846,7 @@ class Zombie(pygame.sprite.Sprite):
         elif now - self.last_mode_change_time > self.mode_change_interval:
             self.change_mode()
         move_x, move_y = self._calculate_movement(player_center)
-        move_x, move_y = self._avoid_other_zombies(move_x, move_y, zombies)
+        move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
         final_x, final_y = self._handle_wall_collision(
             self.x + move_x, self.y + move_y, walls
         )
@@ -1404,8 +1410,11 @@ def update_survivors(game_data) -> None:
     for survivor in survivors:
         _separate_from_point(survivor, player_point, player_overlap)
 
-    for i, survivor in enumerate(survivors):
-        for other in survivors[i + 1 :]:
+    survivors_with_x = sorted(((survivor.x, survivor) for survivor in survivors), key=lambda item: item[0])
+    for i, (base_x, survivor) in enumerate(survivors_with_x):
+        for other_base_x, other in survivors_with_x[i + 1 :]:
+            if other_base_x - base_x > survivor_overlap:
+                break
             dx = other.x - survivor.x
             dy = other.y - survivor.y
             dist = math.hypot(dx, dy)
@@ -1501,16 +1510,41 @@ def handle_survivor_zombie_collisions(game_data) -> None:
     if not survivor_group:
         return
     zombie_group = game_data.groups.zombie_group
+    zombies = [z for z in zombie_group if getattr(z, "alive", lambda: False)()]
+    if not zombies:
+        return
+    zombies.sort(key=lambda s: s.rect.centerx)
+    zombie_xs = [z.rect.centerx for z in zombies]
     camera = game_data.camera
     screen_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
 
     for survivor in list(survivor_group):
         if not survivor.alive():
             continue
-        colliders = pygame.sprite.spritecollide(
-            survivor, zombie_group, False, pygame.sprite.collide_circle
-        )
-        if not colliders:
+        survivor_radius = getattr(survivor, "radius", SURVIVOR_RADIUS)
+        search_radius = survivor_radius + ZOMBIE_RADIUS
+        search_radius_sq = search_radius * search_radius
+
+        min_x = survivor.rect.centerx - search_radius
+        max_x = survivor.rect.centerx + search_radius
+        start_idx = bisect_left(zombie_xs, min_x)
+        collided = False
+        for idx in range(start_idx, len(zombies)):
+            zombie_x = zombie_xs[idx]
+            if zombie_x > max_x:
+                break
+            zombie = zombies[idx]
+            if not zombie.alive():
+                continue
+            dy = zombie.rect.centery - survivor.rect.centery
+            if abs(dy) > search_radius:
+                continue
+            dx = zombie_x - survivor.rect.centerx
+            if dx * dx + dy * dy <= search_radius_sq:
+                collided = True
+                break
+
+        if not collided:
             continue
         if not camera.apply_rect(survivor.rect).colliderect(screen_rect):
             continue
@@ -1521,6 +1555,9 @@ def handle_survivor_zombie_collisions(game_data) -> None:
         new_zombie = create_zombie(game_data.config, start_pos=survivor.rect.center)
         zombie_group.add(new_zombie)
         game_data.groups.all_sprites.add(new_zombie, layer=1)
+        insert_idx = bisect_left(zombie_xs, new_zombie.rect.centerx)
+        zombie_xs.insert(insert_idx, new_zombie.rect.centerx)
+        zombies.insert(insert_idx, new_zombie)
 
 def respawn_rescued_companion_near_player(game_data) -> None:
     """Bring back the rescued companion near the player after losing the car."""
@@ -1670,7 +1707,12 @@ def initialize_game_state(config, stage: Stage):
             outside_rects=[],
             walkable_cells=[],
         ),
-        fog={"hard": fog_surface_hard, "soft": fog_surface_soft, "hatch_patterns": {}},
+        fog={
+            "hard": fog_surface_hard,
+            "soft": fog_surface_soft,
+            "hatch_patterns": {},
+            "overlays": {},
+        },
         config=config,
         stage=stage,
         fuel=None,
@@ -1967,7 +2009,27 @@ def update_entities(game_data, player_dx, player_dy, car_dx, car_dy):
                 if camera.apply_rect(survivor.rect).colliderect(screen_rect):
                     survivors_on_screen.append(survivor)
 
-    for zombie in zombie_group:
+    zombies_sorted: list[Zombie] = sorted(list(zombie_group), key=lambda z: z.x)
+
+    def _nearby_zombies(index: int) -> list[Zombie]:
+        center = zombies_sorted[index]
+        neighbors: list[Zombie] = []
+        search_radius = ZOMBIE_SEPARATION_DISTANCE + PLAYER_SPEED
+        for left in range(index - 1, -1, -1):
+            other = zombies_sorted[left]
+            if center.x - other.x > search_radius:
+                break
+            if other.alive():
+                neighbors.append(other)
+        for right in range(index + 1, len(zombies_sorted)):
+            other = zombies_sorted[right]
+            if other.x - center.x > search_radius:
+                break
+            if other.alive():
+                neighbors.append(other)
+        return neighbors
+
+    for idx, zombie in enumerate(zombies_sorted):
         target = target_center
         if companion_on_screen and companion:
             dist_to_target = math.hypot(
@@ -1993,7 +2055,8 @@ def update_entities(game_data, player_dx, player_dy, car_dx, car_dy):
                         candidate_positions,
                         key=lambda pos: math.hypot(pos[0] - zombie.x, pos[1] - zombie.y),
                     )
-        zombie.update(target, wall_group, zombie_group)
+        nearby_candidates = _nearby_zombies(idx)
+        zombie.update(target, wall_group, nearby_candidates)
 
 
 def check_interactions(game_data):
