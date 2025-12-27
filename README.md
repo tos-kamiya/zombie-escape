@@ -47,7 +47,7 @@ At the title screen you can pick a stage:
 - **Stage 1: Find the Car** — locate the car and drive out.
 - **Stage 2: Fuel Run** — find a fuel can first, pick it up, then find the car and escape.
 - **Stage 3: Rescue Buddy** — find your stranded buddy, grab fuel, pick them up with the car, then escape together.
-- **Stage 4: Evacuate Survivors** — the factory floor is crowded with scared civilians. Find the car, lure survivors to it, load a safe number, and drive out before zombies reach them.
+- **Stage 4: Evacuate Survivors** — find the car, gather nearby civilians, and escape before zombies reach them.
 
 An objective reminder is shown at the top-left during play.
 
