@@ -92,7 +92,8 @@
       "win": "脱出成功！",
       "lose": "ゲームオーバー",
       "prompt": "ESCキーかスペースバーでタイトルに戻る",
-      "scream": "ぎゃあーーー!!"
+      "scream": "ぎゃあーーー!!",
+      "survivors_summary": "救出人数: %{count}"
     }
   }
 }

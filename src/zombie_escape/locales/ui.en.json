@@ -92,7 +92,8 @@
       "win": "YOU ESCAPED!",
       "lose": "GAME OVER",
       "prompt": "Press ESC or SPACE to return to Title",
-      "scream": "AAAAHHH!!"
+      "scream": "AAAAHHH!!",
+      "survivors_summary": "Evacuated: %{count}"
     }
   }
 }

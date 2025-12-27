@@ -1825,13 +1825,13 @@ def handle_game_over_state(screen, game_data):
                 )
 
         if game_data.stage.survivor_stage:
-            msg = _("objectives.survivors_rescued", count=state.survivors_rescued)
+            msg = _("game_over.survivors_summary", count=state.survivors_rescued)
             show_message(
                 screen,
                 msg,
                 18,
                 LIGHT_GRAY,
-                (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 40),
+                (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 70),
             )
 
     show_message(
