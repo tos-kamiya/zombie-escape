@@ -54,6 +54,9 @@
       "paused": "PAUSED",
       "resume_hint": "Press P or click to resume"
     },
+    "survivors": {
+      "too_many_aboard": "Too many aboard!"
+    },
     "objectives": {
       "find_fuel": "Find the fuel can",
       "find_car": "Find the car",

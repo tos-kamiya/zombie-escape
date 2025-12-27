@@ -35,9 +35,9 @@
         "name": "#4 生存者救出",
         "description": "怯える人々を車に乗せ、ゾンビになる前に脱出しよう",
         "conversion_lines": {
-          "line1": "痛いー！",
+          "line1": "痛いぃ！",
           "line2": "無理！無理！",
-          "line3": "来るな！"
+          "line3": "来るなぁ！"
         }
       }
     },
@@ -53,6 +53,9 @@
       "need_fuel": "燃料が必要です！",
       "paused": "一時停止",
       "resume_hint": "Pキーかクリックで再開"
+    },
+    "survivors": {
+      "too_many_aboard": "定員オーバー！"
     },
     "objectives": {
       "find_fuel": "燃料を探す",

@@ -2129,7 +2129,9 @@ def check_interactions(game_data):
                 overload_damage = max(
                     1, int(game_data.car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO)
                 )
-                add_survivor_message(game_data, "Too many aboard!")
+                add_survivor_message(
+                    game_data, _("survivors.too_many_aboard")
+                )
                 game_data.car.take_damage(overload_damage)
 
     if stage.survivor_stage:
