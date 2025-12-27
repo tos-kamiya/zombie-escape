@@ -61,7 +61,7 @@
       "pickup_buddy": "Pick up your buddy",
       "find_buddy": "Find your buddy",
       "load_survivors": "Draw survivors toward the car",
-      "escape_with_survivors": "Escape with whoever you rescued",
+      "escape_with_survivors": "Escape with the survivors aboard",
       "survivors_onboard": "Survivors aboard: %{count}/%{limit}",
       "survivors_rescued": "Evacuated: %{count}"
     },

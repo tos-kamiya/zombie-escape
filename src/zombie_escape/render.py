@@ -469,7 +469,7 @@ def draw(
         objective_lines.append(_("objectives.find_fuel"))
     elif stage and getattr(stage, "survivor_stage", False):
         if not player.in_car:
-            objective_lines.append(_("objectives.load_survivors"))
+            objective_lines.append(_("objectives.find_car"))
         else:
             objective_lines.append(_("objectives.escape_with_survivors"))
     elif not player.in_car:
