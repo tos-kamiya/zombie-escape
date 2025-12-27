@@ -24,29 +24,29 @@
         "description": "車を見つけて乗り込み建物から脱出しよう"
       },
       "stage2": {
-        "name": "#2 ガソリンを求めて",
-        "description": "ガソリンを見つけて車に持っていき、脱出しよう"
+        "name": "#2 燃料を求めて",
+        "description": "燃料を見つけて車に持っていき、脱出しよう"
       },
       "stage3": {
         "name": "#3 相棒を救え",
-        "description": "はぐれた相棒を探し、ガソリンを見つけ、脱出しよう"
+        "description": "はぐれた相棒を探し、燃料を見つけ、脱出しよう"
       }
     },
     "status": {
       "stage": "ステージ %{label}",
       "footprints": "足跡",
-      "fast": "足早",
+      "fast": "高速ゾ",
       "car_hint": "車ヒント",
-      "flashlight": "ライト",
+      "flashlight": "懐中電灯",
       "steel": "鉄筋"
     },
     "hud": {
-      "need_fuel": "ガソリンが必要です！",
+      "need_fuel": "燃料が必要です！",
       "paused": "一時停止",
       "resume_hint": "Pキーかクリックで再開"
     },
     "objectives": {
-      "find_fuel": "ガソリンを見つける",
+      "find_fuel": "燃料を見つける",
       "find_car": "車を見つける",
       "escape": "建物から脱出する",
       "pickup_buddy": "相棒を救出する",
@@ -62,10 +62,10 @@
       "rows": {
         "language": "テキスト言語",
         "footprints": "足跡",
-        "car_hint": "車ヒント",
-        "flashlight": "ライト",
-        "fast_zombies": "足早ゾンビ",
-        "steel_beams": "鉄筋入りカベ"
+        "car_hint": "車のヒント",
+        "flashlight": "懐中電灯",
+        "fast_zombies": "高速ゾンビ",
+        "steel_beams": "鉄筋"
       },
       "hints": {
         "navigate": "上下: 項目選択",
@@ -84,7 +84,7 @@
       "win": "脱出成功！",
       "lose": "ゲームオーバー",
       "prompt": "ESCキーかスペースバーでタイトルに戻る",
-      "scream": "ぎゃあああ!!"
+      "scream": "ぎゃあーーー!!"
     }
   }
 }

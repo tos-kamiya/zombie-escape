@@ -442,13 +442,13 @@ def draw(
     def _render_objective(lines: list[str]):
         try:
             font_settings = get_font_settings()
-            font = load_font(font_settings.resource, font_settings.scaled_size(18))
-            y = 16
+            font = load_font(font_settings.resource, font_settings.scaled_size(11))
+            y = 8
             for line in lines:
                 text_surface = font.render(line, False, YELLOW)
-                text_rect = text_surface.get_rect(topleft=(16, y))
+                text_rect = text_surface.get_rect(topleft=(12, y))
                 screen.blit(text_surface, text_rect)
-                y += text_rect.height + 6
+                y += text_rect.height + 4
         except pygame.error as e:
             print(f"Error rendering objective: {e}")
 
