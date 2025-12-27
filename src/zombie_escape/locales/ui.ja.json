@@ -30,6 +30,10 @@
       "stage3": {
         "name": "#3 相棒を救え",
         "description": "はぐれた相棒を探し、燃料を見つけ、脱出しよう"
+      },
+      "stage4": {
+        "name": "#4 生存者救出",
+        "description": "怯える人々を車に乗せ、ゾンビになる前に脱出しよう"
       }
     },
     "status": {
@@ -50,7 +54,11 @@
       "find_car": "車を見つける",
       "escape": "建物から脱出する",
       "pickup_buddy": "相棒を救出する",
-      "find_buddy": "相棒を見つける"
+      "find_buddy": "相棒を見つける",
+      "load_survivors": "生存者を車へ誘導する",
+      "escape_with_survivors": "救出した人々を乗せて脱出",
+      "survivors_onboard": "乗車中: %{count}/%{limit}",
+      "survivors_rescued": "避難させた人数: %{count}"
     },
     "settings": {
       "title": "設定",

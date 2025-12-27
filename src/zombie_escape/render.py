@@ -86,6 +86,7 @@ def draw_level_overview(
     flashlights=None,
     stage=None,
     companion=None,
+    survivors=None,
 ) -> None:
     surface.fill(BLACK)
     for wall in wall_group:
@@ -114,6 +115,15 @@ def draw_level_overview(
                 )
                 pygame.draw.rect(
                     surface, BLACK, flashlight.rect, width=2, border_radius=2
+                )
+    if survivors:
+        for survivor in survivors:
+            if hasattr(survivor, "alive") and survivor.alive():
+                pygame.draw.circle(
+                    surface,
+                    (220, 220, 255),
+                    survivor.rect.center,
+                    assets.player_radius * 2,
                 )
     if player:
         pygame.draw.circle(surface, BLUE, player.rect.center, assets.player_radius * 2)
@@ -327,6 +337,8 @@ def draw(
     fuel_message_until: int = 0,
     companion=None,
     companion_rescued: bool = False,
+    survivor_info: dict | None = None,
+    survivor_messages: list[dict] | None = None,
     present_fn=None,
 ):
     hint_color = hint_color or YELLOW
@@ -455,6 +467,11 @@ def draw(
     objective_lines: list[str] = []
     if stage and stage.requires_fuel and not has_fuel:
         objective_lines.append(_("objectives.find_fuel"))
+    elif stage and getattr(stage, "survivor_stage", False):
+        if not player.in_car:
+            objective_lines.append(_("objectives.load_survivors"))
+        else:
+            objective_lines.append(_("objectives.escape_with_survivors"))
     elif not player.in_car:
         objective_lines.append(_("objectives.find_car"))
     else:
@@ -469,8 +486,37 @@ def draw(
             elif not buddy_following:
                 objective_lines.append(_("objectives.find_buddy"))
 
+    if survivor_info:
+        onboard = survivor_info.get("onboard", 0)
+        limit = survivor_info.get("limit", 0)
+        rescued = survivor_info.get("rescued", 0)
+        objective_lines.append(
+            _("objectives.survivors_onboard", count=onboard, limit=limit)
+        )
+        if rescued:
+            objective_lines.append(
+                _("objectives.survivors_rescued", count=rescued)
+            )
+
     if objective_lines:
         _render_objective(objective_lines)
+
+    if survivor_messages:
+        try:
+            font_settings = get_font_settings()
+            font = load_font(font_settings.resource, font_settings.scaled_size(14))
+            base_y = assets.screen_height // 2 - 70
+            for idx, message in enumerate(survivor_messages[:3]):
+                text = message.get("text", "")
+                if not text:
+                    continue
+                msg_surface = font.render(text, False, ORANGE)
+                msg_rect = msg_surface.get_rect(
+                    center=(assets.screen_width // 2, base_y + idx * 18)
+                )
+                screen.blit(msg_surface, msg_rect)
+        except pygame.error as e:
+            print(f"Error rendering survivor message: {e}")
 
     _draw_status_bar(screen, assets, config, stage=stage)
     if do_flip:

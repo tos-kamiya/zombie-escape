@@ -47,8 +47,17 @@ At the title screen you can pick a stage:
 - **Stage 1: Find the Car** — locate the car and drive out.
 - **Stage 2: Fuel Run** — find a fuel can first, pick it up, then find the car and escape.
 - **Stage 3: Rescue Buddy** — find your stranded buddy, grab fuel, pick them up with the car, then escape together.
+- **Stage 4: Evacuate Survivors (tentative)** — the factory interior is crowded with terrified civilians who barely move. Guide them to the car, load as many as you safely can, and escape before the horde converts everyone.
 
 An objective reminder is shown at the top-left during play.
+
+#### Stage 4 (tentative) key rules
+
+-   Survivors spawn on open tiles with a global density under 5%. They stand still unless the player steps within a short radius, at which point they shuffle closer at roughly one-third of the player's speed.
+-   If a zombie touches a survivor while that survivor is on-screen, the survivor speaks a short line (currently hard-coded English text) and immediately transforms into a zombie.
+-   Survivors do nothing when touching the player, but touching the car will board them. Up to five passengers can ride safely; each passenger slows the car. Exceeding the limit overloads the car can destroy the car and eject everyone back into the level.
+-   Cars still spawn and respawn randomly as in other stages, and a handful of zombies also spawn inside the building to keep the tension high.
+-   The HUD will track how many survivors are currently aboard so the player can decide when to risk an overloaded run to the exit.
 
 ### Characters/Items
 

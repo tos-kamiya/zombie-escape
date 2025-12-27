@@ -30,6 +30,10 @@
       "stage3": {
         "name": "#3 Rescue Buddy",
         "description": "Find your stranded buddy, pick up fuel, and escape together."
+      },
+      "stage4": {
+        "name": "#4 Evacuate Survivors",
+        "description": "Load terrified civilians into the car and escape before they turn."
       }
     },
     "status": {
@@ -50,7 +54,11 @@
       "find_car": "Find the car",
       "escape": "Escape the building",
       "pickup_buddy": "Pick up your buddy",
-      "find_buddy": "Find your buddy"
+      "find_buddy": "Find your buddy",
+      "load_survivors": "Draw survivors toward the car",
+      "escape_with_survivors": "Escape with whoever you rescued",
+      "survivors_onboard": "Survivors aboard: %{count}/%{limit}",
+      "survivors_rescued": "Evacuated: %{count}"
     },
     "settings": {
       "title": "Settings",
