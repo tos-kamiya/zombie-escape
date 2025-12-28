@@ -168,9 +168,9 @@ def generate_random_blueprint(steel_chance: float) -> dict:
     return {"grid": blueprint_rows, "steel_cells": steel_beams}
 
 
-def choose_blueprint(config: dict | None = None) -> dict:
+def choose_blueprint(config: dict) -> dict:
     # Currently only random generation; hook for future variants.
-    steel_conf = (config or {}).get("steel_beams", {})
+    steel_conf = config.get("steel_beams", {})
     try:
         steel_chance = float(steel_conf.get("chance", STEEL_BEAM_CHANCE))
     except (TypeError, ValueError):
