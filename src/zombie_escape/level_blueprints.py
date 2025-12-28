@@ -131,11 +131,10 @@ def _place_steel_beams(
 def _pick_empty_cell(
     grid: list[list[str]],
     margin: int,
-    forbidden: set[tuple[int, int]] | None = None,
+    forbidden: set[tuple[int, int]],
 ) -> tuple[int, int]:
     cols, rows = len(grid[0]), len(grid)
     attempts = 0
-    forbidden = forbidden or set()
     while attempts < 2000:
         attempts += 1
         x = random.randint(margin, cols - margin - 1)
