@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Sequence
+from typing import Any, Sequence
 
 import pygame
 from pygame import surface, time
@@ -17,7 +17,7 @@ from ..screens import ScreenID, ScreenTransition, nudge_window_scale, present
 def title_screen(
     screen: surface.Surface,
     clock: time.Clock,
-    config,
+    config: dict[str, Any],
     fps: int,
     *,
     stages: Sequence[Stage],

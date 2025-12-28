@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import copy
+from pathlib import Path
+from typing import Any
+
 import pygame
 from pygame import surface, time
 
@@ -22,12 +25,12 @@ from ..screens import nudge_window_scale, present
 def settings_screen(
     screen: surface.Surface,
     clock: time.Clock,
-    config,
+    config: dict[str, Any],
     fps: int,
     *,
-    config_path,
+    config_path: Path,
     screen_size: tuple[int, int],
-) -> dict:
+) -> dict[str, Any]:
     """Settings menu shown from the title screen."""
 
     screen_width, screen_height = screen_size
@@ -43,7 +46,7 @@ def settings_screen(
             node = node.setdefault(key, {})
         return node, path[-1]
 
-    def _get_value(path: tuple[str, ...], default):
+    def _get_value(path: tuple[str, ...], default: Any) -> Any:
         node = working
         for key in path[:-1]:
             next_node = node.get(key)
@@ -54,7 +57,7 @@ def settings_screen(
             return node.get(path[-1], default)
         return default
 
-    def set_value(path: tuple[str, ...], value) -> None:
+    def set_value(path: tuple[str, ...], value: Any) -> None:
         node, leaf = _ensure_parent(path)
         node[leaf] = value
 
@@ -312,7 +315,7 @@ def settings_screen(
                     left_active = value == row["easy_value"]
                     right_active = not left_active
 
-                    def draw_segment(rect: pygame.Rect, text: str, active: bool):
+                    def draw_segment(rect: pygame.Rect, text: str, active: bool) -> None:
                         base_color = (35, 35, 35)
                         active_color = (60, 90, 60) if active else base_color
                         outline_color = GREEN if active else LIGHT_GRAY

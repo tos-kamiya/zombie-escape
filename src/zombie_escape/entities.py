@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import random
 from enum import Enum
-from typing import Callable, Iterable, List, Optional, Self, Tuple
+from typing import Callable, Iterable, Self
 
 import pygame
 from pygame import rect
@@ -65,9 +65,9 @@ class Wall(pygame.sprite.Sprite):
         width: int,
         height: int,
         health: int = INTERNAL_WALL_HEALTH,
-        color: Tuple[int, int, int] = INTERNAL_WALL_COLOR,
-        border_color: Tuple[int, int, int] = INTERNAL_WALL_BORDER_COLOR,
-        on_destroy: Optional[Callable[[Self], None]] = None,
+        color: tuple[int, int, int] = INTERNAL_WALL_COLOR,
+        border_color: tuple[int, int, int] = INTERNAL_WALL_BORDER_COLOR,
+        on_destroy: Callable[[Self], None] | None = None,
     ) -> None:
         super().__init__()
         safe_width = max(1, width)
@@ -254,14 +254,14 @@ class Companion(pygame.sprite.Sprite):
         self.following = False
         self.rescued = True
 
-    def teleport(self: Self, pos: Tuple[int, int]) -> None:
+    def teleport(self: Self, pos: tuple[int, int]) -> None:
         """Reposition the companion (used for quiet respawns)."""
         self.x, self.y = float(pos[0]), float(pos[1])
         self.rect.center = (int(self.x), int(self.y))
         self.following = False
 
     def update_follow(
-        self: Self, target_pos: Tuple[float, float], walls: pygame.sprite.Group
+        self: Self, target_pos: tuple[float, float], walls: pygame.sprite.Group
     ) -> None:
         """Follow the target at a slightly slower speed than the player."""
         if self.rescued or not self.following:
@@ -321,7 +321,7 @@ class Survivor(pygame.sprite.Sprite):
         self.y = float(self.rect.centery)
 
     def update_behavior(
-        self: Self, player_pos: Tuple[int, int], walls: pygame.sprite.Group
+        self: Self, player_pos: tuple[int, int], walls: pygame.sprite.Group
     ) -> None:
         dx = player_pos[0] - self.x
         dy = player_pos[1] - self.y
@@ -347,7 +347,7 @@ class Survivor(pygame.sprite.Sprite):
 
         self.rect.center = (int(self.x), int(self.y))
 
-def random_position_outside_building() -> Tuple[int, int]:
+def random_position_outside_building() -> tuple[int, int]:
     side = random.choice(["top", "bottom", "left", "right"])
     margin = 0
     if side == "top":
@@ -363,9 +363,9 @@ def random_position_outside_building() -> Tuple[int, int]:
 class Zombie(pygame.sprite.Sprite):
     def __init__(
         self: Self,
-        start_pos: Optional[Tuple[int, int]] = None,
-        hint_pos: Optional[Tuple[float, float]] = None,
-        speed_override: Optional[float] = None,
+        start_pos: tuple[int, int] | None = None,
+        hint_pos: tuple[float, float] | None = None,
+        speed_override: float | None = None,
         is_fast: bool = False,
     ) -> None:
         super().__init__()
@@ -395,7 +395,7 @@ class Zombie(pygame.sprite.Sprite):
         )
         self.was_in_sight = False
 
-    def change_mode(self: Self, force_mode: Optional[ZombieMode] = None) -> None:
+    def change_mode(self: Self, force_mode: ZombieMode | None = None) -> None:
         if force_mode:
             self.mode = force_mode
         else:
@@ -407,8 +407,8 @@ class Zombie(pygame.sprite.Sprite):
         )
 
     def _calculate_movement(
-        self: Self, player_center: Tuple[int, int]
-    ) -> Tuple[float, float]:
+        self: Self, player_center: tuple[int, int]
+    ) -> tuple[float, float]:
         move_x, move_y = 0, 0
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
@@ -438,8 +438,8 @@ class Zombie(pygame.sprite.Sprite):
         return move_x, move_y
 
     def _handle_wall_collision(
-        self: Self, next_x: float, next_y: float, walls: List[Wall]
-    ) -> Tuple[float, float]:
+        self: Self, next_x: float, next_y: float, walls: list[Wall]
+    ) -> tuple[float, float]:
         final_x, final_y = next_x, next_y
 
         possible_walls = [
@@ -469,13 +469,13 @@ class Zombie(pygame.sprite.Sprite):
         self: Self,
         move_x: float,
         move_y: float,
-        zombies: Optional[Iterable[Zombie]],
-    ) -> Tuple[float, float]:
+        zombies: Iterable[Zombie] | None,
+    ) -> tuple[float, float]:
         """If another zombie is too close, steer directly away from the closest one."""
         next_x = self.x + move_x
         next_y = self.y + move_y
 
-        closest: Optional["Zombie"] = None
+        closest: "Zombie" | None = None
         closest_dist = ZOMBIE_SEPARATION_DISTANCE
         if not zombies:
             return move_x, move_y
@@ -511,9 +511,9 @@ class Zombie(pygame.sprite.Sprite):
 
     def update(
         self: Self,
-        player_center: Tuple[int, int],
-        walls: List[Wall],
-        nearby_zombies: Optional[Iterable[Zombie]] = None,
+        player_center: tuple[int, int],
+        walls: list[Wall],
+        nearby_zombies: Iterable[Zombie] | None = None,
     ) -> None:
         now = pygame.time.get_ticks()
         dx_target = player_center[0] - self.x
@@ -557,7 +557,7 @@ class Car(pygame.sprite.Sprite):
         self.max_health = CAR_HEALTH
         self.update_color()
 
-    def take_damage(self, amount):
+    def take_damage(self: Self, amount: int) -> None:
         if self.health > 0:
             self.health -= amount
             self.update_color()
@@ -636,7 +636,7 @@ class Car(pygame.sprite.Sprite):
         old_center = self.rect.center
         self.rect = self.image.get_rect(center=old_center)
 
-    def move(self, dx, dy, walls):
+    def move(self: Self, dx: float, dy: float, walls: Iterable[Wall]) -> None:
         if self.health <= 0:
             return
         if dx == 0 and dy == 0:

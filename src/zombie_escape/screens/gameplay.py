@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pygame
 from pygame import surface, time
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 def gameplay_screen(
     screen: surface.Surface,
     clock: time.Clock,
-    config,
+    config: dict[str, Any],
     fps: int,
     stage: Stage,
     *,
@@ -50,7 +50,9 @@ def gameplay_screen(
     if stage.survivor_stage:
         logic.spawn_survivors(game_data, layout_data)
 
-    def current_survivor_ui():
+    def current_survivor_ui() -> tuple[
+        dict[str, int] | None, list[dict[str, Any]] | None
+    ]:
         if not stage.survivor_stage:
             return None, None
         return (

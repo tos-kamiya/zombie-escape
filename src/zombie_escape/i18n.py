@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from importlib import resources
-from typing import Any, Tuple
+from typing import Any
 
 from .font_utils import clear_font_cache
 
@@ -31,7 +31,7 @@ class FontSettings:
         return max(1, round(base_size * self.scale))
 
 
-_LANGUAGE_OPTIONS: Tuple[LanguageOption, ...] | None = None
+_LANGUAGE_OPTIONS: tuple[LanguageOption, ...] | None = None
 _LOCALE_DATA: dict[str, dict[str, Any]] = {}
 
 _CURRENT_LANGUAGE = DEFAULT_LANGUAGE
@@ -78,7 +78,7 @@ def get_language() -> str:
     return _CURRENT_LANGUAGE
 
 
-def language_options() -> Tuple[LanguageOption, ...]:
+def language_options() -> tuple[LanguageOption, ...]:
     return _get_language_options()
 
 
@@ -92,7 +92,7 @@ def get_language_name(code: str) -> str:
     return code or DEFAULT_LANGUAGE
 
 
-def translate(key: str, **kwargs) -> str:
+def translate(key: str, **kwargs: Any) -> str:
     if not _CONFIGURED:
         set_language(_CURRENT_LANGUAGE)
     qualified_key = _qualify_key(key)
@@ -127,7 +127,7 @@ def _qualify_key(key: str) -> str:
     return key if key.startswith("ui.") else f"ui.{key}"
 
 
-def _get_language_options() -> Tuple[LanguageOption, ...]:
+def _get_language_options() -> tuple[LanguageOption, ...]:
     global _LANGUAGE_OPTIONS
     if _LANGUAGE_OPTIONS is not None:
         return _LANGUAGE_OPTIONS

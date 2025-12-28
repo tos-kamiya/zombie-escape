@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from .config import DEFAULT_CONFIG
 from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE
-from .render import FogRing, RenderAssets
+from .render_assets import FogRing, RenderAssets
 
 # --- Screen and window configuration ---
 LOGICAL_SCREEN_WIDTH = 400

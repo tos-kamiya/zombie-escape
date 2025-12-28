@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Any, Callable
 
 import pygame
 from pygame import sprite, surface
@@ -23,39 +22,17 @@ from .colors import (
 )
 from .font_utils import load_font
 from .i18n import get_font_settings, translate as _
-
-
-@dataclass(frozen=True)
-class FogRing:
-    radius_factor: float
-    thickness: int
-
-
-@dataclass(frozen=True)
-class RenderAssets:
-    screen_width: int
-    screen_height: int
-    status_bar_height: int
-    player_radius: int
-    fov_radius: int
-    fog_radius_scale: float
-    fog_max_radius_factor: float
-    fog_hatch_pixel_scale: int
-    fog_rings: List[FogRing]
-    footprint_radius: int
-    footprint_overview_radius: int
-    footprint_lifetime_ms: int
-    footprint_min_fade: float
-    internal_wall_grid_snap: int
-    default_flashlight_bonus_scale: float
+from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player, Survivor
+from .models import Stage
+from .render_assets import FogRing, RenderAssets
 
 
 def show_message(
     screen: surface.Surface,
     text: str,
     size: int,
-    color: Tuple[int, int, int],
-    position: Tuple[int, int],
+    color: tuple[int, int, int],
+    position: tuple[int, int],
 ) -> None:
     try:
         font_settings = get_font_settings()
@@ -79,14 +56,14 @@ def draw_level_overview(
     assets: RenderAssets,
     surface: surface.Surface,
     wall_group: sprite.Group,
-    player,
-    car,
-    footprints,
-    fuel=None,
-    flashlights=None,
-    stage=None,
-    companion=None,
-    survivors=None,
+    player: Player | None,
+    car: Car | None,
+    footprints: list[dict[str, Any]],
+    fuel: FuelCan | None = None,
+    flashlights: list[Flashlight] | None = None,
+    stage: Stage | None = None,
+    companion: Companion | None = None,
+    survivors: list[Survivor] | None = None,
 ) -> None:
     surface.fill(BLACK)
     for wall in wall_group:
@@ -143,7 +120,10 @@ def draw_level_overview(
 
 
 def get_fog_scale(
-    assets: RenderAssets, stage, has_flashlight: bool, config: dict | None = None
+    assets: RenderAssets,
+    stage: Stage | None,
+    has_flashlight: bool,
+    config: dict[str, Any] | None = None,
 ) -> float:
     """Return current fog scale factoring in flashlight bonus."""
     scale = assets.fog_radius_scale
@@ -161,7 +141,7 @@ def get_fog_scale(
 
 
 def get_hatch_pattern(
-    fog_data, thickness: int, pixel_scale: int = 1
+    fog_data: dict[str, Any], thickness: int, pixel_scale: int = 1
 ) -> surface.Surface:
     """Return cached ordered-dither tile surface (Bayer-style, optionally chunky)."""
     cache = fog_data.setdefault("hatch_patterns", {})
@@ -200,10 +180,10 @@ def get_hatch_pattern(
 
 
 def _get_fog_overlay_surfaces(
-    fog_data,
+    fog_data: dict[str, Any],
     assets: RenderAssets,
     scale: float,
-) -> dict:
+) -> dict[str, Any]:
     overlays = fog_data.setdefault("overlays", {})
     key = round(scale, 4)
     if key in overlays:
@@ -249,12 +229,12 @@ def _get_fog_overlay_surfaces(
 
 
 def _draw_hint_arrow(
-    screen,
-    camera,
+    screen: surface.Surface,
+    camera: Camera,
     assets: RenderAssets,
-    player,
-    target_pos: Tuple[int, int],
-    color=None,
+    player: Player,
+    target_pos: tuple[int, int],
+    color: tuple[int, int, int] | None = None,
     ring_radius: float | None = None,
 ) -> None:
     """Draw a soft directional hint from player to a target position."""
@@ -290,7 +270,12 @@ def _draw_hint_arrow(
     pygame.draw.polygon(screen, color, [tip, left, right])
 
 
-def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
+def _draw_status_bar(
+    screen: surface.Surface,
+    assets: RenderAssets,
+    config: dict[str, Any],
+    stage: Stage | None = None,
+) -> None:
     """Render a compact status bar with current config flags and stage info."""
     bar_rect = pygame.Rect(
         0,
@@ -343,30 +328,30 @@ def _draw_status_bar(screen, assets: RenderAssets, config, stage=None):
 
 def draw(
     assets: RenderAssets,
-    screen,
-    outer_rect,
-    camera,
-    all_sprites,
-    fov_target,
-    fog_surfaces,
-    footprints,
-    config,
-    player,
-    hint_target: Tuple[int, int] | None,
-    hint_color=None,
+    screen: surface.Surface,
+    outer_rect: tuple[int, int, int, int],
+    camera: Camera,
+    all_sprites: sprite.LayeredUpdates,
+    fov_target: pygame.sprite.Sprite | None,
+    fog_surfaces: dict[str, Any],
+    footprints: list[dict[str, Any]],
+    config: dict[str, Any],
+    player: Player,
+    hint_target: tuple[int, int] | None,
+    hint_color: tuple[int, int, int] | None = None,
     do_flip: bool = True,
-    outside_rects: List[pygame.Rect] | None = None,
-    stage=None,
+    outside_rects: list[pygame.Rect] | None = None,
+    stage: Stage | None = None,
     has_fuel: bool = False,
     has_flashlight: bool = False,
     elapsed_play_ms: int = 0,
     fuel_message_until: int = 0,
-    companion=None,
+    companion: Companion | None = None,
     companion_rescued: bool = False,
-    survivor_info: dict | None = None,
-    survivor_messages: list[dict] | None = None,
-    present_fn=None,
-):
+    survivor_info: dict[str, int] | None = None,
+    survivor_messages: list[dict[str, Any]] | None = None,
+    present_fn: Callable[[surface.Surface], None] | None = None,
+) -> None:
     hint_color = hint_color or YELLOW
     screen.fill(FLOOR_COLOR_OUTSIDE)
 
@@ -498,7 +483,7 @@ def draw(
             (assets.screen_width // 2, assets.screen_height // 2),
         )
 
-    def _render_objective(lines: list[str]):
+    def _render_objective(lines: list[str]) -> None:
         try:
             font_settings = get_font_settings()
             font = load_font(font_settings.resource, font_settings.scaled_size(11))

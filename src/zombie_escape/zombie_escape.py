@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import sys
 import traceback  # For error reporting
+from typing import Any
 
 import pygame
 
@@ -14,6 +17,9 @@ from .constants import (
     RENDER_ASSETS,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
+    CAR_SPEED,
+    SURVIVOR_MAX_SAFE_PASSENGERS,
+    SURVIVOR_MIN_SPEED_FACTOR,
 )
 from .i18n import set_language
 from .models import GameData, Stage, STAGES, DEFAULT_STAGE_ID
@@ -21,9 +27,10 @@ from .screens import ScreenID, ScreenTransition, apply_window_scale
 from .screens.game_over import game_over_screen
 from .screens.settings import settings_screen
 from .screens.title import title_screen
+from .gameplay.logic import calculate_car_speed_for_passengers
 
 # --- Main Entry Point ---
-def main():
+def main() -> None:
     pygame.init()
     try:
         pygame.font.init()
@@ -39,6 +46,7 @@ def main():
 
     hide_pause_overlay = "--hide-pause-overlay" in sys.argv
 
+    config: dict[str, Any]
     config, config_path = load_config()
     if not config_path.exists():
         save_config(config, config_path)
@@ -47,7 +55,7 @@ def main():
     next_screen = ScreenID.TITLE
     pending_stage: Stage | None = None
     pending_game_data: GameData | None = None
-    pending_config: dict | None = None
+    pending_config: dict[str, Any] | None = None
     running = True
 
     while running:

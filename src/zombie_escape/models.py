@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pygame
 from pygame import sprite, surface
@@ -18,8 +18,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
 class Areas:
     """Container for level area rectangles."""
 
-    outer_rect: Tuple[int, int, int, int]
-    inner_rect: Tuple[int, int, int, int]
+    outer_rect: tuple[int, int, int, int]
+    inner_rect: tuple[int, int, int, int]
     outside_rects: list[pygame.Rect]
     walkable_cells: list[pygame.Rect]
 
@@ -71,11 +71,11 @@ class GameData:
     fog: dict
     config: dict
     stage: Stage
-    fuel: Optional[FuelCan] = None
-    flashlights: List[Flashlight] | None = None
-    player: Optional[Player] = None
-    car: Optional[Car] = None
-    companion: Optional[Companion] = None
+    fuel: FuelCan | None = None
+    flashlights: list[Flashlight] | None = None
+    player: Player | None = None
+    car: Car | None = None
+    companion: Companion | None = None
 
 
 @dataclass(frozen=True)
@@ -97,7 +97,7 @@ class Stage:
         return _(self.description_key)
 
 
-STAGES: List[Stage] = [
+STAGES: list[Stage] = [
     Stage(
         id="stage1",
         name_key="stages.stage1.name",

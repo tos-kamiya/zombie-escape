@@ -1,7 +1,6 @@
 # Blueprint generator for randomized layouts.
 
 import random
-from typing import List, Tuple
 
 GRID_COLS = 48
 GRID_ROWS = 30
@@ -25,7 +24,7 @@ STEEL_BEAM_CHANCE = 0.05
 # C: car spawn candidate
 # Z: zombie spawn candidate
 
-def _collect_exit_adjacent_cells(grid: List[List[str]]) -> set[Tuple[int, int]]:
+def _collect_exit_adjacent_cells(grid: list[list[str]]) -> set[tuple[int, int]]:
     """Return a set of cells that touch any exit (including diagonals)."""
     cols, rows = len(grid[0]), len(grid)
     forbidden = set()
@@ -40,7 +39,7 @@ def _collect_exit_adjacent_cells(grid: List[List[str]]) -> set[Tuple[int, int]]:
     return forbidden
 
 
-def _init_grid(cols: int, rows: int) -> List[List[str]]:
+def _init_grid(cols: int, rows: int) -> list[list[str]]:
     grid = [["." for _ in range(cols)] for _ in range(rows)]
     # Outside band
     for x in range(cols):
@@ -59,11 +58,11 @@ def _init_grid(cols: int, rows: int) -> List[List[str]]:
     return grid
 
 
-def _place_exits(grid: List[List[str]], exits_per_side: int) -> None:
+def _place_exits(grid: list[list[str]], exits_per_side: int) -> None:
     cols, rows = len(grid[0]), len(grid)
     rng = random.randint
     used = set()
-    def pick_pos(side: str) -> Tuple[int, int]:
+    def pick_pos(side: str) -> tuple[int, int]:
         if side in ("top", "bottom"):
             x = rng(2, cols - 3)
             y = 1 if side == "top" else rows - 2
@@ -84,7 +83,7 @@ def _place_exits(grid: List[List[str]], exits_per_side: int) -> None:
             grid[y][x] = "E"
 
 
-def _place_internal_walls(grid: List[List[str]]) -> None:
+def _place_internal_walls(grid: list[list[str]]) -> None:
     cols, rows = len(grid[0]), len(grid)
     rng = random.randint
     # Avoid placing walls adjacent to exits: collect forbidden cells (exits + neighbors)
@@ -111,11 +110,13 @@ def _place_internal_walls(grid: List[List[str]]) -> None:
                     grid[y + i][x] = "1"
 
 
-def _place_steel_beams(grid: List[List[str]], chance: float = STEEL_BEAM_CHANCE) -> set[Tuple[int, int]]:
+def _place_steel_beams(
+    grid: list[list[str]], chance: float = STEEL_BEAM_CHANCE
+) -> set[tuple[int, int]]:
     """Pick individual cells for steel beams, avoiding exits and their neighbors."""
     cols, rows = len(grid[0]), len(grid)
     forbidden = _collect_exit_adjacent_cells(grid)
-    beams: set[Tuple[int, int]] = set()
+    beams: set[tuple[int, int]] = set()
     for y in range(2, rows - 2):
         for x in range(2, cols - 2):
             if (x, y) in forbidden:
@@ -127,7 +128,11 @@ def _place_steel_beams(grid: List[List[str]], chance: float = STEEL_BEAM_CHANCE)
     return beams
 
 
-def _pick_empty_cell(grid: List[List[str]], margin: int, forbidden: set[Tuple[int, int]] | None = None) -> Tuple[int, int]:
+def _pick_empty_cell(
+    grid: list[list[str]],
+    margin: int,
+    forbidden: set[tuple[int, int]] | None = None,
+) -> tuple[int, int]:
     cols, rows = len(grid[0]), len(grid)
     attempts = 0
     forbidden = forbidden or set()
