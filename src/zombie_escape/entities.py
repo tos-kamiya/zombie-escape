@@ -471,16 +471,14 @@ class Zombie(pygame.sprite.Sprite):
         self: Self,
         move_x: float,
         move_y: float,
-        zombies: Iterable[Zombie] | None,
+        zombies: Iterable[Zombie],
     ) -> tuple[float, float]:
         """If another zombie is too close, steer directly away from the closest one."""
         next_x = self.x + move_x
         next_y = self.y + move_y
 
-        closest: "Zombie" | None = None
+        closest: Zombie | None = None
         closest_dist = ZOMBIE_SEPARATION_DISTANCE
-        if not zombies:
-            return move_x, move_y
         for other in zombies:
             if other is self or not other.alive():
                 continue
@@ -532,7 +530,9 @@ class Zombie(pygame.sprite.Sprite):
         elif now - self.last_mode_change_time > self.mode_change_interval:
             self.change_mode()
         move_x, move_y = self._calculate_movement(player_center)
-        move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
+        move_x, move_y = self._avoid_other_zombies(
+            move_x, move_y, nearby_zombies or []
+        )
         final_x, final_y = self._handle_wall_collision(
             self.x + move_x, self.y + move_y, walls
         )
