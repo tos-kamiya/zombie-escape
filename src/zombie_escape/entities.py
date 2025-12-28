@@ -513,7 +513,7 @@ class Zombie(pygame.sprite.Sprite):
         self: Self,
         player_center: tuple[int, int],
         walls: list[Wall],
-        nearby_zombies: Iterable[Zombie] | None = None,
+        nearby_zombies: Iterable[Zombie],
     ) -> None:
         now = pygame.time.get_ticks()
         dx_target = player_center[0] - self.x
@@ -530,9 +530,7 @@ class Zombie(pygame.sprite.Sprite):
         elif now - self.last_mode_change_time > self.mode_change_interval:
             self.change_mode()
         move_x, move_y = self._calculate_movement(player_center)
-        move_x, move_y = self._avoid_other_zombies(
-            move_x, move_y, nearby_zombies or []
-        )
+        move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
         final_x, final_y = self._handle_wall_collision(
             self.x + move_x, self.y + move_y, walls
         )
