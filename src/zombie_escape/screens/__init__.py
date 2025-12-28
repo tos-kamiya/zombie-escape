@@ -45,8 +45,8 @@ class ScreenTransition:
     """Represents the next screen to display and optional payload data."""
 
     next_screen: ScreenID
-    stage: "Stage | None" = None
-    game_data: "GameData | None" = None
+    stage: Stage | None = None
+    game_data: GameData | None = None
     config: dict | None = None
 
 
