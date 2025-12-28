@@ -99,12 +99,12 @@ __all__ = [
 ]
 
 def create_zombie(
-    config: dict[str, Any] | None,
+    config: dict[str, Any],
     start_pos: tuple[int, int] | None = None,
     hint_pos: tuple[float, float] | None = None,
 ) -> Zombie:
     """Factory to create zombies with optional fast variants."""
-    fast_conf = config.get("fast_zombies", {}) if config else {}
+    fast_conf = config.get("fast_zombies", {})
     fast_enabled = fast_conf.get("enabled", True)
     if fast_enabled:
         base_speed = random.uniform(ZOMBIE_SPEED, FAST_ZOMBIE_BASE_SPEED)
