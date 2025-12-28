@@ -46,3 +46,6 @@ include = ["src/zombie_escape/**"]
 
 [project.gui-scripts]
 zombie-escape = "zombie_escape:main"
+
+[tool.ty.rules]
+unresolved-import = "ignore"

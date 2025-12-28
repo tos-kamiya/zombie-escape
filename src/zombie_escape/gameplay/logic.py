@@ -402,8 +402,8 @@ def scatter_positions_on_walkable(
     spawn_rate: float,
     *,
     jitter_ratio: float = 0.35,
-) -> list[tuple[float, float]]:
-    positions: list[tuple[float, float]] = []
+) -> list[tuple[int, int]]:
+    positions: list[tuple[int, int]] = []
     if not walkable_cells or spawn_rate <= 0:
         return positions
 
@@ -415,7 +415,7 @@ def scatter_positions_on_walkable(
         jitter_y = random.uniform(
             -cell.height * jitter_ratio, cell.height * jitter_ratio
         )
-        positions.append((cell.centerx + jitter_x, cell.centery + jitter_y))
+        positions.append((int(cell.centerx + jitter_x), int(cell.centery + jitter_y)))
     return positions
 
 
@@ -649,6 +649,7 @@ def respawn_rescued_companion_near_player(game_data: GameData) -> None:
         return
 
     player = game_data.player
+    assert player is not None
     wall_group = game_data.groups.wall_group
     offsets = [
         (COMPANION_RADIUS * 3, 0),
@@ -695,7 +696,8 @@ def get_shrunk_sprite(
 def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
     """Record player steps and clean up old footprints."""
     state = game_data.state
-    player: Player = game_data.player
+    player = game_data.player
+    assert player is not None
     footprints_enabled = config.get("footprints", {}).get("enabled", True)
     if not footprints_enabled:
         state.footprints = []
@@ -921,7 +923,9 @@ def update_entities(
 ) -> None:
     """Update positions and states of game entities."""
     player = game_data.player
+    assert player is not None
     car = game_data.car
+    assert car is not None
     companion = game_data.companion
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
@@ -1044,7 +1048,9 @@ def check_interactions(
 ) -> pygame.sprite.Sprite | None:
     """Check and handle interactions between entities."""
     player = game_data.player
+    assert player is not None
     car = game_data.car
+    assert car is not None
     companion = game_data.companion
     zombie_group = game_data.groups.zombie_group
     wall_group = game_data.groups.wall_group
@@ -1067,7 +1073,7 @@ def check_interactions(
             state.has_fuel = True
             state.fuel_message_until = 0
             state.hint_expires_at = 0
-            state.hint_target_type = None
+            state.hint_target_type = Nonenew_car
             fuel.kill()
             game_data.fuel = None
             print("Fuel acquired!")
@@ -1097,11 +1103,13 @@ def check_interactions(
         companion and companion.alive() and not getattr(companion, "rescued", False)
     )
     if companion_active:
+        assert companion is not None
         screen_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
         companion_on_screen = camera.apply_rect(companion.rect).colliderect(screen_rect)
 
     # Companion interactions (Stage 3)
     if companion_active and stage.requires_companion:
+        assert companion is not None
         if not player.in_car:
             if pygame.sprite.collide_circle(companion, player):
                 companion.set_following()
