@@ -26,12 +26,12 @@ from .i18n import get_font_settings, translate as _
 from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player, Survivor
 from .models import Stage
 from .render_assets import FogRing, RenderAssets
+from .constants import SURVIVOR_MAX_SAFE_PASSENGERS
 
 
 @dataclass(frozen=True)
 class SurvivorHUDInfo:
     onboard: int
-    limit: int
     rescued: int
 
 
@@ -528,7 +528,7 @@ def draw(
 
     if survivor_info:
         onboard = survivor_info.onboard
-        limit = survivor_info.limit
+        limit = SURVIVOR_MAX_SAFE_PASSENGERS
         rescued = survivor_info.rescued
         objective_lines.append(
             _("objectives.survivors_onboard", count=onboard, limit=limit)

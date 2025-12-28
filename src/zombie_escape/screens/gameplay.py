@@ -58,7 +58,6 @@ def gameplay_screen(
         return (
             SurvivorHUDInfo(
                 onboard=game_data.state.survivors_onboard,
-                limit=SURVIVOR_MAX_SAFE_PASSENGERS,
                 rescued=game_data.state.survivors_rescued,
             ),
             list(game_data.state.survivor_messages),
