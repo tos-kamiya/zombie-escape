@@ -56,6 +56,7 @@ from .constants import (
     ZOMBIE_SPEED,
 )
 
+
 # --- Camera Class ---
 class Wall(pygame.sprite.Sprite):
     def __init__(
@@ -64,6 +65,7 @@ class Wall(pygame.sprite.Sprite):
         y: int,
         width: int,
         height: int,
+        *,
         health: int = INTERNAL_WALL_HEALTH,
         color: tuple[int, int, int] = INTERNAL_WALL_COLOR,
         border_color: tuple[int, int, int] = INTERNAL_WALL_BORDER_COLOR,
@@ -81,7 +83,7 @@ class Wall(pygame.sprite.Sprite):
         self.update_color()
         self.rect = self.image.get_rect(topleft=(x, y))
 
-    def take_damage(self: Self, amount: int = 1) -> None:
+    def take_damage(self: Self, *, amount: int = 1) -> None:
         if self.health > 0:
             self.health -= amount
             self.update_color()
@@ -112,11 +114,12 @@ class Wall(pygame.sprite.Sprite):
         bb = int(self.border_base_color[2] * (0.6 + 0.4 * health_ratio))
         pygame.draw.rect(self.image, (br, bg, bb), self.image.get_rect(), width=9)
 
+
 class SteelBeam(pygame.sprite.Sprite):
     """Single-cell obstacle that behaves like a tougher internal wall."""
 
     def __init__(
-        self: Self, x: int, y: int, size: int, health: int = STEEL_BEAM_HEALTH
+        self: Self, x: int, y: int, size: int, *, health: int = STEEL_BEAM_HEALTH
     ) -> None:
         super().__init__()
         # Slightly inset from the cell size so it reads as a separate object.
@@ -130,7 +133,7 @@ class SteelBeam(pygame.sprite.Sprite):
         self.update_color()
         self.rect = self.image.get_rect(center=(x + size // 2, y + size // 2))
 
-    def take_damage(self: Self, amount: int = 1) -> None:
+    def take_damage(self: Self, *, amount: int = 1) -> None:
         if self.health > 0:
             self.health -= amount
             self.update_color()
@@ -157,6 +160,7 @@ class SteelBeam(pygame.sprite.Sprite):
             self.image, line_color, rect_obj.topright, rect_obj.bottomleft, width=6
         )
 
+
 class Camera:
     def __init__(self: Self, width: int, height: int) -> None:
         self.camera = pygame.Rect(0, 0, width, height)
@@ -176,11 +180,13 @@ class Camera:
         y = max(-(self.height - SCREEN_HEIGHT), min(0, y))
         self.camera = pygame.Rect(x, y, self.width, self.height)
 
+
 # --- Enums ---
 class ZombieMode(Enum):
     CHASE = 1
     FLANK_X = 4
     FLANK_Y = 5
+
 
 # --- Game Classes ---
 class Player(pygame.sprite.Sprite):
@@ -211,7 +217,7 @@ class Player(pygame.sprite.Sprite):
             if hit_list_x:
                 damage = max(1, 4 // len(hit_list_x))
                 for wall in hit_list_x:
-                    wall.take_damage(damage)
+                    wall.take_damage(amount=damage)
                 self.x -= dx * 1.5
                 self.rect.centerx = int(self.x)
 
@@ -229,6 +235,7 @@ class Player(pygame.sprite.Sprite):
                 self.rect.centery = int(self.y)
 
         self.rect.center = (int(self.x), int(self.y))
+
 
 class Companion(pygame.sprite.Sprite):
     """Simple survivor sprite used in Stage 3."""
@@ -306,6 +313,7 @@ class Companion(pygame.sprite.Sprite):
         self.y = min(LEVEL_HEIGHT, max(0, self.y))
         self.rect.center = (int(self.x), int(self.y))
 
+
 class Survivor(pygame.sprite.Sprite):
     """Civilians that gather near the player during Stage 4."""
 
@@ -347,6 +355,7 @@ class Survivor(pygame.sprite.Sprite):
 
         self.rect.center = (int(self.x), int(self.y))
 
+
 def random_position_outside_building() -> tuple[int, int]:
     side = random.choice(["top", "bottom", "left", "right"])
     margin = 0
@@ -360,9 +369,11 @@ def random_position_outside_building() -> tuple[int, int]:
         x, y = LEVEL_WIDTH + margin, random.randint(0, LEVEL_HEIGHT)
     return x, y
 
+
 class Zombie(pygame.sprite.Sprite):
     def __init__(
         self: Self,
+        *,
         start_pos: tuple[int, int] | None = None,
         hint_pos: tuple[float, float] | None = None,
         speed: float = ZOMBIE_SPEED,
@@ -397,7 +408,7 @@ class Zombie(pygame.sprite.Sprite):
         )
         self.was_in_sight = False
 
-    def change_mode(self: Self, force_mode: ZombieMode | None = None) -> None:
+    def change_mode(self: Self, *, force_mode: ZombieMode | None = None) -> None:
         if force_mode:
             self.mode = force_mode
         else:
@@ -542,6 +553,7 @@ class Zombie(pygame.sprite.Sprite):
         self.y = final_y
         self.rect.center = (int(self.x), int(self.y))
 
+
 class Car(pygame.sprite.Sprite):
     def __init__(self: Self, x: int, y: int) -> None:
         super().__init__()
@@ -676,6 +688,7 @@ class Car(pygame.sprite.Sprite):
         self.y = new_y
         self.rect.center = (int(self.x), int(self.y))
 
+
 class FuelCan(pygame.sprite.Sprite):
     """Simple fuel can collectible used in Stage 2."""
 
@@ -707,6 +720,7 @@ class FuelCan(pygame.sprite.Sprite):
         pygame.draw.line(self.image, BLACK, (3, h // 2), (w - 4, h // 2), width=1)
 
         self.rect = self.image.get_rect(center=(x, y))
+
 
 class Flashlight(pygame.sprite.Sprite):
     """Flashlight pickup that expands the player's visible radius when collected."""

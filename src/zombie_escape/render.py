@@ -60,6 +60,7 @@ def draw_level_overview(
     player: Player | None,
     car: Car | None,
     footprints: list[dict[str, Any]],
+    *,
     fuel: FuelCan | None = None,
     flashlights: list[Flashlight] | None = None,
     stage: Stage | None = None,
@@ -124,6 +125,7 @@ def get_fog_scale(
     assets: RenderAssets,
     stage: Stage | None,
     has_flashlight: bool,
+    *,
     config: dict[str, Any] | None = None,
 ) -> float:
     """Return current fog scale factoring in flashlight bonus."""
@@ -142,7 +144,7 @@ def get_fog_scale(
 
 
 def get_hatch_pattern(
-    fog_data: dict[str, Any], thickness: int, pixel_scale: int = 1
+    fog_data: dict[str, Any], thickness: int, *, pixel_scale: int = 1
 ) -> surface.Surface:
     """Return cached ordered-dither tile surface (Bayer-style, optionally chunky)."""
     cache = fog_data.setdefault("hatch_patterns", {})
@@ -206,7 +208,7 @@ def _get_fog_overlay_surfaces(
     for ring in assets.fog_rings:
         ring_surface = pygame.Surface((width, height), pygame.SRCALPHA)
         pattern = get_hatch_pattern(
-            fog_data, ring.thickness, assets.fog_hatch_pixel_scale
+            fog_data, ring.thickness, pixel_scale=assets.fog_hatch_pixel_scale
         )
         p_w, p_h = pattern.get_size()
         for y in range(0, height, p_h):
@@ -235,6 +237,7 @@ def _draw_hint_arrow(
     assets: RenderAssets,
     player: Player,
     target_pos: tuple[int, int],
+    *,
     color: tuple[int, int, int] | None = None,
     ring_radius: float | None = None,
 ) -> None:
@@ -275,6 +278,7 @@ def _draw_status_bar(
     screen: surface.Surface,
     assets: RenderAssets,
     config: dict[str, Any],
+    *,
     stage: Stage | None = None,
 ) -> None:
     """Render a compact status bar with current config flags and stage info."""
@@ -339,6 +343,7 @@ def draw(
     config: dict[str, Any],
     player: Player,
     hint_target: tuple[int, int] | None,
+    *,
     hint_color: tuple[int, int, int] | None = None,
     do_flip: bool = True,
     outside_rects: list[pygame.Rect] | None = None,
@@ -441,7 +446,9 @@ def draw(
             screen.blit(entity.image, sprite_screen_rect)
 
     if hint_target and player:
-        current_fov_scale = get_fog_scale(assets, stage, has_flashlight, config)
+        current_fov_scale = get_fog_scale(
+            assets, stage, has_flashlight, config=config
+        )
         hint_ring_radius = assets.fov_radius * 0.5 * current_fov_scale
         _draw_hint_arrow(
             screen,
@@ -458,16 +465,12 @@ def draw(
         cam_rect = camera.camera
         horizontal_span = camera.width - assets.screen_width
         vertical_span = camera.height - assets.screen_height
-        if horizontal_span <= 0 or (
-            cam_rect.x != 0 and cam_rect.x != -horizontal_span
-        ):
+        if horizontal_span <= 0 or (cam_rect.x != 0 and cam_rect.x != -horizontal_span):
             fov_center_on_screen[0] = assets.screen_width // 2
-        if vertical_span <= 0 or (
-            cam_rect.y != 0 and cam_rect.y != -vertical_span
-        ):
+        if vertical_span <= 0 or (cam_rect.y != 0 and cam_rect.y != -vertical_span):
             fov_center_on_screen[1] = assets.screen_height // 2
         fov_center_tuple = (int(fov_center_on_screen[0]), int(fov_center_on_screen[1]))
-        fog_scale = get_fog_scale(assets, stage, has_flashlight, config)
+        fog_scale = get_fog_scale(assets, stage, has_flashlight, config=config)
         overlay = _get_fog_overlay_surfaces(fog_surfaces, assets, fog_scale)
         combined_surface: surface.Surface = overlay["combined"]
         screen.blit(
@@ -519,8 +522,10 @@ def draw(
             elif not buddy_following:
                 objective_lines.append(_("objectives.find_buddy"))
 
-    if stage and getattr(stage, "survivor_stage", False) and (
-        survivors_onboard is not None
+    if (
+        stage
+        and getattr(stage, "survivor_stage", False)
+        and (survivors_onboard is not None)
     ):
         limit = SURVIVOR_MAX_SAFE_PASSENGERS
         objective_lines.append(

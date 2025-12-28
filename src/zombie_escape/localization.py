@@ -1,4 +1,5 @@
 """Lightweight python-i18n wrapper for runtime language switches."""
+
 from __future__ import annotations
 
 import json
@@ -107,7 +108,7 @@ def translate_dict(key: str) -> dict[str, Any]:
     return result if isinstance(result, dict) else {}
 
 
-def get_font_settings(name: str = "primary") -> FontSettings:
+def get_font_settings(*, name: str = "primary") -> FontSettings:
     _get_language_options()  # ensure locale data is loaded
     locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(
         DEFAULT_LANGUAGE, {}
@@ -157,7 +158,9 @@ def _get_language_options() -> tuple[LanguageOption, ...]:
         locale_data = data.get(code, {}) if isinstance(data, dict) else {}
         _LOCALE_DATA[code] = locale_data if isinstance(locale_data, dict) else {}
         lang_name = (
-            locale_data.get("meta", {}).get("language_name") if isinstance(locale_data, dict) else None
+            locale_data.get("meta", {}).get("language_name")
+            if isinstance(locale_data, dict)
+            else None
         )
         options.append(LanguageOption(code=code, name=lang_name or code))
 

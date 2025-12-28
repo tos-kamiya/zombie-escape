@@ -23,7 +23,9 @@ def test_car_speed_respects_penalty_and_floor() -> None:
 
 
 def test_car_speed_clamped_when_exceeding_limit() -> None:
-    overloaded_speed = calculate_car_speed_for_passengers(SURVIVOR_MAX_SAFE_PASSENGERS + 5)
+    overloaded_speed = calculate_car_speed_for_passengers(
+        SURVIVOR_MAX_SAFE_PASSENGERS + 5
+    )
     assert math.isclose(
         overloaded_speed,
         CAR_SPEED * SURVIVOR_MIN_SPEED_FACTOR,

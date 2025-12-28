@@ -29,6 +29,7 @@ from .screens.settings import settings_screen
 from .screens.title import title_screen
 from .gameplay.logic import calculate_car_speed_for_passengers
 
+
 # --- Main Entry Point ---
 def main() -> None:
     pygame.init()
@@ -137,6 +138,7 @@ def main() -> None:
 
     pygame.quit()  # Quit pygame only once at the very end of main
     sys.exit()  # Exit the script
+
 
 if __name__ == "__main__":
     main()

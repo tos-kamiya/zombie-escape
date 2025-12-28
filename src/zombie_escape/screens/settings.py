@@ -289,7 +289,9 @@ def settings_screen(
                 if row.get("type", "toggle") == "choice":
                     display_fn = row.get("get_display")
                     display_text = (
-                        display_fn(value) if display_fn and value is not None else str(value)
+                        display_fn(value)
+                        if display_fn and value is not None
+                        else str(value)
                     )
                     value_surface = value_font.render(display_text, False, WHITE)
                     value_rect = value_surface.get_rect(
@@ -315,7 +317,9 @@ def settings_screen(
                     left_active = value == row["easy_value"]
                     right_active = not left_active
 
-                    def draw_segment(rect: pygame.Rect, text: str, active: bool) -> None:
+                    def draw_segment(
+                        rect: pygame.Rect, text: str, active: bool
+                    ) -> None:
                         base_color = (35, 35, 35)
                         active_color = (60, 90, 60) if active else base_color
                         outline_color = GREEN if active else LIGHT_GRAY
@@ -330,9 +334,7 @@ def settings_screen(
 
             hint_start_y = start_y
             hint_start_x = screen_width // 2 + 16
-            hint_font = load_font(
-                font_settings.resource, font_settings.scaled_size(11)
-            )
+            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             hint_lines = [
                 _("settings.hints.navigate"),
                 _("settings.hints.adjust"),
@@ -347,9 +349,7 @@ def settings_screen(
                 )
                 screen.blit(hint_surface, hint_rect)
 
-            path_font = load_font(
-                font_settings.resource, font_settings.scaled_size(11)
-            )
+            path_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             path_text = _("settings.config_path", path=str(config_path))
             path_surface = path_font.render(path_text, False, LIGHT_GRAY)
             path_rect = path_surface.get_rect(

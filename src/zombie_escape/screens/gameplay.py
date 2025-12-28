@@ -59,29 +59,32 @@ def gameplay_screen(
 
     flashlight_conf = config.get("flashlight", {})
     flashlights_enabled = flashlight_conf.get("enabled", True)
-    raw_flashlight_count = flashlight_conf.get(
-        "count", DEFAULT_FLASHLIGHT_SPAWN_COUNT
-    )
+    raw_flashlight_count = flashlight_conf.get("count", DEFAULT_FLASHLIGHT_SPAWN_COUNT)
     try:
         flashlight_count = int(raw_flashlight_count)
     except (TypeError, ValueError):
         flashlight_count = DEFAULT_FLASHLIGHT_SPAWN_COUNT
 
     if stage.requires_fuel:
-        fuel_can = logic.place_fuel_can(layout_data["walkable_cells"], player, car)
+        fuel_can = logic.place_fuel_can(
+            layout_data["walkable_cells"], player, car=car
+        )
         if fuel_can:
             game_data.fuel = fuel_can
             game_data.groups.all_sprites.add(fuel_can, layer=1)
     if flashlights_enabled:
         flashlights = logic.place_flashlights(
-            layout_data["walkable_cells"], player, car, count=max(1, flashlight_count)
+            layout_data["walkable_cells"],
+            player,
+            car=car,
+            count=max(1, flashlight_count),
         )
         game_data.flashlights = flashlights
         game_data.groups.all_sprites.add(flashlights, layer=1)
 
     if stage.requires_companion:
         companion = logic.place_companion(
-            layout_data["walkable_cells"], player, car
+            layout_data["walkable_cells"], player, car=car
         )
         if companion:
             game_data.companion = companion
@@ -114,7 +117,7 @@ def gameplay_screen(
                         config,
                         player,
                         None,
-                        None,
+                        hint_color=None,
                         outside_rects=game_data.areas.outside_rects,
                         stage=stage,
                         has_fuel=game_data.state.has_fuel,
@@ -243,9 +246,7 @@ def gameplay_screen(
             keys, player, car
         )
 
-        logic.update_entities(
-            game_data, player_dx, player_dy, car_dx, car_dy, config
-        )
+        logic.update_entities(game_data, player_dx, player_dy, car_dx, car_dy, config)
         logic.update_footprints(game_data, config)
         game_data.state.elapsed_play_ms += int(dt * 1000)
         logic.cleanup_survivor_messages(game_data.state)
@@ -303,7 +304,7 @@ def gameplay_screen(
             config,
             player,
             hint_target,
-            hint_color,
+            hint_color=hint_color,
             outside_rects=game_data.areas.outside_rects,
             stage=stage,
             has_fuel=game_data.state.has_fuel,

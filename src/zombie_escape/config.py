@@ -35,7 +35,7 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     return merged
 
 
-def load_config(path: Path | None = None) -> tuple[dict[str, Any], Path]:
+def load_config(*, path: Path | None = None) -> tuple[dict[str, Any], Path]:
     """Load config from disk, falling back to defaults on errors."""
     config_path = path or user_config_path()
     config: dict[str, Any] = deepcopy(DEFAULT_CONFIG)

@@ -24,6 +24,7 @@ STEEL_BEAM_CHANCE = 0.05
 # C: car spawn candidate
 # Z: zombie spawn candidate
 
+
 def _collect_exit_adjacent_cells(grid: list[list[str]]) -> set[tuple[int, int]]:
     """Return a set of cells that touch any exit (including diagonals)."""
     cols, rows = len(grid[0]), len(grid)
@@ -62,6 +63,7 @@ def _place_exits(grid: list[list[str]], exits_per_side: int) -> None:
     cols, rows = len(grid[0]), len(grid)
     rng = random.randint
     used = set()
+
     def pick_pos(side: str) -> tuple[int, int]:
         if side in ("top", "bottom"):
             x = rng(2, cols - 3)
@@ -111,7 +113,7 @@ def _place_internal_walls(grid: list[list[str]]) -> None:
 
 
 def _place_steel_beams(
-    grid: list[list[str]], chance: float = STEEL_BEAM_CHANCE
+    grid: list[list[str]], *, chance: float = STEEL_BEAM_CHANCE
 ) -> set[tuple[int, int]]:
     """Pick individual cells for steel beams, avoiding exits and their neighbors."""
     cols, rows = len(grid[0]), len(grid)
@@ -153,7 +155,7 @@ def generate_random_blueprint(steel_chance: float) -> dict:
     grid = _init_grid(GRID_COLS, GRID_ROWS)
     _place_exits(grid, EXITS_PER_SIDE)
     _place_internal_walls(grid)
-    steel_beams = _place_steel_beams(grid, steel_chance)
+    steel_beams = _place_steel_beams(grid, chance=steel_chance)
 
     # Spawns: player, car, zombies
     px, py = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden=steel_beams)

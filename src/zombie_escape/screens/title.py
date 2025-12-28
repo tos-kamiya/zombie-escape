@@ -13,7 +13,6 @@ from ..render import show_message
 from ..screens import ScreenID, ScreenTransition, nudge_window_scale, present
 
 
-
 def title_screen(
     screen: surface.Surface,
     clock: time.Clock,
@@ -115,14 +114,10 @@ def title_screen(
                 desc_surface = desc_font.render(
                     current["stage"].description, False, desc_color
                 )
-                desc_rect = desc_surface.get_rect(
-                    center=(width // 2, height // 2 + 74)
-                )
+                desc_rect = desc_surface.get_rect(center=(width // 2, height // 2 + 74))
                 screen.blit(desc_surface, desc_rect)
 
-            hint_font = load_font(
-                font_settings.resource, font_settings.scaled_size(11)
-            )
+            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             hint_text = _("menu.window_hint")
             hint_surface = hint_font.render(hint_text, False, LIGHT_GRAY)
             hint_rect = hint_surface.get_rect(center=(width // 2, height - 50))

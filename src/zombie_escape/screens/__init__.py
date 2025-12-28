@@ -76,7 +76,7 @@ def present(logical_surface: surface.Surface) -> None:
 
 
 def apply_window_scale(
-    scale: float, game_data: "GameData | None" = None
+    scale: float, *, game_data: "GameData | None" = None
 ) -> surface.Surface:
     """Resize the OS window; logical render surface stays constant."""
     global current_window_scale
@@ -99,7 +99,7 @@ def apply_window_scale(
 
 
 def nudge_window_scale(
-    multiplier: float, game_data: "GameData | None" = None
+    multiplier: float, *, game_data: "GameData | None" = None
 ) -> surface.Surface:
     """Scale the window relative to the current zoom level."""
     target_scale = current_window_scale * multiplier

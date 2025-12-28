@@ -69,37 +69,39 @@ from ..entities import (
 )
 
 __all__ = [
-    'create_zombie',
-    'rect_for_cell',
-    'generate_level_from_blueprint',
-    'place_new_car',
-    'place_fuel_can',
-    'place_flashlight',
-    'place_flashlights',
-    'place_companion',
-    'scatter_positions_on_walkable',
-    'spawn_survivors',
-    'update_survivors',
-    'calculate_car_speed_for_passengers',
-    'apply_passenger_speed_penalty',
-    'add_survivor_message',
-    'random_survivor_conversion_line',
-    'cleanup_survivor_messages',
-    'drop_survivors_from_car',
-    'handle_survivor_zombie_collisions',
-    'respawn_rescued_companion_near_player',
-    'get_shrunk_sprite',
-    'update_footprints',
-    'initialize_game_state',
-    'setup_player_and_car',
-    'spawn_initial_zombies',
-    'process_player_input',
-    'update_entities',
-    'check_interactions',
+    "create_zombie",
+    "rect_for_cell",
+    "generate_level_from_blueprint",
+    "place_new_car",
+    "place_fuel_can",
+    "place_flashlight",
+    "place_flashlights",
+    "place_companion",
+    "scatter_positions_on_walkable",
+    "spawn_survivors",
+    "update_survivors",
+    "calculate_car_speed_for_passengers",
+    "apply_passenger_speed_penalty",
+    "add_survivor_message",
+    "random_survivor_conversion_line",
+    "cleanup_survivor_messages",
+    "drop_survivors_from_car",
+    "handle_survivor_zombie_collisions",
+    "respawn_rescued_companion_near_player",
+    "get_shrunk_sprite",
+    "update_footprints",
+    "initialize_game_state",
+    "setup_player_and_car",
+    "spawn_initial_zombies",
+    "process_player_input",
+    "update_entities",
+    "check_interactions",
 ]
+
 
 def create_zombie(
     config: dict[str, Any],
+    *,
     start_pos: tuple[int, int] | None = None,
     hint_pos: tuple[float, float] | None = None,
 ) -> Zombie:
@@ -117,8 +119,10 @@ def create_zombie(
         speed=base_speed,
     )
 
+
 def rect_for_cell(x_idx: int, y_idx: int) -> pygame.Rect:
     return pygame.Rect(x_idx * CELL_SIZE, y_idx * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+
 
 def generate_level_from_blueprint(
     game_data: GameData, config: dict[str, Any]
@@ -237,6 +241,7 @@ def generate_level_from_blueprint(
         "walkable_cells": walkable_cells,
     }
 
+
 def place_new_car(
     wall_group: pygame.sprite.Group,
     player: Player,
@@ -267,8 +272,9 @@ def place_new_car(
             return temp_car
     return None
 
+
 def place_fuel_can(
-    walkable_cells: list[pygame.Rect], player: Player, car: Car | None = None
+    walkable_cells: list[pygame.Rect], player: Player, *, car: Car | None = None
 ) -> FuelCan | None:
     """Pick a spawn spot for the fuel can away from the player (and car if given)."""
     if not walkable_cells:
@@ -298,8 +304,9 @@ def place_fuel_can(
     cell = random.choice(walkable_cells)
     return FuelCan(cell.centerx, cell.centery)
 
+
 def place_flashlight(
-    walkable_cells: list[pygame.Rect], player: Player, car: Car | None = None
+    walkable_cells: list[pygame.Rect], player: Player, *, car: Car | None = None
 ) -> Flashlight | None:
     """Pick a spawn spot for the flashlight away from the player (and car if given)."""
     if not walkable_cells:
@@ -328,9 +335,11 @@ def place_flashlight(
     cell = random.choice(walkable_cells)
     return Flashlight(cell.centerx, cell.centery)
 
+
 def place_flashlights(
     walkable_cells: list[pygame.Rect],
     player: Player,
+    *,
     car: Car | None = None,
     count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT,
 ) -> list[Flashlight]:
@@ -340,7 +349,7 @@ def place_flashlights(
     max_attempts = max(200, count * 80)
     while len(placed) < count and attempts < max_attempts:
         attempts += 1
-        fl = place_flashlight(walkable_cells, player, car)
+        fl = place_flashlight(walkable_cells, player, car=car)
         if not fl:
             break
         # Avoid clustering too tightly
@@ -356,8 +365,9 @@ def place_flashlights(
         placed.append(fl)
     return placed
 
+
 def place_companion(
-    walkable_cells: list[pygame.Rect], player: Player, car: Car | None = None
+    walkable_cells: list[pygame.Rect], player: Player, *, car: Car | None = None
 ) -> Companion | None:
     """Spawn the stranded buddy somewhere on a walkable tile away from the player and car."""
     if not walkable_cells:
@@ -386,9 +396,11 @@ def place_companion(
     cell = random.choice(walkable_cells)
     return Companion(cell.centerx, cell.centery)
 
+
 def scatter_positions_on_walkable(
     walkable_cells: list[pygame.Rect],
     spawn_rate: float,
+    *,
     jitter_ratio: float = 0.35,
 ) -> list[tuple[float, float]]:
     positions: list[tuple[float, float]] = []
@@ -400,9 +412,12 @@ def scatter_positions_on_walkable(
         if random.random() >= clamped_rate:
             continue
         jitter_x = random.uniform(-cell.width * jitter_ratio, cell.width * jitter_ratio)
-        jitter_y = random.uniform(-cell.height * jitter_ratio, cell.height * jitter_ratio)
+        jitter_y = random.uniform(
+            -cell.height * jitter_ratio, cell.height * jitter_ratio
+        )
         positions.append((cell.centerx + jitter_x, cell.centery + jitter_y))
     return positions
+
 
 def spawn_survivors(
     game_data: GameData, layout_data: Mapping[str, list[pygame.Rect]]
@@ -426,6 +441,7 @@ def spawn_survivors(
         survivors.append(s)
 
     return survivors
+
 
 def update_survivors(game_data: GameData) -> None:
     if not game_data.stage.survivor_stage:
@@ -454,7 +470,7 @@ def update_survivors(game_data: GameData) -> None:
             dx, dy = math.cos(angle), math.sin(angle)
             dist = 1
         if dist < min_dist:
-            push = (min_dist - dist)
+            push = min_dist - dist
             survivor.x -= (dx / dist) * push
             survivor.y -= (dy / dist) * push
             survivor.rect.center = (int(survivor.x), int(survivor.y))
@@ -466,7 +482,9 @@ def update_survivors(game_data: GameData) -> None:
     for survivor in survivors:
         _separate_from_point(survivor, player_point, player_overlap)
 
-    survivors_with_x = sorted(((survivor.x, survivor) for survivor in survivors), key=lambda item: item[0])
+    survivors_with_x = sorted(
+        ((survivor.x, survivor) for survivor in survivors), key=lambda item: item[0]
+    )
     for i, (base_x, survivor) in enumerate(survivors_with_x):
         for other_base_x, other in survivors_with_x[i + 1 :]:
             if other_base_x - base_x > survivor_overlap:
@@ -489,11 +507,13 @@ def update_survivors(game_data: GameData) -> None:
                 survivor.rect.center = (int(survivor.x), int(survivor.y))
                 other.rect.center = (int(other.x), int(other.y))
 
+
 def calculate_car_speed_for_passengers(passengers: int) -> float:
     penalty = SURVIVOR_SPEED_PENALTY_PER_PASSENGER * passengers
     penalty = min(0.95, max(0.0, penalty))
     adjusted = CAR_SPEED * (1 - penalty)
     return max(CAR_SPEED * SURVIVOR_MIN_SPEED_FACTOR, adjusted)
+
 
 def apply_passenger_speed_penalty(game_data: GameData) -> None:
     car = game_data.car
@@ -504,9 +524,11 @@ def apply_passenger_speed_penalty(game_data: GameData) -> None:
         return
     car.speed = calculate_car_speed_for_passengers(game_data.state.survivors_onboard)
 
+
 def add_survivor_message(game_data: GameData, text: str) -> None:
     expires = pygame.time.get_ticks() + SURVIVOR_MESSAGE_DURATION_MS
     game_data.state.survivor_messages.append({"text": text, "expires_at": expires})
+
 
 def random_survivor_conversion_line() -> str:
     if not SURVIVOR_CONVERSION_LINE_KEYS:
@@ -514,11 +536,13 @@ def random_survivor_conversion_line() -> str:
     key = random.choice(SURVIVOR_CONVERSION_LINE_KEYS)
     return _(key)
 
+
 def cleanup_survivor_messages(state: ProgressState) -> None:
     now = pygame.time.get_ticks()
     state.survivor_messages = [
         msg for msg in state.survivor_messages if msg.get("expires_at", 0) > now
     ]
+
 
 def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> None:
     """Respawn boarded survivors back into the world after a crash."""
@@ -551,6 +575,7 @@ def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> Non
 
     game_data.state.survivors_onboard = 0
     apply_passenger_speed_penalty(game_data)
+
 
 def handle_survivor_zombie_collisions(
     game_data: GameData, config: dict[str, Any]
@@ -610,6 +635,7 @@ def handle_survivor_zombie_collisions(
         zombie_xs.insert(insert_idx, new_zombie.rect.centerx)
         zombies.insert(insert_idx, new_zombie)
 
+
 def respawn_rescued_companion_near_player(game_data: GameData) -> None:
     """Bring back the rescued companion near the player after losing the car."""
     if not (game_data.stage.requires_companion and game_data.state.companion_rescued):
@@ -643,8 +669,9 @@ def respawn_rescued_companion_near_player(game_data: GameData) -> None:
     game_data.companion = companion
     game_data.groups.all_sprites.add(companion, layer=2)
 
+
 def get_shrunk_sprite(
-    sprite_obj: pygame.sprite.Sprite, scale_x: float, scale_y: float | None = None
+    sprite_obj: pygame.sprite.Sprite, scale_x: float, *, scale_y: float | None = None
 ) -> pygame.sprite.Sprite:
     if scale_y is None:
         scale_y = scale_x
@@ -663,6 +690,7 @@ def get_shrunk_sprite(
     new_sprite.rect = rect
 
     return new_sprite
+
 
 def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
     """Record player steps and clean up old footprints."""
@@ -692,6 +720,7 @@ def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
         footprints = footprints[-FOOTPRINT_MAX:]
 
     state.footprints = footprints
+
 
 def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     """Initialize and return the base game state objects."""
@@ -764,6 +793,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         companion=None,
     )
 
+
 def setup_player_and_car(
     game_data: GameData, layout_data: Mapping[str, list[pygame.Rect]]
 ) -> tuple[Player, Car]:
@@ -807,6 +837,7 @@ def setup_player_and_car(
 
     return player, car
 
+
 def spawn_initial_zombies(
     game_data: GameData,
     player: Player,
@@ -843,6 +874,7 @@ def spawn_initial_zombies(
         pygame.time.get_ticks() - ZOMBIE_SPAWN_DELAY_MS
     )
 
+
 def process_player_input(
     keys: Sequence[bool], player: Player, car: Car
 ) -> tuple[float, float, float, float]:
@@ -877,6 +909,7 @@ def process_player_input(
             )
 
     return player_dx, player_dy, car_dx, car_dy
+
 
 def update_entities(
     game_data: GameData,
@@ -998,10 +1031,13 @@ def update_entities(
                 if candidate_positions:
                     target = min(
                         candidate_positions,
-                        key=lambda pos: math.hypot(pos[0] - zombie.x, pos[1] - zombie.y),
+                        key=lambda pos: math.hypot(
+                            pos[0] - zombie.x, pos[1] - zombie.y
+                        ),
                     )
         nearby_candidates = _nearby_zombies(idx)
         zombie.update(target, wall_group, nearby_candidates)
+
 
 def check_interactions(
     game_data: GameData, config: dict[str, Any]
@@ -1138,9 +1174,7 @@ def check_interactions(
                 overload_damage = max(
                     1, int(game_data.car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO)
                 )
-                add_survivor_message(
-                    game_data, _("survivors.too_many_aboard")
-                )
+                add_survivor_message(game_data, _("survivors.too_many_aboard"))
                 game_data.car.take_damage(overload_damage)
 
     if stage.survivor_stage:
