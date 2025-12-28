@@ -365,8 +365,7 @@ class Zombie(pygame.sprite.Sprite):
         self: Self,
         start_pos: tuple[int, int] | None = None,
         hint_pos: tuple[float, float] | None = None,
-        speed_override: float | None = None,
-        is_fast: bool = False,
+        speed: float = ZOMBIE_SPEED,
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
@@ -383,9 +382,12 @@ class Zombie(pygame.sprite.Sprite):
         else:
             x, y = random_position_outside_building()
         self.rect = self.image.get_rect(center=(x, y))
-        base_speed = speed_override if speed_override is not None else ZOMBIE_SPEED
-        jitter = FAST_ZOMBIE_SPEED_JITTER if is_fast else NORMAL_ZOMBIE_SPEED_JITTER
-        self.speed = base_speed + random.uniform(-jitter, jitter)
+        jitter = (
+            FAST_ZOMBIE_SPEED_JITTER
+            if speed > ZOMBIE_SPEED
+            else NORMAL_ZOMBIE_SPEED_JITTER
+        )
+        self.speed = speed + random.uniform(-jitter, jitter)
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
         self.mode = random.choice(list(ZombieMode))

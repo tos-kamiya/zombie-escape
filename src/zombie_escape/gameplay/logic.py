@@ -108,16 +108,13 @@ def create_zombie(
     fast_enabled = fast_conf.get("enabled", True)
     if fast_enabled:
         base_speed = random.uniform(ZOMBIE_SPEED, FAST_ZOMBIE_BASE_SPEED)
-        is_fast = base_speed > ZOMBIE_SPEED
     else:
         base_speed = ZOMBIE_SPEED
-        is_fast = False
     base_speed = min(base_speed, PLAYER_SPEED - 0.05)
     return Zombie(
         start_pos=start_pos,
         hint_pos=hint_pos,
-        speed_override=base_speed,
-        is_fast=is_fast,
+        speed=base_speed,
     )
 
 def rect_for_cell(x_idx: int, y_idx: int) -> pygame.Rect:
