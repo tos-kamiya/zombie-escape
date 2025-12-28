@@ -149,11 +149,11 @@ def _pick_empty_cell(
     return cols // 2, rows // 2
 
 
-def generate_random_blueprint(steel_chance: float | None = None) -> dict:
+def generate_random_blueprint(steel_chance: float) -> dict:
     grid = _init_grid(GRID_COLS, GRID_ROWS)
     _place_exits(grid, EXITS_PER_SIDE)
     _place_internal_walls(grid)
-    steel_beams = _place_steel_beams(grid, steel_chance if steel_chance is not None else STEEL_BEAM_CHANCE)
+    steel_beams = _place_steel_beams(grid, steel_chance)
 
     # Spawns: player, car, zombies
     px, py = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden=steel_beams)
