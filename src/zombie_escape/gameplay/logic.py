@@ -52,7 +52,7 @@ from ..constants import (
     ZOMBIE_SPAWN_PLAYER_BUFFER,
     ZOMBIE_SPEED,
 )
-from ..i18n import translate as _
+from ..localization import translate as _
 from ..level_blueprints import choose_blueprint
 from ..models import Areas, GameData, Groups, ProgressState, Stage
 from ..entities import (

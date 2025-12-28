@@ -10,7 +10,7 @@ from pygame import surface, time
 from ..colors import BLACK, GREEN, LIGHT_GRAY, WHITE
 from ..config import DEFAULT_CONFIG, save_config
 from ..font_utils import load_font
-from ..i18n import (
+from ..localization import (
     get_font_settings,
     get_language,
     get_language_name,

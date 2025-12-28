@@ -11,7 +11,7 @@ from ..constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
 )
 from ..gameplay import logic
-from ..i18n import translate as _
+from ..localization import translate as _
 from ..models import Stage
 from ..render import draw, show_message
 from ..screens import ScreenID, ScreenTransition, present

@@ -21,7 +21,7 @@ from .colors import (
     YELLOW,
 )
 from .font_utils import load_font
-from .i18n import get_font_settings, translate as _
+from .localization import get_font_settings, translate as _
 from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player, Survivor
 from .models import Stage
 from .render_assets import RenderAssets

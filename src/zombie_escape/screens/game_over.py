@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pygame
 from pygame import surface, time
 
 from ..colors import BLACK, GREEN, LIGHT_GRAY, RED, WHITE
-from ..i18n import translate as _
+from ..localization import translate as _
 from ..models import GameData, Stage
 from ..render import RenderAssets, draw_level_overview, show_message
 from ..screens import ScreenID, ScreenTransition, present

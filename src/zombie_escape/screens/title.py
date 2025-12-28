@@ -7,7 +7,7 @@ from pygame import surface, time
 
 from ..colors import BLACK, GRAY, LIGHT_GRAY, WHITE, YELLOW
 from ..font_utils import load_font
-from ..i18n import get_font_settings, translate as _
+from ..localization import get_font_settings, translate as _
 from ..models import Stage
 from ..render import show_message
 from ..screens import ScreenID, ScreenTransition, nudge_window_scale, present

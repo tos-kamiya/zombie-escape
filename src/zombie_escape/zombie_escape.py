@@ -12,16 +12,16 @@ except Exception:  # pragma: no cover - fallback version
     __version__ = "0.0.0-unknown"
 from .config import load_config, save_config
 from .constants import (
+    CAR_SPEED,
     DEFAULT_WINDOW_SCALE,
     FPS,
     RENDER_ASSETS,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
-    CAR_SPEED,
     SURVIVOR_MAX_SAFE_PASSENGERS,
     SURVIVOR_MIN_SPEED_FACTOR,
 )
-from .i18n import set_language
+from .localization import set_language
 from .models import GameData, Stage, STAGES, DEFAULT_STAGE_ID
 from .screens import ScreenID, ScreenTransition, apply_window_scale
 from .screens.game_over import game_over_screen

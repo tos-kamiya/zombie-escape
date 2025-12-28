@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import sprite, surface
 
-from .i18n import translate as _
+from .localization import translate as _
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from .entities import Camera, Car, Companion, FuelCan, Flashlight, Player

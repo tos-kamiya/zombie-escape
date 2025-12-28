@@ -24,7 +24,7 @@ from ..constants import (
     WINDOW_SCALE_MAX,
     WINDOW_SCALE_MIN,
 )
-from ..i18n import translate as _
+from ..localization import translate as _
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from ..models import GameData, Stage
