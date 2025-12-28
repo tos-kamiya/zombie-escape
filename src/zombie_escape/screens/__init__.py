@@ -103,4 +103,4 @@ def nudge_window_scale(
 ) -> surface.Surface:
     """Scale the window relative to the current zoom level."""
     target_scale = current_window_scale * multiplier
-    return apply_window_scale(target_scale, game_data)
+    return apply_window_scale(target_scale, game_data=game_data)

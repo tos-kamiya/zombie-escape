@@ -49,14 +49,6 @@ def gameplay_screen(
     if stage.survivor_stage:
         logic.spawn_survivors(game_data, layout_data)
 
-    def current_survivor_ui() -> tuple[int | None, list[dict[str, Any]] | None]:
-        if not stage.survivor_stage:
-            return None, None
-        return (
-            game_data.state.survivors_onboard,
-            list(game_data.state.survivor_messages),
-        )
-
     flashlight_conf = config.get("flashlight", {})
     flashlights_enabled = flashlight_conf.get("enabled", True)
     raw_flashlight_count = flashlight_conf.get("count", DEFAULT_FLASHLIGHT_SPAWN_COUNT)
@@ -104,30 +96,13 @@ def gameplay_screen(
                 if game_data.state.game_over_at is None:
                     game_data.state.game_over_at = pygame.time.get_ticks()
                 if pygame.time.get_ticks() - game_data.state.game_over_at < 1000:
-                    survivor_info, survivor_messages = current_survivor_ui()
                     draw(
                         render_assets,
                         screen,
-                        game_data.areas.outer_rect,
-                        game_data.camera,
-                        game_data.groups.all_sprites,
+                        game_data,
                         last_fov_target,
-                        game_data.fog,
-                        game_data.state.footprints,
-                        config,
-                        player,
-                        None,
+                        config=config,
                         hint_color=None,
-                        outside_rects=game_data.areas.outside_rects,
-                        stage=stage,
-                        has_fuel=game_data.state.has_fuel,
-                        has_flashlight=game_data.state.has_flashlight,
-                        elapsed_play_ms=game_data.state.elapsed_play_ms,
-                        fuel_message_until=game_data.state.fuel_message_until,
-                        companion=game_data.companion,
-                        companion_rescued=game_data.state.companion_rescued,
-                        survivors_onboard=survivor_info,
-                        survivor_messages=survivor_messages,
                         present_fn=present,
                     )
                     if game_data.state.game_over_message:
@@ -173,30 +148,13 @@ def gameplay_screen(
 
         paused = paused_manual or paused_focus
         if paused:
-            survivor_info, survivor_messages = current_survivor_ui()
             draw(
                 render_assets,
                 screen,
-                game_data.areas.outer_rect,
-                game_data.camera,
-                game_data.groups.all_sprites,
+                game_data,
                 last_fov_target,
-                game_data.fog,
-                game_data.state.footprints,
-                config,
-                player,
-                None,
+                config=config,
                 do_flip=not show_pause_overlay,
-                outside_rects=game_data.areas.outside_rects,
-                stage=stage,
-                has_fuel=game_data.state.has_fuel,
-                has_flashlight=game_data.state.has_flashlight,
-                elapsed_play_ms=game_data.state.elapsed_play_ms,
-                fuel_message_until=game_data.state.fuel_message_until,
-                companion=game_data.companion,
-                companion_rescued=game_data.state.companion_rescued,
-                survivors_onboard=survivor_info,
-                survivor_messages=survivor_messages,
                 present_fn=present,
             )
             if show_pause_overlay:
@@ -291,30 +249,14 @@ def gameplay_screen(
                 elif target_type == "car" and game_data.car.alive():
                     hint_target = game_data.car.rect.center
 
-        survivor_info, survivor_messages = current_survivor_ui()
         draw(
             render_assets,
             screen,
-            game_data.areas.outer_rect,
-            game_data.camera,
-            game_data.groups.all_sprites,
+            game_data,
             fov_target,
-            game_data.fog,
-            game_data.state.footprints,
-            config,
-            player,
-            hint_target,
+            config=config,
+            hint_target=hint_target,
             hint_color=hint_color,
-            outside_rects=game_data.areas.outside_rects,
-            stage=stage,
-            has_fuel=game_data.state.has_fuel,
-            has_flashlight=game_data.state.has_flashlight,
-            elapsed_play_ms=game_data.state.elapsed_play_ms,
-            fuel_message_until=game_data.state.fuel_message_until,
-            companion=game_data.companion,
-            companion_rescued=game_data.state.companion_rescued,
-            survivors_onboard=survivor_info,
-            survivor_messages=survivor_messages,
             present_fn=present,
         )
 

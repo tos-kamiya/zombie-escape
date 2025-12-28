@@ -23,7 +23,7 @@ from .colors import (
 from .font_utils import load_font
 from .localization import get_font_settings, translate as _
 from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player, Survivor
-from .models import Stage
+from .models import GameData, Stage
 from .render_assets import RenderAssets
 from .constants import SURVIVOR_MAX_SAFE_PASSENGERS
 
@@ -334,31 +334,37 @@ def _draw_status_bar(
 def draw(
     assets: RenderAssets,
     screen: surface.Surface,
-    outer_rect: tuple[int, int, int, int],
-    camera: Camera,
-    all_sprites: sprite.LayeredUpdates,
+    game_data: GameData,
     fov_target: pygame.sprite.Sprite | None,
-    fog_surfaces: dict[str, Any],
-    footprints: list[dict[str, Any]],
-    config: dict[str, Any],
-    player: Player,
-    hint_target: tuple[int, int] | None,
     *,
+    config: dict[str, Any],
+    hint_target: tuple[int, int] | None = None,
     hint_color: tuple[int, int, int] | None = None,
     do_flip: bool = True,
-    outside_rects: list[pygame.Rect] | None = None,
-    stage: Stage | None = None,
-    has_fuel: bool = False,
-    has_flashlight: bool = False,
-    elapsed_play_ms: int = 0,
-    fuel_message_until: int = 0,
-    companion: Companion | None = None,
-    companion_rescued: bool = False,
-    survivors_onboard: int | None = None,
-    survivor_messages: list[dict[str, Any]] | None = None,
     present_fn: Callable[[surface.Surface], None] | None = None,
 ) -> None:
     hint_color = hint_color or YELLOW
+    state = game_data.state
+    player = game_data.player
+    if player is None:
+        raise ValueError("draw requires an active player on game_data")
+
+    camera = game_data.camera
+    stage = game_data.stage
+    companion = game_data.companion
+    outer_rect = game_data.areas.outer_rect
+    outside_rects = game_data.areas.outside_rects or []
+    all_sprites = game_data.groups.all_sprites
+    fog_surfaces = game_data.fog
+    footprints = state.footprints
+    has_fuel = state.has_fuel
+    has_flashlight = state.has_flashlight
+    elapsed_play_ms = state.elapsed_play_ms
+    fuel_message_until = state.fuel_message_until
+    companion_rescued = state.companion_rescued
+    survivors_onboard = state.survivors_onboard
+    survivor_messages = list(state.survivor_messages)
+
     screen.fill(FLOOR_COLOR_OUTSIDE)
 
     xs, ys, xe, ye = outer_rect
@@ -376,7 +382,6 @@ def draw(
     play_area_screen_rect = camera.apply_rect(play_area_rect)
     pygame.draw.rect(screen, FLOOR_COLOR_PRIMARY, play_area_screen_rect)
 
-    outside_rects = outside_rects or []
     outside_cells = {
         (r.x // assets.internal_wall_grid_snap, r.y // assets.internal_wall_grid_snap)
         for r in outside_rects
