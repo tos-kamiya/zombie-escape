@@ -32,7 +32,6 @@ from .constants import SURVIVOR_MAX_SAFE_PASSENGERS
 @dataclass(frozen=True)
 class SurvivorHUDInfo:
     onboard: int
-    rescued: int
 
 
 def show_message(
@@ -529,14 +528,9 @@ def draw(
     if survivor_info:
         onboard = survivor_info.onboard
         limit = SURVIVOR_MAX_SAFE_PASSENGERS
-        rescued = survivor_info.rescued
         objective_lines.append(
             _("objectives.survivors_onboard", count=onboard, limit=limit)
         )
-        if rescued:
-            objective_lines.append(
-                _("objectives.survivors_rescued", count=rescued)
-            )
 
     if objective_lines:
         _render_objective(objective_lines)
