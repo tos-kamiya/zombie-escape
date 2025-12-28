@@ -41,7 +41,7 @@ def gameplay_screen(
     paused_focus = False
     last_fov_target = None
 
-    layout_data = logic.generate_level_from_blueprint(game_data)
+    layout_data = logic.generate_level_from_blueprint(game_data, config)
     player, car = logic.setup_player_and_car(game_data, layout_data)
     game_data.player = player
     game_data.car = car
@@ -94,8 +94,8 @@ def gameplay_screen(
             game_data.companion = companion
             game_data.groups.all_sprites.add(companion, layer=2)
 
-    logic.spawn_initial_zombies(game_data, player, layout_data)
-    logic.update_footprints(game_data)
+    logic.spawn_initial_zombies(game_data, player, layout_data, config)
+    logic.update_footprints(game_data, config)
     last_fov_target = player
 
     while True:
@@ -250,12 +250,14 @@ def gameplay_screen(
             keys, player, car
         )
 
-        logic.update_entities(game_data, player_dx, player_dy, car_dx, car_dy)
-        logic.update_footprints(game_data)
+        logic.update_entities(
+            game_data, player_dx, player_dy, car_dx, car_dy, config
+        )
+        logic.update_footprints(game_data, config)
         game_data.state.elapsed_play_ms += int(dt * 1000)
         logic.cleanup_survivor_messages(game_data.state)
 
-        fov_target = logic.check_interactions(game_data)
+        fov_target = logic.check_interactions(game_data, config)
         last_fov_target = fov_target or last_fov_target
 
         car_hint_conf = config.get("car_hint", {})

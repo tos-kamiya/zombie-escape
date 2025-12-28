@@ -120,12 +120,13 @@ def create_zombie(
 def rect_for_cell(x_idx: int, y_idx: int) -> pygame.Rect:
     return pygame.Rect(x_idx * CELL_SIZE, y_idx * CELL_SIZE, CELL_SIZE, CELL_SIZE)
 
-def generate_level_from_blueprint(game_data: GameData) -> dict[str, list[pygame.Rect]]:
+def generate_level_from_blueprint(
+    game_data: GameData, config: dict[str, Any]
+) -> dict[str, list[pygame.Rect]]:
     """Build walls/spawn candidates/outside area from a blueprint grid."""
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
 
-    config = game_data.config
     steel_conf = config.get("steel_beams", {})
     steel_enabled = steel_conf.get("enabled", False)
 
@@ -551,7 +552,9 @@ def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> Non
     game_data.state.survivors_onboard = 0
     apply_passenger_speed_penalty(game_data)
 
-def handle_survivor_zombie_collisions(game_data: GameData) -> None:
+def handle_survivor_zombie_collisions(
+    game_data: GameData, config: dict[str, Any]
+) -> None:
     if not game_data.stage.survivor_stage:
         return
     survivor_group = game_data.groups.survivor_group
@@ -600,7 +603,7 @@ def handle_survivor_zombie_collisions(game_data: GameData) -> None:
         line = random_survivor_conversion_line()
         if line:
             add_survivor_message(game_data, line)
-        new_zombie = create_zombie(game_data.config, start_pos=survivor.rect.center)
+        new_zombie = create_zombie(config, start_pos=survivor.rect.center)
         zombie_group.add(new_zombie)
         game_data.groups.all_sprites.add(new_zombie, layer=1)
         insert_idx = bisect_left(zombie_xs, new_zombie.rect.centerx)
@@ -661,12 +664,10 @@ def get_shrunk_sprite(
 
     return new_sprite
 
-def update_footprints(game_data: GameData) -> None:
+def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
     """Record player steps and clean up old footprints."""
     state = game_data.state
     player: Player = game_data.player
-    config = game_data.config
-
     footprints_enabled = config.get("footprints", {}).get("enabled", True)
     if not footprints_enabled:
         state.footprints = []
@@ -757,7 +758,6 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             "hatch_patterns": {},
             "overlays": {},
         },
-        config=config,
         stage=stage,
         fuel=None,
         flashlights=[],
@@ -811,9 +811,9 @@ def spawn_initial_zombies(
     game_data: GameData,
     player: Player,
     layout_data: Mapping[str, list[pygame.Rect]],
+    config: dict[str, Any],
 ) -> None:
     """Spawn initial zombies using blueprint candidate cells."""
-    config = game_data.config
     wall_group = game_data.groups.wall_group
     zombie_group = game_data.groups.zombie_group
     all_sprites = game_data.groups.all_sprites
@@ -884,6 +884,7 @@ def update_entities(
     player_dy: float,
     car_dx: float,
     car_dy: float,
+    config: dict[str, Any],
 ) -> None:
     """Update positions and states of game entities."""
     player = game_data.player
@@ -893,7 +894,6 @@ def update_entities(
     all_sprites = game_data.groups.all_sprites
     zombie_group = game_data.groups.zombie_group
     camera = game_data.camera
-    config = game_data.config
     stage = game_data.stage
 
     # Update player/car movement
@@ -1003,7 +1003,9 @@ def update_entities(
         nearby_candidates = _nearby_zombies(idx)
         zombie.update(target, wall_group, nearby_candidates)
 
-def check_interactions(game_data: GameData) -> pygame.sprite.Sprite | None:
+def check_interactions(
+    game_data: GameData, config: dict[str, Any]
+) -> pygame.sprite.Sprite | None:
     """Check and handle interactions between entities."""
     player = game_data.player
     car = game_data.car
@@ -1142,7 +1144,7 @@ def check_interactions(game_data: GameData) -> pygame.sprite.Sprite | None:
                 game_data.car.take_damage(overload_damage)
 
     if stage.survivor_stage:
-        handle_survivor_zombie_collisions(game_data)
+        handle_survivor_zombie_collisions(game_data, config)
 
     # Handle car destruction
     if car.alive() and car.health <= 0:

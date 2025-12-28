@@ -69,7 +69,6 @@ class GameData:
     camera: Camera
     areas: Areas
     fog: dict
-    config: dict
     stage: Stage
     fuel: FuelCan | None = None
     flashlights: list[Flashlight] | None = None
