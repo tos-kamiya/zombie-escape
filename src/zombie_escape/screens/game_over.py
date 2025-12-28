@@ -13,7 +13,7 @@ from ..screens import ScreenID, ScreenTransition, present
 def game_over_screen(
     screen: surface.Surface,
     clock: time.Clock,
-    config: dict | None,
+    config: dict[str, Any],
     fps: int,
     *,
     game_data: GameData | None,
@@ -22,7 +22,7 @@ def game_over_screen(
 ) -> ScreenTransition:
     """Display the game-over overview until the player chooses the next step."""
 
-    if not game_data or config is None:
+    if not game_data:
         return ScreenTransition(ScreenID.TITLE)
 
     screen_width = screen.get_width()

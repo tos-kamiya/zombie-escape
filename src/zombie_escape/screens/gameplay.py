@@ -9,12 +9,11 @@ from ..colors import LIGHT_GRAY, RED, WHITE, YELLOW
 from ..constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
-    SURVIVOR_MAX_SAFE_PASSENGERS,
 )
 from ..gameplay import logic
 from ..i18n import translate as _
 from ..models import Stage
-from ..render import SurvivorHUDInfo, draw, show_message
+from ..render import draw, show_message
 from ..screens import ScreenID, ScreenTransition, present
 
 if TYPE_CHECKING:
@@ -50,15 +49,11 @@ def gameplay_screen(
     if stage.survivor_stage:
         logic.spawn_survivors(game_data, layout_data)
 
-    def current_survivor_ui() -> tuple[
-        SurvivorHUDInfo | None, list[dict[str, Any]] | None
-    ]:
+    def current_survivor_ui() -> tuple[int | None, list[dict[str, Any]] | None]:
         if not stage.survivor_stage:
             return None, None
         return (
-            SurvivorHUDInfo(
-                onboard=game_data.state.survivors_onboard,
-            ),
+            game_data.state.survivors_onboard,
             list(game_data.state.survivor_messages),
         )
 
@@ -128,7 +123,7 @@ def gameplay_screen(
                         fuel_message_until=game_data.state.fuel_message_until,
                         companion=game_data.companion,
                         companion_rescued=game_data.state.companion_rescued,
-                        survivor_info=survivor_info,
+                        survivors_onboard=survivor_info,
                         survivor_messages=survivor_messages,
                         present_fn=present,
                     )
@@ -197,7 +192,7 @@ def gameplay_screen(
                 fuel_message_until=game_data.state.fuel_message_until,
                 companion=game_data.companion,
                 companion_rescued=game_data.state.companion_rescued,
-                survivor_info=survivor_info,
+                survivors_onboard=survivor_info,
                 survivor_messages=survivor_messages,
                 present_fn=present,
             )
@@ -317,7 +312,7 @@ def gameplay_screen(
             fuel_message_until=game_data.state.fuel_message_until,
             companion=game_data.companion,
             companion_rescued=game_data.state.companion_rescued,
-            survivor_info=survivor_info,
+            survivors_onboard=survivor_info,
             survivor_messages=survivor_messages,
             present_fn=present,
         )
