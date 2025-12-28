@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from typing import Any, Callable
 
 import pygame
@@ -25,6 +26,13 @@ from .i18n import get_font_settings, translate as _
 from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player, Survivor
 from .models import Stage
 from .render_assets import FogRing, RenderAssets
+
+
+@dataclass(frozen=True)
+class SurvivorHUDInfo:
+    onboard: int
+    limit: int
+    rescued: int
 
 
 def show_message(
@@ -348,7 +356,7 @@ def draw(
     fuel_message_until: int = 0,
     companion: Companion | None = None,
     companion_rescued: bool = False,
-    survivor_info: dict[str, int] | None = None,
+    survivor_info: SurvivorHUDInfo | None = None,
     survivor_messages: list[dict[str, Any]] | None = None,
     present_fn: Callable[[surface.Surface], None] | None = None,
 ) -> None:
@@ -519,9 +527,9 @@ def draw(
                 objective_lines.append(_("objectives.find_buddy"))
 
     if survivor_info:
-        onboard = survivor_info.get("onboard", 0)
-        limit = survivor_info.get("limit", 0)
-        rescued = survivor_info.get("rescued", 0)
+        onboard = survivor_info.onboard
+        limit = survivor_info.limit
+        rescued = survivor_info.rescued
         objective_lines.append(
             _("objectives.survivors_onboard", count=onboard, limit=limit)
         )

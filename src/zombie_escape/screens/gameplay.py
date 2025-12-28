@@ -14,7 +14,7 @@ from ..constants import (
 from ..gameplay import logic
 from ..i18n import translate as _
 from ..models import Stage
-from ..render import draw, show_message
+from ..render import SurvivorHUDInfo, draw, show_message
 from ..screens import ScreenID, ScreenTransition, present
 
 if TYPE_CHECKING:
@@ -51,16 +51,16 @@ def gameplay_screen(
         logic.spawn_survivors(game_data, layout_data)
 
     def current_survivor_ui() -> tuple[
-        dict[str, int] | None, list[dict[str, Any]] | None
+        SurvivorHUDInfo | None, list[dict[str, Any]] | None
     ]:
         if not stage.survivor_stage:
             return None, None
         return (
-            {
-                "onboard": game_data.state.survivors_onboard,
-                "limit": SURVIVOR_MAX_SAFE_PASSENGERS,
-                "rescued": game_data.state.survivors_rescued,
-            },
+            SurvivorHUDInfo(
+                onboard=game_data.state.survivors_onboard,
+                limit=SURVIVOR_MAX_SAFE_PASSENGERS,
+                rescued=game_data.state.survivors_rescued,
+            ),
             list(game_data.state.survivor_messages),
         )
 
