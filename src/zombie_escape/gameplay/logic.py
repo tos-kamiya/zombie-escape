@@ -638,7 +638,6 @@ def log_waiting_car_count(game_data: GameData, *, force: bool = False) -> None:
     if not force and current == game_data.last_logged_waiting_cars:
         return
     stage_id = getattr(game_data.stage, "id", "unknown")
-    print(f"[WAITING CARS][{stage_id}] alive: {current}")
     game_data.last_logged_waiting_cars = current
 
 
