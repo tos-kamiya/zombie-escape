@@ -68,6 +68,8 @@ from ..entities import (
     Zombie,
 )
 
+LOGICAL_SCREEN_RECT = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+
 __all__ = [
     "create_zombie",
     "rect_for_cell",
@@ -555,6 +557,12 @@ def apply_passenger_speed_penalty(game_data: GameData) -> None:
     car.speed = calculate_car_speed_for_passengers(game_data.state.survivors_onboard)
 
 
+def rect_visible_on_screen(camera: Camera | None, rect: pygame.Rect) -> bool:
+    if camera is None:
+        return False
+    return camera.apply_rect(rect).colliderect(LOGICAL_SCREEN_RECT)
+
+
 def waiting_car_target_count(stage: Stage) -> int:
     return 2 if stage.survivor_stage else 1
 
@@ -574,17 +582,24 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
     obstacles: list[Car] = list(waiting)
     if active_car:
         obstacles.append(active_car)
-    new_car = place_new_car(
-        wall_group,
-        player,
-        walkable_cells,
-        existing_cars=obstacles,
-    )
-    if not new_car:
-        return None
-    game_data.waiting_cars.append(new_car)
-    all_sprites.add(new_car, layer=1)
-    return new_car
+    camera = game_data.camera
+    offscreen_attempts = 6
+    while offscreen_attempts > 0:
+        new_car = place_new_car(
+            wall_group,
+            player,
+            walkable_cells,
+            existing_cars=obstacles,
+        )
+        if not new_car:
+            return None
+        if rect_visible_on_screen(camera, new_car.rect):
+            offscreen_attempts -= 1
+            continue
+        game_data.waiting_cars.append(new_car)
+        all_sprites.add(new_car, layer=1)
+        return new_car
+    return None
 
 
 def maintain_waiting_car_supply(game_data: GameData) -> None:
@@ -686,7 +701,6 @@ def handle_survivor_zombie_collisions(
     zombies.sort(key=lambda s: s.rect.centerx)
     zombie_xs = [z.rect.centerx for z in zombies]
     camera = game_data.camera
-    screen_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
 
     for survivor in list(survivor_group):
         if not survivor.alive():
@@ -716,7 +730,7 @@ def handle_survivor_zombie_collisions(
 
         if not collided:
             continue
-        if not camera.apply_rect(survivor.rect).colliderect(screen_rect):
+        if not rect_visible_on_screen(camera, survivor.rect):
             continue
         survivor.kill()
         line = random_survivor_conversion_line()
@@ -1081,21 +1095,20 @@ def update_entities(
         active_car.rect.center if player.in_car and active_car else player.rect.center
     )
     companion_on_screen = False
-    screen_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
     if (
         game_data.stage.requires_companion
         and companion
         and companion.alive()
         and not companion.rescued
     ):
-        companion_on_screen = camera.apply_rect(companion.rect).colliderect(screen_rect)
+        companion_on_screen = rect_visible_on_screen(camera, companion.rect)
 
     survivors_on_screen: list[Survivor] = []
     if stage.survivor_stage:
         survivor_group = game_data.groups.survivor_group
         for survivor in survivor_group:
             if getattr(survivor, "alive", lambda: False)():
-                if camera.apply_rect(survivor.rect).colliderect(screen_rect):
+                if rect_visible_on_screen(camera, survivor.rect):
                     survivors_on_screen.append(survivor)
 
     zombies_sorted: list[Zombie] = sorted(list(zombie_group), key=lambda z: z.x)
@@ -1131,7 +1144,7 @@ def update_entities(
                 target = companion.rect.center
 
         if stage.survivor_stage:
-            zombie_on_screen = camera.apply_rect(zombie.rect).colliderect(screen_rect)
+            zombie_on_screen = rect_visible_on_screen(camera, zombie.rect)
             if zombie_on_screen:
                 candidate_positions: list[tuple[int, int]] = []
                 for survivor in survivors_on_screen:
@@ -1212,8 +1225,7 @@ def check_interactions(
     )
     if companion_active:
         assert companion is not None
-        screen_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
-        companion_on_screen = camera.apply_rect(companion.rect).colliderect(screen_rect)
+        companion_on_screen = rect_visible_on_screen(camera, companion.rect)
 
     # Companion interactions (Stage 3)
     if companion_active and stage.requires_companion:

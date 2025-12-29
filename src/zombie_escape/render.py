@@ -445,10 +445,28 @@ def draw(
                 pygame.draw.circle(screen, color, sr.center, assets.footprint_radius)
 
     screen_rect_inflated = screen.get_rect().inflate(100, 100)
+    player_screen_rect: pygame.Rect | None = None
     for entity in all_sprites:
         sprite_screen_rect = camera.apply_rect(entity.rect)
         if sprite_screen_rect.colliderect(screen_rect_inflated):
             screen.blit(entity.image, sprite_screen_rect)
+        if entity is player:
+            player_screen_rect = sprite_screen_rect
+
+    if player_screen_rect is None:
+        player_screen_rect = camera.apply_rect(player.rect)
+
+    if has_fuel and player_screen_rect and not player.in_car:
+        indicator_size = max(6, (assets.player_radius // 2) * 2)
+        padding = max(2, indicator_size // 4)
+        indicator_rect = pygame.Rect(
+            player_screen_rect.right - indicator_size + padding,
+            player_screen_rect.bottom - indicator_size + padding,
+            indicator_size,
+            indicator_size,
+        )
+        pygame.draw.rect(screen, YELLOW, indicator_rect)
+        pygame.draw.rect(screen, BLACK, indicator_rect, width=1)
 
     if hint_target and player:
         current_fov_scale = get_fog_scale(
