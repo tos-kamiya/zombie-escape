@@ -540,8 +540,12 @@ def update_survivors(game_data: GameData) -> None:
                 other.rect.center = (int(other.x), int(other.y))
 
 
-def calculate_car_speed_for_passengers(passengers: int) -> float:
-    penalty = SURVIVOR_SPEED_PENALTY_PER_PASSENGER * passengers
+def calculate_car_speed_for_passengers(
+    passengers: int, *, capacity: int = SURVIVOR_MAX_SAFE_PASSENGERS
+) -> float:
+    cap = max(1, capacity)
+    load_ratio = max(0.0, passengers / cap)
+    penalty = SURVIVOR_SPEED_PENALTY_PER_PASSENGER * load_ratio
     penalty = min(0.95, max(0.0, penalty))
     adjusted = CAR_SPEED * (1 - penalty)
     return max(CAR_SPEED * SURVIVOR_MIN_SPEED_FACTOR, adjusted)
@@ -554,7 +558,10 @@ def apply_passenger_speed_penalty(game_data: GameData) -> None:
     if not game_data.stage.survivor_stage:
         car.speed = CAR_SPEED
         return
-    car.speed = calculate_car_speed_for_passengers(game_data.state.survivors_onboard)
+    car.speed = calculate_car_speed_for_passengers(
+        game_data.state.survivors_onboard,
+        capacity=game_data.state.survivor_capacity,
+    )
 
 
 def rect_visible_on_screen(camera: Camera | None, rect: pygame.Rect) -> bool:
@@ -564,7 +571,7 @@ def rect_visible_on_screen(camera: Camera | None, rect: pygame.Rect) -> bool:
 
 
 def waiting_car_target_count(stage: Stage) -> int:
-    return 2 if stage.survivor_stage else 1
+    return 3 if stage.survivor_stage else 1
 
 
 def spawn_waiting_car(game_data: GameData) -> Car | None:
@@ -603,15 +610,14 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
 
 
 def maintain_waiting_car_supply(game_data: GameData) -> None:
-    """Ensure the stage has the desired number of parked cars."""
-    desired = waiting_car_target_count(game_data.stage)
+    """Ensure at least one parked car remains on the field."""
+    minimum = 1
     current = len(alive_waiting_cars(game_data))
-    safety = desired + 2
-    while current < desired and safety > 0:
-        if not spawn_waiting_car(game_data):
+    while current < minimum:
+        new_car = spawn_waiting_car(game_data)
+        if not new_car:
             break
         current += 1
-        safety -= 1
 
 
 def alive_waiting_cars(game_data: GameData) -> list[Car]:
@@ -857,6 +863,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         survivors_onboard=0,
         survivors_rescued=0,
         survivor_messages=[],
+        survivor_capacity=SURVIVOR_MAX_SAFE_PASSENGERS,
     )
 
     # Create sprite groups
@@ -1313,6 +1320,30 @@ def check_interactions(
 
     shrunk_car = get_shrunk_sprite(active_car, 0.8) if active_car else None
 
+    # Bonus: collide a parked car while driving to repair/extend capabilities
+    if player.in_car and active_car and shrunk_car and waiting_cars:
+        waiting_group = pygame.sprite.Group(waiting_cars)
+        collided_waiters = pygame.sprite.spritecollide(
+            shrunk_car, waiting_group, False, pygame.sprite.collide_rect
+        )
+        if collided_waiters:
+            removed_any = False
+            for parked in collided_waiters:
+                if not parked.alive():
+                    continue
+                parked.kill()
+                try:
+                    game_data.waiting_cars.remove(parked)
+                except ValueError:
+                    pass
+                active_car.health = active_car.max_health
+                active_car.update_color()
+                removed_any = True
+                if stage.survivor_stage:
+                    state.survivor_capacity += SURVIVOR_MAX_SAFE_PASSENGERS
+            if removed_any:
+                maintain_waiting_car_supply(game_data)
+
     # Car hitting zombies
     if player.in_car and active_car and active_car.health > 0 and shrunk_car:
         zombies_hit = pygame.sprite.spritecollide(shrunk_car, zombie_group, True)
@@ -1332,7 +1363,8 @@ def check_interactions(
         if boarded:
             state.survivors_onboard += len(boarded)
             apply_passenger_speed_penalty(game_data)
-            if state.survivors_onboard > SURVIVOR_MAX_SAFE_PASSENGERS:
+            capacity_limit = state.survivor_capacity
+            if state.survivors_onboard > capacity_limit:
                 overload_damage = max(
                     1,
                     int(active_car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO),
@@ -1359,6 +1391,7 @@ def check_interactions(
 
         # Clear active car and let the player hunt for another waiting car.
         game_data.car = None
+        state.survivor_capacity = SURVIVOR_MAX_SAFE_PASSENGERS
         apply_passenger_speed_penalty(game_data)
 
         # Bring back the rescued companion near the player after losing the car

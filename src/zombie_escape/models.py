@@ -48,6 +48,7 @@ class ProgressState:
     survivors_onboard: int
     survivors_rescued: int
     survivor_messages: list
+    survivor_capacity: int
 
 
 @dataclass

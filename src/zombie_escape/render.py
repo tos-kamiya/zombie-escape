@@ -550,7 +550,7 @@ def draw(
         and getattr(stage, "survivor_stage", False)
         and (survivors_onboard is not None)
     ):
-        limit = SURVIVOR_MAX_SAFE_PASSENGERS
+        limit = getattr(state, "survivor_capacity", SURVIVOR_MAX_SAFE_PASSENGERS)
         objective_lines.append(
             _("objectives.survivors_onboard", count=survivors_onboard, limit=limit)
         )

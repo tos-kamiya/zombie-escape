@@ -41,13 +41,14 @@ def gameplay_screen(
     last_fov_target = None
 
     layout_data = logic.generate_level_from_blueprint(game_data, config)
-    initial_waiting = 2 if stage.survivor_stage else 1
+    initial_waiting = 3 if stage.survivor_stage else 1
     player, waiting_cars = logic.setup_player_and_cars(
         game_data, layout_data, car_count=initial_waiting
     )
     game_data.player = player
     game_data.waiting_cars = waiting_cars
     game_data.car = None
+    # Only top up if initial placement spawned fewer than the intended baseline (shouldn't happen)
     logic.maintain_waiting_car_supply(game_data)
     logic.apply_passenger_speed_penalty(game_data)
 

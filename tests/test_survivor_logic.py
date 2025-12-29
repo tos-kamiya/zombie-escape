@@ -17,17 +17,21 @@ def test_car_speed_no_passengers_matches_base() -> None:
 
 
 def test_car_speed_respects_penalty_and_floor() -> None:
-    safe_limit_speed = calculate_car_speed_for_passengers(SURVIVOR_MAX_SAFE_PASSENGERS)
+    safe_limit_speed = calculate_car_speed_for_passengers(
+        SURVIVOR_MAX_SAFE_PASSENGERS,
+        capacity=SURVIVOR_MAX_SAFE_PASSENGERS,
+    )
     assert safe_limit_speed < CAR_SPEED
     assert safe_limit_speed >= CAR_SPEED * SURVIVOR_MIN_SPEED_FACTOR
 
 
 def test_car_speed_clamped_when_exceeding_limit() -> None:
     overloaded_speed = calculate_car_speed_for_passengers(
-        SURVIVOR_MAX_SAFE_PASSENGERS + 5
+        SURVIVOR_MAX_SAFE_PASSENGERS + 5,
+        capacity=SURVIVOR_MAX_SAFE_PASSENGERS,
     )
-    assert math.isclose(
-        overloaded_speed,
-        CAR_SPEED * SURVIVOR_MIN_SPEED_FACTOR,
-        rel_tol=1e-6,
+    assert overloaded_speed >= CAR_SPEED * SURVIVOR_MIN_SPEED_FACTOR
+    assert overloaded_speed < calculate_car_speed_for_passengers(
+        SURVIVOR_MAX_SAFE_PASSENGERS,
+        capacity=SURVIVOR_MAX_SAFE_PASSENGERS,
     )

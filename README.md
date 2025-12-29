@@ -47,7 +47,7 @@ At the title screen you can pick a stage:
 - **Stage 1: Find the Car** — locate the car and drive out (you already start with fuel).
 - **Stage 2: Fuel Run** — you start with no fuel; find a fuel can first, pick it up, then find the car and escape.
 - **Stage 3: Rescue Buddy** — same fuel hunt as Stage 2 (you begin empty) plus grab your buddy, pick them up with the car, then escape together.
-- **Stage 4: Evacuate Survivors** — start fueled, find the car, gather nearby civilians, and escape before zombies reach them.
+- **Stage 4: Evacuate Survivors** — start fueled, find the car, gather nearby civilians, and escape before zombies reach them. Stage 4 sprinkles extra parked cars across the map; slamming into one while already driving fully repairs your current ride and adds five more safe seats.
 
 An objective reminder is shown at the top-left during play.
 
@@ -58,9 +58,9 @@ An objective reminder is shown at the top-left during play.
     -   When out of sight, the zombie's movement mode will randomly switch every certain time (moving horizontally/vertically only, side-to-side movement, random movement, etc.).
 -   **Car:** A yellow rectangle. The player can enter by making contact with it.
     -   The car has durability. Durability decreases when colliding with internal walls or hitting zombies.
-    -   If durability reaches 0, the car is destroyed, and the player is ejected.
-    -   When the car is destroyed, a **new car will respawn** at a random location within the stage.
-    -   After roughly 5 minutes of play, a small triangle near the player points toward the objective: fuel first (Stage 2 before pickup), car after fuel is collected (Stage 2), or car directly (Stage 1).
+    -   If durability reaches 0, the car is destroyed and you are dumped on foot; you must track down another parked car hidden in the level.
+    -   When you're already driving, ramming a parked car instantly restores your current car's health. On Stage 4 this also increases the safe passenger limit by five.
+    -   After roughly 5 minutes of play, a small triangle near the player points toward the objective: fuel first (Stage 2 before pickup), car after fuel is collected (Stage 2/3), or car directly (Stage 1/4).
 -   **Walls:** Outer walls are gray; inner walls are beige.
     -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
     -   **Inner Walls:** Beige walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
@@ -74,7 +74,7 @@ An objective reminder is shown at the top-left during play.
 -   **Survivors (Stage 4):** Light blue civilians scattered indoors.
     - They stand still until you get close, then shuffle toward you at about one-third of player speed.
     - Zombies can convert them if both are on-screen; the survivor shouts a line and turns instantly.
-    - They only board the car; up to five ride safely, each slowing the car. Going over the limit damages the car and ejects everyone back into the building.
+    - They only board the car; your safe capacity starts at five but grows by five each time you sideswipe a parked car while already driving. Speed loss is based on how full the car is relative to that capacity, so extra slots mean quicker getaways.
 
 ### Win/Lose Conditions
 
