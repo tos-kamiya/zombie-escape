@@ -45,8 +45,8 @@ Open **Settings** from the title to toggle gameplay assists:
 At the title screen you can pick a stage:
 
 - **Stage 1: Find the Car** — locate the car and drive out (you already start with fuel).
-- **Stage 2: Fuel Run** — you start empty; find a fuel can first, pick it up, then find the car and escape.
-- **Stage 3: Rescue Buddy** — same fuel hunt as Stage 2 plus grab your buddy, pick them up with the car, then escape together.
+- **Stage 2: Fuel Run** — you start with no fuel; find a fuel can first, pick it up, then find the car and escape.
+- **Stage 3: Rescue Buddy** — same fuel hunt as Stage 2 (you begin empty) plus grab your buddy, pick them up with the car, then escape together.
 - **Stage 4: Evacuate Survivors** — start fueled, find the car, gather nearby civilians, and escape before zombies reach them.
 
 An objective reminder is shown at the top-left during play.
