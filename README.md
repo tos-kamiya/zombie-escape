@@ -44,16 +44,16 @@ Open **Settings** from the title to toggle gameplay assists:
 
 At the title screen you can pick a stage:
 
-- **Stage 1: Find the Car** — locate the car and drive out.
-- **Stage 2: Fuel Run** — find a fuel can first, pick it up, then find the car and escape.
-- **Stage 3: Rescue Buddy** — find your stranded buddy, grab fuel, pick them up with the car, then escape together.
-- **Stage 4: Evacuate Survivors** — find the car, gather nearby civilians, and escape before zombies reach them.
+- **Stage 1: Find the Car** — locate the car and drive out (you already start with fuel).
+- **Stage 2: Fuel Run** — you start empty; find a fuel can first, pick it up, then find the car and escape.
+- **Stage 3: Rescue Buddy** — same fuel hunt as Stage 2 plus grab your buddy, pick them up with the car, then escape together.
+- **Stage 4: Evacuate Survivors** — start fueled, find the car, gather nearby civilians, and escape before zombies reach them.
 
 An objective reminder is shown at the top-left during play.
 
 ### Characters/Items
 
--   **Player:** A blue circle. Controlled with the WASD or arrow keys.
+-   **Player:** A blue circle. Controlled with the WASD or arrow keys. When carrying fuel a tiny yellow square appears near the sprite so you can immediately see whether you're ready to drive.
 -   **Zombie:** A red circle. Will chase the player (or car) once detected.
     -   When out of sight, the zombie's movement mode will randomly switch every certain time (moving horizontally/vertically only, side-to-side movement, random movement, etc.).
 -   **Car:** A yellow rectangle. The player can enter by making contact with it.
@@ -66,7 +66,7 @@ An objective reminder is shown at the top-left during play.
     -   **Inner Walls:** Beige walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
 -   **Flashlight:** Picking one up boosts your visible radius by 35%.
 -   **Steel Beam (optional):** A square post with crossed diagonals; same collision as inner walls but with triple durability. Spawns independently of inner walls (may overlap them). If an inner wall covers a beam, the beam appears once the wall is destroyed.
--   **Fuel Can (Stage 2):** A yellow jerrycan. Pick it up before driving the car.
+-   **Fuel Can (Stages 2 & 3):** A yellow jerrycan that only spawns on the fuel-run stages. Pick it up before driving the car; once collected the on-player indicator appears until you refuel the car.
 -   **Buddy (Stage 3):** A green circle survivor who spawns somewhere in the building and waits.
     -   Zombies only choose to pursue the buddy if they are on-screen; otherwise they ignore them.
     -   If a zombie tags the buddy off-screen, the buddy quietly respawns somewhere else instead of ending the run.
