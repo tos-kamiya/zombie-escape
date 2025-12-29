@@ -1073,7 +1073,7 @@ def check_interactions(
             state.has_fuel = True
             state.fuel_message_until = 0
             state.hint_expires_at = 0
-            state.hint_target_type = Nonenew_car
+            state.hint_target_type = None
             fuel.kill()
             game_data.fuel = None
             print("Fuel acquired!")
