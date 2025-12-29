@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import pygame
@@ -74,6 +74,7 @@ class GameData:
     flashlights: list[Flashlight] | None = None
     player: Player | None = None
     car: Car | None = None
+    waiting_cars: list[Car] = field(default_factory=list)
     companion: Companion | None = None
 
 

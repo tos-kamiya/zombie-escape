@@ -41,9 +41,14 @@ def gameplay_screen(
     last_fov_target = None
 
     layout_data = logic.generate_level_from_blueprint(game_data, config)
-    player, car = logic.setup_player_and_car(game_data, layout_data)
+    initial_waiting = 2 if stage.survivor_stage else 1
+    player, waiting_cars = logic.setup_player_and_cars(
+        game_data, layout_data, car_count=initial_waiting
+    )
     game_data.player = player
-    game_data.car = car
+    game_data.waiting_cars = waiting_cars
+    game_data.car = None
+    logic.maintain_waiting_car_supply(game_data)
     logic.apply_passenger_speed_penalty(game_data)
 
     if stage.survivor_stage:
@@ -59,7 +64,7 @@ def gameplay_screen(
 
     if stage.requires_fuel:
         fuel_can = logic.place_fuel_can(
-            layout_data["walkable_cells"], player, car=car
+            layout_data["walkable_cells"], player, cars=game_data.waiting_cars
         )
         if fuel_can:
             game_data.fuel = fuel_can
@@ -68,7 +73,7 @@ def gameplay_screen(
         flashlights = logic.place_flashlights(
             layout_data["walkable_cells"],
             player,
-            car=car,
+            cars=game_data.waiting_cars,
             count=max(1, flashlight_count),
         )
         game_data.flashlights = flashlights
@@ -76,7 +81,7 @@ def gameplay_screen(
 
     if stage.requires_companion:
         companion = logic.place_companion(
-            layout_data["walkable_cells"], player, car=car
+            layout_data["walkable_cells"], player, cars=game_data.waiting_cars
         )
         if companion:
             game_data.companion = companion
@@ -222,10 +227,13 @@ def gameplay_screen(
         hint_expires_at = game_data.state.hint_expires_at
         hint_target_type = game_data.state.hint_target_type
 
+        active_car = game_data.car if game_data.car and game_data.car.alive() else None
         if hint_enabled:
             if not has_fuel and game_data.fuel and game_data.fuel.alive():
                 target_type = "fuel"
-            elif not player.in_car and game_data.car.alive():
+            elif not player.in_car and (
+                active_car or logic.alive_waiting_cars(game_data)
+            ):
                 target_type = "car"
             else:
                 target_type = None
@@ -246,8 +254,15 @@ def gameplay_screen(
             ):
                 if target_type == "fuel" and game_data.fuel and game_data.fuel.alive():
                     hint_target = game_data.fuel.rect.center
-                elif target_type == "car" and game_data.car.alive():
-                    hint_target = game_data.car.rect.center
+                elif target_type == "car":
+                    if active_car:
+                        hint_target = active_car.rect.center
+                    else:
+                        waiting_target = logic.nearest_waiting_car(
+                            game_data, (player.x, player.y)
+                        )
+                        if waiting_target:
+                            hint_target = waiting_target.rect.center
 
         draw(
             render_assets,

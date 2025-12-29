@@ -80,8 +80,13 @@ __all__ = [
     "scatter_positions_on_walkable",
     "spawn_survivors",
     "update_survivors",
+    "alive_waiting_cars",
+    "nearest_waiting_car",
     "calculate_car_speed_for_passengers",
     "apply_passenger_speed_penalty",
+    "waiting_car_target_count",
+    "spawn_waiting_car",
+    "maintain_waiting_car_supply",
     "add_survivor_message",
     "random_survivor_conversion_line",
     "cleanup_survivor_messages",
@@ -91,7 +96,7 @@ __all__ = [
     "get_shrunk_sprite",
     "update_footprints",
     "initialize_game_state",
-    "setup_player_and_car",
+    "setup_player_and_cars",
     "spawn_initial_zombies",
     "process_player_input",
     "update_entities",
@@ -246,6 +251,8 @@ def place_new_car(
     wall_group: pygame.sprite.Group,
     player: Player,
     walkable_cells: list[pygame.Rect],
+    *,
+    existing_cars: Sequence[Car] | None = None,
 ) -> Car | None:
     if not walkable_cells:
         return None
@@ -268,13 +275,23 @@ def place_new_car(
             temp_car, nearby_walls, collided=lambda s1, s2: s1.rect.colliderect(s2.rect)
         )
         collides_player = temp_rect.colliderect(player.rect.inflate(50, 50))
-        if not collides_wall and not collides_player:
+        car_overlap = False
+        if existing_cars:
+            car_overlap = any(
+                temp_car.rect.colliderect(other.rect)
+                for other in existing_cars
+                if other and other.alive()
+            )
+        if not collides_wall and not collides_player and not car_overlap:
             return temp_car
     return None
 
 
 def place_fuel_can(
-    walkable_cells: list[pygame.Rect], player: Player, *, car: Car | None = None
+    walkable_cells: list[pygame.Rect],
+    player: Player,
+    *,
+    cars: Sequence[Car] | None = None,
 ) -> FuelCan | None:
     """Pick a spawn spot for the fuel can away from the player (and car if given)."""
     if not walkable_cells:
@@ -290,14 +307,17 @@ def place_fuel_can(
             < min_player_dist
         ):
             continue
-        if (
-            car
-            and math.hypot(
-                cell.centerx - car.rect.centerx, cell.centery - car.rect.centery
-            )
-            < min_car_dist
-        ):
-            continue
+        if cars:
+            too_close = False
+            for parked_car in cars:
+                if math.hypot(
+                    cell.centerx - parked_car.rect.centerx,
+                    cell.centery - parked_car.rect.centery,
+                ) < min_car_dist:
+                    too_close = True
+                    break
+            if too_close:
+                continue
         return FuelCan(cell.centerx, cell.centery)
 
     # Fallback: drop near a random walkable cell
@@ -306,7 +326,10 @@ def place_fuel_can(
 
 
 def place_flashlight(
-    walkable_cells: list[pygame.Rect], player: Player, *, car: Car | None = None
+    walkable_cells: list[pygame.Rect],
+    player: Player,
+    *,
+    cars: Sequence[Car] | None = None,
 ) -> Flashlight | None:
     """Pick a spawn spot for the flashlight away from the player (and car if given)."""
     if not walkable_cells:
@@ -322,14 +345,16 @@ def place_flashlight(
             < min_player_dist
         ):
             continue
-        if (
-            car
-            and math.hypot(
-                cell.centerx - car.rect.centerx, cell.centery - car.rect.centery
-            )
-            < min_car_dist
-        ):
-            continue
+        if cars:
+            if any(
+                math.hypot(
+                    cell.centerx - parked.rect.centerx,
+                    cell.centery - parked.rect.centery,
+                )
+                < min_car_dist
+                for parked in cars
+            ):
+                continue
         return Flashlight(cell.centerx, cell.centery)
 
     cell = random.choice(walkable_cells)
@@ -340,7 +365,7 @@ def place_flashlights(
     walkable_cells: list[pygame.Rect],
     player: Player,
     *,
-    car: Car | None = None,
+    cars: Sequence[Car] | None = None,
     count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT,
 ) -> list[Flashlight]:
     """Spawn multiple flashlights using the single-place helper to spread them out."""
@@ -349,7 +374,7 @@ def place_flashlights(
     max_attempts = max(200, count * 80)
     while len(placed) < count and attempts < max_attempts:
         attempts += 1
-        fl = place_flashlight(walkable_cells, player, car=car)
+        fl = place_flashlight(walkable_cells, player, cars=cars)
         if not fl:
             break
         # Avoid clustering too tightly
@@ -367,7 +392,10 @@ def place_flashlights(
 
 
 def place_companion(
-    walkable_cells: list[pygame.Rect], player: Player, *, car: Car | None = None
+    walkable_cells: list[pygame.Rect],
+    player: Player,
+    *,
+    cars: Sequence[Car] | None = None,
 ) -> Companion | None:
     """Spawn the stranded buddy somewhere on a walkable tile away from the player and car."""
     if not walkable_cells:
@@ -383,14 +411,16 @@ def place_companion(
             < min_player_dist
         ):
             continue
-        if (
-            car
-            and math.hypot(
-                cell.centerx - car.rect.centerx, cell.centery - car.rect.centery
-            )
-            < min_car_dist
-        ):
-            continue
+        if cars:
+            if any(
+                math.hypot(
+                    cell.centerx - parked.rect.centerx,
+                    cell.centery - parked.rect.centery,
+                )
+                < min_car_dist
+                for parked in cars
+            ):
+                continue
         return Companion(cell.centerx, cell.centery)
 
     cell = random.choice(walkable_cells)
@@ -523,6 +553,70 @@ def apply_passenger_speed_penalty(game_data: GameData) -> None:
         car.speed = CAR_SPEED
         return
     car.speed = calculate_car_speed_for_passengers(game_data.state.survivors_onboard)
+
+
+def waiting_car_target_count(stage: Stage) -> int:
+    return 2 if stage.survivor_stage else 1
+
+
+def spawn_waiting_car(game_data: GameData) -> Car | None:
+    """Attempt to place an additional parked car on the map."""
+    player = game_data.player
+    if not player:
+        return None
+    walkable_cells = game_data.areas.walkable_cells
+    if not walkable_cells:
+        return None
+    wall_group = game_data.groups.wall_group
+    all_sprites = game_data.groups.all_sprites
+    active_car = game_data.car if game_data.car and game_data.car.alive() else None
+    waiting = alive_waiting_cars(game_data)
+    obstacles: list[Car] = list(waiting)
+    if active_car:
+        obstacles.append(active_car)
+    new_car = place_new_car(
+        wall_group,
+        player,
+        walkable_cells,
+        existing_cars=obstacles,
+    )
+    if not new_car:
+        return None
+    game_data.waiting_cars.append(new_car)
+    all_sprites.add(new_car, layer=1)
+    return new_car
+
+
+def maintain_waiting_car_supply(game_data: GameData) -> None:
+    """Ensure the stage has the desired number of parked cars."""
+    desired = waiting_car_target_count(game_data.stage)
+    current = len(alive_waiting_cars(game_data))
+    safety = desired + 2
+    while current < desired and safety > 0:
+        if not spawn_waiting_car(game_data):
+            break
+        current += 1
+        safety -= 1
+
+
+def alive_waiting_cars(game_data: GameData) -> list[Car]:
+    """Return the list of parked cars that still exist, pruning any destroyed sprites."""
+    cars = [car for car in game_data.waiting_cars if car.alive()]
+    game_data.waiting_cars = cars
+    return cars
+
+
+def nearest_waiting_car(
+    game_data: GameData, origin: tuple[float, float]
+) -> Car | None:
+    """Find the closest waiting car to an origin point."""
+    cars = alive_waiting_cars(game_data)
+    if not cars:
+        return None
+    return min(
+        cars,
+        key=lambda car: math.hypot(car.rect.centerx - origin[0], car.rect.centery - origin[1]),
+    )
 
 
 def add_survivor_message(game_data: GameData, text: str) -> None:
@@ -796,10 +890,13 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     )
 
 
-def setup_player_and_car(
-    game_data: GameData, layout_data: Mapping[str, list[pygame.Rect]]
-) -> tuple[Player, Car]:
-    """Create and position the player and car using blueprint candidates."""
+def setup_player_and_cars(
+    game_data: GameData,
+    layout_data: Mapping[str, list[pygame.Rect]],
+    *,
+    car_count: int = 1,
+) -> tuple[Player, list[Car]]:
+    """Create the player plus one or more parked cars using blueprint candidates."""
     all_sprites = game_data.groups.all_sprites
     walkable_cells: list[pygame.Rect] = layout_data["walkable_cells"]
 
@@ -813,31 +910,38 @@ def setup_player_and_car(
     player_pos = pick_center(layout_data["player_cells"] or walkable_cells)
     player = Player(*player_pos)
 
-    # Place car away from player
-    car_candidates = layout_data["car_cells"] or walkable_cells
-    car_pos = None
-    for attempt in range(200):
-        candidate = random.choice(car_candidates)
-        if (
-            math.hypot(
-                candidate.centerx - player_pos[0], candidate.centery - player_pos[1]
-            )
-            >= 400
-        ):
-            car_pos = candidate.center
+    car_candidates = list(layout_data["car_cells"] or walkable_cells)
+    waiting_cars: list[Car] = []
+
+    def _pick_car_position() -> tuple[int, int]:
+        """Favor distant cells for the first car, otherwise fall back to random picks."""
+        if not car_candidates:
+            return (player_pos[0] + 200, player_pos[1])
+        random.shuffle(car_candidates)
+        for candidate in car_candidates:
+            if (
+                math.hypot(
+                    candidate.centerx - player_pos[0],
+                    candidate.centery - player_pos[1],
+                )
+                >= 400
+            ):
+                car_candidates.remove(candidate)
+                return candidate.center
+        # No far-enough cells found; pick the first available
+        choice = car_candidates.pop()
+        return choice.center
+
+    for idx in range(max(1, car_count)):
+        car_pos = _pick_car_position()
+        car = Car(*car_pos)
+        waiting_cars.append(car)
+        all_sprites.add(car, layer=1)
+        if not car_candidates:
             break
-    if car_pos is None and car_candidates:
-        car_pos = random.choice(car_candidates).center
-    elif car_pos is None:
-        car_pos = (player_pos[0] + 200, player_pos[1])  # Fallback
 
-    car = Car(*car_pos)
-
-    # Add to sprite groups
     all_sprites.add(player, layer=2)
-    all_sprites.add(car, layer=1)
-
-    return player, car
+    return player, waiting_cars
 
 
 def spawn_initial_zombies(
@@ -878,7 +982,7 @@ def spawn_initial_zombies(
 
 
 def process_player_input(
-    keys: Sequence[bool], player: Player, car: Car
+    keys: Sequence[bool], player: Player, car: Car | None
 ) -> tuple[float, float, float, float]:
     """Process keyboard input and return movement deltas."""
     dx_input, dy_input = 0, 0
@@ -893,7 +997,7 @@ def process_player_input(
 
     player_dx, player_dy, car_dx, car_dy = 0, 0, 0, 0
 
-    if player.in_car and car.alive():
+    if player.in_car and car and car.alive():
         target_speed = getattr(car, "speed", CAR_SPEED)
         move_len = math.hypot(dx_input, dy_input)
         if move_len > 0:
@@ -925,32 +1029,35 @@ def update_entities(
     player = game_data.player
     assert player is not None
     car = game_data.car
-    assert car is not None
     companion = game_data.companion
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
     zombie_group = game_data.groups.zombie_group
     camera = game_data.camera
     stage = game_data.stage
+    active_car = car if car and car.alive() else None
 
     # Update player/car movement
-    if player.in_car and car.alive():
-        car.move(car_dx, car_dy, wall_group)
-        player.rect.center = car.rect.center
-        player.x, player.y = car.x, car.y
+    if player.in_car and active_car:
+        active_car.move(car_dx, car_dy, wall_group)
+        player.rect.center = active_car.rect.center
+        player.x, player.y = active_car.x, active_car.y
     elif not player.in_car:
         # Ensure player is in all_sprites if not in car
         if player not in all_sprites:
             all_sprites.add(player, layer=2)
         player.move(player_dx, player_dy, wall_group)
+    else:
+        # Player flagged as in-car but car is gone; drop them back to foot control
+        player.in_car = False
 
     # Update camera
-    target_for_camera = car if player.in_car and car.alive() else player
+    target_for_camera = active_car if player.in_car and active_car else player
     camera.update(target_for_camera)
 
     # Update companion (Stage 3 follow logic)
     if companion and companion.alive() and not companion.rescued:
-        follow_target = car if player.in_car and car.alive() else player
+        follow_target = active_car if player.in_car and active_car else player
         companion.update_follow(follow_target.rect.center, wall_group)
         if companion not in all_sprites:
             all_sprites.add(companion, layer=2)
@@ -971,7 +1078,7 @@ def update_entities(
 
     # Update zombies
     target_center = (
-        car.rect.center if player.in_car and car.alive() else player.rect.center
+        active_car.rect.center if player.in_car and active_car else player.rect.center
     )
     companion_on_screen = False
     screen_rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -1050,10 +1157,8 @@ def check_interactions(
     player = game_data.player
     assert player is not None
     car = game_data.car
-    assert car is not None
     companion = game_data.companion
     zombie_group = game_data.groups.zombie_group
-    wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
     survivor_group = game_data.groups.survivor_group
     state = game_data.state
@@ -1063,6 +1168,9 @@ def check_interactions(
     flashlights = game_data.flashlights or []
     camera = game_data.camera
     stage = game_data.stage
+    maintain_waiting_car_supply(game_data)
+    active_car = car if car and car.alive() else None
+    waiting_cars = game_data.waiting_cars
 
     # Fuel pickup
     if fuel and fuel.alive() and not state.has_fuel and not player.in_car:
@@ -1113,10 +1221,10 @@ def check_interactions(
         if not player.in_car:
             if pygame.sprite.collide_circle(companion, player):
                 companion.set_following()
-        elif player.in_car and car.alive():
+        elif player.in_car and active_car:
             g = pygame.sprite.Group()
             g.add(companion)
-            if pygame.sprite.spritecollide(get_shrunk_sprite(car, 0.8), g, False):
+            if pygame.sprite.spritecollide(get_shrunk_sprite(active_car, 0.8), g, False):
                 state.companion_rescued = True
                 companion.mark_rescued()
                 companion.kill()
@@ -1140,13 +1248,18 @@ def check_interactions(
                     companion.teleport((LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2))
                 companion.following = False
 
-    shrunk_car = get_shrunk_sprite(car, 0.8) if car else None
+    player_group = pygame.sprite.Group()
+    player_group.add(player)
 
-    # Player entering car
-    if not player.in_car and car.alive() and car.health > 0:
-        g = pygame.sprite.Group()
-        g.add(player)
-        if pygame.sprite.spritecollide(shrunk_car, g, False):
+    # Player entering an active car already under control
+    if (
+        not player.in_car
+        and active_car
+        and active_car.alive()
+        and active_car.health > 0
+    ):
+        shrunk_active = get_shrunk_sprite(active_car, 0.8)
+        if pygame.sprite.spritecollide(shrunk_active, player_group, False):
             if state.has_fuel:
                 player.in_car = True
                 all_sprites.remove(player)
@@ -1156,19 +1269,48 @@ def check_interactions(
             else:
                 now_ms = state.elapsed_play_ms
                 state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
-                # Keep hint timing unchanged so the car visit doesn't immediately reveal fuel
                 state.hint_target_type = "fuel"
 
+    # Claim a waiting/parked car when the player finally reaches it
+    if not player.in_car and not active_car and waiting_cars:
+        claimed_car: Car | None = None
+        for parked_car in waiting_cars:
+            shrunk_waiting = get_shrunk_sprite(parked_car, 0.8)
+            if pygame.sprite.spritecollide(shrunk_waiting, player_group, False):
+                claimed_car = parked_car
+                break
+        if claimed_car:
+            if state.has_fuel:
+                try:
+                    game_data.waiting_cars.remove(claimed_car)
+                except ValueError:
+                    pass
+                game_data.car = claimed_car
+                active_car = claimed_car
+                player.in_car = True
+                all_sprites.remove(player)
+                state.hint_expires_at = 0
+                state.hint_target_type = None
+                apply_passenger_speed_penalty(game_data)
+                maintain_waiting_car_supply(game_data)
+                print("Player claimed a waiting car!")
+            else:
+                now_ms = state.elapsed_play_ms
+                state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
+                state.hint_target_type = "fuel"
+
+    shrunk_car = get_shrunk_sprite(active_car, 0.8) if active_car else None
+
     # Car hitting zombies
-    if player.in_car and car.alive() and car.health > 0:
+    if player.in_car and active_car and active_car.health > 0 and shrunk_car:
         zombies_hit = pygame.sprite.spritecollide(shrunk_car, zombie_group, True)
         if zombies_hit:
-            car.take_damage(CAR_ZOMBIE_DAMAGE * len(zombies_hit))
+            active_car.take_damage(CAR_ZOMBIE_DAMAGE * len(zombies_hit))
 
     if (
         stage.survivor_stage
         and player.in_car
-        and car.alive()
+        and active_car
         and shrunk_car
         and survivor_group
     ):
@@ -1180,16 +1322,17 @@ def check_interactions(
             apply_passenger_speed_penalty(game_data)
             if state.survivors_onboard > SURVIVOR_MAX_SAFE_PASSENGERS:
                 overload_damage = max(
-                    1, int(game_data.car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO)
+                    1,
+                    int(active_car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO),
                 )
                 add_survivor_message(game_data, _("survivors.too_many_aboard"))
-                game_data.car.take_damage(overload_damage)
+                active_car.take_damage(overload_damage)
 
     if stage.survivor_stage:
         handle_survivor_zombie_collisions(game_data, config)
 
     # Handle car destruction
-    if car.alive() and car.health <= 0:
+    if car and car.alive() and car.health <= 0:
         car_destroyed_pos = car.rect.center
         car.kill()
         if stage.survivor_stage:
@@ -1202,21 +1345,13 @@ def check_interactions(
                 all_sprites.add(player, layer=2)
             print("Car destroyed! Player ejected.")
 
+        # Clear active car and let the player hunt for another waiting car.
+        game_data.car = None
+        apply_passenger_speed_penalty(game_data)
+
         # Bring back the rescued companion near the player after losing the car
         respawn_rescued_companion_near_player(game_data)
-
-        # Respawn car
-        new_car = place_new_car(wall_group, player, walkable_cells)
-        if new_car is None:
-            # Fallback: Try original car position or other strategies
-            new_car = Car(car.rect.centerx, car.rect.centery)
-
-        if new_car is not None:
-            game_data.car = new_car  # Update car reference
-            all_sprites.add(new_car, layer=1)
-            apply_passenger_speed_penalty(game_data)
-        else:
-            print("Error: Failed to respawn car anywhere!")
+        maintain_waiting_car_supply(game_data)
 
     # Player getting caught by zombies
     if not player.in_car and player in all_sprites:
@@ -1230,7 +1365,7 @@ def check_interactions(
                 state.game_over_message = _("game_over.scream")
 
     # Player escaping the level
-    if player.in_car and car.alive() and state.has_fuel:
+    if player.in_car and car and car.alive() and state.has_fuel:
         companion_ready = not stage.requires_companion or state.companion_rescued
         if companion_ready and any(
             outside.collidepoint(car.rect.center) for outside in outside_rects
@@ -1244,5 +1379,5 @@ def check_interactions(
 
     # Return fog of view target
     if not state.game_over and not state.game_won:
-        return car if player.in_car and car.alive() else player
+        return car if player.in_car and car and car.alive() else player
     return None
