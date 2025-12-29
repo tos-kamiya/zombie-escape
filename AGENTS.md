@@ -10,6 +10,7 @@
 - Install for development: `uv pip install -e .` (pulls `pygame` and `platformdirs`).
 - Run the game: `uv run zombie-escape` (preferred) or `uv run python -m zombie_escape.zombie_escape` from the repo root after install.
 - Package check: `uv pip install .` to verify a clean install flow before tagging a release.
+- Before committing, run `uv run ruff check` and ensure it passes cleanly.
 
 ## Coding Style & Naming Conventions
 - Follow PEP 8 with 4-space indentation and type hints (see existing signatures). Use `UPPER_SNAKE_CASE` for constants, `lower_snake_case` for functions/variables, and `CamelCase` for classes.

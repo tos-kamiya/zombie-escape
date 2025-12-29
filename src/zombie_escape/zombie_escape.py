@@ -29,6 +29,15 @@ from .screens.settings import settings_screen
 from .screens.title import title_screen
 from .gameplay.logic import calculate_car_speed_for_passengers
 
+# Re-export the gameplay helpers constants for external callers/tests.
+__all__ = [
+    "main",
+    "CAR_SPEED",
+    "SURVIVOR_MAX_SAFE_PASSENGERS",
+    "SURVIVOR_MIN_SPEED_FACTOR",
+    "calculate_car_speed_for_passengers",
+]
+
 
 # --- Main Entry Point ---
 def main() -> None:
