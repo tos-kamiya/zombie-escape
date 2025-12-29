@@ -77,6 +77,7 @@ class GameData:
     car: Car | None = None
     waiting_cars: list[Car] = field(default_factory=list)
     companion: Companion | None = None
+    last_logged_waiting_cars: int | None = None
 
 
 @dataclass(frozen=True)

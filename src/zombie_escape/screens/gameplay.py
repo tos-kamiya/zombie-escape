@@ -9,6 +9,7 @@ from ..colors import LIGHT_GRAY, RED, WHITE, YELLOW
 from ..constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
+    SURVIVOR_STAGE_WAITING_CAR_COUNT,
 )
 from ..gameplay import logic
 from ..localization import translate as _
@@ -41,7 +42,9 @@ def gameplay_screen(
     last_fov_target = None
 
     layout_data = logic.generate_level_from_blueprint(game_data, config)
-    initial_waiting = 3 if stage.survivor_stage else 1
+    initial_waiting = (
+        SURVIVOR_STAGE_WAITING_CAR_COUNT if stage.survivor_stage else 1
+    )
     player, waiting_cars = logic.setup_player_and_cars(
         game_data, layout_data, car_count=initial_waiting
     )
@@ -49,7 +52,9 @@ def gameplay_screen(
     game_data.waiting_cars = waiting_cars
     game_data.car = None
     # Only top up if initial placement spawned fewer than the intended baseline (shouldn't happen)
-    logic.maintain_waiting_car_supply(game_data)
+    logic.maintain_waiting_car_supply(
+        game_data, minimum=logic.waiting_car_target_count(stage)
+    )
     logic.apply_passenger_speed_penalty(game_data)
 
     if stage.survivor_stage:

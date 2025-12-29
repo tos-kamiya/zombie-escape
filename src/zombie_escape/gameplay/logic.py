@@ -45,6 +45,7 @@ from ..constants import (
     SURVIVOR_RADIUS,
     SURVIVOR_SPAWN_RATE,
     SURVIVOR_SPEED_PENALTY_PER_PASSENGER,
+    SURVIVOR_STAGE_WAITING_CAR_COUNT,
     ZOMBIE_INTERIOR_SPAWN_RATE,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
@@ -83,6 +84,7 @@ __all__ = [
     "spawn_survivors",
     "update_survivors",
     "alive_waiting_cars",
+    "log_waiting_car_count",
     "nearest_waiting_car",
     "calculate_car_speed_for_passengers",
     "apply_passenger_speed_penalty",
@@ -571,7 +573,7 @@ def rect_visible_on_screen(camera: Camera | None, rect: pygame.Rect) -> bool:
 
 
 def waiting_car_target_count(stage: Stage) -> int:
-    return 3 if stage.survivor_stage else 1
+    return SURVIVOR_STAGE_WAITING_CAR_COUNT if stage.survivor_stage else 1
 
 
 def spawn_waiting_car(game_data: GameData) -> Car | None:
@@ -609,11 +611,13 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
     return None
 
 
-def maintain_waiting_car_supply(game_data: GameData) -> None:
-    """Ensure at least one parked car remains on the field."""
-    minimum = 1
+def maintain_waiting_car_supply(
+    game_data: GameData, *, minimum: int | None = None
+) -> None:
+    """Ensure a baseline count of parked cars exists."""
+    target = 1 if minimum is None else max(0, minimum)
     current = len(alive_waiting_cars(game_data))
-    while current < minimum:
+    while current < target:
         new_car = spawn_waiting_car(game_data)
         if not new_car:
             break
@@ -624,7 +628,18 @@ def alive_waiting_cars(game_data: GameData) -> list[Car]:
     """Return the list of parked cars that still exist, pruning any destroyed sprites."""
     cars = [car for car in game_data.waiting_cars if car.alive()]
     game_data.waiting_cars = cars
+    log_waiting_car_count(game_data)
     return cars
+
+
+def log_waiting_car_count(game_data: GameData, *, force: bool = False) -> None:
+    """Print the number of waiting cars when it changes."""
+    current = len(game_data.waiting_cars)
+    if not force and current == game_data.last_logged_waiting_cars:
+        return
+    stage_id = getattr(game_data.stage, "id", "unknown")
+    print(f"[WAITING CARS][{stage_id}] alive: {current}")
+    game_data.last_logged_waiting_cars = current
 
 
 def nearest_waiting_car(
