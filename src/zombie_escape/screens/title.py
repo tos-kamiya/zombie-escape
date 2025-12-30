@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Sequence
 
-import time as std_time
-
 import pygame
 from pygame import surface, time
 
@@ -13,16 +11,15 @@ from ..localization import get_font_settings, translate as _
 from ..models import Stage
 from ..render import show_message
 from ..screens import ScreenID, ScreenTransition, nudge_window_scale, present
+from ..rng import generate_seed
 
 MAX_SEED_DIGITS = 19
-AUTO_SEED_DIGITS = 5
 
 
 def _generate_auto_seed_text() -> str:
-    now_ns = std_time.time_ns()
-    modulus = 10 ** AUTO_SEED_DIGITS
-    value = now_ns % modulus
-    return str(value).zfill(AUTO_SEED_DIGITS)
+    raw = generate_seed()
+    trimmed = raw // 100  # drop lower 2 digits for stability
+    return str(trimmed % 100000).zfill(5)
 
 
 def title_screen(
