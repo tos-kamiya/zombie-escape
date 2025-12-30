@@ -16,7 +16,10 @@
       "settings": "設定",
       "quit": "終了",
       "locked_suffix": "[Locked]",
-      "window_hint": "[キーでウィンドウを小さく、]キーで大きく(メニュー画面のみ)"
+      "window_hint": "[キーでウィンドウを小さく、]キーで大きく(メニュー画面のみ)",
+      "seed_label": "シード: %{value}",
+      "seed_hint": "数字キーで入力、BSでクリア",
+      "seed_empty": "(自動)"
     },
     "stages": {
       "stage1": {
@@ -47,7 +50,8 @@
       "fast": "高速ゾ",
       "car_hint": "車ヒント",
       "flashlight": "懐中電灯",
-      "steel": "鉄筋"
+      "steel": "鉄筋",
+      "seed": "シード %{value}"
     },
     "hud": {
       "need_fuel": "燃料が必要です！",

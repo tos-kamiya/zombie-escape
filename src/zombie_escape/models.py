@@ -49,6 +49,7 @@ class ProgressState:
     survivors_rescued: int
     survivor_messages: list
     survivor_capacity: int
+    seed: int | None
 
 
 @dataclass

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Sequence
 
+import time as std_time
+
 import pygame
 from pygame import surface, time
 
@@ -11,6 +13,16 @@ from ..localization import get_font_settings, translate as _
 from ..models import Stage
 from ..render import show_message
 from ..screens import ScreenID, ScreenTransition, nudge_window_scale, present
+
+MAX_SEED_DIGITS = 19
+AUTO_SEED_DIGITS = 5
+
+
+def _generate_auto_seed_text() -> str:
+    now_ns = std_time.time_ns()
+    modulus = 10 ** AUTO_SEED_DIGITS
+    value = now_ns % modulus
+    return str(value).zfill(AUTO_SEED_DIGITS)
 
 
 def title_screen(
@@ -22,6 +34,8 @@ def title_screen(
     stages: Sequence[Stage],
     default_stage_id: str,
     screen_size: tuple[int, int],
+    seed_text: str | None = None,
+    seed_is_auto: bool = False,
 ) -> ScreenTransition:
     """Display the title menu and return the selected transition."""
 
@@ -40,12 +54,30 @@ def title_screen(
         ),
         0,
     )
+    generated = seed_text is None
+    current_seed_text = seed_text if seed_text is not None else _generate_auto_seed_text()
+    current_seed_auto = seed_is_auto or generated
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return ScreenTransition(ScreenID.EXIT)
+                return ScreenTransition(
+                    ScreenID.EXIT,
+                    seed_text=current_seed_text,
+                    seed_is_auto=current_seed_auto,
+                )
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_BACKSPACE:
+                    current_seed_text = _generate_auto_seed_text()
+                    current_seed_auto = True
+                    continue
+                if event.unicode and event.unicode.isdigit():
+                    if current_seed_auto:
+                        current_seed_text = ""
+                        current_seed_auto = False
+                    if len(current_seed_text) < MAX_SEED_DIGITS:
+                        current_seed_text += event.unicode
+                    continue
                 if event.key == pygame.K_LEFTBRACKET:
                     nudge_window_scale(0.5)
                     continue
@@ -59,13 +91,26 @@ def title_screen(
                 elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
                     current = options[selected]
                     if current["type"] == "stage" and current.get("available"):
+                        seed_value = int(current_seed_text) if current_seed_text else None
                         return ScreenTransition(
-                            ScreenID.GAMEPLAY, stage=current["stage"]
+                            ScreenID.GAMEPLAY,
+                            stage=current["stage"],
+                            seed=seed_value,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
                         )
                     if current["type"] == "settings":
-                        return ScreenTransition(ScreenID.SETTINGS)
+                        return ScreenTransition(
+                            ScreenID.SETTINGS,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
+                        )
                     if current["type"] == "quit":
-                        return ScreenTransition(ScreenID.EXIT)
+                        return ScreenTransition(
+                            ScreenID.EXIT,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
+                        )
 
         screen.fill(BLACK)
         show_message(
@@ -117,11 +162,25 @@ def title_screen(
                 desc_rect = desc_surface.get_rect(center=(width // 2, height // 2 + 74))
                 screen.blit(desc_surface, desc_rect)
 
+            seed_font = load_font(font_settings.resource, font_settings.scaled_size(12))
+            seed_value_display = (
+                current_seed_text if current_seed_text else _("menu.seed_empty")
+            )
+            seed_label = _("status.seed", value=seed_value_display)
+            seed_surface = seed_font.render(seed_label, False, LIGHT_GRAY)
+            seed_rect = seed_surface.get_rect(right=width - 14, bottom=height - 12)
+            screen.blit(seed_surface, seed_rect)
+
             hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             hint_text = _("menu.window_hint")
             hint_surface = hint_font.render(hint_text, False, LIGHT_GRAY)
-            hint_rect = hint_surface.get_rect(center=(width // 2, height - 50))
+            hint_rect = hint_surface.get_rect(center=(width // 2, height - 60))
             screen.blit(hint_surface, hint_rect)
+
+            seed_hint = _("menu.seed_hint")
+            seed_hint_surface = hint_font.render(seed_hint, False, GRAY)
+            seed_hint_rect = seed_hint_surface.get_rect(left=14, bottom=height - 12)
+            screen.blit(seed_hint_surface, seed_hint_rect)
         except pygame.error as e:
             print(f"Error rendering title screen: {e}")
 

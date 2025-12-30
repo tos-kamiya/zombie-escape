@@ -280,6 +280,7 @@ def _draw_status_bar(
     config: dict[str, Any],
     *,
     stage: Stage | None = None,
+    seed: int | None = None,
 ) -> None:
     """Render a compact status bar with current config flags and stage info."""
     bar_rect = pygame.Rect(
@@ -327,6 +328,13 @@ def _draw_status_bar(
         text_surface = font.render(status_text, False, color)
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)
+        if seed is not None:
+            seed_text = _("status.seed", value=str(seed))
+            seed_surface = font.render(seed_text, False, LIGHT_GRAY)
+            seed_rect = seed_surface.get_rect(
+                right=bar_rect.right - 12, centery=bar_rect.centery
+            )
+            screen.blit(seed_surface, seed_rect)
     except pygame.error as e:
         print(f"Error rendering status bar: {e}")
 
@@ -573,7 +581,7 @@ def draw(
                 screen.blit(msg_surface, msg_rect)
         except pygame.error as e:
             print(f"Error rendering survivor message: {e}")
-    _draw_status_bar(screen, assets, config, stage=stage)
+    _draw_status_bar(screen, assets, config, stage=stage, seed=state.seed)
     if do_flip:
         if present_fn:
             present_fn(screen)

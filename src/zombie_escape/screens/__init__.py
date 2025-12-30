@@ -48,6 +48,9 @@ class ScreenTransition:
     stage: Stage | None = None
     game_data: GameData | None = None
     config: dict | None = None
+    seed: int | None = None
+    seed_text: str | None = None
+    seed_is_auto: bool = False
 
 
 current_window_scale = DEFAULT_WINDOW_SCALE  # Applied to the OS window only

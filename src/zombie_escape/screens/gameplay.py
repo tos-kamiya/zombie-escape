@@ -15,6 +15,7 @@ from ..gameplay import logic
 from ..localization import translate as _
 from ..models import Stage
 from ..render import draw, show_message
+from ..rng import generate_seed, seed_rng
 from ..screens import ScreenID, ScreenTransition, present
 
 if TYPE_CHECKING:
@@ -29,6 +30,7 @@ def gameplay_screen(
     stage: Stage,
     *,
     show_pause_overlay: bool,
+    seed: int | None,
     render_assets: "RenderAssets",
 ) -> ScreenTransition:
     """Main gameplay loop that returns the next screen transition."""
@@ -36,7 +38,11 @@ def gameplay_screen(
     screen_width = screen.get_width()
     screen_height = screen.get_height()
 
+    seed_value = seed if seed is not None else generate_seed()
+    applied_seed = seed_rng(seed_value)
+
     game_data = logic.initialize_game_state(config, stage)
+    game_data.state.seed = applied_seed
     paused_manual = False
     paused_focus = False
     last_fov_target = None

@@ -1,6 +1,6 @@
 # Blueprint generator for randomized layouts.
 
-import random
+from .rng import get_rng
 
 GRID_COLS = 48
 GRID_ROWS = 30
@@ -12,6 +12,8 @@ WALL_MIN_LEN = 3
 WALL_MAX_LEN = 10
 SPAWN_MARGIN = 3  # keep spawns away from walls/edges
 SPAWN_ZOMBIES = 3
+
+RNG = get_rng()
 STEEL_BEAM_CHANCE = 0.05
 
 # Legend:
@@ -61,7 +63,7 @@ def _init_grid(cols: int, rows: int) -> list[list[str]]:
 
 def _place_exits(grid: list[list[str]], exits_per_side: int) -> None:
     cols, rows = len(grid[0]), len(grid)
-    rng = random.randint
+    rng = RNG.randint
     used = set()
 
     def pick_pos(side: str) -> tuple[int, int]:
@@ -87,13 +89,13 @@ def _place_exits(grid: list[list[str]], exits_per_side: int) -> None:
 
 def _place_internal_walls(grid: list[list[str]]) -> None:
     cols, rows = len(grid[0]), len(grid)
-    rng = random.randint
+    rng = RNG.randint
     # Avoid placing walls adjacent to exits: collect forbidden cells (exits + neighbors)
     forbidden = _collect_exit_adjacent_cells(grid)
 
     for _ in range(NUM_WALL_LINES):
         length = rng(WALL_MIN_LEN, WALL_MAX_LEN)
-        horizontal = random.choice([True, False])
+        horizontal = RNG.choice([True, False])
         if horizontal:
             y = rng(2, rows - 3)
             x = rng(2, cols - 2 - length)
@@ -125,7 +127,7 @@ def _place_steel_beams(
                 continue
             if grid[y][x] not in (".", "1"):
                 continue
-            if random.random() < chance:
+            if RNG.random() < chance:
                 beams.add((x, y))
     return beams
 
@@ -139,8 +141,8 @@ def _pick_empty_cell(
     attempts = 0
     while attempts < 2000:
         attempts += 1
-        x = random.randint(margin, cols - margin - 1)
-        y = random.randint(margin, rows - margin - 1)
+        x = RNG.randint(margin, cols - margin - 1)
+        y = RNG.randint(margin, rows - margin - 1)
         if grid[y][x] == "." and (x, y) not in forbidden:
             return x, y
     # Fallback: scan for any acceptable cell

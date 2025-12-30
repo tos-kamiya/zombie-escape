@@ -38,6 +38,10 @@ Open **Settings** from the title to toggle gameplay assists:
 -   **Flashlight pickups:** Enable flashlight spawns that expand your visible radius when collected.
 -   **Steel beams:** Adds tougher single-cell obstacles (5% density) that block movement; hidden when stacked with an inner wall until that wall is destroyed.
 
+### Shared Seeds
+
+The title screen also lets you enter a numeric **seed**. Type digits (or pass `--seed <number>` on the CLI) to lock the procedural layout, wall placement, and pickups; share that seed with a friend and you will both play the exact same stage even on different machines. The current seed is shown at the bottom right of the title screen and in-game HUD. Backspace reverts to an automatically generated value so you can quickly roll a fresh challenge.
+
 ## Game Rules
 
 ### Stages

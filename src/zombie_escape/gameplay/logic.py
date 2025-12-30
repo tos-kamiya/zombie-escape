@@ -4,7 +4,6 @@ from bisect import bisect_left
 from typing import Any, Mapping, Sequence
 
 import math
-import random
 
 import pygame
 
@@ -56,6 +55,7 @@ from ..constants import (
 from ..localization import translate as _
 from ..level_blueprints import choose_blueprint
 from ..models import Areas, GameData, Groups, ProgressState, Stage
+from ..rng import get_rng
 from ..entities import (
     Camera,
     Car,
@@ -70,6 +70,7 @@ from ..entities import (
 )
 
 LOGICAL_SCREEN_RECT = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+RNG = get_rng()
 
 __all__ = [
     "create_zombie",
@@ -118,7 +119,7 @@ def create_zombie(
     fast_conf = config.get("fast_zombies", {})
     fast_enabled = fast_conf.get("enabled", True)
     if fast_enabled:
-        base_speed = random.uniform(ZOMBIE_SPEED, FAST_ZOMBIE_BASE_SPEED)
+        base_speed = RNG.uniform(ZOMBIE_SPEED, FAST_ZOMBIE_BASE_SPEED)
     else:
         base_speed = ZOMBIE_SPEED
     base_speed = min(base_speed, PLAYER_SPEED - 0.05)
@@ -263,7 +264,7 @@ def place_new_car(
 
     max_attempts = 150
     for attempt in range(max_attempts):
-        cell = random.choice(walkable_cells)
+        cell = RNG.choice(walkable_cells)
         c_x, c_y = cell.center
         temp_car = Car(c_x, c_y)
         temp_rect = temp_car.rect.inflate(30, 30)
@@ -305,7 +306,7 @@ def place_fuel_can(
     min_car_dist = 200
 
     for attempt in range(200):
-        cell = random.choice(walkable_cells)
+        cell = RNG.choice(walkable_cells)
         if (
             math.hypot(cell.centerx - player.x, cell.centery - player.y)
             < min_player_dist
@@ -325,7 +326,7 @@ def place_fuel_can(
         return FuelCan(cell.centerx, cell.centery)
 
     # Fallback: drop near a random walkable cell
-    cell = random.choice(walkable_cells)
+    cell = RNG.choice(walkable_cells)
     return FuelCan(cell.centerx, cell.centery)
 
 
@@ -343,7 +344,7 @@ def place_flashlight(
     min_car_dist = 200
 
     for attempt in range(200):
-        cell = random.choice(walkable_cells)
+        cell = RNG.choice(walkable_cells)
         if (
             math.hypot(cell.centerx - player.x, cell.centery - player.y)
             < min_player_dist
@@ -361,7 +362,7 @@ def place_flashlight(
                 continue
         return Flashlight(cell.centerx, cell.centery)
 
-    cell = random.choice(walkable_cells)
+    cell = RNG.choice(walkable_cells)
     return Flashlight(cell.centerx, cell.centery)
 
 
@@ -409,7 +410,7 @@ def place_companion(
     min_car_dist = 180
 
     for attempt in range(200):
-        cell = random.choice(walkable_cells)
+        cell = RNG.choice(walkable_cells)
         if (
             math.hypot(cell.centerx - player.x, cell.centery - player.y)
             < min_player_dist
@@ -427,7 +428,7 @@ def place_companion(
                 continue
         return Companion(cell.centerx, cell.centery)
 
-    cell = random.choice(walkable_cells)
+    cell = RNG.choice(walkable_cells)
     return Companion(cell.centerx, cell.centery)
 
 
@@ -443,10 +444,10 @@ def scatter_positions_on_walkable(
 
     clamped_rate = max(0.0, min(1.0, spawn_rate))
     for cell in walkable_cells:
-        if random.random() >= clamped_rate:
+        if RNG.random() >= clamped_rate:
             continue
-        jitter_x = random.uniform(-cell.width * jitter_ratio, cell.width * jitter_ratio)
-        jitter_y = random.uniform(
+        jitter_x = RNG.uniform(-cell.width * jitter_ratio, cell.width * jitter_ratio)
+        jitter_y = RNG.uniform(
             -cell.height * jitter_ratio, cell.height * jitter_ratio
         )
         positions.append((int(cell.centerx + jitter_x), int(cell.centery + jitter_y)))
@@ -500,7 +501,7 @@ def update_survivors(game_data: GameData) -> None:
         dy = point[1] - survivor.y
         dist = math.hypot(dx, dy)
         if dist == 0:
-            angle = random.uniform(0, math.tau)
+            angle = RNG.uniform(0, math.tau)
             dx, dy = math.cos(angle), math.sin(angle)
             dist = 1
         if dist < min_dist:
@@ -527,7 +528,7 @@ def update_survivors(game_data: GameData) -> None:
             dy = other.y - survivor.y
             dist = math.hypot(dx, dy)
             if dist == 0:
-                angle = random.uniform(0, math.tau)
+                angle = RNG.uniform(0, math.tau)
                 dx, dy = math.cos(angle), math.sin(angle)
                 dist = 1
             if dist < survivor_overlap:
@@ -637,7 +638,6 @@ def log_waiting_car_count(game_data: GameData, *, force: bool = False) -> None:
     current = len(game_data.waiting_cars)
     if not force and current == game_data.last_logged_waiting_cars:
         return
-    stage_id = getattr(game_data.stage, "id", "unknown")
     game_data.last_logged_waiting_cars = current
 
 
@@ -662,7 +662,7 @@ def add_survivor_message(game_data: GameData, text: str) -> None:
 def random_survivor_conversion_line() -> str:
     if not SURVIVOR_CONVERSION_LINE_KEYS:
         return ""
-    key = random.choice(SURVIVOR_CONVERSION_LINE_KEYS)
+    key = RNG.choice(SURVIVOR_CONVERSION_LINE_KEYS)
     return _(key)
 
 
@@ -685,8 +685,8 @@ def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> Non
     for survivor_idx in range(count):
         placed = False
         for attempt in range(6):
-            angle = random.uniform(0, math.tau)
-            dist = random.uniform(16, 40)
+            angle = RNG.uniform(0, math.tau)
+            dist = RNG.uniform(16, 40)
             pos = (
                 origin[0] + math.cos(angle) * dist,
                 origin[1] + math.sin(angle) * dist,
@@ -878,6 +878,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         survivors_rescued=0,
         survivor_messages=[],
         survivor_capacity=SURVIVOR_MAX_SAFE_PASSENGERS,
+        seed=None,
     )
 
     # Create sprite groups
@@ -937,7 +938,7 @@ def setup_player_and_cars(
 
     def pick_center(cells: list[pygame.Rect]) -> tuple[int, int]:
         return (
-            random.choice(cells).center
+            RNG.choice(cells).center
             if cells
             else (LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2)
         )
@@ -952,7 +953,7 @@ def setup_player_and_cars(
         """Favor distant cells for the first car, otherwise fall back to random picks."""
         if not car_candidates:
             return (player_pos[0] + 200, player_pos[1])
-        random.shuffle(car_candidates)
+        RNG.shuffle(car_candidates)
         for candidate in car_candidates:
             if (
                 math.hypot(
@@ -1275,7 +1276,7 @@ def check_interactions(
                 state.game_over_at = state.game_over_at or pygame.time.get_ticks()
             else:
                 if walkable_cells:
-                    new_cell = random.choice(walkable_cells)
+                    new_cell = RNG.choice(walkable_cells)
                     companion.teleport(new_cell.center)
                 else:
                     companion.teleport((LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2))

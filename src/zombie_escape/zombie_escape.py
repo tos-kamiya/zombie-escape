@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import argparse
 import sys
 import traceback  # For error reporting
-from typing import Any
+from typing import Any, Tuple
 
 import pygame
 
@@ -26,8 +27,25 @@ from .models import GameData, Stage, STAGES, DEFAULT_STAGE_ID
 from .screens import ScreenID, ScreenTransition, apply_window_scale
 from .screens.game_over import game_over_screen
 from .screens.settings import settings_screen
-from .screens.title import title_screen
+from .screens.title import MAX_SEED_DIGITS, title_screen
 from .gameplay.logic import calculate_car_speed_for_passengers
+
+
+def _parse_cli_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--hide-pause-overlay", action="store_true")
+    parser.add_argument("--seed")
+    return parser.parse_known_args(argv)
+
+
+def _sanitize_seed_text(raw: str | None) -> tuple[str | None, bool]:
+    if not raw:
+        return None, True
+    stripped = raw.strip()
+    if not stripped.isdigit():
+        print("Ignoring --seed value because it must contain only digits.")
+        return None, True
+    return stripped[:MAX_SEED_DIGITS], False
 
 # Re-export the gameplay helpers constants for external callers/tests.
 __all__ = [
@@ -41,6 +59,9 @@ __all__ = [
 
 # --- Main Entry Point ---
 def main() -> None:
+    args, remaining = _parse_cli_args(sys.argv[1:])
+    sys.argv = [sys.argv[0]] + remaining
+
     pygame.init()
     try:
         pygame.font.init()
@@ -54,7 +75,9 @@ def main() -> None:
     screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)).convert_alpha()
     clock = pygame.time.Clock()
 
-    hide_pause_overlay = "--hide-pause-overlay" in sys.argv
+    hide_pause_overlay = bool(args.hide_pause_overlay)
+    cli_seed_text, cli_seed_is_auto = _sanitize_seed_text(args.seed)
+    title_seed_text, title_seed_is_auto = cli_seed_text, cli_seed_is_auto
 
     config: dict[str, Any]
     config, config_path = load_config()
@@ -66,12 +89,14 @@ def main() -> None:
     pending_stage: Stage | None = None
     pending_game_data: GameData | None = None
     pending_config: dict[str, Any] | None = None
+    pending_seed: int | None = None
     running = True
 
     while running:
         transition: ScreenTransition | None = None
 
         if next_screen == ScreenID.TITLE:
+            seed_input = None if title_seed_is_auto else title_seed_text
             transition = title_screen(
                 screen,
                 clock,
@@ -80,7 +105,12 @@ def main() -> None:
                 stages=STAGES,
                 default_stage_id=DEFAULT_STAGE_ID,
                 screen_size=(SCREEN_WIDTH, SCREEN_HEIGHT),
+                seed_text=seed_input,
+                seed_is_auto=title_seed_is_auto,
             )
+            if transition.seed_text is not None:
+                title_seed_text = transition.seed_text
+                title_seed_is_auto = transition.seed_is_auto
         elif next_screen == ScreenID.SETTINGS:
             config = settings_screen(
                 screen,
@@ -95,6 +125,8 @@ def main() -> None:
         elif next_screen == ScreenID.GAMEPLAY:
             stage = pending_stage
             pending_stage = None
+            seed_value = pending_seed
+            pending_seed = None
             if stage is None:
                 transition = ScreenTransition(ScreenID.TITLE)
             else:
@@ -106,6 +138,7 @@ def main() -> None:
                         FPS,
                         stage,
                         show_pause_overlay=not hide_pause_overlay,
+                        seed=seed_value,
                         render_assets=RENDER_ASSETS,
                     )
                 except SystemExit:
@@ -143,6 +176,10 @@ def main() -> None:
         pending_stage = transition.stage
         pending_game_data = transition.game_data
         pending_config = transition.config
+        pending_seed = transition.seed
+        if transition.next_screen == ScreenID.GAMEPLAY:
+            title_seed_text = cli_seed_text
+            title_seed_is_auto = cli_seed_is_auto
         next_screen = transition.next_screen
 
     pygame.quit()  # Quit pygame only once at the very end of main

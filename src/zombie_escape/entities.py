@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-import random
 from enum import Enum
 from typing import Callable, Iterable, Self
 
@@ -55,6 +54,9 @@ from .constants import (
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_SPEED,
 )
+from .rng import get_rng
+
+RNG = get_rng()
 
 
 # --- Camera Class ---
@@ -357,16 +359,16 @@ class Survivor(pygame.sprite.Sprite):
 
 
 def random_position_outside_building() -> tuple[int, int]:
-    side = random.choice(["top", "bottom", "left", "right"])
+    side = RNG.choice(["top", "bottom", "left", "right"])
     margin = 0
     if side == "top":
-        x, y = random.randint(0, LEVEL_WIDTH), -margin
+        x, y = RNG.randint(0, LEVEL_WIDTH), -margin
     elif side == "bottom":
-        x, y = random.randint(0, LEVEL_WIDTH), LEVEL_HEIGHT + margin
+        x, y = RNG.randint(0, LEVEL_WIDTH), LEVEL_HEIGHT + margin
     elif side == "left":
-        x, y = -margin, random.randint(0, LEVEL_HEIGHT)
+        x, y = -margin, RNG.randint(0, LEVEL_HEIGHT)
     else:
-        x, y = LEVEL_WIDTH + margin, random.randint(0, LEVEL_HEIGHT)
+        x, y = LEVEL_WIDTH + margin, RNG.randint(0, LEVEL_HEIGHT)
     return x, y
 
 
@@ -398,12 +400,12 @@ class Zombie(pygame.sprite.Sprite):
             if speed > ZOMBIE_SPEED
             else NORMAL_ZOMBIE_SPEED_JITTER
         )
-        self.speed = speed + random.uniform(-jitter, jitter)
+        self.speed = speed + RNG.uniform(-jitter, jitter)
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
-        self.mode = random.choice(list(ZombieMode))
+        self.mode = RNG.choice(list(ZombieMode))
         self.last_mode_change_time = pygame.time.get_ticks()
-        self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + random.randint(
+        self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + RNG.randint(
             -1000, 1000
         )
         self.was_in_sight = False
@@ -413,9 +415,9 @@ class Zombie(pygame.sprite.Sprite):
             self.mode = force_mode
         else:
             possible_modes = list(ZombieMode)
-            self.mode = random.choice(possible_modes)
+            self.mode = RNG.choice(possible_modes)
         self.last_mode_change_time = pygame.time.get_ticks()
-        self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + random.randint(
+        self.mode_change_interval = ZOMBIE_MODE_CHANGE_INTERVAL_MS + RNG.randint(
             -1000, 1000
         )
 
@@ -439,9 +441,9 @@ class Zombie(pygame.sprite.Sprite):
                     * self.speed
                     * 0.8
                 )
-            move_y = random.uniform(-self.speed * 0.6, self.speed * 0.6)
+            move_y = RNG.uniform(-self.speed * 0.6, self.speed * 0.6)
         elif self.mode == ZombieMode.FLANK_Y:
-            move_x = random.uniform(-self.speed * 0.6, self.speed * 0.6)
+            move_x = RNG.uniform(-self.speed * 0.6, self.speed * 0.6)
             if dist > 0:
                 move_y = (
                     (dy_target / abs(dy_target) if dy_target != 0 else 0)
@@ -512,7 +514,7 @@ class Zombie(pygame.sprite.Sprite):
         away_dy = next_y - closest.y
         away_dist = math.hypot(away_dx, away_dy)
         if away_dist == 0:
-            angle = random.uniform(0, 2 * math.pi)
+            angle = RNG.uniform(0, 2 * math.pi)
             away_dx, away_dy = math.cos(angle), math.sin(angle)
             away_dist = 1
 

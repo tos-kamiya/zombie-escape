@@ -6,7 +6,8 @@ import pygame
 from pygame import surface, time
 
 from ..colors import BLACK, GREEN, LIGHT_GRAY, RED, WHITE
-from ..localization import translate as _
+from ..font_utils import load_font
+from ..localization import get_font_settings, translate as _
 from ..models import GameData, Stage
 from ..render import RenderAssets, draw_level_overview, show_message
 from ..screens import ScreenID, ScreenTransition, present
@@ -118,6 +119,19 @@ def game_over_screen(
             WHITE,
             (screen_width // 2, screen_height // 2 + 24),
         )
+
+        if state.seed is not None:
+            try:
+                font_settings = get_font_settings()
+                font = load_font(font_settings.resource, font_settings.scaled_size(11))
+                seed_text = _("status.seed", value=str(state.seed))
+                seed_surface = font.render(seed_text, False, LIGHT_GRAY)
+                seed_rect = seed_surface.get_rect(
+                    right=screen_width - 14, bottom=screen_height - 12
+                )
+                screen.blit(seed_surface, seed_rect)
+            except pygame.error as exc:
+                print(f"Error rendering game-over seed text: {exc}")
 
         present(screen)
         clock.tick(fps)
