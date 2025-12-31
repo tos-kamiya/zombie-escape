@@ -89,6 +89,7 @@ __all__ = [
     "nearest_waiting_car",
     "calculate_car_speed_for_passengers",
     "apply_passenger_speed_penalty",
+    "increase_survivor_capacity",
     "waiting_car_target_count",
     "spawn_waiting_car",
     "maintain_waiting_car_supply",
@@ -551,7 +552,13 @@ def calculate_car_speed_for_passengers(
     penalty = SURVIVOR_SPEED_PENALTY_PER_PASSENGER * load_ratio
     penalty = min(0.95, max(0.0, penalty))
     adjusted = CAR_SPEED * (1 - penalty)
-    return max(CAR_SPEED * SURVIVOR_MIN_SPEED_FACTOR, adjusted)
+    if passengers <= cap:
+        return max(CAR_SPEED * SURVIVOR_MIN_SPEED_FACTOR, adjusted)
+
+    overload = passengers - cap
+    overload_factor = 1 / math.sqrt(overload + 1)
+    overloaded_speed = CAR_SPEED * overload_factor
+    return max(CAR_SPEED * SURVIVOR_MIN_SPEED_FACTOR, overloaded_speed)
 
 
 def apply_passenger_speed_penalty(game_data: GameData) -> None:
@@ -565,6 +572,16 @@ def apply_passenger_speed_penalty(game_data: GameData) -> None:
         game_data.state.survivors_onboard,
         capacity=game_data.state.survivor_capacity,
     )
+
+
+def increase_survivor_capacity(game_data: GameData, increments: int = 1) -> None:
+    if increments <= 0:
+        return
+    if not game_data.stage.survivor_stage:
+        return
+    state = game_data.state
+    state.survivor_capacity += increments * SURVIVOR_MAX_SAFE_PASSENGERS
+    apply_passenger_speed_penalty(game_data)
 
 
 def rect_visible_on_screen(camera: Camera | None, rect: pygame.Rect) -> bool:
@@ -1343,6 +1360,7 @@ def check_interactions(
         )
         if collided_waiters:
             removed_any = False
+            capacity_increments = 0
             for parked in collided_waiters:
                 if not parked.alive():
                     continue
@@ -1355,8 +1373,10 @@ def check_interactions(
                 active_car.update_color()
                 removed_any = True
                 if stage.survivor_stage:
-                    state.survivor_capacity += SURVIVOR_MAX_SAFE_PASSENGERS
+                    capacity_increments += 1
             if removed_any:
+                if capacity_increments:
+                    increase_survivor_capacity(game_data, capacity_increments)
                 maintain_waiting_car_supply(game_data)
 
     # Car hitting zombies
