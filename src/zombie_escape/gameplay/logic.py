@@ -912,10 +912,6 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     outer_rect = 0, 0, LEVEL_WIDTH, LEVEL_HEIGHT
     inner_rect = outer_rect
 
-    # Create fog surfaces
-    fog_surface_hard = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-    fog_surface_soft = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
-
     return GameData(
         state=game_state,
         groups=Groups(
@@ -932,8 +928,6 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             walkable_cells=[],
         ),
         fog={
-            "hard": fog_surface_hard,
-            "soft": fog_surface_soft,
             "hatch_patterns": {},
             "overlays": {},
         },
