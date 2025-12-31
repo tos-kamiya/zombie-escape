@@ -46,7 +46,6 @@ def gameplay_screen(
     prewarm_fog_overlays(
         game_data.fog,
         render_assets,
-        config=config,
         stage=stage,
     )
     paused_manual = False
@@ -72,14 +71,6 @@ def gameplay_screen(
     if stage.survivor_stage:
         logic.spawn_survivors(game_data, layout_data)
 
-    flashlight_conf = config.get("flashlight", {})
-    flashlights_enabled = flashlight_conf.get("enabled", True)
-    raw_flashlight_count = flashlight_conf.get("count", DEFAULT_FLASHLIGHT_SPAWN_COUNT)
-    try:
-        flashlight_count = int(raw_flashlight_count)
-    except (TypeError, ValueError):
-        flashlight_count = DEFAULT_FLASHLIGHT_SPAWN_COUNT
-
     if stage.requires_fuel:
         fuel_can = logic.place_fuel_can(
             layout_data["walkable_cells"], player, cars=game_data.waiting_cars
@@ -87,15 +78,14 @@ def gameplay_screen(
         if fuel_can:
             game_data.fuel = fuel_can
             game_data.groups.all_sprites.add(fuel_can, layer=1)
-    if flashlights_enabled:
-        flashlights = logic.place_flashlights(
-            layout_data["walkable_cells"],
-            player,
-            cars=game_data.waiting_cars,
-            count=max(1, flashlight_count),
-        )
-        game_data.flashlights = flashlights
-        game_data.groups.all_sprites.add(flashlights, layer=1)
+    flashlights = logic.place_flashlights(
+        layout_data["walkable_cells"],
+        player,
+        cars=game_data.waiting_cars,
+        count=max(1, DEFAULT_FLASHLIGHT_SPAWN_COUNT),
+    )
+    game_data.flashlights = flashlights
+    game_data.groups.all_sprites.add(flashlights, layer=1)
 
     if stage.requires_companion:
         companion = logic.place_companion(

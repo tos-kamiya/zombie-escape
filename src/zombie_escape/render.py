@@ -64,6 +64,7 @@ def draw_level_overview(
     wall_group: sprite.Group,
     player: Player | None,
     car: Car | None,
+    waiting_cars: list[Car] | None,
     footprints: list[dict[str, Any]],
     *,
     fuel: FuelCan | None = None,
@@ -121,63 +122,54 @@ def draw_level_overview(
         pygame.draw.circle(
             surface, buddy_color, companion.rect.center, assets.player_radius * 2
         )
+    drawn_cars: list[Car] = []
     if car and car.alive():
         car_rect = car.image.get_rect(center=car.rect.center)
         surface.blit(car.image, car_rect)
+        drawn_cars.append(car)
+    if waiting_cars:
+        for parked in waiting_cars:
+            if not parked.alive() or parked in drawn_cars:
+                continue
+            parked_rect = parked.image.get_rect(center=parked.rect.center)
+            surface.blit(parked.image, parked_rect)
 
 
 def get_fog_scale(
     assets: RenderAssets,
     stage: Stage | None,
     flashlight_count: int,
-    *,
-    config: dict[str, Any] | None = None,
 ) -> float:
     """Return current fog scale factoring in flashlight bonus."""
     scale = assets.fog_radius_scale
-    flashlight_conf = (config or {}).get("flashlight", {})
-    flashlight_enabled = flashlight_conf.get("enabled", True)
     flashlight_count = max(0, int(flashlight_count))
-    if not flashlight_enabled or flashlight_count <= 0:
+    if flashlight_count <= 0:
         return scale
     bonus_step = max(0.0, assets.flashlight_bonus_step)
     return scale + bonus_step * flashlight_count
 
 
-def _max_flashlight_pickups(config: dict[str, Any] | None) -> int:
-    """Return the maximum flashlight pickups based on configuration flags."""
-    flashlight_conf = (config or {}).get("flashlight", {})
-    if not flashlight_conf.get("enabled", True):
-        return 0
-    raw_count = flashlight_conf.get("count", DEFAULT_FLASHLIGHT_SPAWN_COUNT)
-    try:
-        configured = int(raw_count)
-    except (TypeError, ValueError):
-        configured = DEFAULT_FLASHLIGHT_SPAWN_COUNT
-    # Gameplay enforces at least one flashlight when enabled; mirror that assumption.
-    return max(1, configured)
+def _max_flashlight_pickups() -> int:
+    """Return the maximum flashlight pickups available per stage."""
+    return max(1, DEFAULT_FLASHLIGHT_SPAWN_COUNT)
 
 
 def prewarm_fog_overlays(
     fog_data: dict[str, Any],
     assets: RenderAssets,
     *,
-    config: dict[str, Any] | None = None,
     stage: Stage | None = None,
 ) -> None:
     """Populate fog overlay cache for each reachable flashlight count."""
 
-    max_flashlights = _max_flashlight_pickups(config)
+    max_flashlights = _max_flashlight_pickups()
     counts = range(0, max_flashlights + 1)
-    if max_flashlights == 0:
-        counts = range(0, 1)
 
     for flashlight_count in counts:
         scale = get_fog_scale(
             assets,
             stage,
             flashlight_count,
-            config=config,
         )
         _get_fog_overlay_surfaces(fog_data, assets, scale)
 
@@ -279,7 +271,7 @@ def _build_flashlight_fade_surface(
     size: tuple[int, int], center: tuple[int, int], max_radius: int,
     *,
     start_ratio: float = 0.2,
-    max_alpha: int = 240,
+    max_alpha: int = 220,
     outer_extension: int = 50,
 ) -> surface.Surface:
     """Return a radial gradient so flashlight edges softly darken again."""
@@ -391,8 +383,6 @@ def _draw_status_bar(
     footprints_on = config.get("footprints", {}).get("enabled", True)
     fast_on = config.get("fast_zombies", {}).get("enabled", True)
     hint_on = config.get("car_hint", {}).get("enabled", True)
-    flashlight_conf = config.get("flashlight", {})
-    flashlight_on = flashlight_conf.get("enabled", True)
     steel_on = config.get("steel_beams", {}).get("enabled", False)
     if stage:
         # Keep the label compact for the status bar
@@ -407,15 +397,11 @@ def _draw_status_bar(
         parts.append(_("status.fast"))
     if hint_on:
         parts.append(_("status.car_hint"))
-    if flashlight_on:
-        parts.append(_("status.flashlight"))
     if steel_on:
         parts.append(_("status.steel"))
 
     status_text = " | ".join(parts)
-    color = (
-        GREEN if all([footprints_on, fast_on, hint_on, flashlight_on]) else LIGHT_GRAY
-    )
+    color = GREEN if all([footprints_on, fast_on, hint_on]) else LIGHT_GRAY
 
     try:
         font_settings = get_font_settings()
@@ -573,7 +559,9 @@ def draw(
 
     if hint_target and player:
         current_fov_scale = get_fog_scale(
-            assets, stage, flashlight_count, config=config
+            assets,
+            stage,
+            flashlight_count,
         )
         hint_ring_radius = assets.fov_radius * 0.5 * current_fov_scale
         _draw_hint_arrow(
@@ -597,7 +585,9 @@ def draw(
             fov_center_on_screen[1] = assets.screen_height // 2
         fov_center_tuple = (int(fov_center_on_screen[0]), int(fov_center_on_screen[1]))
         fog_scale = get_fog_scale(
-            assets, stage, flashlight_count, config=config
+            assets,
+            stage,
+            flashlight_count,
         )
         overlay = _get_fog_overlay_surfaces(fog_surfaces, assets, fog_scale)
         combined_surface: surface.Surface = overlay["combined"]

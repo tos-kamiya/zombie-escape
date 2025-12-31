@@ -35,7 +35,6 @@ Open **Settings** from the title to toggle gameplay assists:
 -   **Footprints:** Leave breadcrumb trails so you can backtrack in the dark.
 -   **Fast zombies:** Allow faster zombie variants; each zombie rolls a random speed between the normal and fast ranges.
 -   **Car hint:** After a delay, show a small triangle pointing toward the fuel (Stage 2 before pickup) or the car.
--   **Flashlight pickups:** Enable flashlight spawns; each pickup adds another ~20% to your visible radius and they stack.
 -   **Steel beams:** Adds tougher single-cell obstacles (5% density) that block movement; hidden when stacked with an inner wall until that wall is destroyed.
 
 ### Shared Seeds

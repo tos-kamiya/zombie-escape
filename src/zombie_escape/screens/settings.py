@@ -117,13 +117,6 @@ def settings_screen(
                         "left_label": _("common.on"),
                         "right_label": _("common.off"),
                     },
-                    {
-                        "label": _("settings.rows.flashlight"),
-                        "path": ("flashlight", "enabled"),
-                        "easy_value": True,
-                        "left_label": _("common.on"),
-                        "right_label": _("common.off"),
-                    },
                 ],
             },
             {

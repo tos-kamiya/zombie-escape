@@ -49,7 +49,6 @@
       "footprints": "足跡",
       "fast": "高速ゾ",
       "car_hint": "車ヒント",
-      "flashlight": "懐中電灯",
       "steel": "鉄筋",
       "seed": "シード %{value}"
     },
@@ -82,7 +81,6 @@
         "language": "テキスト言語",
         "footprints": "足跡",
         "car_hint": "車のヒント",
-        "flashlight": "懐中電灯",
         "fast_zombies": "高速ゾンビ",
         "steel_beams": "鉄筋"
       },

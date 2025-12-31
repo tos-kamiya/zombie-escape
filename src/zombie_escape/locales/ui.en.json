@@ -49,7 +49,6 @@
       "footprints": "Footprints",
       "fast": "FastZ",
       "car_hint": "CarHint",
-      "flashlight": "Flashlight",
       "steel": "Steel",
       "seed": "Seed %{value}"
     },
@@ -82,7 +81,6 @@
         "language": "Language",
         "footprints": "Footprints",
         "car_hint": "Car hint",
-        "flashlight": "Flashlight pickups",
         "fast_zombies": "Fast zombies",
         "steel_beams": "Steel beams"
       },

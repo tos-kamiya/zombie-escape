@@ -47,6 +47,7 @@ def game_over_screen(
                 wall_group,
                 game_data.player,
                 game_data.car,
+                game_data.waiting_cars,
                 footprints_to_draw,
                 fuel=game_data.fuel,
                 flashlights=game_data.flashlights or [],
