@@ -14,7 +14,7 @@ from ..constants import (
 from ..gameplay import logic
 from ..localization import translate as _
 from ..models import Stage
-from ..render import draw, show_message
+from ..render import draw, prewarm_fog_overlays, show_message
 from ..rng import generate_seed, seed_rng
 from ..screens import ScreenID, ScreenTransition, present
 
@@ -43,6 +43,12 @@ def gameplay_screen(
 
     game_data = logic.initialize_game_state(config, stage)
     game_data.state.seed = applied_seed
+    prewarm_fog_overlays(
+        game_data.fog,
+        render_assets,
+        config=config,
+        stage=stage,
+    )
     paused_manual = False
     paused_focus = False
     last_fov_target = None

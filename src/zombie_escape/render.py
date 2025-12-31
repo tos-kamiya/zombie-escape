@@ -30,7 +30,7 @@ from .localization import get_font_settings, translate as _
 from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player, Survivor
 from .models import GameData, Stage
 from .render_assets import RenderAssets
-from .constants import SURVIVOR_MAX_SAFE_PASSENGERS
+from .constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT, SURVIVOR_MAX_SAFE_PASSENGERS
 
 
 def show_message(
@@ -142,6 +142,44 @@ def get_fog_scale(
         return scale
     bonus_step = max(0.0, assets.flashlight_bonus_step)
     return scale + bonus_step * flashlight_count
+
+
+def _max_flashlight_pickups(config: dict[str, Any] | None) -> int:
+    """Return the maximum flashlight pickups based on configuration flags."""
+    flashlight_conf = (config or {}).get("flashlight", {})
+    if not flashlight_conf.get("enabled", True):
+        return 0
+    raw_count = flashlight_conf.get("count", DEFAULT_FLASHLIGHT_SPAWN_COUNT)
+    try:
+        configured = int(raw_count)
+    except (TypeError, ValueError):
+        configured = DEFAULT_FLASHLIGHT_SPAWN_COUNT
+    # Gameplay enforces at least one flashlight when enabled; mirror that assumption.
+    return max(1, configured)
+
+
+def prewarm_fog_overlays(
+    fog_data: dict[str, Any],
+    assets: RenderAssets,
+    *,
+    config: dict[str, Any] | None = None,
+    stage: Stage | None = None,
+) -> None:
+    """Populate fog overlay cache for each reachable flashlight count."""
+
+    max_flashlights = _max_flashlight_pickups(config)
+    counts = range(0, max_flashlights + 1)
+    if max_flashlights == 0:
+        counts = range(0, 1)
+
+    for flashlight_count in counts:
+        scale = get_fog_scale(
+            assets,
+            stage,
+            flashlight_count,
+            config=config,
+        )
+        _get_fog_overlay_surfaces(fog_data, assets, scale)
 
 
 def get_hatch_pattern(
