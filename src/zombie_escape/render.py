@@ -6,6 +6,11 @@ from typing import Any, Callable
 import pygame
 from pygame import sprite, surface
 
+try:  # Optional dependency (numpy) backs surfarray; gracefully degrade when absent.
+    import pygame.surfarray as pg_surfarray  # type: ignore
+except Exception:  # pragma: no cover - fallback path without numpy
+    pg_surfarray = None
+
 from .colors import (
     BLACK,
     BLUE,
@@ -218,6 +223,11 @@ def _get_fog_overlay_surfaces(
     for ring_surface in ring_surfaces:
         combined_surface.blit(ring_surface, (0, 0))
 
+    visible_fade_surface = _build_flashlight_fade_surface(
+        (width, height), center, max_radius
+    )
+    combined_surface.blit(visible_fade_surface, (0, 0))
+
     overlay_entry = {
         "hard": hard_surface,
         "rings": ring_surfaces,
@@ -225,6 +235,57 @@ def _get_fog_overlay_surfaces(
     }
     overlays[key] = overlay_entry
     return overlay_entry
+
+
+def _build_flashlight_fade_surface(
+    size: tuple[int, int], center: tuple[int, int], max_radius: int,
+    *,
+    start_ratio: float = 0.2,
+    max_alpha: int = 240,
+    outer_extension: int = 50,
+) -> surface.Surface:
+    """Return a radial gradient so flashlight edges softly darken again."""
+
+    width, height = size
+    fade_surface = pygame.Surface((width, height), pygame.SRCALPHA)
+    fade_surface.fill((0, 0, 0, 0))
+
+    start_radius = max(0.0, min(max_radius, max_radius * start_ratio))
+    end_radius = max(start_radius + 1, max_radius + outer_extension)
+    fade_range = max(1.0, end_radius - start_radius)
+
+    alpha_view = None
+    if pg_surfarray is not None:
+        alpha_view = pg_surfarray.pixels_alpha(fade_surface)
+    else:  # pragma: no cover - numpy-less fallback
+        fade_surface.lock()
+
+    cx, cy = center
+    for y in range(height):
+        dy = y - cy
+        for x in range(width):
+            dx = x - cx
+            dist = math.hypot(dx, dy)
+            if dist > end_radius:
+                dist = end_radius
+            if dist <= start_radius:
+                alpha = 0
+            else:
+                progress = min(1.0, (dist - start_radius) / fade_range)
+                alpha = int(max_alpha * progress)
+            if alpha <= 0:
+                continue
+            if alpha_view is not None:
+                alpha_view[x, y] = alpha
+            else:
+                fade_surface.set_at((x, y), (0, 0, 0, alpha))
+
+    if alpha_view is not None:
+        del alpha_view
+    else:  # pragma: no cover
+        fade_surface.unlock()
+
+    return fade_surface
 
 
 def _draw_hint_arrow(
