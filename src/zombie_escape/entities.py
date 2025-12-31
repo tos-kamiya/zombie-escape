@@ -41,6 +41,7 @@ from .constants import (
     NORMAL_ZOMBIE_SPEED_JITTER,
     PLAYER_RADIUS,
     PLAYER_SPEED,
+    PLAYER_WALL_DAMAGE,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
     STEEL_BEAM_HEALTH,
@@ -53,6 +54,7 @@ from .constants import (
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_SPEED,
+    ZOMBIE_WALL_DAMAGE,
     car_body_radius,
 )
 from .rng import get_rng
@@ -228,9 +230,10 @@ class Player(pygame.sprite.Sprite):
             self.rect.centerx = int(self.x)
             hit_list_x = pygame.sprite.spritecollide(self, walls, False)
             if hit_list_x:
-                damage = max(1, 4 // len(hit_list_x))
+                damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_x))
                 for wall in hit_list_x:
-                    wall.take_damage(amount=damage)
+                    if wall.alive():
+                        wall.take_damage(amount=damage)
                 self.x -= dx * 1.5
                 self.rect.centerx = int(self.x)
 
@@ -240,10 +243,10 @@ class Player(pygame.sprite.Sprite):
             self.rect.centery = int(self.y)
             hit_list_y = pygame.sprite.spritecollide(self, walls, False)
             if hit_list_y:
-                damage = max(1, 4 // len(hit_list_y))
+                damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_y))
                 for wall in hit_list_y:
                     if wall.alive():
-                        wall.take_damage()
+                        wall.take_damage(amount=damage)
                 self.y -= dy * 1.5
                 self.rect.centery = int(self.y)
 
@@ -479,15 +482,21 @@ class Zombie(pygame.sprite.Sprite):
         temp_rect.centery = int(self.y)
         for wall in possible_walls:
             if temp_rect.colliderect(wall.rect):
-                final_x = self.x
-                break
+                if wall.alive():
+                    wall.take_damage(amount=ZOMBIE_WALL_DAMAGE)
+                if wall.alive():
+                    final_x = self.x
+                    break
 
         temp_rect.centerx = int(final_x)
         temp_rect.centery = int(next_y)
         for wall in possible_walls:
             if temp_rect.colliderect(wall.rect):
-                final_y = self.y
-                break
+                if wall.alive():
+                    wall.take_damage(amount=ZOMBIE_WALL_DAMAGE)
+                if wall.alive():
+                    final_y = self.y
+                    break
 
         return final_x, final_y
 
