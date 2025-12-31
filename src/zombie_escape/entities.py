@@ -53,10 +53,21 @@ from .constants import (
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_SPEED,
+    car_body_radius,
 )
 from .rng import get_rng
 
 RNG = get_rng()
+
+
+def circle_rect_collision(center: tuple[float, float], radius: float, rect_obj: rect.Rect) -> bool:
+    """Return True if a circle overlaps the provided rectangle."""
+    cx, cy = center
+    closest_x = max(rect_obj.left, min(cx, rect_obj.right))
+    closest_y = max(rect_obj.top, min(cy, rect_obj.bottom))
+    dx = cx - closest_x
+    dy = cy - closest_y
+    return dx * dx + dy * dy <= radius * radius
 
 
 # --- Camera Class ---
@@ -569,6 +580,7 @@ class Car(pygame.sprite.Sprite):
         self.y = float(self.rect.centery)
         self.health = CAR_HEALTH
         self.max_health = CAR_HEALTH
+        self.collision_radius = car_body_radius(CAR_WIDTH, CAR_HEIGHT)
         self.update_color()
 
     def take_damage(self: Self, amount: int) -> None:
@@ -664,17 +676,15 @@ class Car(pygame.sprite.Sprite):
         new_x = self.x + dx
         new_y = self.y + dy
 
-        temp_rect = self.rect.copy()
-        temp_rect.centerx = int(new_x)
-        temp_rect.centery = int(new_y)
         hit_walls = []
         possible_walls = [
             w
             for w in walls
             if abs(w.rect.centery - self.y) < 100 and abs(w.rect.centerx - new_x) < 100
         ]
+        car_center = (new_x, new_y)
         for wall in possible_walls:
-            if temp_rect.colliderect(wall.rect):
+            if circle_rect_collision(car_center, self.collision_radius, wall.rect):
                 hit_walls.append(wall)
         if hit_walls:
             self.take_damage(CAR_WALL_DAMAGE)

@@ -27,6 +27,11 @@ def interaction_radius(width: float, height: float) -> float:
     """Approximate interaction reach for a humanoid and an object."""
     return HUMANOID_RADIUS + (width + height) / 4
 
+
+def car_body_radius(width: float, height: float) -> float:
+    """Approximate car collision radius using only its own dimensions."""
+    return min(width, height) / 2
+
 PLAYER_RADIUS = HUMANOID_RADIUS
 PLAYER_SPEED = 1.4
 FOV_RADIUS = 124  # approximate legacy FOV (80) * 1.55 cap
@@ -178,6 +183,7 @@ __all__ = [
     "FAST_ZOMBIE_BASE_SPEED",
     "FAST_ZOMBIE_SPEED_JITTER",
     "ZOMBIE_SEPARATION_DISTANCE",
+    "car_body_radius",
     "CAR_WIDTH",
     "CAR_HEIGHT",
     "CAR_SPEED",
