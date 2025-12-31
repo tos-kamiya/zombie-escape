@@ -886,7 +886,6 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         last_footprint_pos=None,
         elapsed_play_ms=0,
         has_fuel=starts_with_fuel,
-        has_flashlight=starts_with_flashlight,
         flashlight_count=1 if starts_with_flashlight else 0,
         hint_expires_at=0,
         hint_target_type=None,
@@ -1243,7 +1242,6 @@ def check_interactions(
             )
             if dist_to_flashlight <= max(FLASHLIGHT_PICKUP_RADIUS, PLAYER_RADIUS + 6):
                 state.flashlight_count += 1
-                state.has_flashlight = state.flashlight_count > 0
                 state.hint_expires_at = 0
                 state.hint_target_type = None
                 flashlight.kill()

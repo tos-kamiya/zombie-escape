@@ -40,7 +40,6 @@ class ProgressState:
     last_footprint_pos: tuple | None
     elapsed_play_ms: int
     has_fuel: bool
-    has_flashlight: bool
     flashlight_count: int
     hint_expires_at: int
     hint_target_type: str | None
