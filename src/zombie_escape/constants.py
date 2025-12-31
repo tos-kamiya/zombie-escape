@@ -28,9 +28,8 @@ LEVEL_HEIGHT = LEVEL_GRID_ROWS * CELL_SIZE
 # --- Player and companion settings ---
 PLAYER_RADIUS = 6
 PLAYER_SPEED = 1.4
-FOV_RADIUS = 80
+FOV_RADIUS = 124  # approximate legacy FOV (80) * 1.55 cap
 FOG_RADIUS_SCALE = 1.2
-FOG_MAX_RADIUS_FACTOR = 1.55
 FOG_HATCH_PIXEL_SCALE = 2
 COMPANION_RADIUS = PLAYER_RADIUS
 COMPANION_FOLLOW_SPEED = PLAYER_SPEED * 0.7
@@ -55,7 +54,7 @@ SURVIVOR_CONVERSION_LINE_KEYS = [
 SURVIVOR_STAGE_WAITING_CAR_COUNT = 2
 
 # --- Flashlight settings ---
-FLASHLIGHT_FOG_SCALE_STEP = 0.2
+FLASHLIGHT_FOG_SCALE_STEP = 0.3
 FLASHLIGHT_WIDTH = 10
 FLASHLIGHT_HEIGHT = 8
 FLASHLIGHT_PICKUP_RADIUS = 13
@@ -106,11 +105,11 @@ STEEL_BEAM_HEALTH = INTERNAL_WALL_HEALTH * 2
 
 # --- Rendering assets shared with draw routines ---
 FOG_RINGS = [
-    FogRing(radius_factor=0.82, thickness=2),
-    FogRing(radius_factor=0.99, thickness=4),
-    FogRing(radius_factor=1.16, thickness=6),
-    FogRing(radius_factor=1.33, thickness=8),
-    FogRing(radius_factor=1.5, thickness=12),
+    FogRing(radius_factor=0.529, thickness=2),
+    FogRing(radius_factor=0.639, thickness=4),
+    FogRing(radius_factor=0.748, thickness=6),
+    FogRing(radius_factor=0.858, thickness=8),
+    FogRing(radius_factor=0.968, thickness=12),
 ]
 
 RENDER_ASSETS = RenderAssets(
@@ -120,7 +119,6 @@ RENDER_ASSETS = RenderAssets(
     player_radius=PLAYER_RADIUS,
     fov_radius=FOV_RADIUS,
     fog_radius_scale=FOG_RADIUS_SCALE,
-    fog_max_radius_factor=FOG_MAX_RADIUS_FACTOR,
     fog_hatch_pixel_scale=FOG_HATCH_PIXEL_SCALE,
     fog_rings=FOG_RINGS,
     footprint_radius=FOOTPRINT_RADIUS,
@@ -142,7 +140,6 @@ __all__ = [
     "SCREEN_WIDTH",
     "SCREEN_HEIGHT",
     "FPS",
-    "STATUS_BAR_HEIGHT",
     "LEVEL_GRID_COLS",
     "LEVEL_GRID_ROWS",
     "CELL_SIZE",
@@ -150,10 +147,6 @@ __all__ = [
     "LEVEL_HEIGHT",
     "PLAYER_RADIUS",
     "PLAYER_SPEED",
-    "FOV_RADIUS",
-    "FOG_RADIUS_SCALE",
-    "FOG_MAX_RADIUS_FACTOR",
-    "FOG_HATCH_PIXEL_SCALE",
     "COMPANION_RADIUS",
     "COMPANION_FOLLOW_SPEED",
     "COMPANION_COLOR",
@@ -169,18 +162,13 @@ __all__ = [
     "SURVIVOR_MESSAGE_DURATION_MS",
     "SURVIVOR_CONVERSION_LINE_KEYS",
     "SURVIVOR_STAGE_WAITING_CAR_COUNT",
-    "FLASHLIGHT_FOG_SCALE_STEP",
     "FLASHLIGHT_WIDTH",
     "FLASHLIGHT_HEIGHT",
     "FLASHLIGHT_PICKUP_RADIUS",
     "DEFAULT_FLASHLIGHT_SPAWN_COUNT",
-    "FOOTPRINT_RADIUS",
-    "FOOTPRINT_OVERVIEW_RADIUS",
     "FOOTPRINT_COLOR",
     "FOOTPRINT_STEP_DISTANCE",
-    "FOOTPRINT_LIFETIME_MS",
     "FOOTPRINT_MAX",
-    "FOOTPRINT_MIN_FADE",
     "ZOMBIE_RADIUS",
     "ZOMBIE_SPEED",
     "NORMAL_ZOMBIE_SPEED_JITTER",
@@ -205,10 +193,8 @@ __all__ = [
     "FUEL_CAN_HEIGHT",
     "FUEL_PICKUP_RADIUS",
     "FUEL_HINT_DURATION_MS",
-    "INTERNAL_WALL_GRID_SNAP",
     "INTERNAL_WALL_HEALTH",
     "OUTER_WALL_HEALTH",
     "STEEL_BEAM_HEALTH",
-    "FOG_RINGS",
     "RENDER_ASSETS",
 ]

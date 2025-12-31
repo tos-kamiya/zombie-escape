@@ -19,7 +19,6 @@ class RenderAssets:
     player_radius: int
     fov_radius: int
     fog_radius_scale: float
-    fog_max_radius_factor: float
     fog_hatch_pixel_scale: int
     fog_rings: list[FogRing]
     footprint_radius: int

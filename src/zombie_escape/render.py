@@ -223,7 +223,7 @@ def _get_fog_overlay_surfaces(
     if key in overlays:
         return overlays[key]
 
-    max_radius = int(assets.fov_radius * assets.fog_max_radius_factor * scale)
+    max_radius = int(assets.fov_radius * scale)
     padding = 32
     coverage_width = max(assets.screen_width * 2, max_radius * 2)
     coverage_height = max(assets.screen_height * 2, max_radius * 2)
