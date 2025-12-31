@@ -14,17 +14,21 @@ from ..colors import (
     OUTER_WALL_COLOR,
 )
 from ..constants import (
+    CAR_HEIGHT,
     CAR_SPEED,
+    CAR_WIDTH,
     CAR_ZOMBIE_DAMAGE,
     CELL_SIZE,
     COMPANION_RADIUS,
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     FAST_ZOMBIE_BASE_SPEED,
-    FLASHLIGHT_PICKUP_RADIUS,
+    FLASHLIGHT_HEIGHT,
+    FLASHLIGHT_WIDTH,
     FOOTPRINT_MAX,
     FOOTPRINT_STEP_DISTANCE,
+    FUEL_CAN_HEIGHT,
+    FUEL_CAN_WIDTH,
     FUEL_HINT_DURATION_MS,
-    FUEL_PICKUP_RADIUS,
     INTERNAL_WALL_HEALTH,
     LEVEL_GRID_COLS,
     LEVEL_HEIGHT,
@@ -51,6 +55,7 @@ from ..constants import (
     ZOMBIE_SPAWN_DELAY_MS,
     ZOMBIE_SPAWN_PLAYER_BUFFER,
     ZOMBIE_SPEED,
+    interaction_radius,
 )
 from ..localization import translate as _
 from ..level_blueprints import choose_blueprint
@@ -1218,12 +1223,30 @@ def check_interactions(
     active_car = car if car and car.alive() else None
     waiting_cars = game_data.waiting_cars
 
+    car_interaction_radius = interaction_radius(CAR_WIDTH, CAR_HEIGHT)
+    fuel_interaction_radius = interaction_radius(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
+    flashlight_interaction_radius = interaction_radius(
+        FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT
+    )
+
+    def player_near_point(point: tuple[float, float], radius: float) -> bool:
+        return math.hypot(point[0] - player.x, point[1] - player.y) <= radius
+
+    def player_near_sprite(
+        sprite_obj: pygame.sprite.Sprite | None, radius: float
+    ) -> bool:
+        return bool(
+            sprite_obj
+            and sprite_obj.alive()
+            and player_near_point(sprite_obj.rect.center, radius)
+        )
+
+    def player_near_car(car_obj: Car | None) -> bool:
+        return player_near_sprite(car_obj, car_interaction_radius)
+
     # Fuel pickup
     if fuel and fuel.alive() and not state.has_fuel and not player.in_car:
-        dist_to_fuel = math.hypot(
-            fuel.rect.centerx - player.x, fuel.rect.centery - player.y
-        )
-        if dist_to_fuel <= max(FUEL_PICKUP_RADIUS, PLAYER_RADIUS + 6):
+        if player_near_point(fuel.rect.center, fuel_interaction_radius):
             state.has_fuel = True
             state.fuel_message_until = 0
             state.hint_expires_at = 0
@@ -1237,10 +1260,9 @@ def check_interactions(
         for flashlight in list(flashlights):
             if not flashlight.alive():
                 continue
-            dist_to_flashlight = math.hypot(
-                flashlight.rect.centerx - player.x, flashlight.rect.centery - player.y
-            )
-            if dist_to_flashlight <= max(FLASHLIGHT_PICKUP_RADIUS, PLAYER_RADIUS + 6):
+            if player_near_point(
+                flashlight.rect.center, flashlight_interaction_radius
+            ):
                 state.flashlight_count += 1
                 state.hint_expires_at = 0
                 state.hint_target_type = None
@@ -1293,35 +1315,29 @@ def check_interactions(
                     companion.teleport((LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2))
                 companion.following = False
 
-    player_group = pygame.sprite.Group()
-    player_group.add(player)
-
     # Player entering an active car already under control
     if (
         not player.in_car
+        and player_near_car(active_car)
         and active_car
-        and active_car.alive()
         and active_car.health > 0
     ):
-        shrunk_active = get_shrunk_sprite(active_car, 0.8)
-        if pygame.sprite.spritecollide(shrunk_active, player_group, False):
-            if state.has_fuel:
-                player.in_car = True
-                all_sprites.remove(player)
-                state.hint_expires_at = 0
-                state.hint_target_type = None
-                print("Player entered car!")
-            else:
-                now_ms = state.elapsed_play_ms
-                state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
-                state.hint_target_type = "fuel"
+        if state.has_fuel:
+            player.in_car = True
+            all_sprites.remove(player)
+            state.hint_expires_at = 0
+            state.hint_target_type = None
+            print("Player entered car!")
+        else:
+            now_ms = state.elapsed_play_ms
+            state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
+            state.hint_target_type = "fuel"
 
     # Claim a waiting/parked car when the player finally reaches it
     if not player.in_car and not active_car and waiting_cars:
         claimed_car: Car | None = None
         for parked_car in waiting_cars:
-            shrunk_waiting = get_shrunk_sprite(parked_car, 0.8)
-            if pygame.sprite.spritecollide(shrunk_waiting, player_group, False):
+            if player_near_car(parked_car):
                 claimed_car = parked_car
                 break
         if claimed_car:

@@ -19,8 +19,8 @@ except Exception:  # pragma: no cover - fallback version
     __version__ = "0.0.0-unknown"
 from ..constants import (
     DEFAULT_WINDOW_SCALE,
-    RENDER_SCREEN_HEIGHT,
-    RENDER_SCREEN_WIDTH,
+    SCREEN_HEIGHT,
+    SCREEN_WIDTH,
     WINDOW_SCALE_MAX,
     WINDOW_SCALE_MIN,
 )
@@ -87,8 +87,8 @@ def apply_window_scale(
     clamped_scale = max(WINDOW_SCALE_MIN, min(WINDOW_SCALE_MAX, scale))
     current_window_scale = clamped_scale
 
-    window_width = max(1, int(RENDER_SCREEN_WIDTH * current_window_scale))
-    window_height = max(1, int(RENDER_SCREEN_HEIGHT * current_window_scale))
+    window_width = max(1, int(SCREEN_WIDTH * current_window_scale))
+    window_height = max(1, int(SCREEN_HEIGHT * current_window_scale))
 
     new_window = pygame.display.set_mode((window_width, window_height))
     pygame.display.set_caption(
