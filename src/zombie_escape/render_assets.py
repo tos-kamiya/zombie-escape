@@ -27,7 +27,7 @@ class RenderAssets:
     footprint_lifetime_ms: int
     footprint_min_fade: float
     internal_wall_grid_snap: int
-    default_flashlight_bonus_scale: float
+    flashlight_bonus_step: float
 
 
 __all__ = ["FogRing", "RenderAssets"]

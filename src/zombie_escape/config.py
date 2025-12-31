@@ -13,7 +13,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "footprints": {"enabled": True},
     "fast_zombies": {"enabled": False, "ratio": 0.1},
     "car_hint": {"enabled": True, "delay_ms": 180_000},
-    "flashlight": {"enabled": True, "bonus_scale": 1.35},
+    "flashlight": {"enabled": True},
     "steel_beams": {"enabled": False, "chance": 0.05},
     "debug": {"hide_pause_overlay": False},
 }

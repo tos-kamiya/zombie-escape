@@ -124,7 +124,7 @@ def draw_level_overview(
 def get_fog_scale(
     assets: RenderAssets,
     stage: Stage | None,
-    has_flashlight: bool,
+    flashlight_count: int,
     *,
     config: dict[str, Any] | None = None,
 ) -> float:
@@ -132,15 +132,11 @@ def get_fog_scale(
     scale = assets.fog_radius_scale
     flashlight_conf = (config or {}).get("flashlight", {})
     flashlight_enabled = flashlight_conf.get("enabled", True)
-    try:
-        bonus_scale = float(
-            flashlight_conf.get("bonus_scale", assets.default_flashlight_bonus_scale)
-        )
-    except (TypeError, ValueError):
-        bonus_scale = assets.default_flashlight_bonus_scale
-    if flashlight_enabled and has_flashlight:
-        scale *= max(1.0, bonus_scale)
-    return scale
+    flashlight_count = max(0, int(flashlight_count))
+    if not flashlight_enabled or flashlight_count <= 0:
+        return scale
+    bonus_step = max(0.0, assets.flashlight_bonus_step)
+    return scale + bonus_step * flashlight_count
 
 
 def get_hatch_pattern(
@@ -366,7 +362,7 @@ def draw(
     fog_surfaces = game_data.fog
     footprints = state.footprints
     has_fuel = state.has_fuel
-    has_flashlight = state.has_flashlight
+    flashlight_count = state.flashlight_count
     elapsed_play_ms = state.elapsed_play_ms
     fuel_message_until = state.fuel_message_until
     companion_rescued = state.companion_rescued
@@ -478,7 +474,7 @@ def draw(
 
     if hint_target and player:
         current_fov_scale = get_fog_scale(
-            assets, stage, has_flashlight, config=config
+            assets, stage, flashlight_count, config=config
         )
         hint_ring_radius = assets.fov_radius * 0.5 * current_fov_scale
         _draw_hint_arrow(
@@ -501,7 +497,9 @@ def draw(
         if vertical_span <= 0 or (cam_rect.y != 0 and cam_rect.y != -vertical_span):
             fov_center_on_screen[1] = assets.screen_height // 2
         fov_center_tuple = (int(fov_center_on_screen[0]), int(fov_center_on_screen[1]))
-        fog_scale = get_fog_scale(assets, stage, has_flashlight, config=config)
+        fog_scale = get_fog_scale(
+            assets, stage, flashlight_count, config=config
+        )
         overlay = _get_fog_overlay_surfaces(fog_surfaces, assets, fog_scale)
         combined_surface: surface.Surface = overlay["combined"]
         screen.blit(

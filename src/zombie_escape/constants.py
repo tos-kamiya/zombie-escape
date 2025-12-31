@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from .config import DEFAULT_CONFIG
 from .level_blueprints import GRID_COLS, GRID_ROWS, TILE_SIZE
 from .render_assets import FogRing, RenderAssets
 
@@ -56,9 +55,7 @@ SURVIVOR_CONVERSION_LINE_KEYS = [
 SURVIVOR_STAGE_WAITING_CAR_COUNT = 2
 
 # --- Flashlight settings ---
-DEFAULT_FLASHLIGHT_BONUS_SCALE = float(
-    DEFAULT_CONFIG.get("flashlight", {}).get("bonus_scale", 1.35)
-)
+FLASHLIGHT_FOG_SCALE_STEP = 0.2
 FLASHLIGHT_WIDTH = 10
 FLASHLIGHT_HEIGHT = 8
 FLASHLIGHT_PICKUP_RADIUS = 13
@@ -131,7 +128,7 @@ RENDER_ASSETS = RenderAssets(
     footprint_lifetime_ms=FOOTPRINT_LIFETIME_MS,
     footprint_min_fade=FOOTPRINT_MIN_FADE,
     internal_wall_grid_snap=INTERNAL_WALL_GRID_SNAP,
-    default_flashlight_bonus_scale=DEFAULT_FLASHLIGHT_BONUS_SCALE,
+    flashlight_bonus_step=FLASHLIGHT_FOG_SCALE_STEP,
 )
 
 __all__ = [
@@ -172,7 +169,7 @@ __all__ = [
     "SURVIVOR_MESSAGE_DURATION_MS",
     "SURVIVOR_CONVERSION_LINE_KEYS",
     "SURVIVOR_STAGE_WAITING_CAR_COUNT",
-    "DEFAULT_FLASHLIGHT_BONUS_SCALE",
+    "FLASHLIGHT_FOG_SCALE_STEP",
     "FLASHLIGHT_WIDTH",
     "FLASHLIGHT_HEIGHT",
     "FLASHLIGHT_PICKUP_RADIUS",

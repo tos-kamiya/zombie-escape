@@ -887,6 +887,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         elapsed_play_ms=0,
         has_fuel=starts_with_fuel,
         has_flashlight=starts_with_flashlight,
+        flashlight_count=1 if starts_with_flashlight else 0,
         hint_expires_at=0,
         hint_target_type=None,
         fuel_message_until=0,
@@ -1239,7 +1240,7 @@ def check_interactions(
             print("Fuel acquired!")
 
     # Flashlight pickup
-    if not state.has_flashlight and not player.in_car:
+    if not player.in_car:
         for flashlight in list(flashlights):
             if not flashlight.alive():
                 continue
@@ -1247,7 +1248,8 @@ def check_interactions(
                 flashlight.rect.centerx - player.x, flashlight.rect.centery - player.y
             )
             if dist_to_flashlight <= max(FLASHLIGHT_PICKUP_RADIUS, PLAYER_RADIUS + 6):
-                state.has_flashlight = True
+                state.flashlight_count += 1
+                state.has_flashlight = state.flashlight_count > 0
                 state.hint_expires_at = 0
                 state.hint_target_type = None
                 flashlight.kill()
