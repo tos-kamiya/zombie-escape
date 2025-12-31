@@ -35,7 +35,7 @@ Open **Settings** from the title to toggle gameplay assists:
 -   **Footprints:** Leave breadcrumb trails so you can backtrack in the dark.
 -   **Fast zombies:** Allow faster zombie variants; each zombie rolls a random speed between the normal and fast ranges.
 -   **Car hint:** After a delay, show a small triangle pointing toward the fuel (Stage 2 before pickup) or the car.
--   **Flashlight pickups:** Enable flashlight spawns that expand your visible radius when collected.
+-   **Flashlight pickups:** Enable flashlight spawns; each pickup adds another ~20% to your visible radius and they stack.
 -   **Steel beams:** Adds tougher single-cell obstacles (5% density) that block movement; hidden when stacked with an inner wall until that wall is destroyed.
 
 ### Shared Seeds
@@ -68,7 +68,7 @@ An objective reminder is shown at the top-left during play.
 -   **Walls:** Outer walls are gray; inner walls are beige.
     -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
     -   **Inner Walls:** Beige walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
--   **Flashlight:** Picking one up boosts your visible radius by 35%.
+-   **Flashlight:** Each pickup expands your visible radius by about 20% (grab two to reach the max boost).
 -   **Steel Beam (optional):** A square post with crossed diagonals; same collision as inner walls but with triple durability. Spawns independently of inner walls (may overlap them). If an inner wall covers a beam, the beam appears once the wall is destroyed.
 -   **Fuel Can (Stages 2 & 3):** A yellow jerrycan that only spawns on the fuel-run stages. Pick it up before driving the car; once collected the on-player indicator appears until you refuel the car.
 -   **Buddy (Stage 3):** A green circle survivor who spawns somewhere in the building and waits.
