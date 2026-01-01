@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import sprite, surface
 
+from .constants import ZOMBIE_SPAWN_DELAY_MS
 from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -101,7 +102,7 @@ class Stage:
     survival_stage: bool = False
     survival_goal_ms: int = 0
     fuel_spawn_count: int = 1
-    spawn_interval_ms: int = 5000
+    spawn_interval_ms: int = ZOMBIE_SPAWN_DELAY_MS
     exterior_spawn_weight: float = 1.0
     interior_spawn_weight: float = 0.0
 
@@ -142,7 +143,7 @@ STAGES: list[Stage] = [
         description_key="stages.stage4.description",
         available=True,
         survivor_stage=True,
-        spawn_interval_ms=5000,
+        spawn_interval_ms=ZOMBIE_SPAWN_DELAY_MS,
         exterior_spawn_weight=1.0,
         interior_spawn_weight=0.0,
     ),
@@ -150,14 +151,14 @@ STAGES: list[Stage] = [
         id="stage5",
         name_key="stages.stage5.name",
         description_key="stages.stage5.description",
-        available=False,  # Temporarily hidden from the stage picker
+        available=True,
         requires_fuel=True,
         survival_stage=True,
         survival_goal_ms=1_200_000,
         fuel_spawn_count=0,
-        spawn_interval_ms=5000,
-        exterior_spawn_weight=0.55,
-        interior_spawn_weight=0.45,
+        spawn_interval_ms=ZOMBIE_SPAWN_DELAY_MS,
+        exterior_spawn_weight=0.4,
+        interior_spawn_weight=0.6,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

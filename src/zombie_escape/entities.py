@@ -52,6 +52,8 @@ from .constants import (
     ZOMBIE_MODE_CHANGE_INTERVAL_MS,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
+    ZOMBIE_AGING_DURATION_FRAMES,
+    ZOMBIE_AGING_MIN_SPEED_RATIO,
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_SPEED,
     ZOMBIE_WALL_DAMAGE,
@@ -431,7 +433,9 @@ class Zombie(pygame.sprite.Sprite):
             if speed > ZOMBIE_SPEED
             else NORMAL_ZOMBIE_SPEED_JITTER
         )
-        self.speed = speed + RNG.uniform(-jitter, jitter)
+        base_speed = speed + RNG.uniform(-jitter, jitter)
+        self.initial_speed = base_speed
+        self.speed = base_speed
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
         self.mode = RNG.choice(list(ZombieMode))
@@ -441,6 +445,7 @@ class Zombie(pygame.sprite.Sprite):
         )
         self.was_in_sight = False
         self.carbonized = False
+        self.age_frames = 0
 
     def change_mode(self: Self, *, force_mode: ZombieMode | None = None) -> None:
         if force_mode:
@@ -560,6 +565,16 @@ class Zombie(pygame.sprite.Sprite):
         move_y = (away_dy / away_dist) * self.speed
         return move_x, move_y
 
+    def _apply_aging(self: Self) -> None:
+        """Slowly reduce zombie speed over time to simulate decay."""
+        if ZOMBIE_AGING_DURATION_FRAMES <= 0:
+            return
+        if self.age_frames < ZOMBIE_AGING_DURATION_FRAMES:
+            self.age_frames += 1
+        progress = min(1.0, self.age_frames / ZOMBIE_AGING_DURATION_FRAMES)
+        slowdown_ratio = 1.0 - progress * (1.0 - ZOMBIE_AGING_MIN_SPEED_RATIO)
+        self.speed = self.initial_speed * slowdown_ratio
+
     def update(
         self: Self,
         player_center: tuple[int, int],
@@ -568,6 +583,7 @@ class Zombie(pygame.sprite.Sprite):
     ) -> None:
         if self.carbonized:
             return
+        self._apply_aging()
         now = pygame.time.get_ticks()
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
