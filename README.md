@@ -52,7 +52,7 @@ At the title screen you can pick a stage:
 - **Stage 2: Fuel Run** — you start with no fuel; find a fuel can first, pick it up, then find the car and escape.
 - **Stage 3: Rescue Buddy** — same fuel hunt as Stage 2 (you begin empty) plus grab your buddy, pick them up with the car, then escape together.
 - **Stage 4: Evacuate Survivors** — start fueled, find the car, gather nearby civilians, and escape before zombies reach them. Stage 4 sprinkles extra parked cars across the map; slamming into one while already driving fully repairs your current ride and adds five more safe seats.
-- **Stage 5: Survive Until Dawn** — every car is bone-dry. Endure for 20 real minutes while off-screen zombies keep collapsing your safe zone. Hold `Shift` to fast-forward the entire simulation 4x whenever you need breathing room. Once dawn hits, outdoor zombies carbonize and you must walk out through an existing exterior gap to win; cars remain unusable.
+<!-- - **Stage 5: Survive Until Dawn** — every car is bone-dry. Endure for 20 real minutes while off-screen zombies keep collapsing your safe zone. Hold `Shift` to fast-forward the entire simulation 4x whenever you need breathing room. Once dawn hits, outdoor zombies carbonize and you must walk out through an existing exterior gap to win; cars remain unusable. -->
 
 An objective reminder is shown at the top-left during play.
 
@@ -115,7 +115,7 @@ zombie-escape
 
 ### Debug Mode
 
-For Stage 5 balancing or capture needs, run `zombie-escape --debug`. This hides the pause overlay and starts survival stages with 3 minutes remaining so you can immediately test late-night behavior.
+<!-- For Stage 5 balancing or capture needs, run `zombie-escape --debug`. This hides the pause overlay and starts survival stages with 3 minutes remaining so you can immediately test late-night behavior. -->
 
 ## License
 
