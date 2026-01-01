@@ -52,7 +52,7 @@ At the title screen you can pick a stage:
 - **Stage 2: Fuel Run** — you start with no fuel; find a fuel can first, pick it up, then find the car and escape.
 - **Stage 3: Rescue Buddy** — same fuel hunt as Stage 2 (you begin empty) plus grab your buddy, pick them up with the car, then escape together.
 - **Stage 4: Evacuate Survivors** — start fueled, find the car, gather nearby civilians, and escape before zombies reach them. Stage 4 sprinkles extra parked cars across the map; slamming into one while already driving fully repairs your current ride and adds five more safe seats.
-<!-- - **Stage 5: Survive Until Dawn** — every car is bone-dry. Endure for 20 real minutes while off-screen zombies keep collapsing your safe zone. Hold `Shift` to fast-forward the entire simulation 4x whenever you need breathing room. Once dawn hits, outdoor zombies carbonize and you must walk out through an existing exterior gap to win; cars remain unusable. -->
+- **Stage 5: Survive Until Dawn** — every car is bone-dry. Endure until the sun rises while the horde presses in from every direction. Once dawn hits, outdoor zombies carbonize and you must walk out through an existing exterior gap to win; cars remain unusable.
 
 An objective reminder is shown at the top-left during play.
 
@@ -68,7 +68,7 @@ An objective reminder is shown at the top-left during play.
     -   After roughly 5 minutes of play, a small triangle near the player points toward the objective: fuel first (Stage 2 before pickup), car after fuel is collected (Stage 2/3), or car directly (Stage 1/4).
 -   **Walls:** Outer walls are gray; inner walls are beige.
     -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
-    -   **Inner Walls:** Beige walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. The car cannot break walls.
+    -   **Inner Walls:** Beige walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. Zombies can also wear down walls, but far more slowly. The car cannot break walls.
 -   **Flashlight:** Each pickup expands your visible radius by about 20% (grab two to reach the max boost).
 -   **Steel Beam (optional):** A square post with crossed diagonals; same collision as inner walls but with triple durability. Spawns independently of inner walls (may overlap them). If an inner wall covers a beam, the beam appears once the wall is destroyed.
 -   **Fuel Can (Stages 2 & 3):** A yellow jerrycan that only spawns on the fuel-run stages. Pick it up before driving the car; once collected the on-player indicator appears until you refuel the car.
@@ -84,8 +84,10 @@ An objective reminder is shown at the top-left during play.
 ### Win/Lose Conditions
 
 -   **Win Condition:** Escape the stage (level) boundaries while inside the car.
+    - Stage 1 and Stage 4 follow the base rule: find the car (already fueled) and drive out.
     - Stage 2 also requires that you have collected the fuel can before driving out.
     - Stage 3 requires both fuel and having picked up your buddy with the car before driving out.
+    - Stage 5 has no working cars; survive until dawn, then walk out through an exterior opening on foot.
 -   **Lose Condition:**
     -   The player is touched by a zombie while *not* inside a car.
     -   In Stage 3, if your buddy is caught (when visible), it's game over.
