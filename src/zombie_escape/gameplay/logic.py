@@ -58,7 +58,7 @@ from ..constants import (
     ZOMBIE_SPEED,
     interaction_radius,
 )
-from ..localization import translate as _
+from ..localization import translate as tr
 from ..level_blueprints import choose_blueprint
 from ..models import Areas, GameData, Groups, ProgressState, Stage
 from ..rng import get_rng
@@ -697,7 +697,7 @@ def random_survivor_conversion_line() -> str:
     if not SURVIVOR_CONVERSION_LINE_KEYS:
         return ""
     key = RNG.choice(SURVIVOR_CONVERSION_LINE_KEYS)
-    return _(key)
+    return tr(key)
 
 
 def cleanup_survivor_messages(state: ProgressState) -> None:
@@ -924,6 +924,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         time_accel_active=False,
         last_zombie_spawn_time=0,
         dawn_carbonized=False,
+        debug_mode=False,
     )
 
     # Create sprite groups
@@ -1458,7 +1459,7 @@ def check_interactions(
             companion, zombie_group, False, pygame.sprite.collide_circle
         ):
             if companion_on_screen:
-                state.game_over_message = _("game_over.scream")
+                state.game_over_message = tr("game_over.scream")
                 state.game_over = True
                 state.game_over_at = state.game_over_at or pygame.time.get_ticks()
             else:
@@ -1570,7 +1571,7 @@ def check_interactions(
                     1,
                     int(active_car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO),
                 )
-                add_survivor_message(game_data, _("survivors.too_many_aboard"))
+                add_survivor_message(game_data, tr("survivors.too_many_aboard"))
                 active_car.take_damage(overload_damage)
 
     if stage.survivor_stage:
@@ -1608,7 +1609,7 @@ def check_interactions(
             if not state.game_over:
                 state.game_over = True
                 state.game_over_at = pygame.time.get_ticks()
-                state.game_over_message = _("game_over.scream")
+                state.game_over_message = tr("game_over.scream")
 
     # Player escaping on foot after dawn (Stage 5)
     if (

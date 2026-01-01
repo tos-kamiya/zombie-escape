@@ -7,7 +7,7 @@ from pygame import surface, time
 
 from ..colors import BLACK, GRAY, LIGHT_GRAY, WHITE, YELLOW
 from ..font_utils import load_font
-from ..localization import get_font_settings, translate as _
+from ..localization import get_font_settings, translate as tr
 from ..models import Stage
 from ..render import show_message
 from ..screens import ScreenID, ScreenTransition, nudge_window_scale, present
@@ -112,7 +112,7 @@ def title_screen(
         screen.fill(BLACK)
         show_message(
             screen,
-            _("game.title"),
+            tr("game.title"),
             32,
             LIGHT_GRAY,
             (width // 2, 40),
@@ -127,7 +127,7 @@ def title_screen(
                 if option["type"] == "stage":
                     label = option["stage"].name
                     if not option.get("available"):
-                        locked_suffix = _("menu.locked_suffix")
+                        locked_suffix = tr("menu.locked_suffix")
                         label += f" {locked_suffix}"
                     color = (
                         YELLOW
@@ -135,10 +135,10 @@ def title_screen(
                         else (WHITE if option.get("available") else GRAY)
                     )
                 elif option["type"] == "settings":
-                    label = _("menu.settings")
+                    label = tr("menu.settings")
                     color = YELLOW if idx == selected else WHITE
                 else:
-                    label = _("menu.quit")
+                    label = tr("menu.quit")
                     color = YELLOW if idx == selected else WHITE
 
                 text_surface = font.render(label, False, color)
@@ -161,20 +161,20 @@ def title_screen(
 
             seed_font = load_font(font_settings.resource, font_settings.scaled_size(12))
             seed_value_display = (
-                current_seed_text if current_seed_text else _("menu.seed_empty")
+                current_seed_text if current_seed_text else tr("menu.seed_empty")
             )
-            seed_label = _("status.seed", value=seed_value_display)
+            seed_label = tr("status.seed", value=seed_value_display)
             seed_surface = seed_font.render(seed_label, False, LIGHT_GRAY)
             seed_rect = seed_surface.get_rect(right=width - 14, bottom=height - 12)
             screen.blit(seed_surface, seed_rect)
 
             hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            hint_text = _("menu.window_hint")
+            hint_text = tr("menu.window_hint")
             hint_surface = hint_font.render(hint_text, False, LIGHT_GRAY)
             hint_rect = hint_surface.get_rect(center=(width // 2, height - 60))
             screen.blit(hint_surface, hint_rect)
 
-            seed_hint = _("menu.seed_hint")
+            seed_hint = tr("menu.seed_hint")
             seed_hint_surface = hint_font.render(seed_hint, False, GRAY)
             seed_hint_rect = seed_hint_surface.get_rect(left=14, bottom=height - 12)
             screen.blit(seed_hint_surface, seed_hint_rect)

@@ -45,7 +45,7 @@
       },
       "stage5": {
         "name": "#5 Survive Until Dawn",
-        "description": "No fuel—endure 30 minutes, then walk out when dawn arrives."
+        "description": "No fuel—endure 20 minutes, then walk out when dawn arrives."
       }
     },
     "status": {
@@ -54,15 +54,16 @@
       "fast": "FastZ",
       "car_hint": "CarHint",
       "steel": "Steel",
-      "seed": "Seed %{value}"
+      "seed": "Seed %{value}",
+      "debug": "Debug"
     },
     "hud": {
       "need_fuel": "Need fuel to drive!",
       "paused": "PAUSED",
       "resume_hint": "Press P or click to resume",
       "survival_timer_label": "Until dawn %{time}",
-      "time_accel": ">> 5x",
-      "time_accel_hint": "Hold Shift for 5x"
+      "time_accel": ">> 4x",
+      "time_accel_hint": "Hold Shift: 4x"
     },
     "survivors": {
       "too_many_aboard": "Too many aboard!"

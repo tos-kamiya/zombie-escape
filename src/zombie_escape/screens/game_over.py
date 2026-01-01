@@ -7,9 +7,14 @@ from pygame import surface, time
 
 from ..colors import BLACK, GREEN, LIGHT_GRAY, RED, WHITE
 from ..font_utils import load_font
-from ..localization import get_font_settings, translate as _
+from ..localization import translate as tr
 from ..models import GameData, Stage
-from ..render import RenderAssets, draw_level_overview, show_message
+from ..render import (
+    RenderAssets,
+    draw_level_overview,
+    draw_status_bar,
+    show_message,
+)
 from ..screens import ScreenID, ScreenTransition, present
 from ..constants import SURVIVAL_FAKE_CLOCK_RATIO
 
@@ -84,7 +89,7 @@ def game_over_screen(
             if state.game_won:
                 show_message(
                     screen,
-                    _("game_over.win"),
+                    tr("game_over.win"),
                     22,
                     GREEN,
                     (screen_width // 2, screen_height // 2 - 26),
@@ -92,7 +97,7 @@ def game_over_screen(
             else:
                 show_message(
                     screen,
-                    _("game_over.lose"),
+                    tr("game_over.lose"),
                     22,
                     RED,
                     (screen_width // 2, screen_height // 2 - 26),
@@ -107,7 +112,7 @@ def game_over_screen(
                     )
             summary_y = screen_height // 2 + 70
             if stage and stage.survivor_stage:
-                msg = _("game_over.survivors_summary", count=state.survivors_rescued)
+                msg = tr("game_over.survivors_summary", count=state.survivors_rescued)
                 show_message(
                     screen,
                     msg,
@@ -124,7 +129,7 @@ def game_over_screen(
                 hours = display_ms // 3_600_000
                 minutes = (display_ms % 3_600_000) // 60_000
                 time_label = f"{int(hours):02d}:{int(minutes):02d}"
-                msg = _("game_over.survival_duration", time=time_label)
+                msg = tr("game_over.survival_duration", time=time_label)
                 show_message(
                     screen,
                     msg,
@@ -135,24 +140,19 @@ def game_over_screen(
 
         show_message(
             screen,
-            _("game_over.prompt"),
+            tr("game_over.prompt"),
             18,
             WHITE,
             (screen_width // 2, screen_height // 2 + 24),
         )
-
-        if state.seed is not None:
-            try:
-                font_settings = get_font_settings()
-                font = load_font(font_settings.resource, font_settings.scaled_size(11))
-                seed_text = _("status.seed", value=str(state.seed))
-                seed_surface = font.render(seed_text, False, LIGHT_GRAY)
-                seed_rect = seed_surface.get_rect(
-                    right=screen_width - 14, bottom=screen_height - 12
-                )
-                screen.blit(seed_surface, seed_rect)
-            except pygame.error as exc:
-                print(f"Error rendering game-over seed text: {exc}")
+        draw_status_bar(
+            screen,
+            render_assets,
+            config,
+            stage=stage,
+            seed=state.seed,
+            debug_mode=bool(getattr(state, "debug_mode", False)),
+        )
 
         present(screen)
         clock.tick(fps)

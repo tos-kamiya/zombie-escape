@@ -16,7 +16,7 @@ from ..localization import (
     get_language_name,
     language_options,
     set_language,
-    translate as _,
+    translate as tr,
 )
 from ..render import show_message
 from ..screens import nudge_window_scale, present
@@ -88,11 +88,11 @@ def settings_screen(
     def build_sections() -> list[dict]:
         return [
             {
-                "label": _("settings.sections.localization"),
+                "label": tr("settings.sections.localization"),
                 "rows": [
                     {
                         "type": "choice",
-                        "label": _("settings.rows.language"),
+                        "label": tr("settings.rows.language"),
                         "path": ("language",),
                         "choices": language_codes,
                         "get_display": get_language_name,
@@ -101,40 +101,40 @@ def settings_screen(
                 ],
             },
             {
-                "label": _("settings.sections.player_support"),
+                "label": tr("settings.sections.player_support"),
                 "rows": [
                     {
-                        "label": _("settings.rows.footprints"),
+                        "label": tr("settings.rows.footprints"),
                         "path": ("footprints", "enabled"),
                         "easy_value": True,
-                        "left_label": _("common.on"),
-                        "right_label": _("common.off"),
+                        "left_label": tr("common.on"),
+                        "right_label": tr("common.off"),
                     },
                     {
-                        "label": _("settings.rows.car_hint"),
+                        "label": tr("settings.rows.car_hint"),
                         "path": ("car_hint", "enabled"),
                         "easy_value": True,
-                        "left_label": _("common.on"),
-                        "right_label": _("common.off"),
+                        "left_label": tr("common.on"),
+                        "right_label": tr("common.off"),
                     },
                 ],
             },
             {
-                "label": _("settings.sections.tougher_enemies"),
+                "label": tr("settings.sections.tougher_enemies"),
                 "rows": [
                     {
-                        "label": _("settings.rows.fast_zombies"),
+                        "label": tr("settings.rows.fast_zombies"),
                         "path": ("fast_zombies", "enabled"),
                         "easy_value": False,
-                        "left_label": _("common.off"),
-                        "right_label": _("common.on"),
+                        "left_label": tr("common.off"),
+                        "right_label": tr("common.on"),
                     },
                     {
-                        "label": _("settings.rows.steel_beams"),
+                        "label": tr("settings.rows.steel_beams"),
                         "path": ("steel_beams", "enabled"),
                         "easy_value": False,
-                        "left_label": _("common.off"),
-                        "right_label": _("common.on"),
+                        "left_label": tr("common.off"),
+                        "right_label": tr("common.on"),
                     },
                 ],
             },
@@ -203,7 +203,7 @@ def settings_screen(
         screen.fill(BLACK)
         show_message(
             screen,
-            _("settings.title"),
+            tr("settings.title"),
             26,
             LIGHT_GRAY,
             (screen_width // 2, 20),
@@ -329,11 +329,11 @@ def settings_screen(
             hint_start_x = screen_width // 2 + 16
             hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             hint_lines = [
-                _("settings.hints.navigate"),
-                _("settings.hints.adjust"),
-                _("settings.hints.toggle"),
-                _("settings.hints.reset"),
-                _("settings.hints.exit"),
+                tr("settings.hints.navigate"),
+                tr("settings.hints.adjust"),
+                tr("settings.hints.toggle"),
+                tr("settings.hints.reset"),
+                tr("settings.hints.exit"),
             ]
             for i, line in enumerate(hint_lines):
                 hint_surface = hint_font.render(line, False, WHITE)
@@ -343,7 +343,7 @@ def settings_screen(
                 screen.blit(hint_surface, hint_rect)
 
             path_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            path_text = _("settings.config_path", path=str(config_path))
+            path_text = tr("settings.config_path", path=str(config_path))
             path_surface = path_font.render(path_text, False, LIGHT_GRAY)
             path_rect = path_surface.get_rect(
                 midtop=(screen_width // 2, screen_height - 32)

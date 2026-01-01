@@ -24,7 +24,7 @@ from .colors import (
     get_environment_palette,
 )
 from .font_utils import load_font
-from .localization import get_font_settings, translate as _
+from .localization import get_font_settings, translate as tr
 from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player, Survivor
 from .models import GameData, Stage
 from .render_assets import RenderAssets
@@ -367,13 +367,14 @@ def _draw_hint_arrow(
     pygame.draw.polygon(screen, color, [tip, left, right])
 
 
-def _draw_status_bar(
+def draw_status_bar(
     screen: surface.Surface,
     assets: RenderAssets,
     config: dict[str, Any],
     *,
     stage: Stage | None = None,
     seed: int | None = None,
+    debug_mode: bool = False,
 ) -> None:
     """Render a compact status bar with current config flags and stage info."""
     bar_rect = pygame.Rect(
@@ -396,15 +397,17 @@ def _draw_status_bar(
     else:
         stage_label = "#1"
 
-    parts = [_("status.stage", label=stage_label)]
+    parts = [tr("status.stage", label=stage_label)]
     if footprints_on:
-        parts.append(_("status.footprints"))
+        parts.append(tr("status.footprints"))
     if fast_on:
-        parts.append(_("status.fast"))
+        parts.append(tr("status.fast"))
     if hint_on:
-        parts.append(_("status.car_hint"))
+        parts.append(tr("status.car_hint"))
     if steel_on:
-        parts.append(_("status.steel"))
+        parts.append(tr("status.steel"))
+    if debug_mode:
+        parts.append(tr("status.debug"))
 
     status_text = " | ".join(parts)
     color = GREEN if all([footprints_on, fast_on, hint_on]) else LIGHT_GRAY
@@ -416,7 +419,7 @@ def _draw_status_bar(
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)
         if seed is not None:
-            seed_text = _("status.seed", value=str(seed))
+            seed_text = tr("status.seed", value=str(seed))
             seed_surface = font.render(seed_text, False, LIGHT_GRAY)
             seed_rect = seed_surface.get_rect(
                 right=bar_rect.right - 12, centery=bar_rect.centery
@@ -606,7 +609,7 @@ def draw(
     if not has_fuel and fuel_message_until > elapsed_play_ms:
         show_message(
             screen,
-            _("hud.need_fuel"),
+            tr("hud.need_fuel"),
             18,
             ORANGE,
             (assets.screen_width // 2, assets.screen_height // 2),
@@ -663,7 +666,7 @@ def draw(
         display_hours = display_ms // 3_600_000
         display_minutes = (display_ms % 3_600_000) // 60_000
         display_label = f"{int(display_hours):02d}:{int(display_minutes):02d}"
-        timer_text = _("hud.survival_timer_label", time=display_label)
+        timer_text = tr("hud.survival_timer_label", time=display_label)
         try:
             font_settings = get_font_settings()
             font = load_font(font_settings.resource, font_settings.scaled_size(12))
@@ -671,14 +674,14 @@ def draw(
             text_rect = text_surface.get_rect(left=bar_rect.left, bottom=bar_rect.top - 2)
             screen.blit(text_surface, text_rect)
             if state.time_accel_active:
-                accel_text = _("hud.time_accel")
+                accel_text = tr("hud.time_accel")
                 accel_surface = font.render(accel_text, False, YELLOW)
                 accel_rect = accel_surface.get_rect(
                     right=bar_rect.right, bottom=bar_rect.top - 2
                 )
                 screen.blit(accel_surface, accel_rect)
             else:
-                hint_text = _("hud.time_accel_hint")
+                hint_text = tr("hud.time_accel_hint")
                 hint_surface = font.render(hint_text, False, LIGHT_GRAY)
                 hint_rect = hint_surface.get_rect(
                     right=bar_rect.right, bottom=bar_rect.top - 2
@@ -687,32 +690,54 @@ def draw(
         except pygame.error as e:
             print(f"Error rendering survival timer: {e}")
 
+    def _render_time_accel_indicator() -> None:
+        if stage and getattr(stage, "survival_stage", False):
+            return
+        try:
+            font_settings = get_font_settings()
+            font = load_font(font_settings.resource, font_settings.scaled_size(12))
+            if state.time_accel_active:
+                text = tr("hud.time_accel")
+                color = YELLOW
+            else:
+                text = tr("hud.time_accel_hint")
+                color = LIGHT_GRAY
+            text_surface = font.render(text, False, color)
+            bottom_margin = assets.status_bar_height + 6
+            text_rect = text_surface.get_rect(
+                right=assets.screen_width - 12,
+                bottom=assets.screen_height - bottom_margin,
+            )
+            screen.blit(text_surface, text_rect)
+        except pygame.error as e:
+            print(f"Error rendering acceleration indicator: {e}")
+
     objective_lines: list[str] = []
     if stage and getattr(stage, "survival_stage", False):
         if state.dawn_ready:
-            objective_lines.append(_("objectives.get_outside"))
+            objective_lines.append(tr("objectives.get_outside"))
         else:
-            objective_lines.append(_("objectives.survive_until_dawn"))
+            objective_lines.append(tr("objectives.survive_until_dawn"))
     elif stage and stage.requires_fuel and not has_fuel:
-        objective_lines.append(_("objectives.find_fuel"))
+        objective_lines.append(tr("objectives.find_fuel"))
     elif stage and getattr(stage, "survivor_stage", False):
         if not player.in_car:
-            objective_lines.append(_("objectives.find_car"))
+            objective_lines.append(tr("objectives.find_car"))
         else:
-            objective_lines.append(_("objectives.escape_with_survivors"))
+            objective_lines.append(tr("objectives.escape_with_survivors"))
     elif not player.in_car:
-        objective_lines.append(_("objectives.find_car"))
+        objective_lines.append(tr("objectives.find_car"))
     else:
-        objective_lines.append(_("objectives.escape"))
+        objective_lines.append(tr("objectives.escape"))
 
     if stage and getattr(stage, "requires_companion", False):
         if not companion_rescued:
             buddy_following = companion and getattr(companion, "following", False)
             if player.in_car:
                 # Cannot escape until the buddy is picked up; suppress the redundant find prompt.
-                objective_lines[-1] = _("objectives.pickup_buddy")
+                objective_lines[-1] = tr("objectives.pickup_buddy")
             elif not buddy_following:
-                objective_lines.append(_("objectives.find_buddy"))
+                objective_lines.append(tr("objectives.find_buddy"))
 
     if (
         stage
@@ -721,7 +746,7 @@ def draw(
     ):
         limit = getattr(state, "survivor_capacity", SURVIVOR_MAX_SAFE_PASSENGERS)
         objective_lines.append(
-            _("objectives.survivors_onboard", count=survivors_onboard, limit=limit)
+            tr("objectives.survivors_onboard", count=survivors_onboard, limit=limit)
         )
 
     if objective_lines:
@@ -742,8 +767,18 @@ def draw(
                 screen.blit(msg_surface, msg_rect)
         except pygame.error as e:
             print(f"Error rendering survivor message: {e}")
-    _render_survival_timer()
-    _draw_status_bar(screen, assets, config, stage=stage, seed=state.seed)
+    if stage and getattr(stage, "survival_stage", False):
+        _render_survival_timer()
+    else:
+        _render_time_accel_indicator()
+    draw_status_bar(
+        screen,
+        assets,
+        config,
+        stage=stage,
+        seed=state.seed,
+        debug_mode=bool(getattr(state, "debug_mode", False)),
+    )
     if do_flip:
         if present_fn:
             present_fn(screen)

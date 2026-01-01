@@ -24,7 +24,7 @@ from ..constants import (
     WINDOW_SCALE_MAX,
     WINDOW_SCALE_MIN,
 )
-from ..localization import translate as _
+from ..localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from ..models import GameData, Stage
@@ -92,7 +92,7 @@ def apply_window_scale(
 
     new_window = pygame.display.set_mode((window_width, window_height))
     pygame.display.set_caption(
-        f"{_('game.title')} v{__version__} ({window_width}x{window_height})"
+        f"{tr('game.title')} v{__version__} ({window_width}x{window_height})"
     )
 
     if game_data is not None:

@@ -5,7 +5,7 @@
       survival_goal_ms (real countdown), interior/exterior spawn weights,
       fuel_spawn_count.
     - Stage 5 entry: requires_fuel=True, survival_stage=True, survival_goal_ms
-      = 1_800_000 (30 min), spawn weights tuned so interior share rises while
+      = 1_200_000 (20 min), spawn weights tuned so interior share rises while
       total spawn rate matches other stages, fuel_spawn_count = 0.
 - State & initialization
     - ProgressState adds survival_elapsed_ms, survival_goal_ms, dawn_ready,
@@ -20,7 +20,7 @@
       driving without extra flags.
 - Time acceleration
     - Gameplay loop checks the acceleration key (e.g., Shift) and uses
-      substeps (step_count = accel ? 5 : 1) with clamped sub_dt (≤ 1/30 s).
+      substeps (step_count = accel ? 4 : 1) with clamped sub_dt (≤ 1/30 s).
     - Each substep increments state.elapsed_play_ms; state.time_accel_active
       drives the HUD icon.
 - Survival countdown & win flow
@@ -41,8 +41,8 @@
     - Objective text: “Survive until dawn” before dawn_ready, “Get outside”
       afterward.
     - Timer bar at the bottom: compute display_remaining_ms = remaining_ms *
-      (4 hours / 30 minutes) on the fly (no stored display_duration_ms),
-      render HH:MM plus progress bar, show >> 5x when time_accel_active.
+      (4 hours / 20 minutes) on the fly (no stored display_duration_ms),
+      render HH:MM plus progress bar, show >> 4x when time_accel_active.
     - Show “Dawn has come. Get outside.” until the player exits once
       dawn_ready is true.
 - Localization & docs

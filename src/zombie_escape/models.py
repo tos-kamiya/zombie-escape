@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import sprite, surface
 
-from .localization import translate as _
+from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from .entities import Camera, Car, Companion, FuelCan, Flashlight, Player
@@ -57,6 +57,7 @@ class ProgressState:
     time_accel_active: bool
     last_zombie_spawn_time: int
     dawn_carbonized: bool
+    debug_mode: bool
 
 
 @dataclass
@@ -106,11 +107,11 @@ class Stage:
 
     @property
     def name(self) -> str:
-        return _(self.name_key)
+        return tr(self.name_key)
 
     @property
     def description(self) -> str:
-        return _(self.description_key)
+        return tr(self.description_key)
 
 
 STAGES: list[Stage] = [
@@ -152,7 +153,7 @@ STAGES: list[Stage] = [
         available=True,
         requires_fuel=True,
         survival_stage=True,
-        survival_goal_ms=1_800_000,
+        survival_goal_ms=1_200_000,
         fuel_spawn_count=0,
         spawn_interval_ms=5000,
         exterior_spawn_weight=0.55,

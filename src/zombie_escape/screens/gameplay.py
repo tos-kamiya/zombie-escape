@@ -14,7 +14,7 @@ from ..constants import (
     SURVIVAL_TIME_ACCEL_MAX_SUBSTEP,
 )
 from ..gameplay import logic
-from ..localization import translate as _
+from ..localization import translate as tr
 from ..models import Stage
 from ..render import draw, prewarm_fog_overlays, show_message
 from ..rng import generate_seed, seed_rng
@@ -46,6 +46,7 @@ def gameplay_screen(
 
     game_data = logic.initialize_game_state(config, stage)
     game_data.state.seed = applied_seed
+    game_data.state.debug_mode = debug_mode
     if debug_mode and stage.survival_stage:
         goal_ms = max(0, stage.survival_goal_ms)
         if goal_ms > 0:
@@ -210,14 +211,14 @@ def gameplay_screen(
                 screen.blit(overlay, (0, 0))
                 show_message(
                     screen,
-                    _("hud.paused"),
+                    tr("hud.paused"),
                     18,
                     WHITE,
                     (screen_width // 2, screen_height // 2 + 24),
                 )
                 show_message(
                     screen,
-                    _("hud.resume_hint"),
+                    tr("hud.resume_hint"),
                     18,
                     LIGHT_GRAY,
                     (screen_width // 2, screen_height // 2 + 70),
@@ -226,7 +227,7 @@ def gameplay_screen(
             continue
 
         keys = pygame.key.get_pressed()
-        accel_allowed = stage.survival_stage and not (
+        accel_allowed = not (
             game_data.state.game_over or game_data.state.game_won
         )
         accel_active = accel_allowed and (
