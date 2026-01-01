@@ -33,7 +33,7 @@ from .gameplay.logic import calculate_car_speed_for_passengers
 
 def _parse_cli_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--hide-pause-overlay", action="store_true")
+    parser.add_argument("--debug", action="store_true", help="Enable debugging aids for Stage 5 and hide pause overlay")
     parser.add_argument("--seed")
     return parser.parse_known_args(argv)
 
@@ -75,7 +75,7 @@ def main() -> None:
     screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)).convert_alpha()
     clock = pygame.time.Clock()
 
-    hide_pause_overlay = bool(args.hide_pause_overlay)
+    debug_mode = bool(args.debug)
     cli_seed_text, cli_seed_is_auto = _sanitize_seed_text(args.seed)
     title_seed_text, title_seed_is_auto = cli_seed_text, cli_seed_is_auto
 
@@ -137,9 +137,10 @@ def main() -> None:
                         config,
                         FPS,
                         stage,
-                        show_pause_overlay=not hide_pause_overlay,
+                        show_pause_overlay=not debug_mode,
                         seed=seed_value,
                         render_assets=RENDER_ASSETS,
+                        debug_mode=debug_mode,
                     )
                 except SystemExit:
                     running = False

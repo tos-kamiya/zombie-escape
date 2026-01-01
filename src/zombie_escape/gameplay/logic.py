@@ -1180,7 +1180,7 @@ def update_survival_timer(game_data: GameData, dt_ms: int) -> None:
     if not state.dawn_ready and state.survival_elapsed_ms >= state.survival_goal_ms:
         state.dawn_ready = True
         state.dawn_prompt_at = pygame.time.get_ticks()
-    if state.dawn_ready and not state.dawn_carbonized:
+    if state.dawn_ready:
         carbonize_outdoor_zombies(game_data)
         state.dawn_carbonized = True
 
@@ -1271,8 +1271,10 @@ def update_entities(
     # Spawn new zombies if needed
     current_time = pygame.time.get_ticks()
     spawn_interval = max(1, getattr(stage, "spawn_interval_ms", ZOMBIE_SPAWN_DELAY_MS))
+    spawn_blocked = stage.survival_stage and game_data.state.dawn_ready
     if (
         len(zombie_group) < MAX_ZOMBIES
+        and not spawn_blocked
         and current_time - game_data.state.last_zombie_spawn_time > spawn_interval
     ):
         if spawn_weighted_zombie(game_data, config):

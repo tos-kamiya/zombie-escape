@@ -34,6 +34,7 @@ def gameplay_screen(
     show_pause_overlay: bool,
     seed: int | None,
     render_assets: "RenderAssets",
+    debug_mode: bool = False,
 ) -> ScreenTransition:
     """Main gameplay loop that returns the next screen transition."""
 
@@ -45,6 +46,14 @@ def gameplay_screen(
 
     game_data = logic.initialize_game_state(config, stage)
     game_data.state.seed = applied_seed
+    if debug_mode and stage.survival_stage:
+        goal_ms = max(0, stage.survival_goal_ms)
+        if goal_ms > 0:
+            remaining = 3 * 60 * 1000  # 3 minutes in ms
+            game_data.state.survival_elapsed_ms = max(0, goal_ms - remaining)
+            game_data.state.dawn_ready = False
+            game_data.state.dawn_prompt_at = None
+            game_data.state.dawn_carbonized = False
     prewarm_fog_overlays(
         game_data.fog,
         render_assets,

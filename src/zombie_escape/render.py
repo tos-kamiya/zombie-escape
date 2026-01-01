@@ -612,24 +612,6 @@ def draw(
             (assets.screen_width // 2, assets.screen_height // 2),
         )
 
-    if (
-        stage
-        and getattr(stage, "survival_stage", False)
-        and state.dawn_ready
-        and not state.game_won
-    ):
-        prompt_at = state.dawn_prompt_at or pygame.time.get_ticks()
-        prompt_age = max(0, pygame.time.get_ticks() - prompt_at)
-        blink = (prompt_age // 600) % 2 == 0
-        prompt_color = ORANGE if blink else YELLOW
-        show_message(
-            screen,
-            _("hud.dawn_prompt"),
-            18,
-            prompt_color,
-            (assets.screen_width // 2, assets.screen_height // 2 - 60),
-        )
-
     def _render_objective(lines: list[str]) -> None:
         try:
             font_settings = get_font_settings()
@@ -666,13 +648,16 @@ def draw(
         progress_ratio = elapsed_ms / goal_ms if goal_ms else 0.0
         progress_width = int(bar_rect.width * max(0.0, min(1.0, progress_ratio)))
         if progress_width > 0:
+            fill_color = (120, 20, 20)
+            if getattr(state, "dawn_ready", False):
+                fill_color = (25, 40, 120)
             fill_rect = pygame.Rect(
                 bar_rect.left,
                 bar_rect.top,
                 progress_width,
                 bar_rect.height,
             )
-            pygame.draw.rect(screen, (120, 20, 20), fill_rect)
+            pygame.draw.rect(screen, fill_color, fill_rect)
         display_ms = int(remaining_ms * SURVIVAL_FAKE_CLOCK_RATIO)
         display_ms = max(0, display_ms)
         display_hours = display_ms // 3_600_000

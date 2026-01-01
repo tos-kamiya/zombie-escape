@@ -113,6 +113,10 @@ Launch using the following command line:
 zombie-escape
 ```
 
+### Debug Mode
+
+For Stage 5 balancing or capture needs, run `zombie-escape --debug`. This hides the pause overlay and starts survival stages with 3 minutes remaining so you can immediately test late-night behavior.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.

@@ -59,7 +59,7 @@ def test_load_config_falls_back_to_defaults_on_invalid_json(
 
 def test_save_config_persists_to_disk(tmp_path: Path) -> None:
     config_path = tmp_path / "config.json"
-    payload = {"debug": {"hide_pause_overlay": True}}
+    payload = {"custom": {"value": 42}}
 
     config.save_config(payload, config_path)
 
