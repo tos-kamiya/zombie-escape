@@ -40,6 +40,7 @@ def title_screen(
     options: list[dict] = [
         {"type": "stage", "stage": stage, "available": stage.available}
         for stage in stages
+        if stage.available
     ]
     options += [{"type": "settings"}, {"type": "quit"}]
 
