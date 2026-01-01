@@ -8,6 +8,7 @@ import math
 import pygame
 
 from ..colors import (
+    DAWN_AMBIENT_PALETTE_KEY,
     ambient_palette_key_for_flashlights,
     get_environment_palette,
 )
@@ -1181,6 +1182,7 @@ def update_survival_timer(game_data: GameData, dt_ms: int) -> None:
     if not state.dawn_ready and state.survival_elapsed_ms >= state.survival_goal_ms:
         state.dawn_ready = True
         state.dawn_prompt_at = pygame.time.get_ticks()
+        set_ambient_palette(game_data, DAWN_AMBIENT_PALETTE_KEY, force=True)
     if state.dawn_ready:
         carbonize_outdoor_zombies(game_data)
         state.dawn_carbonized = True
@@ -1659,7 +1661,11 @@ def sync_ambient_palette_with_flashlights(
 ) -> None:
     """Sync the ambient palette with the player's flashlight inventory."""
 
-    key = ambient_palette_key_for_flashlights(game_data.state.flashlight_count)
+    state = game_data.state
+    if state.dawn_ready:
+        set_ambient_palette(game_data, DAWN_AMBIENT_PALETTE_KEY, force=force)
+        return
+    key = ambient_palette_key_for_flashlights(state.flashlight_count)
     set_ambient_palette(game_data, key, force=force)
 
 

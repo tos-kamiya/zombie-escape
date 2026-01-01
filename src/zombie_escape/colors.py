@@ -49,6 +49,7 @@ def _adjust_color(
 
 DEFAULT_AMBIENT_PALETTE_KEY = "default"
 NO_FLASHLIGHT_PALETTE_KEY = "no_flashlight"
+DAWN_AMBIENT_PALETTE_KEY = "dawn"
 
 # Base palette used throughout gameplay (matches the previous constants).
 _DEFAULT_ENVIRONMENT_PALETTE = EnvironmentPalette(
@@ -86,9 +87,20 @@ _GLOOM_ENVIRONMENT_PALETTE = EnvironmentPalette(
     ),
 )
 
+_DAWN_ENVIRONMENT_PALETTE = EnvironmentPalette(
+    floor_primary=(58, 70, 84),
+    floor_secondary=(66, 78, 92),
+    outside=(118, 140, 104),
+    inner_wall=(125, 101, 78),
+    inner_wall_border=(136, 110, 85),
+    outer_wall=(136, 135, 128),
+    outer_wall_border=(147, 146, 138),
+)
+
 ENVIRONMENT_PALETTES: dict[str, EnvironmentPalette] = {
     DEFAULT_AMBIENT_PALETTE_KEY: _DEFAULT_ENVIRONMENT_PALETTE,
     NO_FLASHLIGHT_PALETTE_KEY: _GLOOM_ENVIRONMENT_PALETTE,
+    DAWN_AMBIENT_PALETTE_KEY: _DAWN_ENVIRONMENT_PALETTE,
 }
 
 
@@ -111,7 +123,6 @@ def ambient_palette_key_for_flashlights(count: int) -> str:
 
 
 # World colors (default palette versions preserved for backwards compatibility).
-FOG_COLOR: tuple[int, int, int, int] = (0, 0, 0, 255)
 INTERNAL_WALL_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.inner_wall
 INTERNAL_WALL_BORDER_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border
 OUTER_WALL_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outer_wall
@@ -135,7 +146,7 @@ __all__ = [
     "YELLOW",
     "ORANGE",
     "DARK_RED",
-    "FOG_COLOR",
+    "DAWN_AMBIENT_PALETTE_KEY",
     "INTERNAL_WALL_COLOR",
     "INTERNAL_WALL_BORDER_COLOR",
     "OUTER_WALL_COLOR",

@@ -3,6 +3,8 @@ from __future__ import annotations
 import math
 from typing import Any, Callable
 
+from enum import Enum
+
 import pygame
 from pygame import sprite, surface
 
@@ -14,7 +16,6 @@ except Exception:  # pragma: no cover - fallback path without numpy
 from .colors import (
     BLACK,
     BLUE,
-    FOG_COLOR,
     FOOTPRINT_COLOR,
     GREEN,
     INTERNAL_WALL_COLOR,
@@ -160,6 +161,30 @@ def _max_flashlight_pickups() -> int:
     return max(1, DEFAULT_FLASHLIGHT_SPAWN_COUNT)
 
 
+class FogProfile(Enum):
+    DARK0 = (0, (0, 0, 0, 255))
+    DARK1 = (1, (0, 0, 0, 255))
+    DARK2 = (2, (0, 0, 0, 255))
+    DAWN = (2, (50, 50, 50, 230))
+
+    def __init__(self, flashlight_count: int, color: tuple[int, int, int, int]) -> None:
+        self.flashlight_count = flashlight_count
+        self.color = color
+
+    def scale(self, assets: RenderAssets, stage: Stage | None) -> float:
+        count = max(0, min(self.flashlight_count, _max_flashlight_pickups()))
+        return get_fog_scale(assets, stage, count)
+
+    @staticmethod
+    def from_flashlight_count(count: int) -> "FogProfile":
+        safe_count = max(0, count)
+        if safe_count >= 2:
+            return FogProfile.DARK2
+        if safe_count == 1:
+            return FogProfile.DARK1
+        return FogProfile.DARK0
+
+
 def prewarm_fog_overlays(
     fog_data: dict[str, Any],
     assets: RenderAssets,
@@ -168,25 +193,26 @@ def prewarm_fog_overlays(
 ) -> None:
     """Populate fog overlay cache for each reachable flashlight count."""
 
-    max_flashlights = _max_flashlight_pickups()
-    counts = range(0, max_flashlights + 1)
-
-    for flashlight_count in counts:
-        scale = get_fog_scale(
+    for profile in FogProfile:
+        _get_fog_overlay_surfaces(
+            fog_data,
             assets,
-            stage,
-            flashlight_count,
+            profile,
+            stage=stage,
         )
-        _get_fog_overlay_surfaces(fog_data, assets, scale)
 
 
 def get_hatch_pattern(
-    fog_data: dict[str, Any], thickness: int, *, pixel_scale: int = 1
+    fog_data: dict[str, Any],
+    thickness: int,
+    *,
+    pixel_scale: int = 1,
+    color: tuple[int, int, int, int] | None = None,
 ) -> surface.Surface:
     """Return cached ordered-dither tile surface (Bayer-style, optionally chunky)."""
     cache = fog_data.setdefault("hatch_patterns", {})
     pixel_scale = max(1, pixel_scale)
-    key = (thickness, pixel_scale)
+    key = (thickness, pixel_scale, color)
     if key in cache:
         return cache[key]
 
@@ -209,7 +235,7 @@ def get_hatch_pattern(
     for y in range(spacing):
         for x in range(spacing):
             if bayer[y % 8][x % 8] < threshold:
-                pattern.set_at((x, y), (0, 0, 0, 255))
+                pattern.set_at((x, y), color or (0, 0, 0, 255))
 
     if pixel_scale > 1:
         scaled_size = (spacing * pixel_scale, spacing * pixel_scale)
@@ -222,13 +248,16 @@ def get_hatch_pattern(
 def _get_fog_overlay_surfaces(
     fog_data: dict[str, Any],
     assets: RenderAssets,
-    scale: float,
+    profile: FogProfile,
+    *,
+    stage: Stage | None = None,
 ) -> dict[str, Any]:
     overlays = fog_data.setdefault("overlays", {})
-    key = round(scale, 4)
+    key = profile
     if key in overlays:
         return overlays[key]
 
+    scale = profile.scale(assets, stage)
     max_radius = int(assets.fov_radius * scale)
     padding = 32
     coverage_width = max(assets.screen_width * 2, max_radius * 2)
@@ -238,14 +267,18 @@ def _get_fog_overlay_surfaces(
     center = (width // 2, height // 2)
 
     hard_surface = pygame.Surface((width, height), pygame.SRCALPHA)
-    hard_surface.fill(FOG_COLOR)
+    base_color = profile.color
+    hard_surface.fill(base_color)
     pygame.draw.circle(hard_surface, (0, 0, 0, 0), center, max_radius)
 
     ring_surfaces: list[surface.Surface] = []
     for ring in assets.fog_rings:
         ring_surface = pygame.Surface((width, height), pygame.SRCALPHA)
         pattern = get_hatch_pattern(
-            fog_data, ring.thickness, pixel_scale=assets.fog_hatch_pixel_scale
+            fog_data,
+            ring.thickness,
+            pixel_scale=assets.fog_hatch_pixel_scale,
+            color=base_color,
         )
         p_w, p_h = pattern.get_size()
         for y in range(0, height, p_h):
@@ -594,12 +627,16 @@ def draw(
         if vertical_span <= 0 or (cam_rect.y != 0 and cam_rect.y != -vertical_span):
             fov_center_on_screen[1] = assets.screen_height // 2
         fov_center_tuple = (int(fov_center_on_screen[0]), int(fov_center_on_screen[1]))
-        fog_scale = get_fog_scale(
+        if state.dawn_ready:
+            profile = FogProfile.DAWN
+        else:
+            profile = FogProfile.from_flashlight_count(flashlight_count)
+        overlay = _get_fog_overlay_surfaces(
+            fog_surfaces,
             assets,
-            stage,
-            flashlight_count,
+            profile,
+            stage=stage,
         )
-        overlay = _get_fog_overlay_surfaces(fog_surfaces, assets, fog_scale)
         combined_surface: surface.Surface = overlay["combined"]
         screen.blit(
             combined_surface,
