@@ -35,7 +35,6 @@ class ProgressState:
     overview_surface: surface.Surface | None
     scaled_overview: surface.Surface | None
     overview_created: bool
-    last_zombie_spawn_time: int
     footprints: list
     last_footprint_pos: tuple | None
     elapsed_play_ms: int
@@ -51,6 +50,13 @@ class ProgressState:
     survivor_messages: list
     survivor_capacity: int
     seed: int | None
+    survival_elapsed_ms: int
+    survival_goal_ms: int
+    dawn_ready: bool
+    dawn_prompt_at: int | None
+    time_accel_active: bool
+    last_zombie_spawn_time: int
+    dawn_carbonized: bool
 
 
 @dataclass
@@ -91,6 +97,12 @@ class Stage:
     requires_fuel: bool = False
     requires_companion: bool = False
     survivor_stage: bool = False
+    survival_stage: bool = False
+    survival_goal_ms: int = 0
+    fuel_spawn_count: int = 1
+    spawn_interval_ms: int = 5000
+    exterior_spawn_weight: float = 1.0
+    interior_spawn_weight: float = 0.0
 
     @property
     def name(self) -> str:
@@ -129,6 +141,22 @@ STAGES: list[Stage] = [
         description_key="stages.stage4.description",
         available=True,
         survivor_stage=True,
+        spawn_interval_ms=5000,
+        exterior_spawn_weight=1.0,
+        interior_spawn_weight=0.0,
+    ),
+    Stage(
+        id="stage5",
+        name_key="stages.stage5.name",
+        description_key="stages.stage5.description",
+        available=True,
+        requires_fuel=True,
+        survival_stage=True,
+        survival_goal_ms=1_800_000,
+        fuel_spawn_count=0,
+        spawn_interval_ms=5000,
+        exterior_spawn_weight=0.55,
+        interior_spawn_weight=0.45,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

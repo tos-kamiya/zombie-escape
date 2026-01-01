@@ -28,7 +28,11 @@ from .localization import get_font_settings, translate as _
 from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player, Survivor
 from .models import GameData, Stage
 from .render_assets import RenderAssets
-from .constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT, SURVIVOR_MAX_SAFE_PASSENGERS
+from .constants import (
+    DEFAULT_FLASHLIGHT_SPAWN_COUNT,
+    SURVIVOR_MAX_SAFE_PASSENGERS,
+    SURVIVAL_FAKE_CLOCK_RATIO,
+)
 
 
 def show_message(
@@ -73,7 +77,8 @@ def draw_level_overview(
     palette_key: str | None = None,
 ) -> None:
     palette = get_environment_palette(palette_key)
-    surface.fill(palette.outside)
+    floor_color = getattr(palette, "floor_primary", palette.outside)
+    surface.fill(floor_color)
     for wall in wall_group:
         color = getattr(wall, "base_color", INTERNAL_WALL_COLOR)
         pygame.draw.rect(surface, color, wall.rect)
@@ -606,6 +611,24 @@ def draw(
             (assets.screen_width // 2, assets.screen_height // 2),
         )
 
+    if (
+        stage
+        and getattr(stage, "survival_stage", False)
+        and state.dawn_ready
+        and not state.game_won
+    ):
+        prompt_at = state.dawn_prompt_at or pygame.time.get_ticks()
+        prompt_age = max(0, pygame.time.get_ticks() - prompt_at)
+        blink = (prompt_age // 600) % 2 == 0
+        prompt_color = ORANGE if blink else YELLOW
+        show_message(
+            screen,
+            _("hud.dawn_prompt"),
+            18,
+            prompt_color,
+            (assets.screen_width // 2, assets.screen_height // 2 - 60),
+        )
+
     def _render_objective(lines: list[str]) -> None:
         try:
             font_settings = get_font_settings()
@@ -619,8 +642,72 @@ def draw(
         except pygame.error as e:
             print(f"Error rendering objective: {e}")
 
+    def _render_survival_timer() -> None:
+        if not (stage and getattr(stage, "survival_stage", False)):
+            return
+        goal_ms = getattr(state, "survival_goal_ms", 0)
+        if goal_ms <= 0:
+            return
+        elapsed_ms = max(0, min(goal_ms, getattr(state, "survival_elapsed_ms", 0)))
+        remaining_ms = max(0, goal_ms - elapsed_ms)
+        padding = 12
+        bar_height = 8
+        y_pos = assets.screen_height - assets.status_bar_height - bar_height - 10
+        bar_rect = pygame.Rect(
+            padding,
+            y_pos,
+            assets.screen_width - padding * 2,
+            bar_height,
+        )
+        track_surface = pygame.Surface((bar_rect.width, bar_rect.height), pygame.SRCALPHA)
+        track_surface.fill((0, 0, 0, 140))
+        screen.blit(track_surface, bar_rect.topleft)
+        progress_ratio = elapsed_ms / goal_ms if goal_ms else 0.0
+        progress_width = int(bar_rect.width * max(0.0, min(1.0, progress_ratio)))
+        if progress_width > 0:
+            fill_rect = pygame.Rect(
+                bar_rect.left,
+                bar_rect.top,
+                progress_width,
+                bar_rect.height,
+            )
+            pygame.draw.rect(screen, (120, 20, 20), fill_rect)
+        display_ms = int(remaining_ms * SURVIVAL_FAKE_CLOCK_RATIO)
+        display_ms = max(0, display_ms)
+        display_hours = display_ms // 3_600_000
+        display_minutes = (display_ms % 3_600_000) // 60_000
+        display_label = f"{int(display_hours):02d}:{int(display_minutes):02d}"
+        timer_text = _("hud.survival_timer_label", time=display_label)
+        try:
+            font_settings = get_font_settings()
+            font = load_font(font_settings.resource, font_settings.scaled_size(12))
+            text_surface = font.render(timer_text, False, LIGHT_GRAY)
+            text_rect = text_surface.get_rect(left=bar_rect.left, bottom=bar_rect.top - 2)
+            screen.blit(text_surface, text_rect)
+            if state.time_accel_active:
+                accel_text = _("hud.time_accel")
+                accel_surface = font.render(accel_text, False, YELLOW)
+                accel_rect = accel_surface.get_rect(
+                    right=bar_rect.right, bottom=bar_rect.top - 2
+                )
+                screen.blit(accel_surface, accel_rect)
+            else:
+                hint_text = _("hud.time_accel_hint")
+                hint_surface = font.render(hint_text, False, LIGHT_GRAY)
+                hint_rect = hint_surface.get_rect(
+                    right=bar_rect.right, bottom=bar_rect.top - 2
+                )
+                screen.blit(hint_surface, hint_rect)
+        except pygame.error as e:
+            print(f"Error rendering survival timer: {e}")
+
     objective_lines: list[str] = []
-    if stage and stage.requires_fuel and not has_fuel:
+    if stage and getattr(stage, "survival_stage", False):
+        if state.dawn_ready:
+            objective_lines.append(_("objectives.get_outside"))
+        else:
+            objective_lines.append(_("objectives.survive_until_dawn"))
+    elif stage and stage.requires_fuel and not has_fuel:
         objective_lines.append(_("objectives.find_fuel"))
     elif stage and getattr(stage, "survivor_stage", False):
         if not player.in_car:
@@ -669,6 +756,7 @@ def draw(
                 screen.blit(msg_surface, msg_rect)
         except pygame.error as e:
             print(f"Error rendering survivor message: {e}")
+    _render_survival_timer()
     _draw_status_bar(screen, assets, config, stage=stage, seed=state.seed)
     if do_flip:
         if present_fn:

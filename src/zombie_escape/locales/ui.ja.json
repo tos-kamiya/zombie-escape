@@ -42,6 +42,10 @@
           "line2": "無理！無理！",
           "line3": "来るなぁ！"
         }
+      },
+      "stage5": {
+        "name": "#5 朝まで耐えろ",
+        "description": "燃料なし。30分耐え、夜明けになったら徒歩で脱出せよ。"
       }
     },
     "status": {
@@ -55,12 +59,18 @@
     "hud": {
       "need_fuel": "燃料が必要です！",
       "paused": "一時停止",
-      "resume_hint": "Pキーかクリックで再開"
+      "resume_hint": "Pキーかクリックで再開",
+      "survival_timer_label": "夜明けまであと %{time}",
+      "time_accel": ">> 5x",
+      "time_accel_hint": "Shiftキーで5x加速",
+      "dawn_prompt": "夜が明けた。外へ！"
     },
     "survivors": {
       "too_many_aboard": "定員オーバー！"
     },
     "objectives": {
+      "survive_until_dawn": "夜明けまで生き延びる",
+      "get_outside": "建物の外へ出る",
       "find_fuel": "燃料を探す",
       "find_car": "車を探す",
       "escape": "建物から脱出する",
@@ -100,9 +110,10 @@
     "game_over": {
       "win": "脱出成功！",
       "lose": "ゲームオーバー",
-      "prompt": "ESCキーかスペースバーでタイトルに戻る",
+      "prompt": "ESC/Space: タイトルへ  R: 再挑戦",
       "scream": "ぎゃあーーー!!",
-      "survivors_summary": "救出人数: %{count}"
+      "survivors_summary": "救出人数: %{count}",
+      "survival_duration": "逃げ延びた時間 %{time}"
     }
   }
 }

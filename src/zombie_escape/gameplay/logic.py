@@ -47,6 +47,9 @@ from ..constants import (
     SURVIVOR_SPAWN_RATE,
     SURVIVOR_SPEED_PENALTY_PER_PASSENGER,
     SURVIVOR_STAGE_WAITING_CAR_COUNT,
+    SURVIVAL_NEAR_SPAWN_CAMERA_MARGIN,
+    SURVIVAL_NEAR_SPAWN_MAX_DISTANCE,
+    SURVIVAL_NEAR_SPAWN_MIN_DISTANCE,
     ZOMBIE_INTERIOR_SPAWN_RATE,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
@@ -86,6 +89,9 @@ __all__ = [
     "place_companion",
     "scatter_positions_on_walkable",
     "spawn_survivors",
+    "spawn_nearby_zombie",
+    "spawn_exterior_zombie",
+    "spawn_weighted_zombie",
     "update_survivors",
     "alive_waiting_cars",
     "log_waiting_car_count",
@@ -107,6 +113,8 @@ __all__ = [
     "initialize_game_state",
     "setup_player_and_cars",
     "spawn_initial_zombies",
+    "update_survival_timer",
+    "carbonize_outdoor_zombies",
     "process_player_input",
     "update_entities",
     "check_interactions",
@@ -306,9 +314,10 @@ def place_fuel_can(
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
+    count: int = 1,
 ) -> FuelCan | None:
     """Pick a spawn spot for the fuel can away from the player (and car if given)."""
-    if not walkable_cells:
+    if count <= 0 or not walkable_cells:
         return None
 
     min_player_dist = 250
@@ -880,6 +889,8 @@ def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
 def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     """Initialize and return the base game state objects."""
     starts_with_fuel = not stage.requires_fuel
+    if stage.survival_stage:
+        starts_with_fuel = False
     starts_with_flashlight = False
     initial_flashlights = 1 if starts_with_flashlight else 0
     initial_palette_key = ambient_palette_key_for_flashlights(initial_flashlights)
@@ -891,7 +902,6 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         overview_surface=None,
         scaled_overview=None,
         overview_created=False,
-        last_zombie_spawn_time=0,
         footprints=[],
         last_footprint_pos=None,
         elapsed_play_ms=0,
@@ -907,6 +917,13 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         survivor_messages=[],
         survivor_capacity=SURVIVOR_MAX_SAFE_PASSENGERS,
         seed=None,
+        survival_elapsed_ms=0,
+        survival_goal_ms=max(0, stage.survival_goal_ms),
+        dawn_ready=False,
+        dawn_prompt_at=None,
+        time_accel_active=False,
+        last_zombie_spawn_time=0,
+        dawn_carbonized=False,
     )
 
     # Create sprite groups
@@ -1034,9 +1051,138 @@ def spawn_initial_zombies(
         zombie_group.add(tentative)
         all_sprites.add(tentative, layer=1)
 
-    game_data.state.last_zombie_spawn_time = (
-        pygame.time.get_ticks() - ZOMBIE_SPAWN_DELAY_MS
+    interval = max(1, getattr(game_data.stage, "spawn_interval_ms", ZOMBIE_SPAWN_DELAY_MS))
+    game_data.state.last_zombie_spawn_time = pygame.time.get_ticks() - interval
+
+
+def spawn_nearby_zombie(
+    game_data: GameData,
+    config: dict[str, Any],
+) -> Zombie | None:
+    """Spawn a zombie just outside of the current camera frustum."""
+    player = game_data.player
+    if not player:
+        return None
+    zombie_group = game_data.groups.zombie_group
+    if len(zombie_group) >= MAX_ZOMBIES:
+        return None
+    camera = game_data.camera
+    view_rect = pygame.Rect(
+        -camera.camera.x,
+        -camera.camera.y,
+        SCREEN_WIDTH,
+        SCREEN_HEIGHT,
     )
+    view_rect.inflate_ip(
+        SURVIVAL_NEAR_SPAWN_CAMERA_MARGIN * 2,
+        SURVIVAL_NEAR_SPAWN_CAMERA_MARGIN * 2,
+    )
+    wall_group = game_data.groups.wall_group
+    all_sprites = game_data.groups.all_sprites
+    for _ in range(18):
+        angle = RNG.uniform(0, math.tau)
+        distance = RNG.uniform(
+            SURVIVAL_NEAR_SPAWN_MIN_DISTANCE,
+            SURVIVAL_NEAR_SPAWN_MAX_DISTANCE,
+        )
+        spawn_x = player.x + math.cos(angle) * distance
+        spawn_y = player.y + math.sin(angle) * distance
+        candidate = (
+            int(max(0, min(LEVEL_WIDTH, spawn_x))),
+            int(max(0, min(LEVEL_HEIGHT, spawn_y))),
+        )
+        if view_rect.collidepoint(candidate):
+            continue
+        new_zombie = create_zombie(config, start_pos=candidate)
+        if pygame.sprite.spritecollideany(new_zombie, wall_group):
+            continue
+        zombie_group.add(new_zombie)
+        all_sprites.add(new_zombie, layer=1)
+        return new_zombie
+    return None
+
+
+def spawn_exterior_zombie(
+    game_data: GameData,
+    config: dict[str, Any],
+) -> Zombie | None:
+    """Spawn a zombie using the standard exterior hint logic."""
+    player = game_data.player
+    if not player:
+        return None
+    zombie_group = game_data.groups.zombie_group
+    all_sprites = game_data.groups.all_sprites
+    new_zombie = create_zombie(config, hint_pos=(player.x, player.y))
+    zombie_group.add(new_zombie)
+    all_sprites.add(new_zombie, layer=1)
+    return new_zombie
+
+
+def spawn_weighted_zombie(
+    game_data: GameData,
+    config: dict[str, Any],
+) -> bool:
+    """Spawn a zombie according to the stage's interior/exterior mix."""
+    stage = game_data.stage
+    interior_weight = max(0.0, getattr(stage, "interior_spawn_weight", 0.0))
+    exterior_weight = max(0.0, getattr(stage, "exterior_spawn_weight", 1.0))
+    total_weight = interior_weight + exterior_weight
+
+    def _spawn(choice: str) -> bool:
+        if choice == "interior":
+            return spawn_nearby_zombie(game_data, config) is not None
+        return spawn_exterior_zombie(game_data, config) is not None
+
+    if total_weight <= 0:
+        return _spawn("exterior")
+
+    pick = RNG.uniform(0, total_weight)
+    if pick <= interior_weight:
+        if _spawn("interior"):
+            return True
+        return _spawn("exterior")
+    if _spawn("exterior"):
+        return True
+    return _spawn("interior")
+
+
+def carbonize_outdoor_zombies(game_data: GameData) -> None:
+    """Petrify zombies that have already broken through to the exterior."""
+    outside_rects = game_data.areas.outside_rects or []
+    if not outside_rects:
+        return
+    group = game_data.groups.zombie_group
+    if not group:
+        return
+    for zombie in list(group):
+        alive = getattr(zombie, "alive", lambda: False)
+        if not alive():
+            continue
+        center = zombie.rect.center
+        if any(rect_obj.collidepoint(center) for rect_obj in outside_rects):
+            carbonize = getattr(zombie, "carbonize", None)
+            if carbonize:
+                carbonize()
+
+
+def update_survival_timer(game_data: GameData, dt_ms: int) -> None:
+    """Advance the survival countdown and trigger dawn handoff."""
+    stage = game_data.stage
+    state = game_data.state
+    if not stage.survival_stage:
+        return
+    if state.survival_goal_ms <= 0 or dt_ms <= 0:
+        return
+    state.survival_elapsed_ms = min(
+        state.survival_goal_ms,
+        state.survival_elapsed_ms + dt_ms,
+    )
+    if not state.dawn_ready and state.survival_elapsed_ms >= state.survival_goal_ms:
+        state.dawn_ready = True
+        state.dawn_prompt_at = pygame.time.get_ticks()
+    if state.dawn_ready and not state.dawn_carbonized:
+        carbonize_outdoor_zombies(game_data)
+        state.dawn_carbonized = True
 
 
 def process_player_input(
@@ -1124,15 +1270,13 @@ def update_entities(
 
     # Spawn new zombies if needed
     current_time = pygame.time.get_ticks()
+    spawn_interval = max(1, getattr(stage, "spawn_interval_ms", ZOMBIE_SPAWN_DELAY_MS))
     if (
         len(zombie_group) < MAX_ZOMBIES
-        and current_time - game_data.state.last_zombie_spawn_time
-        > ZOMBIE_SPAWN_DELAY_MS
+        and current_time - game_data.state.last_zombie_spawn_time > spawn_interval
     ):
-        new_zombie = create_zombie(config, hint_pos=(player.x, player.y))
-        zombie_group.add(new_zombie)
-        all_sprites.add(new_zombie, layer=1)
-        game_data.state.last_zombie_spawn_time = current_time
+        if spawn_weighted_zombie(game_data, config):
+            game_data.state.last_zombie_spawn_time = current_time
 
     # Update zombies
     target_center = (
@@ -1337,9 +1481,10 @@ def check_interactions(
             state.hint_target_type = None
             print("Player entered car!")
         else:
-            now_ms = state.elapsed_play_ms
-            state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
-            state.hint_target_type = "fuel"
+            if not stage.survival_stage:
+                now_ms = state.elapsed_play_ms
+                state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
+                state.hint_target_type = "fuel"
 
     # Claim a waiting/parked car when the player finally reaches it
     if not player.in_car and not active_car and waiting_cars:
@@ -1364,9 +1509,10 @@ def check_interactions(
                 maintain_waiting_car_supply(game_data)
                 print("Player claimed a waiting car!")
             else:
-                now_ms = state.elapsed_play_ms
-                state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
-                state.hint_target_type = "fuel"
+                if not stage.survival_stage:
+                    now_ms = state.elapsed_play_ms
+                    state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
+                    state.hint_target_type = "fuel"
 
     shrunk_car = get_shrunk_sprite(active_car, 0.8) if active_car else None
 
@@ -1461,6 +1607,16 @@ def check_interactions(
                 state.game_over = True
                 state.game_over_at = pygame.time.get_ticks()
                 state.game_over_message = _("game_over.scream")
+
+    # Player escaping on foot after dawn (Stage 5)
+    if (
+        stage.survival_stage
+        and state.dawn_ready
+        and not player.in_car
+        and outside_rects
+        and any(outside.collidepoint(player.rect.center) for outside in outside_rects)
+    ):
+        state.game_won = True
 
     # Player escaping the level
     if player.in_car and car and car.alive() and state.has_fuel:

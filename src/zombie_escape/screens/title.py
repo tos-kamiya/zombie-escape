@@ -121,8 +121,8 @@ def title_screen(
         try:
             font_settings = get_font_settings()
             font = load_font(font_settings.resource, font_settings.scaled_size(18))
-            line_height = 22
-            start_y = 80
+            line_height = 18
+            start_y = 84
             for idx, option in enumerate(options):
                 if option["type"] == "stage":
                     label = option["stage"].name

@@ -440,6 +440,7 @@ class Zombie(pygame.sprite.Sprite):
             -1000, 1000
         )
         self.was_in_sight = False
+        self.carbonized = False
 
     def change_mode(self: Self, *, force_mode: ZombieMode | None = None) -> None:
         if force_mode:
@@ -565,6 +566,8 @@ class Zombie(pygame.sprite.Sprite):
         walls: list[Wall],
         nearby_zombies: Iterable[Zombie],
     ) -> None:
+        if self.carbonized:
+            return
         now = pygame.time.get_ticks()
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
@@ -591,6 +594,16 @@ class Zombie(pygame.sprite.Sprite):
         self.x = final_x
         self.y = final_y
         self.rect.center = (int(self.x), int(self.y))
+
+    def carbonize(self: Self) -> None:
+        if self.carbonized:
+            return
+        self.carbonized = True
+        self.speed = 0
+        self.image.fill((0, 0, 0, 0))
+        color = (80, 80, 80)
+        pygame.draw.circle(self.image, color, (self.radius, self.radius), self.radius)
+        pygame.draw.circle(self.image, (30, 30, 30), (self.radius, self.radius), self.radius, width=2)
 
 
 class Car(pygame.sprite.Sprite):

@@ -27,6 +27,7 @@ This game is a simple 2D top-down action game where the player aims to escape by
 -   **Quit Game:** `ESC` key
 -   **Restart:** `R` key (on Game Over/Clear screen)
 -   **Window Scale (title/settings only):** `[` to shrink, `]` to enlarge
+-   **Time Acceleration (Stage 5):** Hold either `Shift` key to run the world (and dawn timer) 5x faster; release to return to normal speed.
 
 ## Settings (Title Screen)
 
@@ -51,6 +52,7 @@ At the title screen you can pick a stage:
 - **Stage 2: Fuel Run** — you start with no fuel; find a fuel can first, pick it up, then find the car and escape.
 - **Stage 3: Rescue Buddy** — same fuel hunt as Stage 2 (you begin empty) plus grab your buddy, pick them up with the car, then escape together.
 - **Stage 4: Evacuate Survivors** — start fueled, find the car, gather nearby civilians, and escape before zombies reach them. Stage 4 sprinkles extra parked cars across the map; slamming into one while already driving fully repairs your current ride and adds five more safe seats.
+- **Stage 5: Survive Until Dawn** — every car is bone-dry. Endure for 30 real minutes (the HUD shows a stretched 4-hour faux clock) while off-screen zombies keep collapsing your safe zone. Hold `Shift` to fast-forward the entire simulation 5x. Once dawn hits, outdoor zombies carbonize and you must walk out through an existing exterior gap to win; cars remain unusable.
 
 An objective reminder is shown at the top-left during play.
 

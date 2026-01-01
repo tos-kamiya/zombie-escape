@@ -11,6 +11,7 @@ from ..localization import get_font_settings, translate as _
 from ..models import GameData, Stage
 from ..render import RenderAssets, draw_level_overview, show_message
 from ..screens import ScreenID, ScreenTransition, present
+from ..constants import SURVIVAL_FAKE_CLOCK_RATIO
 
 
 def game_over_screen(
@@ -104,6 +105,7 @@ def game_over_screen(
                         LIGHT_GRAY,
                         (screen_width // 2, screen_height // 2 + 6),
                     )
+            summary_y = screen_height // 2 + 70
             if stage and stage.survivor_stage:
                 msg = _("game_over.survivors_summary", count=state.survivors_rescued)
                 show_message(
@@ -111,7 +113,24 @@ def game_over_screen(
                     msg,
                     18,
                     LIGHT_GRAY,
-                    (screen_width // 2, screen_height // 2 + 70),
+                    (screen_width // 2, summary_y),
+                )
+            elif stage and getattr(stage, "survival_stage", False):
+                elapsed_ms = max(0, getattr(state, "survival_elapsed_ms", 0))
+                goal_ms = max(0, getattr(state, "survival_goal_ms", 0))
+                if goal_ms:
+                    elapsed_ms = min(elapsed_ms, goal_ms)
+                display_ms = int(elapsed_ms * SURVIVAL_FAKE_CLOCK_RATIO)
+                hours = display_ms // 3_600_000
+                minutes = (display_ms % 3_600_000) // 60_000
+                time_label = f"{int(hours):02d}:{int(minutes):02d}"
+                msg = _("game_over.survival_duration", time=time_label)
+                show_message(
+                    screen,
+                    msg,
+                    18,
+                    LIGHT_GRAY,
+                    (screen_width // 2, summary_y),
                 )
 
         show_message(

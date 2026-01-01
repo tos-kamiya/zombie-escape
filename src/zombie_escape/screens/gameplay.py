@@ -10,6 +10,8 @@ from ..constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     SURVIVOR_STAGE_WAITING_CAR_COUNT,
+    SURVIVAL_TIME_ACCEL_SUBSTEPS,
+    SURVIVAL_TIME_ACCEL_MAX_SUBSTEP,
 )
 from ..gameplay import logic
 from ..localization import translate as _
@@ -73,8 +75,12 @@ def gameplay_screen(
         logic.spawn_survivors(game_data, layout_data)
 
     if stage.requires_fuel:
+        fuel_spawn_count = getattr(stage, "fuel_spawn_count", 1)
         fuel_can = logic.place_fuel_can(
-            layout_data["walkable_cells"], player, cars=game_data.waiting_cars
+            layout_data["walkable_cells"],
+            player,
+            cars=game_data.waiting_cars,
+            count=fuel_spawn_count,
         )
         if fuel_can:
             game_data.fuel = fuel_can
@@ -102,9 +108,6 @@ def gameplay_screen(
 
     while True:
         dt = clock.tick(fps) / 1000.0
-        player = game_data.player
-        car = game_data.car
-
         if game_data.state.game_over or game_data.state.game_won:
             if game_data.state.game_over and not game_data.state.game_won:
                 if game_data.state.game_over_at is None:
@@ -214,23 +217,57 @@ def gameplay_screen(
             continue
 
         keys = pygame.key.get_pressed()
-        player_dx, player_dy, car_dx, car_dy = logic.process_player_input(
-            keys, player, car
+        accel_allowed = stage.survival_stage and not (
+            game_data.state.game_over or game_data.state.game_won
         )
+        accel_active = accel_allowed and (
+            keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
+        )
+        game_data.state.time_accel_active = accel_active
+        substeps = SURVIVAL_TIME_ACCEL_SUBSTEPS if accel_active else 1
+        sub_dt = (
+            min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
+        )
+        frame_fov_target = None
+        for _ in range(substeps):
+            player_ref = game_data.player
+            if player_ref is None:
+                break
+            car_ref = game_data.car
+            player_dx, player_dy, car_dx, car_dy = logic.process_player_input(
+                keys, player_ref, car_ref
+            )
+            logic.update_entities(
+                game_data, player_dx, player_dy, car_dx, car_dy, config
+            )
+            logic.update_footprints(game_data, config)
+            step_ms = int(sub_dt * 1000)
+            if accel_active:
+                step_ms = max(1, step_ms)
+            game_data.state.elapsed_play_ms += step_ms
+            logic.update_survival_timer(game_data, step_ms)
+            logic.cleanup_survivor_messages(game_data.state)
+            sub_fov_target = logic.check_interactions(game_data, config)
+            if sub_fov_target:
+                frame_fov_target = sub_fov_target
+            if game_data.state.game_over or game_data.state.game_won:
+                break
 
-        logic.update_entities(game_data, player_dx, player_dy, car_dx, car_dy, config)
-        logic.update_footprints(game_data, config)
-        game_data.state.elapsed_play_ms += int(dt * 1000)
-        logic.cleanup_survivor_messages(game_data.state)
+        if frame_fov_target:
+            last_fov_target = frame_fov_target
+        else:
+            frame_fov_target = last_fov_target
 
-        fov_target = logic.check_interactions(game_data, config)
-        last_fov_target = fov_target or last_fov_target
+        player = game_data.player
+        if player is None:
+            raise ValueError("Player missing from game data")
+        car = game_data.car
 
         car_hint_conf = config.get("car_hint", {})
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
         elapsed_ms = game_data.state.elapsed_play_ms
         has_fuel = game_data.state.has_fuel
-        hint_enabled = car_hint_conf.get("enabled", True)
+        hint_enabled = car_hint_conf.get("enabled", True) and not stage.survival_stage
         hint_target = None
         hint_color = YELLOW
         hint_expires_at = game_data.state.hint_expires_at
@@ -277,7 +314,7 @@ def gameplay_screen(
             render_assets,
             screen,
             game_data,
-            fov_target,
+            frame_fov_target,
             config=config,
             hint_target=hint_target,
             hint_color=hint_color,
