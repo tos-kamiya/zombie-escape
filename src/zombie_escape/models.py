@@ -41,6 +41,7 @@ class ProgressState:
     elapsed_play_ms: int
     has_fuel: bool
     flashlight_count: int
+    ambient_palette_key: str
     hint_expires_at: int
     hint_target_type: str | None
     fuel_message_until: int

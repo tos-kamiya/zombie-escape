@@ -14,9 +14,6 @@ except Exception:  # pragma: no cover - fallback path without numpy
 from .colors import (
     BLACK,
     BLUE,
-    FLOOR_COLOR_OUTSIDE,
-    FLOOR_COLOR_PRIMARY,
-    FLOOR_COLOR_SECONDARY,
     FOG_COLOR,
     FOOTPRINT_COLOR,
     GREEN,
@@ -24,6 +21,7 @@ from .colors import (
     LIGHT_GRAY,
     ORANGE,
     YELLOW,
+    get_environment_palette,
 )
 from .font_utils import load_font
 from .localization import get_font_settings, translate as _
@@ -72,8 +70,10 @@ def draw_level_overview(
     stage: Stage | None = None,
     companion: Companion | None = None,
     survivors: list[Survivor] | None = None,
+    palette_key: str | None = None,
 ) -> None:
-    surface.fill(BLACK)
+    palette = get_environment_palette(palette_key)
+    surface.fill(palette.outside)
     for wall in wall_group:
         color = getattr(wall, "base_color", INTERNAL_WALL_COLOR)
         pygame.draw.rect(surface, color, wall.rect)
@@ -454,7 +454,8 @@ def draw(
     survivors_onboard = state.survivors_onboard
     survivor_messages = list(state.survivor_messages)
 
-    screen.fill(FLOOR_COLOR_OUTSIDE)
+    palette = get_environment_palette(state.ambient_palette_key)
+    screen.fill(palette.outside)
 
     xs, ys, xe, ye = outer_rect
     xs //= assets.internal_wall_grid_snap
@@ -469,7 +470,7 @@ def draw(
         (ye - ys) * assets.internal_wall_grid_snap,
     )
     play_area_screen_rect = camera.apply_rect(play_area_rect)
-    pygame.draw.rect(screen, FLOOR_COLOR_PRIMARY, play_area_screen_rect)
+    pygame.draw.rect(screen, palette.floor_primary, play_area_screen_rect)
 
     outside_cells = {
         (r.x // assets.internal_wall_grid_snap, r.y // assets.internal_wall_grid_snap)
@@ -478,7 +479,7 @@ def draw(
     for rect_obj in outside_rects:
         sr = camera.apply_rect(rect_obj)
         if sr.colliderect(screen.get_rect()):
-            pygame.draw.rect(screen, FLOOR_COLOR_OUTSIDE, sr)
+            pygame.draw.rect(screen, palette.outside, sr)
 
     view_world = pygame.Rect(
         -camera.camera.x,
@@ -514,7 +515,7 @@ def draw(
                 )
                 sr = camera.apply_rect(r)
                 if sr.colliderect(screen.get_rect()):
-                    pygame.draw.rect(screen, FLOOR_COLOR_SECONDARY, sr)
+                    pygame.draw.rect(screen, palette.floor_secondary, sr)
 
     if config.get("footprints", {}).get("enabled", True):
         now = pygame.time.get_ticks()

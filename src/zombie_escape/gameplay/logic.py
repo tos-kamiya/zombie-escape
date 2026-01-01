@@ -8,10 +8,8 @@ import math
 import pygame
 
 from ..colors import (
-    INTERNAL_WALL_BORDER_COLOR,
-    INTERNAL_WALL_COLOR,
-    OUTER_WALL_BORDER_COLOR,
-    OUTER_WALL_COLOR,
+    ambient_palette_key_for_flashlights,
+    get_environment_palette,
 )
 from ..constants import (
     CAR_HEIGHT,
@@ -112,6 +110,8 @@ __all__ = [
     "process_player_input",
     "update_entities",
     "check_interactions",
+    "set_ambient_palette",
+    "sync_ambient_palette_with_flashlights",
 ]
 
 
@@ -167,6 +167,7 @@ def generate_level_from_blueprint(
     player_cells: list[pygame.Rect] = []
     car_cells: list[pygame.Rect] = []
     zombie_cells: list[pygame.Rect] = []
+    palette = get_environment_palette(game_data.state.ambient_palette_key)
 
     def add_beam_to_groups(beam: "SteelBeam") -> None:
         if getattr(beam, "_added_to_groups", False):
@@ -193,8 +194,9 @@ def generate_level_from_blueprint(
                     cell_rect.width,
                     cell_rect.height,
                     health=OUTER_WALL_HEALTH,
-                    color=OUTER_WALL_COLOR,
-                    border_color=OUTER_WALL_BORDER_COLOR,
+                    color=palette.outer_wall,
+                    border_color=palette.outer_wall_border,
+                    palette_category="outer_wall",
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
@@ -217,8 +219,9 @@ def generate_level_from_blueprint(
                     cell_rect.width,
                     cell_rect.height,
                     health=INTERNAL_WALL_HEALTH,
-                    color=INTERNAL_WALL_COLOR,
-                    border_color=INTERNAL_WALL_BORDER_COLOR,
+                    color=palette.inner_wall,
+                    border_color=palette.inner_wall_border,
+                    palette_category="inner_wall",
                     on_destroy=(lambda _w, b=beam: add_beam_to_groups(b))
                     if beam
                     else None,
@@ -878,6 +881,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     """Initialize and return the base game state objects."""
     starts_with_fuel = not stage.requires_fuel
     starts_with_flashlight = False
+    initial_flashlights = 1 if starts_with_flashlight else 0
+    initial_palette_key = ambient_palette_key_for_flashlights(initial_flashlights)
     game_state = ProgressState(
         game_over=False,
         game_won=False,
@@ -891,7 +896,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         last_footprint_pos=None,
         elapsed_play_ms=0,
         has_fuel=starts_with_fuel,
-        flashlight_count=1 if starts_with_flashlight else 0,
+        flashlight_count=initial_flashlights,
+        ambient_palette_key=initial_palette_key,
         hint_expires_at=0,
         hint_target_type=None,
         fuel_message_until=0,
@@ -1274,6 +1280,8 @@ def check_interactions(
                 print("Flashlight acquired!")
                 break
 
+    sync_ambient_palette_with_flashlights(game_data)
+
     companion_on_screen = False
     companion_active = (
         companion and companion.alive() and not getattr(companion, "rescued", False)
@@ -1471,3 +1479,46 @@ def check_interactions(
     if not state.game_over and not state.game_won:
         return car if player.in_car and car and car.alive() else player
     return None
+
+
+def set_ambient_palette(
+    game_data: GameData, key: str, *, force: bool = False
+) -> None:
+    """Apply a named ambient palette to all walls in the level."""
+
+    palette = get_environment_palette(key)
+    state = game_data.state
+    if not force and state.ambient_palette_key == key:
+        return
+
+    state.ambient_palette_key = key
+    _apply_palette_to_walls(game_data, palette, force=True)
+
+
+def sync_ambient_palette_with_flashlights(
+    game_data: GameData, *, force: bool = False
+) -> None:
+    """Sync the ambient palette with the player's flashlight inventory."""
+
+    key = ambient_palette_key_for_flashlights(game_data.state.flashlight_count)
+    set_ambient_palette(game_data, key, force=force)
+
+
+def _apply_palette_to_walls(
+    game_data: GameData,
+    palette,
+    *,
+    force: bool = False,
+) -> None:
+    wall_group = game_data.groups.wall_group
+    for wall in wall_group:
+        if not hasattr(wall, "set_palette_colors"):
+            continue
+        category = getattr(wall, "palette_category", "inner_wall")
+        if category == "outer_wall":
+            color = palette.outer_wall
+            border_color = palette.outer_wall_border
+        else:
+            color = palette.inner_wall
+            border_color = palette.inner_wall_border
+        wall.set_palette_colors(color=color, border_color=border_color, force=force)

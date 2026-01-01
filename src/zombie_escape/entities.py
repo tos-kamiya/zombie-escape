@@ -84,6 +84,7 @@ class Wall(pygame.sprite.Sprite):
         health: int = INTERNAL_WALL_HEALTH,
         color: tuple[int, int, int] = INTERNAL_WALL_COLOR,
         border_color: tuple[int, int, int] = INTERNAL_WALL_BORDER_COLOR,
+        palette_category: str = "inner_wall",
         on_destroy: Callable[[Self], None] | None = None,
     ) -> None:
         super().__init__()
@@ -92,6 +93,7 @@ class Wall(pygame.sprite.Sprite):
         self.image = pygame.Surface((safe_width, safe_height))
         self.base_color = color
         self.border_base_color = border_color
+        self.palette_category = palette_category
         self.health = health
         self.max_health = max(1, health)
         self.on_destroy = on_destroy
@@ -128,6 +130,21 @@ class Wall(pygame.sprite.Sprite):
         bg = int(self.border_base_color[1] * (0.6 + 0.4 * health_ratio))
         bb = int(self.border_base_color[2] * (0.6 + 0.4 * health_ratio))
         pygame.draw.rect(self.image, (br, bg, bb), self.image.get_rect(), width=9)
+
+    def set_palette_colors(
+        self: Self,
+        *,
+        color: tuple[int, int, int],
+        border_color: tuple[int, int, int],
+        force: bool = False,
+    ) -> None:
+        """Update the wall's base colors to match the current ambient palette."""
+
+        if not force and self.base_color == color and self.border_base_color == border_color:
+            return
+        self.base_color = color
+        self.border_base_color = border_color
+        self.update_color()
 
 
 class SteelBeam(pygame.sprite.Sprite):

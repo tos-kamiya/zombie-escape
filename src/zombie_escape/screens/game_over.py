@@ -54,6 +54,7 @@ def game_over_screen(
                 stage=stage,
                 companion=game_data.companion,
                 survivors=list(game_data.groups.survivor_group),
+                palette_key=state.ambient_palette_key,
             )
 
             level_aspect = level_width / max(1, level_height)

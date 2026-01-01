@@ -53,6 +53,7 @@ def gameplay_screen(
     last_fov_target = None
 
     layout_data = logic.generate_level_from_blueprint(game_data, config)
+    logic.sync_ambient_palette_with_flashlights(game_data, force=True)
     initial_waiting = (
         SURVIVOR_STAGE_WAITING_CAR_COUNT if stage.survivor_stage else 1
     )
