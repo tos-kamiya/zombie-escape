@@ -110,7 +110,7 @@
     "game_over": {
       "win": "YOU ESCAPED!",
       "lose": "GAME OVER",
-      "prompt": "Press ESC or SPACE to return to Title",
+      "prompt": "ESC/SPACE: Title · R: Retry",
       "scream": "AAAAHHH!!",
       "survivors_summary": "Evacuated: %{count}",
       "survival_duration": "Time survived %{time}"

@@ -163,3 +163,9 @@ def game_over_screen(
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_ESCAPE, pygame.K_SPACE):
                     return ScreenTransition(ScreenID.TITLE)
+                if event.key == pygame.K_r and stage is not None:
+                    return ScreenTransition(
+                        ScreenID.GAMEPLAY,
+                        stage=stage,
+                        seed=state.seed,
+                    )

@@ -77,8 +77,9 @@ def draw_level_overview(
     palette_key: str | None = None,
 ) -> None:
     palette = get_environment_palette(palette_key)
-    floor_color = getattr(palette, "floor_primary", palette.outside)
-    surface.fill(floor_color)
+    base_floor = getattr(palette, "floor_primary", palette.outside)
+    dark_floor = tuple(max(0, int(channel * 0.55)) for channel in base_floor)
+    surface.fill(dark_floor)
     for wall in wall_group:
         color = getattr(wall, "base_color", INTERNAL_WALL_COLOR)
         pygame.draw.rect(surface, color, wall.rect)
