@@ -14,7 +14,7 @@ SPAWN_MARGIN = 3  # keep spawns away from walls/edges
 SPAWN_ZOMBIES = 3
 
 RNG = get_rng()
-STEEL_BEAM_CHANCE = 0.05
+STEEL_BEAM_CHANCE = 0.02
 
 # Legend:
 # O: outside area (win when car reaches)
