@@ -623,10 +623,24 @@ class Zombie(pygame.sprite.Sprite):
 
 
 class Car(pygame.sprite.Sprite):
-    def __init__(self: Self, x: int, y: int) -> None:
+    COLOR_SCHEMES: dict[str, dict[str, tuple[int, int, int]]] = {
+        "default": {
+            "healthy": YELLOW,
+            "damaged": ORANGE,
+            "critical": DARK_RED,
+        },
+        "disabled": {
+            "healthy": (185, 185, 185),
+            "damaged": (150, 150, 150),
+            "critical": (110, 110, 110),
+        },
+    }
+
+    def __init__(self: Self, x: int, y: int, *, appearance: str = "default") -> None:
         super().__init__()
         self.original_image = pygame.Surface((CAR_WIDTH, CAR_HEIGHT), pygame.SRCALPHA)
-        self.base_color = YELLOW
+        self.appearance = appearance if appearance in self.COLOR_SCHEMES else "default"
+        self.base_color = self.COLOR_SCHEMES[self.appearance]["healthy"]
         self.image = self.original_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = CAR_SPEED
@@ -645,11 +659,12 @@ class Car(pygame.sprite.Sprite):
 
     def update_color(self: Self) -> None:
         health_ratio = max(0, self.health / self.max_health)
-        color = YELLOW
+        palette = self.COLOR_SCHEMES.get(self.appearance, self.COLOR_SCHEMES["default"])
+        color = palette["healthy"]
         if health_ratio < 0.6:
-            color = ORANGE
+            color = palette["damaged"]
         if health_ratio < 0.3:
-            color = DARK_RED
+            color = palette["critical"]
         self.original_image.fill((0, 0, 0, 0))
 
         body_rect = pygame.Rect(1, 4, CAR_WIDTH - 2, CAR_HEIGHT - 8)

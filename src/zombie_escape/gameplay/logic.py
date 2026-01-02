@@ -79,6 +79,10 @@ from ..entities import (
 LOGICAL_SCREEN_RECT = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
 RNG = get_rng()
 
+
+def car_appearance_for_stage(stage: Stage | None) -> str:
+    return "disabled" if stage and stage.survival_stage else "default"
+
 __all__ = [
     "create_zombie",
     "rect_for_cell",
@@ -276,6 +280,7 @@ def place_new_car(
     walkable_cells: list[pygame.Rect],
     *,
     existing_cars: Sequence[Car] | None = None,
+    appearance: str = "default",
 ) -> Car | None:
     if not walkable_cells:
         return None
@@ -284,7 +289,7 @@ def place_new_car(
     for attempt in range(max_attempts):
         cell = RNG.choice(walkable_cells)
         c_x, c_y = cell.center
-        temp_car = Car(c_x, c_y)
+        temp_car = Car(c_x, c_y, appearance=appearance)
         temp_rect = temp_car.rect.inflate(30, 30)
         nearby_walls = pygame.sprite.Group()
         nearby_walls.add(
@@ -628,6 +633,7 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
     if active_car:
         obstacles.append(active_car)
     camera = game_data.camera
+    appearance = car_appearance_for_stage(game_data.stage)
     offscreen_attempts = 6
     while offscreen_attempts > 0:
         new_car = place_new_car(
@@ -635,6 +641,7 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
             player,
             walkable_cells,
             existing_cars=obstacles,
+            appearance=appearance,
         )
         if not new_car:
             return None
@@ -989,6 +996,7 @@ def setup_player_and_cars(
 
     car_candidates = list(layout_data["car_cells"] or walkable_cells)
     waiting_cars: list[Car] = []
+    car_appearance = car_appearance_for_stage(game_data.stage)
 
     def _pick_car_position() -> tuple[int, int]:
         """Favor distant cells for the first car, otherwise fall back to random picks."""
@@ -1011,7 +1019,7 @@ def setup_player_and_cars(
 
     for idx in range(max(1, car_count)):
         car_pos = _pick_car_position()
-        car = Car(*car_pos)
+        car = Car(*car_pos, appearance=car_appearance)
         waiting_cars.append(car)
         all_sprites.add(car, layer=1)
         if not car_candidates:
