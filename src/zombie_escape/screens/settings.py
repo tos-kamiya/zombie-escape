@@ -212,27 +212,29 @@ def settings_screen(
         try:
             font_settings = get_font_settings()
             label_font = load_font(
-                font_settings.resource, font_settings.scaled_size(11)
+                font_settings.resource, font_settings.scaled_size(13)
             )
             value_font = load_font(
-                font_settings.resource, font_settings.scaled_size(11)
+                font_settings.resource, font_settings.scaled_size(13)
             )
             section_font = load_font(
-                font_settings.resource, font_settings.scaled_size(11)
+                font_settings.resource, font_settings.scaled_size(12)
             )
             highlight_color = (70, 70, 70)
 
-            row_height = 18
-            start_y = 44
+            row_height = 22
+            start_y = 52
 
-            segment_width = 26
-            segment_height = 16
-            segment_gap = 8
+            segment_width = 30
+            segment_height = 18
+            segment_gap = 10
             segment_total_width = segment_width * 2 + segment_gap
 
-            column_margin = 20
+            column_margin = 24
             column_width = screen_width // 2 - column_margin * 2
             section_spacing = 6
+            row_indent = 12
+            value_padding = 20
 
             section_states: dict[str, dict] = {}
             y_cursor = start_y
@@ -258,7 +260,8 @@ def settings_screen(
             for idx, row in enumerate(rows):
                 section_label = row_sections[idx]
                 state = section_states[section_label]
-                col_x = column_margin
+                col_x = column_margin + row_indent
+                row_width = column_width - row_indent + value_padding
                 value = _get_value(
                     row["path"], row.get("easy_value", row.get("choices", [None])[0])
                 )
@@ -266,7 +269,7 @@ def settings_screen(
                 state["next_y"] += row_height
 
                 highlight_rect = pygame.Rect(
-                    col_x, row_y_current - 2, column_width, row_height - 4
+                    col_x, row_y_current - 2, row_width, row_height - 4
                 )
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
@@ -289,14 +292,14 @@ def settings_screen(
                     value_surface = value_font.render(display_text, False, WHITE)
                     value_rect = value_surface.get_rect(
                         midright=(
-                            col_x + column_width,
+                            col_x + row_width,
                             row_y_current + row_height // 2,
                         )
                     )
                     screen.blit(value_surface, value_rect)
                 else:
                     slider_y = row_y_current + (row_height - segment_height) // 2 - 2
-                    slider_x = col_x + column_width - segment_total_width
+                    slider_x = col_x + row_width - segment_total_width
                     left_rect = pygame.Rect(
                         slider_x, slider_y, segment_width, segment_height
                     )

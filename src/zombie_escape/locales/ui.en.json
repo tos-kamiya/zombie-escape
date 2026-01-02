@@ -19,7 +19,21 @@
       "window_hint": "Resize window: [ to shrink, ] to enlarge (menu only)",
       "seed_label": "Seed: %{value}",
       "seed_hint": "Type 0-9 to set a custom seed, Backspace clears",
-      "seed_empty": "(auto)"
+      "seed_empty": "(auto)",
+      "sections": {
+        "stage_select": "Stages",
+        "resources": "Resources"
+      },
+      "readme": "Open README",
+      "hints": {
+        "navigate": "Up/Down: choose an option",
+        "confirm": "Enter/Space: activate selection"
+      },
+      "option_help": {
+        "settings": "Open Settings to adjust assists and localization.",
+        "quit": "Close the game.",
+        "readme": "Open the GitHub README in your browser."
+      }
     },
     "stages": {
       "stage1": {

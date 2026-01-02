@@ -271,7 +271,6 @@ def gameplay_screen(
         player = game_data.player
         if player is None:
             raise ValueError("Player missing from game data")
-        car = game_data.car
 
         car_hint_conf = config.get("car_hint", {})
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)

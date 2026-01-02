@@ -19,7 +19,21 @@
       "window_hint": "[キーでウィンドウを小さく、]キーで大きく(メニュー画面のみ)",
       "seed_label": "シード: %{value}",
       "seed_hint": "数字キーで入力、BSでクリア",
-      "seed_empty": "(自動)"
+      "seed_empty": "(自動)",
+      "sections": {
+        "stage_select": "ステージ",
+        "resources": "リソース"
+      },
+      "readme": "README を開く",
+      "hints": {
+        "navigate": "↑↓: 項目選択",
+        "confirm": "Enter/Space: 決定または実行"
+      },
+      "option_help": {
+        "settings": "設定画面を開いて言語や補助オプションを変更します。",
+        "quit": "ゲームを終了します。",
+        "readme": "GitHub の README ページをブラウザで開きます。"
+      }
     },
     "stages": {
       "stage1": {
@@ -44,7 +58,7 @@
         }
       },
       "stage5": {
-        "name": "#5 朝まで耐えろ",
+        "name": "#5 持久戦",
         "description": "燃料なし。20分耐え、夜明けになったら徒歩で脱出せよ。"
       }
     },

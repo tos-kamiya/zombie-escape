@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import webbrowser
 from typing import Any, Sequence
 
 import pygame
@@ -7,13 +8,99 @@ from pygame import surface, time
 
 from ..colors import BLACK, GRAY, LIGHT_GRAY, WHITE, YELLOW
 from ..font_utils import load_font
-from ..localization import get_font_settings, translate as tr
+from ..localization import get_font_settings, get_language, translate as tr
 from ..models import Stage
 from ..render import show_message
 from ..screens import ScreenID, ScreenTransition, nudge_window_scale, present
 from ..rng import generate_seed
 
 MAX_SEED_DIGITS = 19
+README_URLS: dict[str, str] = {
+    "en": "https://github.com/tos-kamiya/zombie-escape/blob/main/README.md",
+    "ja": "https://github.com/tos-kamiya/zombie-escape/blob/main/README-ja_JP.md",
+}
+
+
+def _open_readme_link() -> None:
+    """Open the GitHub README for the active UI language."""
+
+    language = get_language()
+    url = README_URLS.get(language, README_URLS["en"])
+    try:
+        webbrowser.open(url, new=0, autoraise=True)
+    except Exception as exc:  # pragma: no cover - best effort only
+        print(f"Unable to open README URL {url}: {exc}")
+
+
+def _wrap_long_segment(
+    segment: str, font: pygame.font.Font, max_width: int
+) -> list[str]:
+    lines: list[str] = []
+    current = ""
+    for char in segment:
+        candidate = current + char
+        if font.size(candidate)[0] <= max_width or not current:
+            current = candidate
+        else:
+            lines.append(current)
+            current = char
+    if current:
+        lines.append(current)
+    return lines
+
+
+def _wrap_text(text: str, font: pygame.font.Font, max_width: int) -> list[str]:
+    """Break text into multiple lines within a max width (supports CJK text)."""
+
+    if max_width <= 0:
+        return [text]
+    paragraphs = text.splitlines() or [text]
+    lines: list[str] = []
+    for paragraph in paragraphs:
+        if not paragraph:
+            lines.append("")
+            continue
+        words = paragraph.split(" ")
+        if len(words) == 1:
+            lines.extend(_wrap_long_segment(paragraph, font, max_width))
+            continue
+        current = ""
+        for word in words:
+            candidate = f"{current} {word}".strip() if current else word
+            if font.size(candidate)[0] <= max_width:
+                current = candidate
+                continue
+            if current:
+                lines.append(current)
+            if font.size(word)[0] <= max_width:
+                current = word
+            else:
+                lines.extend(_wrap_long_segment(word, font, max_width))
+                current = ""
+        if current:
+            lines.append(current)
+    return lines
+
+
+def _blit_wrapped_text(
+    target: surface.Surface,
+    text: str,
+    font: pygame.font.Font,
+    color: tuple[int, int, int],
+    topleft: tuple[int, int],
+    max_width: int,
+) -> None:
+    """Render text with simple wrapping constrained to max_width."""
+
+    x, y = topleft
+    line_height = font.get_linesize()
+    for line in _wrap_text(text, font, max_width):
+        if not line:
+            y += line_height
+            continue
+        rendered = font.render(line, False, color)
+        target.blit(rendered, (x, y))
+        y += line_height
 
 
 def _generate_auto_seed_text() -> str:
@@ -42,9 +129,14 @@ def title_screen(
         for stage in stages
         if stage.available
     ]
-    options += [{"type": "settings"}, {"type": "quit"}]
+    action_options: list[dict[str, Any]] = [
+        {"type": "settings"},
+        {"type": "readme"},
+        {"type": "quit"},
+    ]
+    options += action_options
 
-    selected = next(
+    selected_stage_index = next(
         (
             i
             for i, opt in enumerate(options)
@@ -52,6 +144,7 @@ def title_screen(
         ),
         0,
     )
+    selected = min(selected_stage_index, len(options) - 1)
     generated = seed_text is None
     current_seed_text = seed_text if seed_text is not None else _generate_auto_seed_text()
     current_seed_auto = seed_is_auto or generated
@@ -103,6 +196,9 @@ def title_screen(
                             seed_text=current_seed_text,
                             seed_is_auto=current_seed_auto,
                         )
+                    if current["type"] == "readme":
+                        _open_readme_link()
+                        continue
                     if current["type"] == "quit":
                         return ScreenTransition(
                             ScreenID.EXIT,
@@ -111,69 +207,150 @@ def title_screen(
                         )
 
         screen.fill(BLACK)
-        show_message(
-            screen,
-            tr("game.title"),
-            32,
-            LIGHT_GRAY,
-            (width // 2, 40),
-        )
+        show_message(screen, tr("game.title"), 32, LIGHT_GRAY, (width // 2, 40))
 
         try:
             font_settings = get_font_settings()
-            font = load_font(font_settings.resource, font_settings.scaled_size(18))
-            line_height = 18
-            start_y = 84
-            for idx, option in enumerate(options):
-                if option["type"] == "stage":
-                    label = option["stage"].name
-                    if not option.get("available"):
-                        locked_suffix = tr("menu.locked_suffix")
-                        label += f" {locked_suffix}"
-                    color = (
-                        YELLOW
-                        if idx == selected
-                        else (WHITE if option.get("available") else GRAY)
+            option_font = load_font(
+                font_settings.resource, font_settings.scaled_size(14)
+            )
+            desc_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+            section_font = load_font(
+                font_settings.resource, font_settings.scaled_size(12)
+            )
+            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+
+            row_height = 22
+            stage_column_x = 24
+            stage_column_width = width // 2 - 48
+            resource_column_x = width // 2 + 12
+            resource_column_width = width - resource_column_x - 24
+            section_top = 70
+            highlight_color = (70, 70, 70)
+
+            stage_options = [opt for opt in options if opt["type"] == "stage"]
+            stage_count = len(stage_options)
+            resource_count = len(options) - stage_count
+
+            stage_header = section_font.render(
+                tr("menu.sections.stage_select"), False, LIGHT_GRAY
+            )
+            stage_header_pos = (stage_column_x, section_top)
+            screen.blit(stage_header, stage_header_pos)
+            stage_rows_start = stage_header_pos[1] + stage_header.get_height() + 6
+
+            resource_header = section_font.render(
+                tr("menu.sections.resources"), False, LIGHT_GRAY
+            )
+            resource_header_pos = (resource_column_x, section_top)
+            screen.blit(resource_header, resource_header_pos)
+            resource_rows_start = (
+                resource_header_pos[1] + resource_header.get_height() + 6
+            )
+
+            for idx, option in enumerate(stage_options):
+                row_top = stage_rows_start + idx * row_height
+                highlight_rect = pygame.Rect(
+                    stage_column_x, row_top - 2, stage_column_width, row_height
+                )
+                color = YELLOW if idx == selected else WHITE
+                if idx == selected:
+                    pygame.draw.rect(screen, highlight_color, highlight_rect)
+                label = option["stage"].name
+                if not option.get("available"):
+                    locked_suffix = tr("menu.locked_suffix")
+                    label = f"{label} {locked_suffix}"
+                    color = GRAY
+                text_surface = option_font.render(label, False, color)
+                text_rect = text_surface.get_rect(
+                    midleft=(
+                        stage_column_x + 8,
+                        row_top + row_height // 2,
                     )
-                elif option["type"] == "settings":
+                )
+                screen.blit(text_surface, text_rect)
+
+            for idx, option in enumerate(action_options):
+                option_idx = stage_count + idx
+                row_top = resource_rows_start + idx * row_height
+                highlight_rect = pygame.Rect(
+                    resource_column_x, row_top - 2, resource_column_width, row_height
+                )
+                is_selected = option_idx == selected
+                if is_selected:
+                    pygame.draw.rect(screen, highlight_color, highlight_rect)
+                if option["type"] == "settings":
                     label = tr("menu.settings")
-                    color = YELLOW if idx == selected else WHITE
+                elif option["type"] == "readme":
+                    label = f"> {tr('menu.readme')}"
                 else:
                     label = tr("menu.quit")
-                    color = YELLOW if idx == selected else WHITE
-
-                text_surface = font.render(label, False, color)
+                color = YELLOW if is_selected else WHITE
+                text_surface = option_font.render(label, False, color)
                 text_rect = text_surface.get_rect(
-                    center=(width // 2, start_y + idx * line_height)
+                    midleft=(
+                        resource_column_x + 8,
+                        row_top + row_height // 2,
+                    )
                 )
                 screen.blit(text_surface, text_rect)
 
             current = options[selected]
+            desc_area_top = stage_rows_start + stage_count * row_height + 12
             if current["type"] == "stage":
-                desc_font = load_font(
-                    font_settings.resource, font_settings.scaled_size(11)
-                )
                 desc_color = LIGHT_GRAY if current.get("available") else GRAY
-                desc_surface = desc_font.render(
-                    current["stage"].description, False, desc_color
+                _blit_wrapped_text(
+                    screen,
+                    current["stage"].description,
+                    desc_font,
+                    desc_color,
+                    (stage_column_x, desc_area_top),
+                    stage_column_width,
                 )
-                desc_rect = desc_surface.get_rect(center=(width // 2, height // 2 + 74))
-                screen.blit(desc_surface, desc_rect)
+
+            option_help_top = resource_rows_start + resource_count * row_height + 12
+            help_text = ""
+            if current["type"] == "settings":
+                help_text = tr("menu.option_help.settings")
+            elif current["type"] == "quit":
+                help_text = tr("menu.option_help.quit")
+            elif current["type"] == "readme":
+                help_text = tr("menu.option_help.readme")
+
+            if help_text:
+                _blit_wrapped_text(
+                    screen,
+                    help_text,
+                    desc_font,
+                    LIGHT_GRAY,
+                    (resource_column_x, option_help_top),
+                    resource_column_width,
+                )
+
+            hint_lines = [tr("menu.hints.navigate"), tr("menu.hints.confirm")]
+            hint_start_y = height - 96
+            for offset, line in enumerate(hint_lines):
+                hint_surface = hint_font.render(line, False, LIGHT_GRAY)
+                hint_rect = hint_surface.get_rect(
+                    topleft=(resource_column_x, hint_start_y + offset * 18)
+                )
+                screen.blit(hint_surface, hint_rect)
+
+            window_hint = tr("menu.window_hint")
+            window_hint_surface = hint_font.render(window_hint, False, LIGHT_GRAY)
+            window_hint_rect = window_hint_surface.get_rect(
+                center=(width // 2, height - 46)
+            )
+            screen.blit(window_hint_surface, window_hint_rect)
 
             seed_font = load_font(font_settings.resource, font_settings.scaled_size(12))
             seed_value_display = (
                 current_seed_text if current_seed_text else tr("menu.seed_empty")
             )
-            seed_label = tr("status.seed", value=seed_value_display)
+            seed_label = tr("menu.seed_label", value=seed_value_display)
             seed_surface = seed_font.render(seed_label, False, LIGHT_GRAY)
             seed_rect = seed_surface.get_rect(right=width - 14, bottom=height - 12)
             screen.blit(seed_surface, seed_rect)
-
-            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            hint_text = tr("menu.window_hint")
-            hint_surface = hint_font.render(hint_text, False, LIGHT_GRAY)
-            hint_rect = hint_surface.get_rect(center=(width // 2, height - 60))
-            screen.blit(hint_surface, hint_rect)
 
             seed_hint = tr("menu.seed_hint")
             seed_hint_surface = hint_font.render(seed_hint, False, GRAY)

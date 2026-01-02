@@ -6,7 +6,6 @@ import pygame
 from pygame import surface, time
 
 from ..colors import BLACK, GREEN, LIGHT_GRAY, RED, WHITE
-from ..font_utils import load_font
 from ..localization import translate as tr
 from ..models import GameData, Stage
 from ..render import (
