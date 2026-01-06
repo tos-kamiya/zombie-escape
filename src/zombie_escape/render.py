@@ -18,6 +18,7 @@ from .colors import (
     BLUE,
     FOOTPRINT_COLOR,
     GREEN,
+    INTERNAL_WALL_COLOR,
     LIGHT_GRAY,
     ORANGE,
     YELLOW,
@@ -81,7 +82,8 @@ def draw_level_overview(
     dark_floor = tuple(max(0, int(channel * 0.55)) for channel in base_floor)
     surface.fill(dark_floor)
     for wall in wall_group:
-        surface.blit(wall.image, wall.rect)
+        color = getattr(wall, "base_color", INTERNAL_WALL_COLOR)
+        pygame.draw.rect(surface, color, wall.rect)
     now = pygame.time.get_ticks()
     for fp in footprints:
         age = now - fp["time"]

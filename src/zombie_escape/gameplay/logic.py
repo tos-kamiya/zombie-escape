@@ -241,10 +241,18 @@ def generate_level_from_blueprint(
                         health=STEEL_BEAM_HEALTH,
                     )
                 bevel_mask = (
-                    not has_wall(x, y - 1) and not has_wall(x - 1, y),
-                    not has_wall(x, y - 1) and not has_wall(x + 1, y),
-                    not has_wall(x, y + 1) and not has_wall(x + 1, y),
-                    not has_wall(x, y + 1) and not has_wall(x - 1, y),
+                    not has_wall(x, y - 1)
+                    and not has_wall(x - 1, y)
+                    and not has_wall(x - 1, y - 1),
+                    not has_wall(x, y - 1)
+                    and not has_wall(x + 1, y)
+                    and not has_wall(x + 1, y - 1),
+                    not has_wall(x, y + 1)
+                    and not has_wall(x + 1, y)
+                    and not has_wall(x + 1, y + 1),
+                    not has_wall(x, y + 1)
+                    and not has_wall(x - 1, y)
+                    and not has_wall(x - 1, y + 1),
                 )
                 wall = Wall(
                     cell_rect.x,
