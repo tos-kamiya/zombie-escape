@@ -12,7 +12,7 @@ from .constants import ZOMBIE_SPAWN_DELAY_MS
 from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
-    from .entities import Camera, Car, Companion, FuelCan, Flashlight, Player
+    from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player
 
 
 @dataclass
@@ -121,6 +121,8 @@ STAGES: list[Stage] = [
         name_key="stages.stage1.name",
         description_key="stages.stage1.description",
         available=True,
+        exterior_spawn_weight=0.9,
+        interior_spawn_weight=0.1,
     ),
     Stage(
         id="stage2",
@@ -128,6 +130,8 @@ STAGES: list[Stage] = [
         description_key="stages.stage2.description",
         available=True,
         requires_fuel=True,
+        exterior_spawn_weight=0.9,
+        interior_spawn_weight=0.1,
     ),
     Stage(
         id="stage3",
@@ -136,6 +140,8 @@ STAGES: list[Stage] = [
         available=True,
         requires_companion=True,
         requires_fuel=True,
+        exterior_spawn_weight=0.9,
+        interior_spawn_weight=0.1,
     ),
     Stage(
         id="stage4",
@@ -143,9 +149,6 @@ STAGES: list[Stage] = [
         description_key="stages.stage4.description",
         available=True,
         survivor_stage=True,
-        spawn_interval_ms=ZOMBIE_SPAWN_DELAY_MS,
-        exterior_spawn_weight=1.0,
-        interior_spawn_weight=0.0,
     ),
     Stage(
         id="stage5",
@@ -156,7 +159,6 @@ STAGES: list[Stage] = [
         survival_stage=True,
         survival_goal_ms=1_200_000,
         fuel_spawn_count=0,
-        spawn_interval_ms=ZOMBIE_SPAWN_DELAY_MS,
         exterior_spawn_weight=0.4,
         interior_spawn_weight=0.6,
     ),

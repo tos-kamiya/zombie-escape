@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Callable
-
 from enum import Enum
+from typing import Any, Callable
 
 import pygame
 from pygame import sprite, surface
@@ -24,16 +23,17 @@ from .colors import (
     YELLOW,
     get_environment_palette,
 )
-from .font_utils import load_font
-from .localization import get_font_settings, translate as tr
-from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player, Survivor
-from .models import GameData, Stage
-from .render_assets import RenderAssets
 from .constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
-    SURVIVOR_MAX_SAFE_PASSENGERS,
     SURVIVAL_FAKE_CLOCK_RATIO,
+    SURVIVOR_MAX_SAFE_PASSENGERS,
 )
+from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player, Survivor
+from .font_utils import load_font
+from .localization import get_font_settings
+from .localization import translate as tr
+from .models import GameData, Stage
+from .render_assets import RenderAssets
 
 
 def show_message(
@@ -307,7 +307,9 @@ def _get_fog_overlay_surfaces(
 
 
 def _build_flashlight_fade_surface(
-    size: tuple[int, int], center: tuple[int, int], max_radius: int,
+    size: tuple[int, int],
+    center: tuple[int, int],
+    max_radius: int,
     *,
     start_ratio: float = 0.2,
     max_alpha: int = 220,
@@ -589,11 +591,11 @@ def draw(
         player_screen_rect = camera.apply_rect(player.rect)
 
     if has_fuel and player_screen_rect and not player.in_car:
-        indicator_size = max(6, (assets.player_radius // 2) * 2)
-        padding = max(2, indicator_size // 4)
+        indicator_size = 4
+        padding = 1
         indicator_rect = pygame.Rect(
-            player_screen_rect.right - indicator_size + padding,
-            player_screen_rect.bottom - indicator_size + padding,
+            player_screen_rect.right - indicator_size - padding,
+            player_screen_rect.bottom - indicator_size - padding,
             indicator_size,
             indicator_size,
         )
@@ -682,7 +684,9 @@ def draw(
             assets.screen_width - padding * 2,
             bar_height,
         )
-        track_surface = pygame.Surface((bar_rect.width, bar_rect.height), pygame.SRCALPHA)
+        track_surface = pygame.Surface(
+            (bar_rect.width, bar_rect.height), pygame.SRCALPHA
+        )
         track_surface.fill((0, 0, 0, 140))
         screen.blit(track_surface, bar_rect.topleft)
         progress_ratio = elapsed_ms / goal_ms if goal_ms else 0.0
@@ -708,7 +712,9 @@ def draw(
             font_settings = get_font_settings()
             font = load_font(font_settings.resource, font_settings.scaled_size(12))
             text_surface = font.render(timer_text, False, LIGHT_GRAY)
-            text_rect = text_surface.get_rect(left=bar_rect.left, bottom=bar_rect.top - 2)
+            text_rect = text_surface.get_rect(
+                left=bar_rect.left, bottom=bar_rect.top - 2
+            )
             screen.blit(text_surface, text_rect)
             if state.time_accel_active:
                 accel_text = tr("hud.time_accel")
