@@ -598,7 +598,7 @@ def draw(
             indicator_size,
         )
         pygame.draw.rect(screen, YELLOW, indicator_rect)
-        pygame.draw.rect(screen, BLACK, indicator_rect, width=1)
+        pygame.draw.rect(screen, (180, 160, 40), indicator_rect, width=1)
 
     if hint_target and player:
         current_fov_scale = get_fog_scale(
