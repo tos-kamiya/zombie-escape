@@ -431,10 +431,10 @@ def draw_status_bar(
     parts = [tr("status.stage", label=stage_label)]
     if footprints_on:
         parts.append(tr("status.footprints"))
-    if fast_on:
-        parts.append(tr("status.fast"))
     if hint_on:
         parts.append(tr("status.car_hint"))
+    if fast_on:
+        parts.append(tr("status.fast"))
     if steel_on:
         parts.append(tr("status.steel"))
     if debug_mode:
