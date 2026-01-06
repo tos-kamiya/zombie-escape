@@ -544,7 +544,7 @@ def draw(
         for x in range(start_x, end_x):
             if (x, y) in outside_cells:
                 continue
-            if (x + y) % 2 == 0:
+            if ((x // 2) + (y // 2)) % 2 == 0:
                 lx, ly = (
                     x * assets.internal_wall_grid_snap,
                     y * assets.internal_wall_grid_snap,
