@@ -30,6 +30,7 @@ from ..constants import (
     FUEL_HINT_DURATION_MS,
     INTERNAL_WALL_HEALTH,
     LEVEL_GRID_COLS,
+    LEVEL_GRID_ROWS,
     LEVEL_HEIGHT,
     LEVEL_WIDTH,
     MAX_ZOMBIES,
@@ -74,6 +75,7 @@ from ..entities import (
     Survivor,
     Wall,
     Zombie,
+    spritecollideany_walls,
 )
 
 LOGICAL_SCREEN_RECT = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -174,6 +176,17 @@ def generate_level_from_blueprint(
     steel_cells = (
         {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
     )
+    wall_cells = {
+        (x, y)
+        for y, row in enumerate(blueprint)
+        for x, ch in enumerate(row)
+        if ch in {"B", "1"}
+    }
+
+    def has_wall(nx: int, ny: int) -> bool:
+        if nx < 0 or ny < 0 or nx >= LEVEL_GRID_COLS or ny >= LEVEL_GRID_ROWS:
+            return True
+        return (nx, ny) in wall_cells
 
     outside_rects: list[pygame.Rect] = []
     walkable_cells: list[pygame.Rect] = []
@@ -210,6 +223,7 @@ def generate_level_from_blueprint(
                     color=palette.outer_wall,
                     border_color=palette.outer_wall_border,
                     palette_category="outer_wall",
+                    bevel_depth=0,
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
@@ -226,6 +240,12 @@ def generate_level_from_blueprint(
                         cell_rect.width,
                         health=STEEL_BEAM_HEALTH,
                     )
+                bevel_mask = (
+                    not has_wall(x, y - 1) and not has_wall(x - 1, y),
+                    not has_wall(x, y - 1) and not has_wall(x + 1, y),
+                    not has_wall(x, y + 1) and not has_wall(x + 1, y),
+                    not has_wall(x, y + 1) and not has_wall(x - 1, y),
+                )
                 wall = Wall(
                     cell_rect.x,
                     cell_rect.y,
@@ -235,6 +255,7 @@ def generate_level_from_blueprint(
                     color=palette.inner_wall,
                     border_color=palette.inner_wall_border,
                     palette_category="inner_wall",
+                    bevel_mask=bevel_mask,
                     on_destroy=(lambda _w, b=beam: add_beam_to_groups(b))
                     if beam
                     else None,
@@ -299,9 +320,7 @@ def place_new_car(
                 if abs(w.rect.centerx - c_x) < 150 and abs(w.rect.centery - c_y) < 150
             ]
         )
-        collides_wall = pygame.sprite.spritecollideany(
-            temp_car, nearby_walls, collided=lambda s1, s2: s1.rect.colliderect(s2.rect)
-        )
+        collides_wall = spritecollideany_walls(temp_car, nearby_walls)
         collides_player = temp_rect.colliderect(player.rect.inflate(50, 50))
         car_overlap = False
         if existing_cars:
@@ -493,7 +512,7 @@ def spawn_survivors(
 
     for pos in scatter_positions_on_walkable(walkable, SURVIVOR_SPAWN_RATE):
         s = Survivor(*pos)
-        if pygame.sprite.spritecollideany(s, wall_group):
+        if spritecollideany_walls(s, wall_group):
             continue
         survivor_group.add(s)
         all_sprites.add(s, layer=1)
@@ -734,7 +753,7 @@ def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> Non
                 origin[1] + math.sin(angle) * dist,
             )
             s = Survivor(*pos)
-            if not pygame.sprite.spritecollideany(s, wall_group):
+            if not spritecollideany_walls(s, wall_group):
                 survivor_group.add(s)
                 all_sprites.add(s, layer=1)
                 placed = True
@@ -831,7 +850,7 @@ def respawn_rescued_companion_near_player(game_data: GameData) -> None:
     spawn_pos = (int(player.x), int(player.y))
     for dx, dy in offsets:
         candidate = Companion(player.x + dx, player.y + dy)
-        if not pygame.sprite.spritecollideany(candidate, wall_group):
+        if not spritecollideany_walls(candidate, wall_group):
             spawn_pos = (candidate.x, candidate.y)
             break
 
@@ -1056,7 +1075,7 @@ def spawn_initial_zombies(
         ):
             continue
         tentative = create_zombie(config, start_pos=pos)
-        if pygame.sprite.spritecollideany(tentative, wall_group):
+        if spritecollideany_walls(tentative, wall_group):
             continue
         zombie_group.add(tentative)
         all_sprites.add(tentative, layer=1)
@@ -1104,7 +1123,7 @@ def spawn_nearby_zombie(
         if view_rect.collidepoint(candidate):
             continue
         new_zombie = create_zombie(config, start_pos=candidate)
-        if pygame.sprite.spritecollideany(new_zombie, wall_group):
+        if spritecollideany_walls(new_zombie, wall_group):
             continue
         zombie_group.add(new_zombie)
         all_sprites.add(new_zombie, layer=1)
@@ -1683,6 +1702,8 @@ def _apply_palette_to_walls(
     *,
     force: bool = False,
 ) -> None:
+    if not hasattr(game_data, "groups") or not hasattr(game_data.groups, "wall_group"):
+        return
     wall_group = game_data.groups.wall_group
     for wall in wall_group:
         if not hasattr(wall, "set_palette_colors"):

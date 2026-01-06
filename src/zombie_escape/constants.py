@@ -31,6 +31,8 @@ LEVEL_HEIGHT = LEVEL_GRID_ROWS * CELL_SIZE
 
 # --- Player and companion settings ---
 HUMANOID_RADIUS = 6
+
+
 def interaction_radius(width: float, height: float) -> float:
     """Approximate interaction reach for a humanoid and an object."""
     return HUMANOID_RADIUS + (width + height) / 4
@@ -39,6 +41,7 @@ def interaction_radius(width: float, height: float) -> float:
 def car_body_radius(width: float, height: float) -> float:
     """Approximate car collision radius using only its own dimensions."""
     return min(width, height) / 2
+
 
 PLAYER_RADIUS = HUMANOID_RADIUS
 PLAYER_SPEED = 1.4
@@ -114,6 +117,7 @@ FUEL_HINT_DURATION_MS = 1600
 # --- Wall and beam settings ---
 INTERNAL_WALL_GRID_SNAP = CELL_SIZE
 INTERNAL_WALL_HEALTH = 40 * 100
+INTERNAL_WALL_BEVEL_DEPTH = 10
 OUTER_WALL_HEALTH = 999999
 STEEL_BEAM_HEALTH = int(INTERNAL_WALL_HEALTH * 1.5)
 PLAYER_WALL_DAMAGE = 100
@@ -215,6 +219,7 @@ __all__ = [
     "FUEL_CAN_HEIGHT",
     "FUEL_HINT_DURATION_MS",
     "INTERNAL_WALL_HEALTH",
+    "INTERNAL_WALL_BEVEL_DEPTH",
     "OUTER_WALL_HEALTH",
     "STEEL_BEAM_HEALTH",
     "PLAYER_WALL_DAMAGE",

@@ -2,6 +2,10 @@
 node_modules/
 **/__pycache__/**
 dist/
+dev-samples/
+mplus_bitmap_fonts/
+shot*.png
+*.log
 
 package-lock.json
 package.json

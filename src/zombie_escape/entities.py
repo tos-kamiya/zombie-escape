@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from enum import Enum
-from typing import Callable, Iterable, Self
+from typing import Callable, Iterable, Self, Sequence
 
 import pygame
 from pygame import rect
@@ -22,11 +22,11 @@ from .colors import (
     YELLOW,
 )
 from .constants import (
-    CAR_HEIGHT,
     CAR_HEALTH,
+    CAR_HEIGHT,
     CAR_SPEED,
-    CAR_WIDTH,
     CAR_WALL_DAMAGE,
+    CAR_WIDTH,
     COMPANION_COLOR,
     COMPANION_FOLLOW_SPEED,
     COMPANION_RADIUS,
@@ -35,6 +35,7 @@ from .constants import (
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
+    INTERNAL_WALL_BEVEL_DEPTH,
     INTERNAL_WALL_HEALTH,
     LEVEL_HEIGHT,
     LEVEL_WIDTH,
@@ -49,11 +50,11 @@ from .constants import (
     SURVIVOR_APPROACH_SPEED,
     SURVIVOR_COLOR,
     SURVIVOR_RADIUS,
+    ZOMBIE_AGING_DURATION_FRAMES,
+    ZOMBIE_AGING_MIN_SPEED_RATIO,
     ZOMBIE_MODE_CHANGE_INTERVAL_MS,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
-    ZOMBIE_AGING_DURATION_FRAMES,
-    ZOMBIE_AGING_MIN_SPEED_RATIO,
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_SPEED,
     ZOMBIE_WALL_DAMAGE,
@@ -64,7 +65,9 @@ from .rng import get_rng
 RNG = get_rng()
 
 
-def circle_rect_collision(center: tuple[float, float], radius: float, rect_obj: rect.Rect) -> bool:
+def circle_rect_collision(
+    center: tuple[float, float], radius: float, rect_obj: rect.Rect
+) -> bool:
     """Return True if a circle overlaps the provided rectangle."""
     cx, cy = center
     closest_x = max(rect_obj.left, min(cx, rect_obj.right))
@@ -72,6 +75,206 @@ def circle_rect_collision(center: tuple[float, float], radius: float, rect_obj: 
     dx = cx - closest_x
     dy = cy - closest_y
     return dx * dx + dy * dy <= radius * radius
+
+
+def _build_beveled_polygon(
+    width: int,
+    height: int,
+    depth: int,
+    bevels: tuple[bool, bool, bool, bool],
+) -> list[tuple[int, int]]:
+    d = max(0, min(depth, width // 2, height // 2))
+    if d == 0 or not any(bevels):
+        return [(0, 0), (width, 0), (width, height), (0, height)]
+
+    tl, tr, br, bl = bevels
+    points: list[tuple[int, int]] = []
+    points.append((d if tl else 0, 0))
+    if tr:
+        points.append((width - d, 0))
+        points.append((width, d))
+    else:
+        points.append((width, 0))
+    if br:
+        points.append((width, height - d))
+        points.append((width - d, height))
+    else:
+        points.append((width, height))
+    if bl:
+        points.append((d, height))
+        points.append((0, height - d))
+    else:
+        points.append((0, height))
+    if tl:
+        points.append((0, d))
+    return points
+
+
+def _point_in_polygon(
+    point: tuple[float, float], polygon: Sequence[tuple[float, float]]
+) -> bool:
+    x, y = point
+    inside = False
+    count = len(polygon)
+    j = count - 1
+    for i in range(count):
+        xi, yi = polygon[i]
+        xj, yj = polygon[j]
+        intersects = (yi > y) != (yj > y) and (
+            x < (xj - xi) * (y - yi) / (yj - yi + 0.000001) + xi
+        )
+        if intersects:
+            inside = not inside
+        j = i
+    return inside
+
+
+def _segments_intersect(
+    a1: tuple[float, float],
+    a2: tuple[float, float],
+    b1: tuple[float, float],
+    b2: tuple[float, float],
+) -> bool:
+    def orient(
+        p: tuple[float, float], q: tuple[float, float], r: tuple[float, float]
+    ) -> float:
+        return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+
+    def on_segment(
+        p: tuple[float, float], q: tuple[float, float], r: tuple[float, float]
+    ) -> bool:
+        return min(p[0], r[0]) <= q[0] <= max(p[0], r[0]) and min(p[1], r[1]) <= q[
+            1
+        ] <= max(p[1], r[1])
+
+    o1 = orient(a1, a2, b1)
+    o2 = orient(a1, a2, b2)
+    o3 = orient(b1, b2, a1)
+    o4 = orient(b1, b2, a2)
+
+    if (o1 > 0) != (o2 > 0) and (o3 > 0) != (o4 > 0):
+        return True
+    if o1 == 0 and on_segment(a1, b1, a2):
+        return True
+    if o2 == 0 and on_segment(a1, b2, a2):
+        return True
+    if o3 == 0 and on_segment(b1, a1, b2):
+        return True
+    if o4 == 0 and on_segment(b1, a2, b2):
+        return True
+    return False
+
+
+def _point_segment_distance_sq(
+    point: tuple[float, float],
+    seg_a: tuple[float, float],
+    seg_b: tuple[float, float],
+) -> float:
+    px, py = point
+    ax, ay = seg_a
+    bx, by = seg_b
+    dx = bx - ax
+    dy = by - ay
+    if dx == 0 and dy == 0:
+        return (px - ax) ** 2 + (py - ay) ** 2
+    t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)
+    t = max(0.0, min(1.0, t))
+    nearest_x = ax + t * dx
+    nearest_y = ay + t * dy
+    return (px - nearest_x) ** 2 + (py - nearest_y) ** 2
+
+
+def rect_polygon_collision(
+    rect_obj: rect.Rect, polygon: Sequence[tuple[float, float]]
+) -> bool:
+    min_x = min(p[0] for p in polygon)
+    max_x = max(p[0] for p in polygon)
+    min_y = min(p[1] for p in polygon)
+    max_y = max(p[1] for p in polygon)
+    if not rect_obj.colliderect(
+        pygame.Rect(min_x, min_y, max_x - min_x, max_y - min_y)
+    ):
+        return False
+
+    rect_points = [
+        (rect_obj.left, rect_obj.top),
+        (rect_obj.right, rect_obj.top),
+        (rect_obj.right, rect_obj.bottom),
+        (rect_obj.left, rect_obj.bottom),
+    ]
+    if any(_point_in_polygon(p, polygon) for p in rect_points):
+        return True
+    if any(rect_obj.collidepoint(p) for p in polygon):
+        return True
+
+    rect_edges = [
+        (rect_points[0], rect_points[1]),
+        (rect_points[1], rect_points[2]),
+        (rect_points[2], rect_points[3]),
+        (rect_points[3], rect_points[0]),
+    ]
+    poly_edges = [
+        (polygon[i], polygon[(i + 1) % len(polygon)]) for i in range(len(polygon))
+    ]
+    for edge_a in rect_edges:
+        for edge_b in poly_edges:
+            if _segments_intersect(edge_a[0], edge_a[1], edge_b[0], edge_b[1]):
+                return True
+    return False
+
+
+def circle_polygon_collision(
+    center: tuple[float, float],
+    radius: float,
+    polygon: Sequence[tuple[float, float]],
+) -> bool:
+    if _point_in_polygon(center, polygon):
+        return True
+    radius_sq = radius * radius
+    for i in range(len(polygon)):
+        a = polygon[i]
+        b = polygon[(i + 1) % len(polygon)]
+        if _point_segment_distance_sq(center, a, b) <= radius_sq:
+            return True
+    return False
+
+
+def collide_sprite_wall(
+    sprite: pygame.sprite.Sprite, wall: pygame.sprite.Sprite
+) -> bool:
+    if hasattr(wall, "collides_rect"):
+        return wall.collides_rect(sprite.rect)
+    if hasattr(sprite, "collides_rect"):
+        return sprite.collides_rect(wall.rect)
+    return sprite.rect.colliderect(wall.rect)
+
+
+def spritecollide_walls(
+    sprite: pygame.sprite.Sprite,
+    walls: pygame.sprite.Group,
+    *,
+    dokill: bool = False,
+) -> list[pygame.sprite.Sprite]:
+    return pygame.sprite.spritecollide(
+        sprite, walls, dokill, collided=collide_sprite_wall
+    )
+
+
+def spritecollideany_walls(
+    sprite: pygame.sprite.Sprite,
+    walls: pygame.sprite.Group,
+) -> pygame.sprite.Sprite | None:
+    return pygame.sprite.spritecollideany(sprite, walls, collided=collide_sprite_wall)
+
+
+def circle_wall_collision(
+    center: tuple[float, float],
+    radius: float,
+    wall: pygame.sprite.Sprite,
+) -> bool:
+    if hasattr(wall, "collides_circle"):
+        return wall.collides_circle(center, radius)
+    return circle_rect_collision(center, radius, wall.rect)
 
 
 # --- Camera Class ---
@@ -87,20 +290,32 @@ class Wall(pygame.sprite.Sprite):
         color: tuple[int, int, int] = INTERNAL_WALL_COLOR,
         border_color: tuple[int, int, int] = INTERNAL_WALL_BORDER_COLOR,
         palette_category: str = "inner_wall",
+        bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
+        bevel_mask: tuple[bool, bool, bool, bool] | None = None,
         on_destroy: Callable[[Self], None] | None = None,
     ) -> None:
         super().__init__()
         safe_width = max(1, width)
         safe_height = max(1, height)
-        self.image = pygame.Surface((safe_width, safe_height))
+        self.image = pygame.Surface((safe_width, safe_height), pygame.SRCALPHA)
         self.base_color = color
         self.border_base_color = border_color
         self.palette_category = palette_category
         self.health = health
         self.max_health = max(1, health)
         self.on_destroy = on_destroy
+        self.bevel_depth = max(0, bevel_depth)
+        self.bevel_mask = bevel_mask or (False, False, False, False)
+        self._local_polygon = _build_beveled_polygon(
+            safe_width, safe_height, self.bevel_depth, self.bevel_mask
+        )
         self.update_color()
         self.rect = self.image.get_rect(topleft=(x, y))
+        self._collision_polygon = (
+            [(px + self.rect.x, py + self.rect.y) for px, py in self._local_polygon]
+            if self.bevel_depth > 0 and any(self.bevel_mask)
+            else None
+        )
 
     def take_damage(self: Self, *, amount: int = 1) -> None:
         if self.health > 0:
@@ -115,9 +330,10 @@ class Wall(pygame.sprite.Sprite):
                 self.kill()
 
     def update_color(self: Self) -> None:
+        self.image.fill((0, 0, 0, 0))
         if self.health <= 0:
-            self.image.fill((40, 40, 40))
             health_ratio = 0
+            fill_color = (40, 40, 40)
         else:
             health_ratio = max(0, self.health / self.max_health)
             mix = (
@@ -126,12 +342,30 @@ class Wall(pygame.sprite.Sprite):
             r = int(self.base_color[0] * mix)
             g = int(self.base_color[1] * mix)
             b = int(self.base_color[2] * mix)
-            self.image.fill((r, g, b))
+            fill_color = (r, g, b)
         # Bright edge to separate walls from floor
         br = int(self.border_base_color[0] * (0.6 + 0.4 * health_ratio))
         bg = int(self.border_base_color[1] * (0.6 + 0.4 * health_ratio))
         bb = int(self.border_base_color[2] * (0.6 + 0.4 * health_ratio))
-        pygame.draw.rect(self.image, (br, bg, bb), self.image.get_rect(), width=9)
+        border_color = (br, bg, bb)
+
+        if self.bevel_depth > 0 and any(self.bevel_mask):
+            pygame.draw.polygon(self.image, border_color, self._local_polygon)
+        else:
+            self.image.fill(border_color)
+        border_width = 18
+        inner_rect = self.image.get_rect().inflate(-border_width, -border_width)
+        pygame.draw.rect(self.image, fill_color, inner_rect)
+
+    def collides_rect(self: Self, rect_obj: rect.Rect) -> bool:
+        if self._collision_polygon is None:
+            return self.rect.colliderect(rect_obj)
+        return rect_polygon_collision(rect_obj, self._collision_polygon)
+
+    def collides_circle(self: Self, center: tuple[float, float], radius: float) -> bool:
+        if self._collision_polygon is None:
+            return circle_rect_collision(center, radius, self.rect)
+        return circle_polygon_collision(center, radius, self._collision_polygon)
 
     def set_palette_colors(
         self: Self,
@@ -142,7 +376,11 @@ class Wall(pygame.sprite.Sprite):
     ) -> None:
         """Update the wall's base colors to match the current ambient palette."""
 
-        if not force and self.base_color == color and self.border_base_color == border_color:
+        if (
+            not force
+            and self.base_color == color
+            and self.border_base_color == border_color
+        ):
             return
         self.base_color = color
         self.border_base_color = border_color
@@ -247,7 +485,7 @@ class Player(pygame.sprite.Sprite):
             self.x += dx
             self.x = min(LEVEL_WIDTH, max(0, self.x))
             self.rect.centerx = int(self.x)
-            hit_list_x = pygame.sprite.spritecollide(self, walls, False)
+            hit_list_x = spritecollide_walls(self, walls)
             if hit_list_x:
                 damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_x))
                 for wall in hit_list_x:
@@ -260,7 +498,7 @@ class Player(pygame.sprite.Sprite):
             self.y += dy
             self.y = min(LEVEL_HEIGHT, max(0, self.y))
             self.rect.centery = int(self.y)
-            hit_list_y = pygame.sprite.spritecollide(self, walls, False)
+            hit_list_y = spritecollide_walls(self, walls)
             if hit_list_y:
                 damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_y))
                 for wall in hit_list_y:
@@ -323,13 +561,13 @@ class Companion(pygame.sprite.Sprite):
         if move_x != 0:
             self.x += move_x
             self.rect.centerx = int(self.x)
-            if pygame.sprite.spritecollideany(self, walls):
+            if spritecollideany_walls(self, walls):
                 self.x -= move_x
                 self.rect.centerx = int(self.x)
         if move_y != 0:
             self.y += move_y
             self.rect.centery = int(self.y)
-            if pygame.sprite.spritecollideany(self, walls):
+            if spritecollideany_walls(self, walls):
                 self.y -= move_y
                 self.rect.centery = int(self.y)
 
@@ -378,13 +616,13 @@ class Survivor(pygame.sprite.Sprite):
         if move_x:
             self.x += move_x
             self.rect.centerx = int(self.x)
-            if pygame.sprite.spritecollideany(self, walls):
+            if spritecollideany_walls(self, walls):
                 self.x -= move_x
                 self.rect.centerx = int(self.x)
         if move_y:
             self.y += move_y
             self.rect.centery = int(self.y)
-            if pygame.sprite.spritecollideany(self, walls):
+            if spritecollideany_walls(self, walls):
                 self.y -= move_y
                 self.rect.centery = int(self.y)
 
@@ -504,7 +742,12 @@ class Zombie(pygame.sprite.Sprite):
         temp_rect.centerx = int(next_x)
         temp_rect.centery = int(self.y)
         for wall in possible_walls:
-            if temp_rect.colliderect(wall.rect):
+            collides = (
+                wall.collides_rect(temp_rect)
+                if hasattr(wall, "collides_rect")
+                else temp_rect.colliderect(wall.rect)
+            )
+            if collides:
                 if wall.alive():
                     wall.take_damage(amount=ZOMBIE_WALL_DAMAGE)
                 if wall.alive():
@@ -514,7 +757,12 @@ class Zombie(pygame.sprite.Sprite):
         temp_rect.centerx = int(final_x)
         temp_rect.centery = int(next_y)
         for wall in possible_walls:
-            if temp_rect.colliderect(wall.rect):
+            collides = (
+                wall.collides_rect(temp_rect)
+                if hasattr(wall, "collides_rect")
+                else temp_rect.colliderect(wall.rect)
+            )
+            if collides:
                 if wall.alive():
                     wall.take_damage(amount=ZOMBIE_WALL_DAMAGE)
                 if wall.alive():
@@ -619,7 +867,9 @@ class Zombie(pygame.sprite.Sprite):
         self.image.fill((0, 0, 0, 0))
         color = (80, 80, 80)
         pygame.draw.circle(self.image, color, (self.radius, self.radius), self.radius)
-        pygame.draw.circle(self.image, (30, 30, 30), (self.radius, self.radius), self.radius, width=2)
+        pygame.draw.circle(
+            self.image, (30, 30, 30), (self.radius, self.radius), self.radius, width=2
+        )
 
 
 class Car(pygame.sprite.Sprite):
@@ -754,7 +1004,7 @@ class Car(pygame.sprite.Sprite):
         ]
         car_center = (new_x, new_y)
         for wall in possible_walls:
-            if circle_rect_collision(car_center, self.collision_radius, wall.rect):
+            if circle_wall_collision(car_center, self.collision_radius, wall):
                 hit_walls.append(wall)
         if hit_walls:
             self.take_damage(CAR_WALL_DAMAGE)
