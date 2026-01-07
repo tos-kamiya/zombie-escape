@@ -23,7 +23,7 @@ from .colors import (
     YELLOW,
     get_environment_palette,
 )
-from .constants import (
+from .gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     SURVIVAL_FAKE_CLOCK_RATIO,
     SURVIVOR_MAX_SAFE_PASSENGERS,
@@ -763,7 +763,7 @@ def draw(
             objective_lines.append(tr("objectives.survive_until_dawn"))
     elif stage and stage.requires_fuel and not has_fuel:
         objective_lines.append(tr("objectives.find_fuel"))
-    elif stage and getattr(stage, "survivor_stage", False):
+    elif stage and getattr(stage, "rescue_stage", False):
         if not player.in_car:
             objective_lines.append(tr("objectives.find_car"))
         else:
@@ -773,7 +773,7 @@ def draw(
     else:
         objective_lines.append(tr("objectives.escape"))
 
-    if stage and getattr(stage, "requires_companion", False):
+    if stage and getattr(stage, "companion_stage", False):
         if not companion_rescued:
             buddy_following = companion and getattr(companion, "following", False)
             if player.in_car:
@@ -784,7 +784,7 @@ def draw(
 
     if (
         stage
-        and getattr(stage, "survivor_stage", False)
+        and getattr(stage, "rescue_stage", False)
         and (survivors_onboard is not None)
     ):
         limit = getattr(state, "survivor_capacity", SURVIVOR_MAX_SAFE_PASSENGERS)

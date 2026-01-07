@@ -6,7 +6,7 @@ import pygame
 from pygame import surface, time
 
 from ..colors import LIGHT_GRAY, RED, WHITE, YELLOW
-from ..constants import (
+from ..gameplay_constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     SURVIVOR_STAGE_WAITING_CAR_COUNT,
@@ -67,7 +67,7 @@ def gameplay_screen(
     layout_data = logic.generate_level_from_blueprint(game_data, config)
     logic.sync_ambient_palette_with_flashlights(game_data, force=True)
     initial_waiting = (
-        SURVIVOR_STAGE_WAITING_CAR_COUNT if stage.survivor_stage else 1
+        SURVIVOR_STAGE_WAITING_CAR_COUNT if stage.rescue_stage else 1
     )
     player, waiting_cars = logic.setup_player_and_cars(
         game_data, layout_data, car_count=initial_waiting
@@ -81,7 +81,7 @@ def gameplay_screen(
     )
     logic.apply_passenger_speed_penalty(game_data)
 
-    if stage.survivor_stage:
+    if stage.rescue_stage:
         logic.spawn_survivors(game_data, layout_data)
 
     if stage.requires_fuel:
@@ -104,7 +104,7 @@ def gameplay_screen(
     game_data.flashlights = flashlights
     game_data.groups.all_sprites.add(flashlights, layer=1)
 
-    if stage.requires_companion:
+    if stage.companion_stage:
         companion = logic.place_companion(
             layout_data["walkable_cells"], player, cars=game_data.waiting_cars
         )

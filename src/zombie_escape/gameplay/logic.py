@@ -12,12 +12,11 @@ from ..colors import (
     ambient_palette_key_for_flashlights,
     get_environment_palette,
 )
-from ..constants import (
+from ..gameplay_constants import (
     CAR_HEIGHT,
     CAR_SPEED,
     CAR_WIDTH,
     CAR_ZOMBIE_DAMAGE,
-    CELL_SIZE,
     COMPANION_RADIUS,
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     FAST_ZOMBIE_BASE_SPEED,
@@ -29,16 +28,10 @@ from ..constants import (
     FUEL_CAN_WIDTH,
     FUEL_HINT_DURATION_MS,
     INTERNAL_WALL_HEALTH,
-    LEVEL_GRID_COLS,
-    LEVEL_GRID_ROWS,
-    LEVEL_HEIGHT,
-    LEVEL_WIDTH,
     MAX_ZOMBIES,
     OUTER_WALL_HEALTH,
     PLAYER_RADIUS,
     PLAYER_SPEED,
-    SCREEN_HEIGHT,
-    SCREEN_WIDTH,
     STEEL_BEAM_HEALTH,
     SURVIVOR_CONVERSION_LINE_KEYS,
     SURVIVOR_MAX_SAFE_PASSENGERS,
@@ -52,7 +45,6 @@ from ..constants import (
     SURVIVAL_NEAR_SPAWN_CAMERA_MARGIN,
     SURVIVAL_NEAR_SPAWN_MAX_DISTANCE,
     SURVIVAL_NEAR_SPAWN_MIN_DISTANCE,
-    ZOMBIE_INTERIOR_SPAWN_RATE,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SPAWN_DELAY_MS,
@@ -60,6 +52,8 @@ from ..constants import (
     ZOMBIE_SPEED,
     interaction_radius,
 )
+from ..level_constants import CELL_SIZE, GRID_COLS, GRID_ROWS, LEVEL_HEIGHT, LEVEL_WIDTH
+from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from ..localization import translate as tr
 from ..level_blueprints import choose_blueprint
 from ..models import Areas, GameData, Groups, ProgressState, Stage
@@ -184,7 +178,7 @@ def generate_level_from_blueprint(
     }
 
     def has_wall(nx: int, ny: int) -> bool:
-        if nx < 0 or ny < 0 or nx >= LEVEL_GRID_COLS or ny >= LEVEL_GRID_ROWS:
+        if nx < 0 or ny < 0 or nx >= GRID_COLS or ny >= GRID_ROWS:
             return True
         return (nx, ny) in wall_cells
 
@@ -203,9 +197,9 @@ def generate_level_from_blueprint(
         beam._added_to_groups = True
 
     for y, row in enumerate(blueprint):
-        if len(row) != LEVEL_GRID_COLS:
+        if len(row) != GRID_COLS:
             raise ValueError(
-                f"Blueprint width mismatch at row {y}: {len(row)} != {LEVEL_GRID_COLS}"
+                f"Blueprint width mismatch at row {y}: {len(row)} != {GRID_COLS}"
             )
         for x, ch in enumerate(row):
             cell_rect = rect_for_cell(x, y)
@@ -510,7 +504,7 @@ def spawn_survivors(
 ) -> list[Survivor]:
     """Populate Stage 4 with passive survivors on open tiles."""
     survivors: list[Survivor] = []
-    if not game_data.stage.survivor_stage:
+    if not game_data.stage.rescue_stage:
         return survivors
 
     walkable = layout_data.get("walkable_cells", [])
@@ -530,7 +524,7 @@ def spawn_survivors(
 
 
 def update_survivors(game_data: GameData) -> None:
-    if not game_data.stage.survivor_stage:
+    if not game_data.stage.rescue_stage:
         return
     survivor_group = game_data.groups.survivor_group
     wall_group = game_data.groups.wall_group
@@ -615,7 +609,7 @@ def apply_passenger_speed_penalty(game_data: GameData) -> None:
     car = game_data.car
     if not car:
         return
-    if not game_data.stage.survivor_stage:
+    if not game_data.stage.rescue_stage:
         car.speed = CAR_SPEED
         return
     car.speed = calculate_car_speed_for_passengers(
@@ -627,7 +621,7 @@ def apply_passenger_speed_penalty(game_data: GameData) -> None:
 def increase_survivor_capacity(game_data: GameData, increments: int = 1) -> None:
     if increments <= 0:
         return
-    if not game_data.stage.survivor_stage:
+    if not game_data.stage.rescue_stage:
         return
     state = game_data.state
     state.survivor_capacity += increments * SURVIVOR_MAX_SAFE_PASSENGERS
@@ -641,7 +635,7 @@ def rect_visible_on_screen(camera: Camera | None, rect: pygame.Rect) -> bool:
 
 
 def waiting_car_target_count(stage: Stage) -> int:
-    return SURVIVOR_STAGE_WAITING_CAR_COUNT if stage.survivor_stage else 1
+    return SURVIVOR_STAGE_WAITING_CAR_COUNT if stage.rescue_stage else 1
 
 
 def spawn_waiting_car(game_data: GameData) -> Car | None:
@@ -778,7 +772,7 @@ def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> Non
 def handle_survivor_zombie_collisions(
     game_data: GameData, config: dict[str, Any]
 ) -> None:
-    if not game_data.stage.survivor_stage:
+    if not game_data.stage.rescue_stage:
         return
     survivor_group = game_data.groups.survivor_group
     if not survivor_group:
@@ -835,7 +829,7 @@ def handle_survivor_zombie_collisions(
 
 def respawn_rescued_companion_near_player(game_data: GameData) -> None:
     """Bring back the rescued companion near the player after losing the car."""
-    if not (game_data.stage.requires_companion and game_data.state.companion_rescued):
+    if not (game_data.stage.companion_stage and game_data.state.companion_rescued):
         return
     # If a companion is already active, do nothing
     if (
@@ -934,7 +928,6 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         game_won=False,
         game_over_message=None,
         game_over_at=None,
-        overview_surface=None,
         scaled_overview=None,
         overview_created=False,
         footprints=[],
@@ -1071,7 +1064,7 @@ def spawn_initial_zombies(
     if not spawn_cells:
         return
 
-    spawn_rate = ZOMBIE_INTERIOR_SPAWN_RATE
+    spawn_rate = max(0.0, getattr(game_data.stage, "initial_interior_spawn_rate", 0.0))
     positions = scatter_positions_on_walkable(spawn_cells, spawn_rate)
     if not positions:
         positions = scatter_positions_on_walkable(spawn_cells, spawn_rate * 1.5)
@@ -1324,7 +1317,7 @@ def update_entities(
     )
     companion_on_screen = False
     if (
-        game_data.stage.requires_companion
+        game_data.stage.companion_stage
         and companion
         and companion.alive()
         and not companion.rescued
@@ -1332,7 +1325,7 @@ def update_entities(
         companion_on_screen = rect_visible_on_screen(camera, companion.rect)
 
     survivors_on_screen: list[Survivor] = []
-    if stage.survivor_stage:
+    if stage.rescue_stage:
         survivor_group = game_data.groups.survivor_group
         for survivor in survivor_group:
             if getattr(survivor, "alive", lambda: False)():
@@ -1371,7 +1364,7 @@ def update_entities(
             if dist_to_companion < dist_to_target:
                 target = companion.rect.center
 
-        if stage.survivor_stage:
+        if stage.rescue_stage:
             zombie_on_screen = rect_visible_on_screen(camera, zombie.rect)
             if zombie_on_screen:
                 candidate_positions: list[tuple[int, int]] = []
@@ -1475,7 +1468,7 @@ def check_interactions(
         companion_on_screen = rect_visible_on_screen(camera, companion.rect)
 
     # Companion interactions (Stage 3)
-    if companion_active and stage.requires_companion:
+    if companion_active and stage.companion_stage:
         assert companion is not None
         if not player.in_car:
             if pygame.sprite.collide_circle(companion, player):
@@ -1576,7 +1569,7 @@ def check_interactions(
                 active_car.health = active_car.max_health
                 active_car.update_color()
                 removed_any = True
-                if stage.survivor_stage:
+                if stage.rescue_stage:
                     capacity_increments += 1
             if removed_any:
                 if capacity_increments:
@@ -1590,7 +1583,7 @@ def check_interactions(
             active_car.take_damage(CAR_ZOMBIE_DAMAGE * len(zombies_hit))
 
     if (
-        stage.survivor_stage
+        stage.rescue_stage
         and player.in_car
         and active_car
         and shrunk_car
@@ -1611,14 +1604,14 @@ def check_interactions(
                 add_survivor_message(game_data, tr("survivors.too_many_aboard"))
                 active_car.take_damage(overload_damage)
 
-    if stage.survivor_stage:
+    if stage.rescue_stage:
         handle_survivor_zombie_collisions(game_data, config)
 
     # Handle car destruction
     if car and car.alive() and car.health <= 0:
         car_destroyed_pos = car.rect.center
         car.kill()
-        if stage.survivor_stage:
+        if stage.rescue_stage:
             drop_survivors_from_car(game_data, car_destroyed_pos)
         if player.in_car:
             player.in_car = False
@@ -1660,11 +1653,11 @@ def check_interactions(
 
     # Player escaping the level
     if player.in_car and car and car.alive() and state.has_fuel:
-        companion_ready = not stage.requires_companion or state.companion_rescued
+        companion_ready = not stage.companion_stage or state.companion_rescued
         if companion_ready and any(
             outside.collidepoint(car.rect.center) for outside in outside_rects
         ):
-            if stage.survivor_stage and state.survivors_onboard:
+            if stage.rescue_stage and state.survivors_onboard:
                 state.survivors_rescued += state.survivors_onboard
                 state.survivors_onboard = 0
                 state.next_overload_check_ms = 0

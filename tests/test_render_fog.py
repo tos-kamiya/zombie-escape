@@ -1,7 +1,7 @@
 import pytest
 
 from zombie_escape import render
-from zombie_escape.constants import (
+from zombie_escape.render_constants import (
     FLASHLIGHT_FOG_SCALE_STEP,
     FOG_RADIUS_SCALE,
     RENDER_ASSETS,

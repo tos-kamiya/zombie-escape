@@ -17,7 +17,7 @@ try:  # pragma: no cover - version fallback not critical for tests
     from ..__about__ import __version__
 except Exception:  # pragma: no cover - fallback version
     __version__ = "0.0.0-unknown"
-from ..constants import (
+from ..screen_constants import (
     DEFAULT_WINDOW_SCALE,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,

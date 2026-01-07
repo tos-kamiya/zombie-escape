@@ -15,7 +15,7 @@ from ..render import (
     show_message,
 )
 from ..screens import ScreenID, ScreenTransition, present
-from ..constants import SURVIVAL_FAKE_CLOCK_RATIO
+from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 
 
 def game_over_screen(
@@ -44,11 +44,11 @@ def game_over_screen(
             level_rect = game_data.areas.outer_rect
             level_width = level_rect[2]
             level_height = level_rect[3]
-            state.overview_surface = pygame.Surface((level_width, level_height))
+            overview_surface = pygame.Surface((level_width, level_height))
             footprints_to_draw = state.footprints if footprints_enabled else []
             draw_level_overview(
                 render_assets,
-                state.overview_surface,
+                overview_surface,
                 wall_group,
                 game_data.player,
                 game_data.car,
@@ -73,7 +73,7 @@ def game_over_screen(
             scaled_w = max(1, scaled_w)
             scaled_h = max(1, scaled_h)
             state.scaled_overview = pygame.transform.smoothscale(
-                state.overview_surface, (scaled_w, scaled_h)
+                overview_surface, (scaled_w, scaled_h)
             )
             state.overview_created = True
 
@@ -110,7 +110,7 @@ def game_over_screen(
                         (screen_width // 2, screen_height // 2 + 6),
                     )
             summary_y = screen_height // 2 + 70
-            if stage and stage.survivor_stage:
+            if stage and stage.rescue_stage:
                 msg = tr("game_over.survivors_summary", count=state.survivors_rescued)
                 show_message(
                     screen,

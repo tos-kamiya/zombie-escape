@@ -1,10 +1,7 @@
 # Blueprint generator for randomized layouts.
 
+from .level_constants import GRID_COLS, GRID_ROWS
 from .rng import get_rng
-
-GRID_COLS = 48
-GRID_ROWS = 30
-TILE_SIZE = 50  # world units per cell; adjust to scale the whole map
 
 EXITS_PER_SIDE = 1  # currently fixed to 1 per side (can be tuned)
 NUM_WALL_LINES = 80  # reduced density (roughly 1/5 of previous 450)

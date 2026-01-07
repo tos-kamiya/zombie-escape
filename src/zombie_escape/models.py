@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import sprite, surface
 
-from .constants import ZOMBIE_SPAWN_DELAY_MS
+from .gameplay_constants import ZOMBIE_SPAWN_DELAY_MS
 from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -33,7 +33,6 @@ class ProgressState:
     game_won: bool
     game_over_message: str | None
     game_over_at: int | None
-    overview_surface: surface.Surface | None
     scaled_overview: surface.Surface | None
     overview_created: bool
     footprints: list
@@ -97,12 +96,13 @@ class Stage:
     description_key: str
     available: bool = True
     requires_fuel: bool = False
-    requires_companion: bool = False
-    survivor_stage: bool = False
+    companion_stage: bool = False
+    rescue_stage: bool = False
     survival_stage: bool = False
     survival_goal_ms: int = 0
     fuel_spawn_count: int = 1
     spawn_interval_ms: int = ZOMBIE_SPAWN_DELAY_MS
+    initial_interior_spawn_rate: float = 0.015
     exterior_spawn_weight: float = 1.0
     interior_spawn_weight: float = 0.0
 
@@ -138,7 +138,7 @@ STAGES: list[Stage] = [
         name_key="stages.stage3.name",
         description_key="stages.stage3.description",
         available=True,
-        requires_companion=True,
+        companion_stage=True,
         requires_fuel=True,
         exterior_spawn_weight=0.975,
         interior_spawn_weight=0.025,
@@ -148,7 +148,7 @@ STAGES: list[Stage] = [
         name_key="stages.stage4.name",
         description_key="stages.stage4.description",
         available=True,
-        survivor_stage=True,
+        rescue_stage=True,
     ),
     Stage(
         id="stage5",

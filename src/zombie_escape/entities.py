@@ -21,7 +21,7 @@ from .colors import (
     STEEL_BEAM_LINE_COLOR,
     YELLOW,
 )
-from .constants import (
+from .gameplay_constants import (
     CAR_HEALTH,
     CAR_HEIGHT,
     CAR_SPEED,
@@ -30,21 +30,16 @@ from .constants import (
     COMPANION_COLOR,
     COMPANION_FOLLOW_SPEED,
     COMPANION_RADIUS,
-    FAST_ZOMBIE_SPEED_JITTER,
+    FAST_ZOMBIE_BASE_SPEED,
     FLASHLIGHT_HEIGHT,
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
     INTERNAL_WALL_BEVEL_DEPTH,
     INTERNAL_WALL_HEALTH,
-    LEVEL_HEIGHT,
-    LEVEL_WIDTH,
-    NORMAL_ZOMBIE_SPEED_JITTER,
     PLAYER_RADIUS,
     PLAYER_SPEED,
     PLAYER_WALL_DAMAGE,
-    SCREEN_HEIGHT,
-    SCREEN_WIDTH,
     STEEL_BEAM_HEALTH,
     SURVIVOR_APPROACH_RADIUS,
     SURVIVOR_APPROACH_SPEED,
@@ -60,6 +55,8 @@ from .constants import (
     ZOMBIE_WALL_DAMAGE,
     car_body_radius,
 )
+from .level_constants import LEVEL_HEIGHT, LEVEL_WIDTH
+from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from .rng import get_rng
 
 RNG = get_rng()
@@ -716,11 +713,8 @@ class Zombie(pygame.sprite.Sprite):
         else:
             x, y = random_position_outside_building()
         self.rect = self.image.get_rect(center=(x, y))
-        jitter = (
-            FAST_ZOMBIE_SPEED_JITTER
-            if speed > ZOMBIE_SPEED
-            else NORMAL_ZOMBIE_SPEED_JITTER
-        )
+        jitter_base = FAST_ZOMBIE_BASE_SPEED if speed > ZOMBIE_SPEED else ZOMBIE_SPEED
+        jitter = jitter_base * 0.2
         base_speed = speed + RNG.uniform(-jitter, jitter)
         self.initial_speed = base_speed
         self.speed = base_speed

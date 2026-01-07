@@ -54,7 +54,7 @@ def test_capacity_boost_refreshes_speed_after_overload() -> None:
     car = SimpleNamespace(speed=CAR_SPEED)
     game_data = SimpleNamespace(
         car=car,
-        stage=SimpleNamespace(survivor_stage=True),
+        stage=SimpleNamespace(rescue_stage=True),
         state=SimpleNamespace(
             survivors_onboard=passengers,
             survivor_capacity=SURVIVOR_MAX_SAFE_PASSENGERS,
