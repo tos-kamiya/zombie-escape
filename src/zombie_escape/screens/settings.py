@@ -16,10 +16,60 @@ from ..localization import (
     get_language_name,
     language_options,
     set_language,
+)
+from ..localization import (
     translate as tr,
 )
 from ..render import show_message
 from ..screens import nudge_window_scale, present
+
+
+def _wrap_long_segment(
+    segment: str, font: pygame.font.Font, max_width: int
+) -> list[str]:
+    lines: list[str] = []
+    current = ""
+    for char in segment:
+        candidate = current + char
+        if font.size(candidate)[0] <= max_width or not current:
+            current = candidate
+        else:
+            lines.append(current)
+            current = char
+    if current:
+        lines.append(current)
+    return lines
+
+
+def _wrap_text(text: str, font: pygame.font.Font, max_width: int) -> list[str]:
+    if max_width <= 0:
+        return [text]
+    paragraphs = text.splitlines() or [text]
+    lines: list[str] = []
+    for paragraph in paragraphs:
+        if not paragraph:
+            lines.append("")
+            continue
+        words = paragraph.split(" ")
+        if len(words) == 1:
+            lines.extend(_wrap_long_segment(paragraph, font, max_width))
+            continue
+        current = ""
+        for word in words:
+            candidate = f"{current} {word}".strip() if current else word
+            if font.size(candidate)[0] <= max_width:
+                current = candidate
+                continue
+            if current:
+                lines.append(current)
+            if font.size(word)[0] <= max_width:
+                current = word
+            else:
+                lines.extend(_wrap_long_segment(word, font, max_width))
+                current = ""
+        if current:
+            lines.append(current)
+    return lines
 
 
 def settings_screen(
@@ -212,13 +262,13 @@ def settings_screen(
         try:
             font_settings = get_font_settings()
             label_font = load_font(
-                font_settings.resource, font_settings.scaled_size(13)
+                font_settings.resource, font_settings.scaled_size(12)
             )
             value_font = load_font(
-                font_settings.resource, font_settings.scaled_size(13)
+                font_settings.resource, font_settings.scaled_size(12)
             )
             section_font = load_font(
-                font_settings.resource, font_settings.scaled_size(12)
+                font_settings.resource, font_settings.scaled_size(13)
             )
             highlight_color = (70, 70, 70)
 
@@ -269,7 +319,7 @@ def settings_screen(
                 state["next_y"] += row_height
 
                 highlight_rect = pygame.Rect(
-                    col_x, row_y_current - 2, row_width, row_height - 4
+                    col_x, row_y_current - 2, row_width, row_height
                 )
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
@@ -338,12 +388,22 @@ def settings_screen(
                 tr("settings.hints.reset"),
                 tr("settings.hints.exit"),
             ]
-            for i, line in enumerate(hint_lines):
+            hint_line_height = hint_font.get_linesize()
+            hint_max_width = screen_width - hint_start_x - 16
+            y_cursor = hint_start_y
+            for line in hint_lines:
                 hint_surface = hint_font.render(line, False, WHITE)
-                hint_rect = hint_surface.get_rect(
-                    topleft=(hint_start_x, hint_start_y + i * 18)
-                )
+                hint_rect = hint_surface.get_rect(topleft=(hint_start_x, y_cursor))
                 screen.blit(hint_surface, hint_rect)
+                y_cursor += hint_line_height
+
+            y_cursor += 26
+            window_hint = tr("menu.window_hint")
+            for line in _wrap_text(window_hint, hint_font, hint_max_width):
+                hint_surface = hint_font.render(line, False, WHITE)
+                hint_rect = hint_surface.get_rect(topleft=(hint_start_x, y_cursor))
+                screen.blit(hint_surface, hint_rect)
+                y_cursor += hint_line_height
 
             path_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             path_text = tr("settings.config_path", path=str(config_path))
