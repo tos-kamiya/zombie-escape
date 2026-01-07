@@ -115,7 +115,8 @@
         "reset": "R: reset to defaults",
         "exit": "Esc/Backspace: save and return"
       },
-      "config_path": "Config: %{path}"
+      "config_path": "Config: %{path}",
+      "progress_path": "Progress: %{path}"
     },
     "common": {
       "on": "ON",

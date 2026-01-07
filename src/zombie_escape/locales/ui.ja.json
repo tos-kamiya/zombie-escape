@@ -115,7 +115,8 @@
         "reset": "R: デフォルト設定に戻す",
         "exit": "Esc/BS: セーブして戻る"
       },
-      "config_path": "設定ファイル: %{path}"
+      "config_path": "設定ファイル: %{path}",
+      "progress_path": "クリア状況: %{path}"
     },
     "common": {
       "on": "有",

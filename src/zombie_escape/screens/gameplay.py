@@ -18,6 +18,7 @@ from ..localization import translate as tr
 from ..models import Stage
 from ..render import draw, prewarm_fog_overlays, show_message
 from ..rng import generate_seed, seed_rng
+from ..progress import record_stage_clear
 from ..screens import ScreenID, ScreenTransition, present
 
 if TYPE_CHECKING:
@@ -119,6 +120,8 @@ def gameplay_screen(
     while True:
         dt = clock.tick(fps) / 1000.0
         if game_data.state.game_over or game_data.state.game_won:
+            if game_data.state.game_won:
+                record_stage_clear(stage.id)
             if game_data.state.game_over and not game_data.state.game_won:
                 if game_data.state.game_over_at is None:
                     game_data.state.game_over_at = pygame.time.get_ticks()

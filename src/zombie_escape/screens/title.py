@@ -11,6 +11,7 @@ from ..font_utils import load_font
 from ..localization import get_font_settings, get_language
 from ..localization import translate as tr
 from ..models import Stage
+from ..progress import load_progress
 from ..render import show_message
 from ..rng import generate_seed
 from ..screens import ScreenID, ScreenTransition, nudge_window_scale, present
@@ -20,6 +21,7 @@ README_URLS: dict[str, str] = {
     "en": "https://github.com/tos-kamiya/zombie-escape/blob/main/README.md",
     "ja": "https://github.com/tos-kamiya/zombie-escape/blob/main/README-ja_JP.md",
 }
+UNCLEARED_STAGE_COLOR: tuple[int, int, int] = (220, 80, 80)
 
 
 def _open_readme_link() -> None:
@@ -151,6 +153,7 @@ def title_screen(
         seed_text if seed_text is not None else _generate_auto_seed_text()
     )
     current_seed_auto = seed_is_auto or generated
+    stage_progress, _ = load_progress()
 
     while True:
         for event in pygame.event.get():
@@ -258,7 +261,9 @@ def title_screen(
                 highlight_rect = pygame.Rect(
                     list_column_x, row_top - 2, list_column_width, row_height
                 )
-                color = YELLOW if idx == selected else WHITE
+                cleared = stage_progress.get(option["stage"].id, 0) > 0
+                base_color = WHITE if cleared else UNCLEARED_STAGE_COLOR
+                color = base_color
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
                 label = option["stage"].name
@@ -290,7 +295,7 @@ def title_screen(
                     label = f"> {tr('menu.readme')}"
                 else:
                     label = tr("menu.quit")
-                color = YELLOW if is_selected else WHITE
+                color = WHITE
                 text_surface = option_font.render(label, False, color)
                 text_rect = text_surface.get_rect(
                     topleft=(

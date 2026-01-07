@@ -21,6 +21,7 @@ from ..localization import (
     translate as tr,
 )
 from ..render import show_message
+from ..progress import user_progress_path
 from ..screens import nudge_window_scale, present
 
 
@@ -406,12 +407,21 @@ def settings_screen(
                 y_cursor += hint_line_height
 
             path_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            path_text = tr("settings.config_path", path=str(config_path))
-            path_surface = path_font.render(path_text, False, LIGHT_GRAY)
-            path_rect = path_surface.get_rect(
+            config_text = tr("settings.config_path", path=str(config_path))
+            progress_text = tr(
+                "settings.progress_path", path=str(user_progress_path())
+            )
+            line_height = path_font.get_linesize()
+            config_surface = path_font.render(config_text, False, LIGHT_GRAY)
+            progress_surface = path_font.render(progress_text, False, LIGHT_GRAY)
+            config_rect = config_surface.get_rect(
+                midtop=(screen_width // 2, screen_height - 32 - line_height)
+            )
+            progress_rect = progress_surface.get_rect(
                 midtop=(screen_width // 2, screen_height - 32)
             )
-            screen.blit(path_surface, path_rect)
+            screen.blit(config_surface, config_rect)
+            screen.blit(progress_surface, progress_rect)
         except pygame.error as e:
             print(f"Error rendering settings: {e}")
 
