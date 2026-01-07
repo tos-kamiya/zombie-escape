@@ -87,26 +87,56 @@ def _build_beveled_polygon(
     if d == 0 or not any(bevels):
         return [(0, 0), (width, 0), (width, height), (0, height)]
 
+    segments = max(4, d // 2)
     tl, tr, br, bl = bevels
     points: list[tuple[int, int]] = []
-    points.append((d if tl else 0, 0))
+
+    def add_point(x: float, y: float) -> None:
+        point = (int(round(x)), int(round(y)))
+        if not points or points[-1] != point:
+            points.append(point)
+
+    def add_arc(
+        center_x: float,
+        center_y: float,
+        radius: float,
+        start_deg: float,
+        end_deg: float,
+        *,
+        skip_first: bool = False,
+        skip_last: bool = False,
+    ) -> None:
+        for i in range(segments + 1):
+            if skip_first and i == 0:
+                continue
+            if skip_last and i == segments:
+                continue
+            t = i / segments
+            angle = math.radians(start_deg + (end_deg - start_deg) * t)
+            add_point(
+                center_x + radius * math.cos(angle),
+                center_y + radius * math.sin(angle),
+            )
+
+    add_point(d if tl else 0, 0)
     if tr:
-        points.append((width - d, 0))
-        points.append((width, d))
+        add_point(width - d, 0)
+        add_arc(width - d, d, d, -90, 0, skip_first=True)
     else:
-        points.append((width, 0))
+        add_point(width, 0)
     if br:
-        points.append((width, height - d))
-        points.append((width - d, height))
+        add_point(width, height - d)
+        add_arc(width - d, height - d, d, 0, 90, skip_first=True)
     else:
-        points.append((width, height))
+        add_point(width, height)
     if bl:
-        points.append((d, height))
-        points.append((0, height - d))
+        add_point(d, height)
+        add_arc(d, height - d, d, 90, 180, skip_first=True)
     else:
-        points.append((0, height))
+        add_point(0, height)
     if tl:
-        points.append((0, d))
+        add_point(0, d)
+        add_arc(d, d, d, 180, 270, skip_first=True, skip_last=True)
     return points
 
 
@@ -242,6 +272,12 @@ def circle_polygon_collision(
 def collide_sprite_wall(
     sprite: pygame.sprite.Sprite, wall: pygame.sprite.Sprite
 ) -> bool:
+    if hasattr(sprite, "radius"):
+        center = sprite.rect.center
+        radius = float(getattr(sprite, "radius"))
+        if hasattr(wall, "collides_circle"):
+            return wall.collides_circle(center, radius)
+        return circle_rect_collision(center, radius, wall.rect)
     if hasattr(wall, "collides_rect"):
         return wall.collides_rect(sprite.rect)
     if hasattr(sprite, "collides_rect"):
@@ -355,7 +391,21 @@ class Wall(pygame.sprite.Sprite):
             self.image.fill(border_color)
         border_width = 18
         inner_rect = self.image.get_rect().inflate(-border_width, -border_width)
-        pygame.draw.rect(self.image, fill_color, inner_rect)
+        if inner_rect.width > 0 and inner_rect.height > 0:
+            inner_depth = max(0, self.bevel_depth - border_width)
+            if inner_depth > 0 and any(self.bevel_mask):
+                inner_polygon = _build_beveled_polygon(
+                    inner_rect.width,
+                    inner_rect.height,
+                    inner_depth,
+                    self.bevel_mask,
+                )
+                inner_points = [
+                    (px + inner_rect.x, py + inner_rect.y) for px, py in inner_polygon
+                ]
+                pygame.draw.polygon(self.image, fill_color, inner_points)
+            else:
+                pygame.draw.rect(self.image, fill_color, inner_rect)
 
     def collides_rect(self: Self, rect_obj: rect.Rect) -> bool:
         if self._collision_polygon is None:
@@ -738,15 +788,8 @@ class Zombie(pygame.sprite.Sprite):
             if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100
         ]
 
-        temp_rect = self.rect.copy()
-        temp_rect.centerx = int(next_x)
-        temp_rect.centery = int(self.y)
         for wall in possible_walls:
-            collides = (
-                wall.collides_rect(temp_rect)
-                if hasattr(wall, "collides_rect")
-                else temp_rect.colliderect(wall.rect)
-            )
+            collides = circle_wall_collision((next_x, self.y), self.radius, wall)
             if collides:
                 if wall.alive():
                     wall.take_damage(amount=ZOMBIE_WALL_DAMAGE)
@@ -754,14 +797,8 @@ class Zombie(pygame.sprite.Sprite):
                     final_x = self.x
                     break
 
-        temp_rect.centerx = int(final_x)
-        temp_rect.centery = int(next_y)
         for wall in possible_walls:
-            collides = (
-                wall.collides_rect(temp_rect)
-                if hasattr(wall, "collides_rect")
-                else temp_rect.colliderect(wall.rect)
-            )
+            collides = circle_wall_collision((final_x, next_y), self.radius, wall)
             if collides:
                 if wall.alive():
                     wall.take_damage(amount=ZOMBIE_WALL_DAMAGE)
