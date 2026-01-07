@@ -29,20 +29,7 @@ This game is a simple 2D top-down action game where the player aims to escape by
 -   **Window Scale (title/settings only):** `[` to shrink, `]` to enlarge
 -   **Time Acceleration:** Hold either `Shift` key to run the entire world 4x faster; release to return to normal speed.
 
-## Settings (Title Screen)
-
-Open **Settings** from the title to toggle gameplay assists:
-
--   **Footprints:** Leave breadcrumb trails so you can backtrack in the dark.
--   **Fast zombies:** Allow faster zombie variants; each zombie rolls a random speed between the normal and fast ranges.
--   **Car hint:** After a delay, show a small triangle pointing toward the fuel (Stage 2 before pickup) or the car.
--   **Steel beams:** Adds tougher single-cell obstacles (5% density) that block movement; hidden when stacked with an inner wall until that wall is destroyed.
-
-### Shared Seeds
-
-The title screen also lets you enter a numeric **seed**. Type digits (or pass `--seed <number>` on the CLI) to lock the procedural layout, wall placement, and pickups; share that seed with a friend and you will both play the exact same stage even on different machines. The current seed is shown at the bottom right of the title screen and in-game HUD. Backspace reverts to an automatically generated value so you can quickly roll a fresh challenge.
-
-## Game Rules
+## Title Screen
 
 ### Stages
 
@@ -54,7 +41,24 @@ At the title screen you can pick a stage:
 - **Stage 4: Evacuate Survivors** — start fueled, find the car, gather nearby civilians, and escape before zombies reach them. Stage 4 sprinkles extra parked cars across the map; slamming into one while already driving fully repairs your current ride and adds five more safe seats.
 - **Stage 5: Survive Until Dawn** — every car is bone-dry. Endure until the sun rises while the horde presses in from every direction. Once dawn hits, outdoor zombies carbonize and you must walk out through an existing exterior gap to win; cars remain unusable.
 
+**Stage names are red until cleared** and turn white after at least one clear.
+
 An objective reminder is shown at the top-left during play.
+
+### Shared Seeds
+
+The title screen also lets you enter a numeric **seed**. Type digits (or pass `--seed <number>` on the CLI) to lock the procedural layout, wall placement, and pickups; share that seed with a friend and you will both play the exact same stage even on different machines. The current seed is shown at the bottom right of the title screen and in-game HUD. Backspace reverts to an automatically generated value so you can quickly roll a fresh challenge.
+
+## Settings Screen
+
+Open **Settings** from the title to toggle gameplay assists:
+
+-   **Footprints:** Leave breadcrumb trails so you can backtrack in the dark.
+-   **Fast zombies:** Allow faster zombie variants; each zombie rolls a random speed between the normal and fast ranges.
+-   **Car hint:** After a delay, show a small triangle pointing toward the fuel (Stage 2 before pickup) or the car.
+-   **Steel beams:** Adds tougher single-cell obstacles (5% density) that block movement; hidden when stacked with an inner wall until that wall is destroyed.
+
+## Game Rules
 
 ### Characters/Items
 
