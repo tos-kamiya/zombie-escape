@@ -121,8 +121,8 @@ STAGES: list[Stage] = [
         name_key="stages.stage1.name",
         description_key="stages.stage1.description",
         available=True,
-        exterior_spawn_weight=0.95,
-        interior_spawn_weight=0.05,
+        exterior_spawn_weight=0.97,
+        interior_spawn_weight=0.03,
     ),
     Stage(
         id="stage2",
@@ -130,8 +130,8 @@ STAGES: list[Stage] = [
         description_key="stages.stage2.description",
         available=True,
         requires_fuel=True,
-        exterior_spawn_weight=0.95,
-        interior_spawn_weight=0.05,
+        exterior_spawn_weight=0.97,
+        interior_spawn_weight=0.03,
     ),
     Stage(
         id="stage3",
@@ -140,8 +140,8 @@ STAGES: list[Stage] = [
         available=True,
         companion_stage=True,
         requires_fuel=True,
-        exterior_spawn_weight=0.975,
-        interior_spawn_weight=0.025,
+        exterior_spawn_weight=0.97,
+        interior_spawn_weight=0.03,
     ),
     Stage(
         id="stage4",
