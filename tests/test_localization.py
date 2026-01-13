@@ -28,8 +28,8 @@ def test_get_font_settings_uses_locale_data(localization: object) -> None:
     settings = localization.get_font_settings(name="primary")
 
     assert settings.resource.endswith("misaki_gothic.ttf")
-    assert settings.scale == pytest.approx(0.75)
-    assert settings.scaled_size(10) == 8
+    assert settings.scale == pytest.approx(0.7)
+    assert settings.scaled_size(10) == 7
 
 
 def test_translate_qualifies_key_and_falls_back(localization: object) -> None:

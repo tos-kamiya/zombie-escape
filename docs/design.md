@@ -16,6 +16,8 @@
   - `pygame.sprite.Sprite` を使ったゲーム内エンティティ定義と衝突判定補助。
 - `src/zombie_escape/models.py`
   - 進行状態やステージ情報のデータ構造（`dataclass`）。
+- `src/zombie_escape/stage_constants.py`
+  - ステージ構成とデフォルト設定の一覧。
 - `src/zombie_escape/render.py`
   - 描画パイプライン（床/壁/霧/足跡/HUD/ヒント矢印など）。
 - `src/zombie_escape/level_blueprints.py`

@@ -6,7 +6,7 @@ from typing import Any, Sequence
 import pygame
 from pygame import surface, time
 
-from ..colors import BLACK, GRAY, LIGHT_GRAY, WHITE, YELLOW
+from ..colors import BLACK, GRAY, LIGHT_GRAY, WHITE
 from ..font_utils import load_font
 from ..localization import get_font_settings, get_language
 from ..localization import translate as tr
@@ -158,6 +158,13 @@ def title_screen(
         )
 
     current_page = 0
+    if stage_options_all:
+        for idx, opt in enumerate(stage_options_all):
+            if opt["stage"].id == default_stage_id:
+                target_page = idx // page_size
+                if _page_available(target_page):
+                    current_page = target_page
+                break
 
     def _build_options(page_index: int) -> tuple[list[dict], list[dict]]:
         page_index = max(0, min(page_index, len(stage_pages) - 1))
@@ -373,7 +380,7 @@ def title_screen(
                 )
 
             hint_lines = [tr("menu.hints.navigate")]
-            if _page_available(1):
+            if len(stage_pages) > 1 and _page_available(1):
                 hint_lines.append(tr("menu.hints.page_switch"))
             hint_lines.append(tr("menu.hints.confirm"))
             hint_line_height = hint_font.get_linesize()

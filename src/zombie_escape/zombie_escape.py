@@ -25,7 +25,8 @@ from .screen_constants import (
     SCREEN_WIDTH,
 )
 from .localization import set_language
-from .models import GameData, Stage, STAGES, DEFAULT_STAGE_ID
+from .models import GameData, Stage
+from .stage_constants import DEFAULT_STAGE_ID, STAGES
 from .screens import ScreenID, ScreenTransition, apply_window_scale
 from .screens.game_over import game_over_screen
 from .screens.settings import settings_screen
@@ -80,6 +81,7 @@ def main() -> None:
     debug_mode = bool(args.debug)
     cli_seed_text, cli_seed_is_auto = _sanitize_seed_text(args.seed)
     title_seed_text, title_seed_is_auto = cli_seed_text, cli_seed_is_auto
+    last_stage_id: str | None = None
 
     config: dict[str, Any]
     config, config_path = load_config()
@@ -105,7 +107,7 @@ def main() -> None:
                 config,
                 FPS,
                 stages=STAGES,
-                default_stage_id=DEFAULT_STAGE_ID,
+                default_stage_id=last_stage_id or DEFAULT_STAGE_ID,
                 screen_size=(SCREEN_WIDTH, SCREEN_HEIGHT),
                 seed_text=seed_input,
                 seed_is_auto=title_seed_is_auto,
@@ -132,6 +134,7 @@ def main() -> None:
             if stage is None:
                 transition = ScreenTransition(ScreenID.TITLE)
             else:
+                last_stage_id = stage.id
                 try:
                     transition = gameplay_screen(
                         screen,
