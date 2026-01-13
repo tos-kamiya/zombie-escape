@@ -72,6 +72,8 @@
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`
 - 内外スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`
 - サバイバル設定: `survival_goal_ms`, `fuel_spawn_count`
+- 変種移動ルーチン: `zombie_variant_ratio`（足跡追跡型の出現率）
+- エイジング速度: `zombie_aging_duration_frames`（値が大きいほど老化が遅い）
 
 ### 3.4 スプライト群 (models.Groups)
 

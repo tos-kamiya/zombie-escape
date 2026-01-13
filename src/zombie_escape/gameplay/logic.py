@@ -45,11 +45,13 @@ from ..gameplay_constants import (
     SURVIVAL_NEAR_SPAWN_CAMERA_MARGIN,
     SURVIVAL_NEAR_SPAWN_MAX_DISTANCE,
     SURVIVAL_NEAR_SPAWN_MIN_DISTANCE,
+    ZOMBIE_AGING_DURATION_FRAMES,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SPAWN_DELAY_MS,
     ZOMBIE_SPAWN_PLAYER_BUFFER,
     ZOMBIE_SPEED,
+    ZOMBIE_TRACKER_AGING_DURATION_FRAMES,
     interaction_radius,
 )
 from ..level_constants import CELL_SIZE, GRID_COLS, GRID_ROWS, LEVEL_HEIGHT, LEVEL_WIDTH
@@ -129,6 +131,7 @@ def create_zombie(
     *,
     start_pos: tuple[int, int] | None = None,
     hint_pos: tuple[float, float] | None = None,
+    stage: Stage | None = None,
 ) -> Zombie:
     """Factory to create zombies with optional fast variants."""
     fast_conf = config.get("fast_zombies", {})
@@ -138,10 +141,33 @@ def create_zombie(
     else:
         base_speed = ZOMBIE_SPEED
     base_speed = min(base_speed, PLAYER_SPEED - 0.05)
+    tracker_ratio = 0.0
+    if stage is not None:
+        tracker_ratio = max(0.0, min(1.0, getattr(stage, "zombie_variant_ratio", 0.0)))
+        aging_duration_frames = max(
+            1.0,
+            float(
+                getattr(
+                    stage, "zombie_aging_duration_frames", ZOMBIE_AGING_DURATION_FRAMES
+                )
+            ),
+        )
+    else:
+        aging_duration_frames = ZOMBIE_AGING_DURATION_FRAMES
+    tracker = tracker_ratio > 0 and RNG.random() < tracker_ratio
+    if tracker:
+        ratio = (
+            ZOMBIE_TRACKER_AGING_DURATION_FRAMES / ZOMBIE_AGING_DURATION_FRAMES
+            if ZOMBIE_AGING_DURATION_FRAMES > 0
+            else 1.0
+        )
+        aging_duration_frames = max(1.0, aging_duration_frames * ratio)
     return Zombie(
         start_pos=start_pos,
         hint_pos=hint_pos,
         speed=base_speed,
+        tracker=tracker,
+        aging_duration_frames=aging_duration_frames,
     )
 
 
@@ -823,7 +849,9 @@ def handle_survivor_zombie_collisions(
         line = random_survivor_conversion_line()
         if line:
             add_survivor_message(game_data, line)
-        new_zombie = create_zombie(config, start_pos=survivor.rect.center)
+        new_zombie = create_zombie(
+            config, start_pos=survivor.rect.center, stage=game_data.stage
+        )
         zombie_group.add(new_zombie)
         game_data.groups.all_sprites.add(new_zombie, layer=1)
         insert_idx = bisect_left(zombie_xs, new_zombie.rect.centerx)
@@ -1079,7 +1107,7 @@ def spawn_initial_zombies(
             < ZOMBIE_SPAWN_PLAYER_BUFFER
         ):
             continue
-        tentative = create_zombie(config, start_pos=pos)
+        tentative = create_zombie(config, start_pos=pos, stage=game_data.stage)
         if spritecollideany_walls(tentative, wall_group):
             continue
         zombie_group.add(tentative)
@@ -1127,7 +1155,7 @@ def spawn_nearby_zombie(
         )
         if view_rect.collidepoint(candidate):
             continue
-        new_zombie = create_zombie(config, start_pos=candidate)
+        new_zombie = create_zombie(config, start_pos=candidate, stage=game_data.stage)
         if spritecollideany_walls(new_zombie, wall_group):
             continue
         zombie_group.add(new_zombie)
@@ -1146,7 +1174,9 @@ def spawn_exterior_zombie(
         return None
     zombie_group = game_data.groups.zombie_group
     all_sprites = game_data.groups.all_sprites
-    new_zombie = create_zombie(config, hint_pos=(player.x, player.y))
+    new_zombie = create_zombie(
+        config, hint_pos=(player.x, player.y), stage=game_data.stage
+    )
     zombie_group.add(new_zombie)
     all_sprites.add(new_zombie, layer=1)
     return new_zombie
@@ -1385,7 +1415,9 @@ def update_entities(
                         ),
                     )
         nearby_candidates = _nearby_zombies(idx)
-        zombie.update(target, wall_group, nearby_candidates)
+        zombie.update(
+            target, wall_group, nearby_candidates, footprints=game_data.state.footprints
+        )
 
 
 def check_interactions(

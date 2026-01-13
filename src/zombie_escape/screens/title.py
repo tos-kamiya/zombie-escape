@@ -127,18 +127,45 @@ def title_screen(
     """Display the title menu and return the selected transition."""
 
     width, height = screen_size
-    options: list[dict] = [
+    stage_options_all: list[dict] = [
         {"type": "stage", "stage": stage, "available": stage.available}
         for stage in stages
         if stage.available
+    ]
+    page_size = 5
+    stage_pages = [
+        stage_options_all[i : i + page_size]
+        for i in range(0, len(stage_options_all), page_size)
     ]
     action_options: list[dict[str, Any]] = [
         {"type": "settings"},
         {"type": "readme"},
         {"type": "quit"},
     ]
-    options += action_options
+    generated = seed_text is None
+    current_seed_text = (
+        seed_text if seed_text is not None else _generate_auto_seed_text()
+    )
+    current_seed_auto = seed_is_auto or generated
+    stage_progress, _ = load_progress()
 
+    def _page_available(page_index: int) -> bool:
+        if page_index <= 0:
+            return True
+        required = stage_options_all[:page_size]
+        return all(
+            stage_progress.get(option["stage"].id, 0) > 0 for option in required
+        )
+
+    current_page = 0
+
+    def _build_options(page_index: int) -> tuple[list[dict], list[dict]]:
+        page_index = max(0, min(page_index, len(stage_pages) - 1))
+        stage_options = stage_pages[page_index] if stage_pages else []
+        options = list(stage_options) + action_options
+        return options, stage_options
+
+    options, stage_options = _build_options(current_page)
     selected_stage_index = next(
         (
             i
@@ -148,12 +175,6 @@ def title_screen(
         0,
     )
     selected = min(selected_stage_index, len(options) - 1)
-    generated = seed_text is None
-    current_seed_text = (
-        seed_text if seed_text is not None else _generate_auto_seed_text()
-    )
-    current_seed_auto = seed_is_auto or generated
-    stage_progress, _ = load_progress()
 
     while True:
         for event in pygame.event.get():
@@ -180,6 +201,21 @@ def title_screen(
                     continue
                 if event.key == pygame.K_RIGHTBRACKET:
                     nudge_window_scale(2.0)
+                    continue
+                if event.key == pygame.K_LEFT:
+                    if current_page > 0:
+                        current_page -= 1
+                        options, stage_options = _build_options(current_page)
+                        selected = 0
+                    continue
+                if event.key == pygame.K_RIGHT:
+                    if (
+                        current_page < len(stage_pages) - 1
+                        and _page_available(current_page + 1)
+                    ):
+                        current_page += 1
+                        options, stage_options = _build_options(current_page)
+                        selected = 0
                     continue
                 if event.key in (pygame.K_UP, pygame.K_w):
                     selected = (selected - 1) % len(options)
@@ -236,7 +272,6 @@ def title_screen(
             section_top = 70
             highlight_color = (70, 70, 70)
 
-            stage_options = [opt for opt in options if opt["type"] == "stage"]
             stage_count = len(stage_options)
             # resource_count = len(options) - stage_count
 
@@ -337,10 +372,10 @@ def title_screen(
                     info_column_width,
                 )
 
-            hint_lines = [
-                tr("settings.hints.navigate"),
-                tr("settings.hints.toggle"),
-            ]
+            hint_lines = [tr("menu.hints.navigate")]
+            if _page_available(1):
+                hint_lines.append(tr("menu.hints.page_switch"))
+            hint_lines.append(tr("menu.hints.confirm"))
             hint_line_height = hint_font.get_linesize()
             # hint_block_height = len(hint_lines) * hint_line_height
             hint_start_y = action_header_pos[1]

@@ -27,6 +27,7 @@
       "readme": "Open README",
       "hints": {
         "navigate": "Up/Down: choose an option",
+        "page_switch": "Left/Right: switch stage groups",
         "confirm": "Enter/Space: activate selection"
       },
       "option_help": {
@@ -60,6 +61,10 @@
       "stage5": {
         "name": "#5 Survive Until Dawn",
         "description": "No fuel—endure 20 minutes, then walk out when dawn arrives."
+      },
+      "stage6": {
+        "name": "#6 Tracker Run",
+        "description": "Escape like stage 2, but some zombies follow your trail."
       }
     },
     "status": {

@@ -52,6 +52,9 @@ from .gameplay_constants import (
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_SPEED,
+    ZOMBIE_TRACKER_SCENT_RADIUS,
+    ZOMBIE_TRACKER_SIGHT_RANGE,
+    ZOMBIE_TRACKER_WANDER_INTERVAL_MS,
     ZOMBIE_WALL_DAMAGE,
     car_body_radius,
 )
@@ -772,6 +775,8 @@ class Zombie(pygame.sprite.Sprite):
         start_pos: tuple[int, int] | None = None,
         hint_pos: tuple[float, float] | None = None,
         speed: float = ZOMBIE_SPEED,
+        tracker: bool = False,
+        aging_duration_frames: float = ZOMBIE_AGING_DURATION_FRAMES,
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
@@ -802,7 +807,15 @@ class Zombie(pygame.sprite.Sprite):
         )
         self.was_in_sight = False
         self.carbonized = False
-        self.age_frames = 0
+        self.age_frames = 0.0
+        self.aging_duration_frames = aging_duration_frames
+        self.tracker = tracker
+        self.tracker_target_pos: tuple[float, float] | None = None
+        self.wander_angle = RNG.uniform(0, math.tau)
+        self.last_wander_change_time = pygame.time.get_ticks()
+        self.wander_change_interval = ZOMBIE_TRACKER_WANDER_INTERVAL_MS + RNG.randint(
+            -500, 500
+        )
 
     def change_mode(self: Self, *, force_mode: ZombieMode | None = None) -> None:
         if force_mode:
@@ -877,6 +890,58 @@ class Zombie(pygame.sprite.Sprite):
 
         return final_x, final_y
 
+    def _update_tracker_target(
+        self: Self, footprints: list[dict[str, object]]
+    ) -> None:
+        self.tracker_target_pos = None
+        if not footprints:
+            return
+        nearby: list[dict[str, object]] = []
+        for fp in footprints:
+            pos = fp.get("pos")
+            if not isinstance(pos, tuple):
+                continue
+            dx = pos[0] - self.x
+            dy = pos[1] - self.y
+            if math.hypot(dx, dy) <= ZOMBIE_TRACKER_SCENT_RADIUS:
+                nearby.append(fp)
+
+        if not nearby:
+            return
+
+        latest = max(
+            nearby,
+            key=lambda fp: fp.get("time", -1)
+            if isinstance(fp.get("time"), int)
+            else -1,
+        )
+        pos = latest.get("pos")
+        if isinstance(pos, tuple):
+            self.tracker_target_pos = pos
+
+    def _tracker_move_wandering(self: Self) -> tuple[float, float]:
+        now = pygame.time.get_ticks()
+        if now - self.last_wander_change_time > self.wander_change_interval:
+            self.wander_angle = RNG.uniform(0, math.tau)
+            self.last_wander_change_time = now
+            self.wander_change_interval = ZOMBIE_TRACKER_WANDER_INTERVAL_MS + RNG.randint(
+                -500, 500
+            )
+
+        move_x = math.cos(self.wander_angle) * self.speed
+        move_y = math.sin(self.wander_angle) * self.speed
+        return move_x, move_y
+
+    def _tracker_move_toward(
+        self: Self, target: tuple[float, float]
+    ) -> tuple[float, float]:
+        dx = target[0] - self.x
+        dy = target[1] - self.y
+        dist = math.hypot(dx, dy)
+        if dist <= 0:
+            return 0.0, 0.0
+        return (dx / dist) * self.speed, (dy / dist) * self.speed
+
     def _avoid_other_zombies(
         self: Self,
         move_x: float,
@@ -921,11 +986,11 @@ class Zombie(pygame.sprite.Sprite):
 
     def _apply_aging(self: Self) -> None:
         """Slowly reduce zombie speed over time to simulate decay."""
-        if ZOMBIE_AGING_DURATION_FRAMES <= 0:
+        if self.aging_duration_frames <= 0:
             return
-        if self.age_frames < ZOMBIE_AGING_DURATION_FRAMES:
+        if self.age_frames < self.aging_duration_frames:
             self.age_frames += 1
-        progress = min(1.0, self.age_frames / ZOMBIE_AGING_DURATION_FRAMES)
+        progress = min(1.0, self.age_frames / self.aging_duration_frames)
         slowdown_ratio = 1.0 - progress * (1.0 - ZOMBIE_AGING_MIN_SPEED_RATIO)
         self.speed = self.initial_speed * slowdown_ratio
 
@@ -934,6 +999,7 @@ class Zombie(pygame.sprite.Sprite):
         player_center: tuple[int, int],
         walls: list[Wall],
         nearby_zombies: Iterable[Zombie],
+        footprints: list[dict[str, object]] | None = None,
     ) -> None:
         if self.carbonized:
             return
@@ -942,7 +1008,8 @@ class Zombie(pygame.sprite.Sprite):
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
         dist_to_player = math.hypot(dx_target, dy_target)
-        is_in_sight = dist_to_player <= ZOMBIE_SIGHT_RANGE
+        sight_range = ZOMBIE_TRACKER_SIGHT_RANGE if self.tracker else ZOMBIE_SIGHT_RANGE
+        is_in_sight = dist_to_player <= sight_range
         if is_in_sight:
             if self.mode != ZombieMode.CHASE:
                 self.change_mode(force_mode=ZombieMode.CHASE)
@@ -952,7 +1019,14 @@ class Zombie(pygame.sprite.Sprite):
             self.was_in_sight = False
         elif now - self.last_mode_change_time > self.mode_change_interval:
             self.change_mode()
-        move_x, move_y = self._calculate_movement(player_center)
+        if self.tracker and not is_in_sight:
+            self._update_tracker_target(footprints or [])
+            if self.tracker_target_pos is not None:
+                move_x, move_y = self._tracker_move_toward(self.tracker_target_pos)
+            else:
+                move_x, move_y = self._tracker_move_wandering()
+        else:
+            move_x, move_y = self._calculate_movement(player_center)
         move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
         final_x, final_y = self._handle_wall_collision(
             self.x + move_x, self.y + move_y, walls

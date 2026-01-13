@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import sprite, surface
 
-from .gameplay_constants import ZOMBIE_SPAWN_DELAY_MS
+from .gameplay_constants import ZOMBIE_AGING_DURATION_FRAMES, ZOMBIE_SPAWN_DELAY_MS
 from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -105,6 +105,8 @@ class Stage:
     initial_interior_spawn_rate: float = 0.015
     exterior_spawn_weight: float = 1.0
     interior_spawn_weight: float = 0.0
+    zombie_variant_ratio: float = 0.0
+    zombie_aging_duration_frames: int = ZOMBIE_AGING_DURATION_FRAMES
 
     @property
     def name(self) -> str:
@@ -161,6 +163,17 @@ STAGES: list[Stage] = [
         fuel_spawn_count=0,
         exterior_spawn_weight=0.4,
         interior_spawn_weight=0.6,
+    ),
+    Stage(
+        id="stage6",
+        name_key="stages.stage6.name",
+        description_key="stages.stage6.description",
+        available=True,
+        requires_fuel=True,
+        exterior_spawn_weight=0.97,
+        interior_spawn_weight=0.03,
+        zombie_variant_ratio=0.5,
+        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"
