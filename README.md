@@ -65,6 +65,7 @@ Open **Settings** from the title to toggle gameplay assists:
 -   **Player:** A blue circle. Controlled with the WASD or arrow keys. When carrying fuel a tiny yellow square appears near the sprite so you can immediately see whether you're ready to drive.
 -   **Zombie:** A red circle. Will chase the player (or car) once detected.
     -   When out of sight, the zombie's movement mode will randomly switch every certain time (moving horizontally/vertically only, side-to-side movement, random movement, etc.).
+    -   Variants with different behavior have been observed.
 -   **Car:** A yellow rectangle. The player can enter by making contact with it.
     -   The car has durability. Durability decreases when colliding with internal walls or hitting zombies.
     -   If durability reaches 0, the car is destroyed and you are dumped on foot; you must track down another parked car hidden in the level.
