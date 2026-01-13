@@ -132,6 +132,7 @@ def create_zombie(
     start_pos: tuple[int, int] | None = None,
     hint_pos: tuple[float, float] | None = None,
     stage: Stage | None = None,
+    outer_wall_cells: set[tuple[int, int]] | None = None,
 ) -> Zombie:
     """Factory to create zombies with optional fast variants."""
     fast_conf = config.get("fast_zombies", {})
@@ -143,7 +144,7 @@ def create_zombie(
     base_speed = min(base_speed, PLAYER_SPEED - 0.05)
     tracker_ratio = 0.0
     if stage is not None:
-        tracker_ratio = max(0.0, min(1.0, getattr(stage, "zombie_variant_ratio", 0.0)))
+        tracker_ratio = max(0.0, min(1.0, getattr(stage, "zombie_tracker_ratio", 0.0)))
         aging_duration_frames = max(
             1.0,
             float(
@@ -168,6 +169,7 @@ def create_zombie(
         speed=base_speed,
         tracker=tracker,
         aging_duration_frames=aging_duration_frames,
+        outer_wall_cells=outer_wall_cells,
     )
 
 
@@ -196,6 +198,12 @@ def generate_level_from_blueprint(
     steel_cells = (
         {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
     )
+    outer_wall_cells = {
+        (x, y)
+        for y, row in enumerate(blueprint)
+        for x, ch in enumerate(row)
+        if ch == "B"
+    }
     wall_cells = {
         (x, y)
         for y, row in enumerate(blueprint)
@@ -317,6 +325,7 @@ def generate_level_from_blueprint(
     game_data.areas.inner_rect = (0, 0, LEVEL_WIDTH, LEVEL_HEIGHT)
     game_data.areas.outside_rects = outside_rects
     game_data.areas.walkable_cells = walkable_cells
+    game_data.areas.outer_wall_cells = outer_wall_cells
     # level_rect no longer used
 
     return {
@@ -850,7 +859,10 @@ def handle_survivor_zombie_collisions(
         if line:
             add_survivor_message(game_data, line)
         new_zombie = create_zombie(
-            config, start_pos=survivor.rect.center, stage=game_data.stage
+            config,
+            start_pos=survivor.rect.center,
+            stage=game_data.stage,
+            outer_wall_cells=game_data.areas.outer_wall_cells,
         )
         zombie_group.add(new_zombie)
         game_data.groups.all_sprites.add(new_zombie, layer=1)
@@ -1014,6 +1026,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             inner_rect=inner_rect,
             outside_rects=[],
             walkable_cells=[],
+            outer_wall_cells=set(),
         ),
         fog={
             "hatch_patterns": {},
@@ -1107,7 +1120,12 @@ def spawn_initial_zombies(
             < ZOMBIE_SPAWN_PLAYER_BUFFER
         ):
             continue
-        tentative = create_zombie(config, start_pos=pos, stage=game_data.stage)
+        tentative = create_zombie(
+            config,
+            start_pos=pos,
+            stage=game_data.stage,
+            outer_wall_cells=game_data.areas.outer_wall_cells,
+        )
         if spritecollideany_walls(tentative, wall_group):
             continue
         zombie_group.add(tentative)
@@ -1155,7 +1173,12 @@ def spawn_nearby_zombie(
         )
         if view_rect.collidepoint(candidate):
             continue
-        new_zombie = create_zombie(config, start_pos=candidate, stage=game_data.stage)
+        new_zombie = create_zombie(
+            config,
+            start_pos=candidate,
+            stage=game_data.stage,
+            outer_wall_cells=game_data.areas.outer_wall_cells,
+        )
         if spritecollideany_walls(new_zombie, wall_group):
             continue
         zombie_group.add(new_zombie)
@@ -1175,7 +1198,10 @@ def spawn_exterior_zombie(
     zombie_group = game_data.groups.zombie_group
     all_sprites = game_data.groups.all_sprites
     new_zombie = create_zombie(
-        config, hint_pos=(player.x, player.y), stage=game_data.stage
+        config,
+        hint_pos=(player.x, player.y),
+        stage=game_data.stage,
+        outer_wall_cells=game_data.areas.outer_wall_cells,
     )
     zombie_group.add(new_zombie)
     all_sprites.add(new_zombie, layer=1)

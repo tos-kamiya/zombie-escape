@@ -23,6 +23,7 @@ class Areas:
     inner_rect: tuple[int, int, int, int]
     outside_rects: list[pygame.Rect]
     walkable_cells: list[pygame.Rect]
+    outer_wall_cells: set[tuple[int, int]]
 
 
 @dataclass
@@ -105,7 +106,7 @@ class Stage:
     initial_interior_spawn_rate: float = 0.015
     exterior_spawn_weight: float = 1.0
     interior_spawn_weight: float = 0.0
-    zombie_variant_ratio: float = 0.0
+    zombie_tracker_ratio: float = 0.0
     zombie_aging_duration_frames: int = ZOMBIE_AGING_DURATION_FRAMES
 
     @property

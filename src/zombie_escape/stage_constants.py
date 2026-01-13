@@ -60,7 +60,7 @@ STAGES: list[Stage] = [
         requires_fuel=True,
         exterior_spawn_weight=0.8,
         interior_spawn_weight=0.2,
-        zombie_variant_ratio=0.5,
+        zombie_tracker_ratio=0.5,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
     ),
 ]
