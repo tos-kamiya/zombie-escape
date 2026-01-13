@@ -4,6 +4,7 @@
 - Core game loop and entities live in `src/zombie_escape/zombie_escape.py`; configuration helpers in `config.py`; level layout logic in `level_blueprints.py`; package metadata in `__about__.py`.
 - Screenshots sit in `imgs/`; `dev-samples/` holds the Windows demo binary and supporting assets; keep it untouched unless preparing a new release build.
 - Tests belong in `tests/` (currently minimal). Add fixtures and helpers there instead of mixing them into game code.
+- Design documentation lives in `docs/design.md`; keep it updated when core gameplay/data flows change.
 
 ## Build, Test, and Development Commands
 - Create an environment with uv (Python 3.10+): `uv venv --python 3.12` then `source .venv/bin/activate` (or `Scripts\\activate`).

@@ -1,0 +1,194 @@
+# Zombie Escape 設計メモ
+
+この文書は、`zombie-escape` の主要な構造・データ・関数の関係を素早く把握するための設計メモです。
+実装詳細は各モジュールのコメントや関数本体を参照してください。
+
+## 1. モジュール構成の概要
+
+- `src/zombie_escape/zombie_escape.py`
+  - エントリポイント。CLI引数の解析、`pygame` 初期化、画面遷移ループを担当。
+- `src/zombie_escape/screens/*.py`
+  - `title`, `settings`, `gameplay`, `game_over` の各画面。
+  - `screens/__init__.py` に画面遷移と表示ユーティリティ。
+- `src/zombie_escape/gameplay/logic.py`
+  - ゲームロジックの集約。初期化、スポーン、移動、当たり判定、勝敗条件など。
+- `src/zombie_escape/entities.py`
+  - `pygame.sprite.Sprite` を使ったゲーム内エンティティ定義と衝突判定補助。
+- `src/zombie_escape/models.py`
+  - 進行状態やステージ情報のデータ構造（`dataclass`）。
+- `src/zombie_escape/render.py`
+  - 描画パイプライン（床/壁/霧/足跡/HUD/ヒント矢印など）。
+- `src/zombie_escape/level_blueprints.py`
+  - マップのセル配置生成（外周・出口・内部壁・スポーン候補）。
+- `src/zombie_escape/config.py`
+  - 設定のデフォルト値、保存/読込。
+- `src/zombie_escape/progress.py`
+  - ステージクリア回数の保存/読込。
+- `src/zombie_escape/rng.py`
+  - 再現性のある乱数生成（MT19937）。
+- `src/zombie_escape/colors.py`
+  - 環境パレットと基本色定義。
+- `src/zombie_escape/render_assets.py`, `render_constants.py`
+  - 描画系アセットと定数の集約。
+- `src/zombie_escape/level_constants.py`, `screen_constants.py`, `gameplay_constants.py`
+  - マップ・画面・ゲームプレイの各種パラメータ。
+
+## 2. 画面遷移とゲームループ
+
+- `ScreenID` は `TITLE`, `SETTINGS`, `GAMEPLAY`, `GAME_OVER`, `EXIT` の5種。
+- `zombie_escape.main()` が `ScreenTransition` を受け取りながら画面遷移を管理。
+- ゲームプレイ本体は `screens/gameplay.py:gameplay_screen()`。
+  - ここで `logic.initialize_game_state()` -> `logic.generate_level_from_blueprint()` -> 各種スポーン -> メインループへ。
+
+## 3. 主要データ構造
+
+### 3.1 進行状態 (models.ProgressState)
+
+`ProgressState` はプレイ中の状態変数を集約する `dataclass`。
+
+- 勝敗・ゲーム終了関連: `game_over`, `game_won`, `game_over_message`, `game_over_at`
+- 進行演出: `footprints`, `last_footprint_pos`, `elapsed_play_ms`
+- アイテム状態: `has_fuel`, `flashlight_count`
+- ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`
+- ステージ特殊処理: `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
+- サバイバル用: `survival_elapsed_ms`, `survival_goal_ms`, `dawn_ready`, `dawn_prompt_at`, `dawn_carbonized`
+- 乱数/デバッグ: `seed`, `debug_mode`, `time_accel_active`
+
+### 3.2 ゲーム状態 (models.GameData)
+
+- `state`: `ProgressState`
+- `groups`: `Groups`（Sprite Groupの集合）
+- `camera`: `Camera`
+- `areas`: `Areas`（外周/内側/外側セルなど）
+- `fog`: 霧描画用のキャッシュ辞書
+- `stage`: `Stage`（ステージ定義）
+- `fuel`, `flashlights`, `player`, `car`, `waiting_cars`, `companion` など
+
+### 3.3 ステージ定義 (models.Stage)
+
+`Stage` はステージ属性を保持する `dataclass`。
+
+- プレイ特性: `requires_fuel`, `companion_stage`, `rescue_stage`, `survival_stage`
+- スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`
+- 内外スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`
+- サバイバル設定: `survival_goal_ms`, `fuel_spawn_count`
+
+### 3.4 スプライト群 (models.Groups)
+
+- `all_sprites` (`LayeredUpdates`) と `wall_group`, `zombie_group`, `survivor_group` を保持。
+
+### 3.5 エンティティ (entities.py)
+
+- `Wall`: 内壁。体力を持ち、破壊時に `on_destroy` を発火。
+- `SteelBeam`: 簡易な強化障害物。
+- `Camera`: 画面スクロール用の矩形管理。
+- `Player`, `Zombie`, `Car`, `Survivor`, `Companion`
+- `FuelCan`, `Flashlight`（収集アイテム）
+
+補助関数:
+
+- `circle_rect_collision`, `circle_polygon_collision`, `rect_polygon_collision`
+- `spritecollide_walls`, `spritecollideany_walls` など
+
+## 4. ゲームロジックの主要関数 (gameplay/logic.py)
+
+### 初期化・生成
+
+- `initialize_game_state(config, stage)`
+  - `GameData` の基本セットアップ。
+- `generate_level_from_blueprint(game_data, config)`
+  - `level_blueprints` から壁・歩行セル・外部セルを作成。
+- `setup_player_and_cars(game_data, layout_data, car_count)`
+  - プレイヤーと待機車両を配置。
+- `spawn_initial_zombies(game_data, player, layout_data, config)`
+  - 初期ゾンビを内側エリア中心に配置。
+
+### スポーン
+
+- `spawn_nearby_zombie`, `spawn_exterior_zombie`, `spawn_weighted_zombie`
+  - 画面外スポーン/外周スポーン/重み付けスポーン。
+- `spawn_survivors` / `place_companion` / `place_fuel_can` / `place_flashlights`
+  - ステージ別のアイテムやNPCを配置。
+
+### 更新
+
+- `process_player_input(keys, player, car)`
+  - プレイヤー/車両の入力速度を決定。
+- `update_entities(game_data, player_dx, player_dy, car_dx, car_dy, config)`
+  - 移動、カメラ更新、ゾンビAI、サバイバー移動など。
+- `check_interactions(game_data, config)`
+  - アイテム収集、車両/救助/敗北判定などの相互作用。
+- `update_footprints(game_data, config)`
+  - 足跡を記録し寿命で削除。
+- `update_survival_timer(game_data, dt_ms)`
+  - サバイバル用の時間管理と夜明け切り替え。
+
+### 速度/容量補助
+
+- `calculate_car_speed_for_passengers`, `apply_passenger_speed_penalty`
+  - 乗車人数に応じた速度低下。
+- `increase_survivor_capacity`, `drop_survivors_from_car` など
+
+## 5. 描画パイプライン (render.py)
+
+- `draw(...)` が描画の中心。
+  1. 環境色で背景塗りつぶし
+  2. プレイ領域・床パターン描画
+  3. 足跡のフェード描画
+  4. Sprite 群を `Camera` でオフセットして描画
+  5. ヒント矢印 (`_draw_hint_arrow`)
+  6. 霧 (`fog_surfaces` + `FOG_RINGS`)
+  7. HUD: 目的/メッセージ/ステータスバー
+
+- `draw_status_bar()`
+  - 設定フラグやステージ番号、シード値を表示。
+
+- `draw_level_overview()`
+  - `game_over` 画面用のレベル縮小図。
+
+## 6. レベル生成 (level_blueprints.py)
+
+- グリッド凡例
+  - `O`: 外周（勝利判定エリア）
+  - `B`: 外周壁
+  - `E`: 出口
+  - `1`: 内部壁
+  - `.`: 空床
+  - `P`: プレイヤー候補
+  - `C`: 車候補
+  - `Z`: ゾンビ候補
+
+- `generate_random_blueprint()`
+  - 外周 -> 出口 -> 壁 -> スポーン候補 の順に生成。
+
+## 7. 設定と進行データ
+
+- `config.py`
+  - `DEFAULT_CONFIG` を基準に `load_config()` でユーザ設定を統合。
+  - 保存先: `platformdirs.user_config_dir(APP_NAME, APP_NAME)`
+
+- `progress.py`
+  - ステージクリア回数を `user_data_dir()` 配下へ保存。
+
+## 8. 乱数とシード
+
+- `rng.py` で MT19937 を自前実装。
+- `seed_rng(seed)` で全体RNGを初期化。
+- `screens/title.py` でシード入力/自動生成を受け付け。
+
+## 9. ローカライズ
+
+- `localization.py` が `python-i18n` をラップ。
+- `locales/ui.*.json` を読み込み、`translate()` で文字列取得。
+- フォント指定やスケールもロケール別に制御。
+
+## 10. 重要な定数
+
+- `screen_constants.py`: 400x300 の論理解像度、`DEFAULT_WINDOW_SCALE=2.0`。
+- `level_constants.py`: 48x30 グリッドで全体サイズを決定。
+- `gameplay_constants.py`: 速度、判定半径、スポーンレートなど。
+- `render_constants.py`: 霧や足跡の描画パラメータ。
+
+---
+
+必要に応じて、この文書に「テスト観点」「拡張ポイント」「既知の制約」などを追加してください。

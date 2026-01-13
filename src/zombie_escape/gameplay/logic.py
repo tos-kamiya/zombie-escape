@@ -208,6 +208,7 @@ def generate_level_from_blueprint(
                 outside_rects.append(cell_rect)
                 continue
             if ch == "B":
+                draw_bottom_side = not has_wall(x, y + 1)
                 wall = Wall(
                     cell_rect.x,
                     cell_rect.y,
@@ -218,6 +219,7 @@ def generate_level_from_blueprint(
                     border_color=palette.outer_wall_border,
                     palette_category="outer_wall",
                     bevel_depth=0,
+                    draw_bottom_side=draw_bottom_side,
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
@@ -234,6 +236,7 @@ def generate_level_from_blueprint(
                         cell_rect.width,
                         health=STEEL_BEAM_HEALTH,
                     )
+                draw_bottom_side = not has_wall(x, y + 1)
                 bevel_mask = (
                     not has_wall(x, y - 1)
                     and not has_wall(x - 1, y)
@@ -258,6 +261,7 @@ def generate_level_from_blueprint(
                     border_color=palette.inner_wall_border,
                     palette_category="inner_wall",
                     bevel_mask=bevel_mask,
+                    draw_bottom_side=draw_bottom_side,
                     on_destroy=(lambda _w, b=beam: add_beam_to_groups(b))
                     if beam
                     else None,

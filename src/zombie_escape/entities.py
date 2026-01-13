@@ -325,6 +325,9 @@ class Wall(pygame.sprite.Sprite):
         palette_category: str = "inner_wall",
         bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
         bevel_mask: tuple[bool, bool, bool, bool] | None = None,
+        draw_bottom_side: bool = False,
+        bottom_side_ratio: float = 0.1,
+        side_shade_ratio: float = 0.9,
         on_destroy: Callable[[Self], None] | None = None,
     ) -> None:
         super().__init__()
@@ -339,6 +342,9 @@ class Wall(pygame.sprite.Sprite):
         self.on_destroy = on_destroy
         self.bevel_depth = max(0, bevel_depth)
         self.bevel_mask = bevel_mask or (False, False, False, False)
+        self.draw_bottom_side = draw_bottom_side
+        self.bottom_side_ratio = max(0.0, bottom_side_ratio)
+        self.side_shade_ratio = max(0.0, min(1.0, side_shade_ratio))
         self._local_polygon = _build_beveled_polygon(
             safe_width, safe_height, self.bevel_depth, self.bevel_mask
         )
@@ -382,27 +388,77 @@ class Wall(pygame.sprite.Sprite):
         bb = int(self.border_base_color[2] * (0.6 + 0.4 * health_ratio))
         border_color = (br, bg, bb)
 
-        if self.bevel_depth > 0 and any(self.bevel_mask):
-            pygame.draw.polygon(self.image, border_color, self._local_polygon)
-        else:
-            self.image.fill(border_color)
-        border_width = 18
-        inner_rect = self.image.get_rect().inflate(-border_width, -border_width)
-        if inner_rect.width > 0 and inner_rect.height > 0:
-            inner_depth = max(0, self.bevel_depth - border_width)
-            if inner_depth > 0 and any(self.bevel_mask):
-                inner_polygon = _build_beveled_polygon(
-                    inner_rect.width,
-                    inner_rect.height,
-                    inner_depth,
-                    self.bevel_mask,
+        rect_obj = self.image.get_rect()
+        side_height = 0
+        if self.draw_bottom_side:
+            side_height = max(1, int(rect_obj.height * self.bottom_side_ratio))
+
+        def draw_face(
+            target: pygame.Surface,
+            *,
+            face_size: tuple[int, int] | None = None,
+        ) -> None:
+            face_width, face_height = face_size or target.get_size()
+            if self.bevel_depth > 0 and any(self.bevel_mask):
+                face_polygon = _build_beveled_polygon(
+                    face_width, face_height, self.bevel_depth, self.bevel_mask
                 )
-                inner_points = [
-                    (px + inner_rect.x, py + inner_rect.y) for px, py in inner_polygon
-                ]
-                pygame.draw.polygon(self.image, fill_color, inner_points)
+                pygame.draw.polygon(target, border_color, face_polygon)
             else:
-                pygame.draw.rect(self.image, fill_color, inner_rect)
+                target.fill(border_color)
+            border_width = 18
+            inner_rect = target.get_rect().inflate(-border_width, -border_width)
+            if inner_rect.width > 0 and inner_rect.height > 0:
+                inner_depth = max(0, self.bevel_depth - border_width)
+                if inner_depth > 0 and any(self.bevel_mask):
+                    inner_polygon = _build_beveled_polygon(
+                        inner_rect.width,
+                        inner_rect.height,
+                        inner_depth,
+                        self.bevel_mask,
+                    )
+                    inner_points = [
+                        (px + inner_rect.x, py + inner_rect.y)
+                        for px, py in inner_polygon
+                    ]
+                    pygame.draw.polygon(target, fill_color, inner_points)
+                else:
+                    pygame.draw.rect(target, fill_color, inner_rect)
+
+        if self.draw_bottom_side:
+            extra_height = max(0, int(self.bevel_depth / 2))
+            side_draw_height = min(rect_obj.height, side_height + extra_height)
+            side_rect = pygame.Rect(
+                rect_obj.left,
+                rect_obj.bottom - side_draw_height,
+                rect_obj.width,
+                side_draw_height,
+            )
+            side_color = tuple(int(c * self.side_shade_ratio) for c in fill_color)
+            side_surface = pygame.Surface(rect_obj.size, pygame.SRCALPHA)
+            if self.bevel_depth > 0 and any(self.bevel_mask):
+                pygame.draw.polygon(side_surface, side_color, self._local_polygon)
+            else:
+                pygame.draw.rect(side_surface, side_color, rect_obj)
+            self.image.blit(side_surface, side_rect.topleft, area=side_rect)
+
+        if self.draw_bottom_side:
+            top_height = max(0, rect_obj.height - side_height)
+            top_rect = pygame.Rect(
+                rect_obj.left,
+                rect_obj.top,
+                rect_obj.width,
+                rect_obj.height - side_height,
+            )
+            top_surface = pygame.Surface((rect_obj.width, top_height), pygame.SRCALPHA)
+            draw_face(
+                top_surface,
+                face_size=(rect_obj.width, top_height),
+            )
+            if top_rect.height > 0:
+                self.image.blit(top_surface, top_rect.topleft, area=top_rect)
+        else:
+            draw_face(self.image)
 
     def collides_rect(self: Self, rect_obj: rect.Rect) -> bool:
         if self._collision_polygon is None:
@@ -468,16 +524,35 @@ class SteelBeam(pygame.sprite.Sprite):
         fill_mix = 0.55 + 0.45 * health_ratio
         fill_color = tuple(int(c * fill_mix) for c in self.base_color)
         rect_obj = self.image.get_rect()
-        pygame.draw.rect(self.image, fill_color, rect_obj)
+        side_height = max(1, int(rect_obj.height * 0.1))
+        top_rect = pygame.Rect(
+            rect_obj.left,
+            rect_obj.top,
+            rect_obj.width,
+            rect_obj.height - side_height,
+        )
+        side_mix = 0.45 + 0.35 * health_ratio
+        side_color = tuple(int(c * side_mix * 0.9) for c in self.base_color)
+        side_rect = pygame.Rect(
+            rect_obj.left,
+            rect_obj.bottom - side_height,
+            rect_obj.width,
+            side_height,
+        )
+        pygame.draw.rect(self.image, side_color, side_rect)
         line_mix = 0.7 + 0.3 * health_ratio
         line_color = tuple(int(c * line_mix) for c in self.line_color)
-        pygame.draw.rect(self.image, line_color, rect_obj, width=6)
+        top_surface = pygame.Surface(top_rect.size, pygame.SRCALPHA)
+        local_rect = top_surface.get_rect()
+        pygame.draw.rect(top_surface, fill_color, local_rect)
+        pygame.draw.rect(top_surface, line_color, local_rect, width=6)
         pygame.draw.line(
-            self.image, line_color, rect_obj.topleft, rect_obj.bottomright, width=6
+            top_surface, line_color, local_rect.topleft, local_rect.bottomright, width=6
         )
         pygame.draw.line(
-            self.image, line_color, rect_obj.topright, rect_obj.bottomleft, width=6
+            top_surface, line_color, local_rect.topright, local_rect.bottomleft, width=6
         )
+        self.image.blit(top_surface, top_rect.topleft)
 
 
 class Camera:
