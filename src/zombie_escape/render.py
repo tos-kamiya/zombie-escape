@@ -614,7 +614,7 @@ def draw(
                 DEBUG_TRACKER_OUTLINE_COLOR,
                 sprite_screen_rect.center,
                 radius + 1,
-                width=2,
+                width=1,
             )
         for zombie in zombie_group:
             if not getattr(zombie, "wall_follower", False):
@@ -634,7 +634,7 @@ def draw(
                 DEBUG_WALL_FOLLOWER_OUTLINE_COLOR,
                 sprite_screen_rect.center,
                 radius + 1,
-                width=2,
+                width=1,
             )
 
     if player_screen_rect is None:

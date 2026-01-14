@@ -34,6 +34,8 @@ from .gameplay_constants import (
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
+    HUMANOID_OUTLINE_COLOR,
+    HUMANOID_OUTLINE_WIDTH,
     INTERNAL_WALL_BEVEL_DEPTH,
     INTERNAL_WALL_HEALTH,
     PLAYER_RADIUS,
@@ -81,6 +83,19 @@ def circle_rect_collision(
     dx = cx - closest_x
     dy = cy - closest_y
     return dx * dx + dy * dy <= radius * radius
+
+
+def _draw_outlined_circle(
+    surface: pygame.Surface,
+    center: tuple[int, int],
+    radius: int,
+    fill_color: tuple[int, int, int],
+    outline_color: tuple[int, int, int],
+    outline_width: int,
+) -> None:
+    pygame.draw.circle(surface, fill_color, center, radius)
+    if outline_width > 0:
+        pygame.draw.circle(surface, outline_color, center, radius, width=outline_width)
 
 
 def _build_beveled_polygon(
@@ -592,8 +607,13 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.Surface(
             (self.radius * 2 + 2, self.radius * 2 + 2), pygame.SRCALPHA
         )
-        pygame.draw.circle(
-            self.image, BLUE, (self.radius + 1, self.radius + 1), self.radius
+        _draw_outlined_circle(
+            self.image,
+            (self.radius + 1, self.radius + 1),
+            self.radius,
+            BLUE,
+            HUMANOID_OUTLINE_COLOR,
+            HUMANOID_OUTLINE_WIDTH,
         )
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = PLAYER_SPEED
@@ -641,8 +661,13 @@ class Companion(pygame.sprite.Sprite):
         super().__init__()
         self.radius = COMPANION_RADIUS
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
-        pygame.draw.circle(
-            self.image, COMPANION_COLOR, (self.radius, self.radius), self.radius
+        _draw_outlined_circle(
+            self.image,
+            (self.radius, self.radius),
+            self.radius,
+            COMPANION_COLOR,
+            HUMANOID_OUTLINE_COLOR,
+            HUMANOID_OUTLINE_WIDTH,
         )
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.x = float(self.rect.centerx)
@@ -718,8 +743,13 @@ class Survivor(pygame.sprite.Sprite):
         super().__init__()
         self.radius = SURVIVOR_RADIUS
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
-        pygame.draw.circle(
-            self.image, SURVIVOR_COLOR, (self.radius, self.radius), self.radius
+        _draw_outlined_circle(
+            self.image,
+            (self.radius, self.radius),
+            self.radius,
+            SURVIVOR_COLOR,
+            HUMANOID_OUTLINE_COLOR,
+            HUMANOID_OUTLINE_WIDTH,
         )
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.x = float(self.rect.centerx)
@@ -1189,7 +1219,7 @@ class Zombie(pygame.sprite.Sprite):
         color = (80, 80, 80)
         pygame.draw.circle(self.image, color, (self.radius, self.radius), self.radius)
         pygame.draw.circle(
-            self.image, (30, 30, 30), (self.radius, self.radius), self.radius, width=2
+            self.image, (30, 30, 30), (self.radius, self.radius), self.radius, width=1
         )
 
 
