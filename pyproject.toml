@@ -23,6 +23,7 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
 ]
 dependencies = [
+  "numpy",
   "pygame",
   "platformdirs",
   "python-i18n",

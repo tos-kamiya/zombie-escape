@@ -5,7 +5,8 @@ from enum import Enum
 from typing import Any, Callable
 
 import pygame
-from pygame import pg_surfarray, sprite, surface
+from pygame import sprite, surface
+import pygame.surfarray as pg_surfarray  # type: ignore
 
 from .colors import (
     BLACK,
