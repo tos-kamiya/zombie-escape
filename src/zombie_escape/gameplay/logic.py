@@ -133,6 +133,8 @@ def create_zombie(
     hint_pos: tuple[float, float] | None = None,
     stage: Stage | None = None,
     outer_wall_cells: set[tuple[int, int]] | None = None,
+    tracker: bool | None = None,
+    wall_follower: bool | None = None,
 ) -> Zombie:
     """Factory to create zombies with optional fast variants."""
     fast_conf = config.get("fast_zombies", {})
@@ -142,9 +144,17 @@ def create_zombie(
     else:
         base_speed = ZOMBIE_SPEED
     base_speed = min(base_speed, PLAYER_SPEED - 0.05)
+    normal_ratio = 1.0
     tracker_ratio = 0.0
+    wall_follower_ratio = 0.0
     if stage is not None:
+        normal_ratio = max(
+            0.0, min(1.0, getattr(stage, "zombie_normal_ratio", 1.0))
+        )
         tracker_ratio = max(0.0, min(1.0, getattr(stage, "zombie_tracker_ratio", 0.0)))
+        wall_follower_ratio = max(
+            0.0, min(1.0, getattr(stage, "zombie_wall_follower_ratio", 0.0))
+        )
         aging_duration_frames = max(
             1.0,
             float(
@@ -155,7 +165,23 @@ def create_zombie(
         )
     else:
         aging_duration_frames = ZOMBIE_AGING_DURATION_FRAMES
-    tracker = tracker_ratio > 0 and RNG.random() < tracker_ratio
+    picked_tracker = False
+    picked_wall_follower = False
+    total_ratio = normal_ratio + tracker_ratio + wall_follower_ratio
+    if total_ratio > 0:
+        pick = RNG.random() * total_ratio
+        if pick < normal_ratio:
+            pass
+        elif pick < normal_ratio + tracker_ratio:
+            picked_tracker = True
+        else:
+            picked_wall_follower = True
+    if tracker is None:
+        tracker = picked_tracker
+    if wall_follower is None:
+        wall_follower = picked_wall_follower
+    if tracker:
+        wall_follower = False
     if tracker:
         ratio = (
             ZOMBIE_TRACKER_AGING_DURATION_FRAMES / ZOMBIE_AGING_DURATION_FRAMES
@@ -168,6 +194,7 @@ def create_zombie(
         hint_pos=hint_pos,
         speed=base_speed,
         tracker=tracker,
+        wall_follower=wall_follower,
         aging_duration_frames=aging_duration_frames,
         outer_wall_cells=outer_wall_cells,
     )

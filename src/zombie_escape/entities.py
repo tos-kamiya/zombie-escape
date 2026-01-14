@@ -54,6 +54,8 @@ from .gameplay_constants import (
     ZOMBIE_TRACKER_SIGHT_RANGE,
     ZOMBIE_TRACKER_WANDER_INTERVAL_MS,
     ZOMBIE_WALL_DAMAGE,
+    ZOMBIE_WALL_FOLLOW_LOST_WALL_MS,
+    ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
     ZOMBIE_WANDER_INTERVAL_MS,
     car_body_radius,
 )
@@ -780,6 +782,105 @@ def zombie_tracker_movement(
     return zombie_move_toward(zombie, player_center)
 
 
+def zombie_wall_follow_has_wall(
+    zombie: Zombie,
+    walls: list[Wall],
+    angle: float,
+    distance: float,
+) -> bool:
+    check_x = zombie.x + math.cos(angle) * distance
+    check_y = zombie.y + math.sin(angle) * distance
+    candidates = [
+        wall
+        for wall in walls
+        if abs(wall.rect.centerx - check_x) < 120
+        and abs(wall.rect.centery - check_y) < 120
+    ]
+    return any(
+        circle_wall_collision((check_x, check_y), zombie.radius, wall)
+        for wall in candidates
+    )
+
+
+def zombie_wall_follow_movement(
+    zombie: Zombie,
+    player_center: tuple[int, int],
+    walls: list[Wall],
+    _footprints: list[dict[str, object]],
+) -> tuple[float, float]:
+    is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
+    if zombie.wall_follow_angle is None:
+        zombie.wall_follow_angle = zombie.wander_angle
+    if zombie.wall_follow_side == 0:
+        sensor_distance = ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE + zombie.radius
+        forward_angle = zombie.wall_follow_angle
+        left_angle = forward_angle + math.pi / 2.0
+        right_angle = forward_angle - math.pi / 2.0
+        left_wall = zombie_wall_follow_has_wall(
+            zombie, walls, left_angle, sensor_distance
+        )
+        right_wall = zombie_wall_follow_has_wall(
+            zombie, walls, right_angle, sensor_distance
+        )
+        forward_wall = zombie_wall_follow_has_wall(
+            zombie, walls, forward_angle, sensor_distance
+        )
+        if left_wall or right_wall or forward_wall:
+            if left_wall and not right_wall:
+                zombie.wall_follow_side = 1.0
+            elif right_wall and not left_wall:
+                zombie.wall_follow_side = -1.0
+            else:
+                zombie.wall_follow_side = RNG.choice([-1.0, 1.0])
+            zombie.wall_follow_last_wall_time = pygame.time.get_ticks()
+            zombie.wall_follow_last_side_has_wall = left_wall or right_wall
+        else:
+            if is_in_sight:
+                return zombie_move_toward(zombie, player_center)
+            return zombie_wander_move(zombie, walls)
+
+    sensor_distance = ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE + zombie.radius
+    side_angle = zombie.wall_follow_angle + zombie.wall_follow_side * (math.pi / 2.0)
+    side_has_wall = zombie_wall_follow_has_wall(
+        zombie, walls, side_angle, sensor_distance
+    )
+    forward_has_wall = zombie_wall_follow_has_wall(
+        zombie, walls, zombie.wall_follow_angle, sensor_distance
+    )
+    now = pygame.time.get_ticks()
+    wall_following = side_has_wall or forward_has_wall
+    wall_recent = (
+        zombie.wall_follow_last_wall_time is not None
+        and now - zombie.wall_follow_last_wall_time <= ZOMBIE_WALL_FOLLOW_LOST_WALL_MS
+    )
+    if is_in_sight:
+        return zombie_move_toward(zombie, player_center)
+
+    turn_step = math.radians(5)
+    if side_has_wall or forward_has_wall:
+        zombie.wall_follow_last_wall_time = now
+    if side_has_wall:
+        zombie.wall_follow_last_side_has_wall = True
+        if forward_has_wall:
+            zombie.wall_follow_angle -= zombie.wall_follow_side * turn_step
+    else:
+        if wall_recent:
+            if zombie.wall_follow_last_side_has_wall and not forward_has_wall:
+                zombie.wall_follow_angle += zombie.wall_follow_side * (math.pi / 2.0)
+                zombie.wall_follow_last_side_has_wall = False
+            elif zombie.wall_follow_last_side_has_wall:
+                zombie.wall_follow_angle += zombie.wall_follow_side * turn_step
+                zombie.wall_follow_last_side_has_wall = False
+        else:
+            zombie.wall_follow_angle += zombie.wall_follow_side * (math.pi / 2.0)
+            zombie.wall_follow_side = 0.0
+    zombie.wall_follow_angle %= math.tau
+
+    move_x = math.cos(zombie.wall_follow_angle) * zombie.speed
+    move_y = math.sin(zombie.wall_follow_angle) * zombie.speed
+    return move_x, move_y
+
+
 def zombie_normal_movement(
     zombie: Zombie,
     player_center: tuple[int, int],
@@ -899,6 +1000,7 @@ class Zombie(pygame.sprite.Sprite):
         hint_pos: tuple[float, float] | None = None,
         speed: float = ZOMBIE_SPEED,
         tracker: bool = False,
+        wall_follower: bool = False,
         movement_strategy: MovementStrategy | None = None,
         aging_duration_frames: float = ZOMBIE_AGING_DURATION_FRAMES,
         outer_wall_cells: set[tuple[int, int]] | None = None,
@@ -930,16 +1032,26 @@ class Zombie(pygame.sprite.Sprite):
         self.age_frames = 0.0
         self.aging_duration_frames = aging_duration_frames
         self.tracker = tracker
-        self.movement_strategy = movement_strategy or (
-            zombie_tracker_movement if tracker else zombie_normal_movement
-        )
+        self.wall_follower = wall_follower
+        if movement_strategy is None:
+            if tracker:
+                movement_strategy = zombie_tracker_movement
+            elif wall_follower:
+                movement_strategy = zombie_wall_follow_movement
+            else:
+                movement_strategy = zombie_normal_movement
+        self.movement_strategy = movement_strategy
         self.outer_wall_cells = outer_wall_cells
         self.tracker_target_pos: tuple[float, float] | None = None
+        self.wall_follow_side = RNG.choice([-1.0, 1.0]) if wall_follower else 0.0
+        self.wall_follow_angle = (
+            RNG.uniform(0, math.tau) if wall_follower else None
+        )
+        self.wall_follow_last_wall_time: int | None = None
+        self.wall_follow_last_side_has_wall = False
         self.wander_angle = RNG.uniform(0, math.tau)
         self.wander_interval_ms = (
-            ZOMBIE_TRACKER_WANDER_INTERVAL_MS
-            if tracker
-            else ZOMBIE_WANDER_INTERVAL_MS
+            ZOMBIE_TRACKER_WANDER_INTERVAL_MS if tracker else ZOMBIE_WANDER_INTERVAL_MS
         )
         self.last_wander_change_time = pygame.time.get_ticks()
         self.wander_change_interval = max(

@@ -74,7 +74,9 @@
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`
 - 内外スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`
 - サバイバル設定: `survival_goal_ms`, `fuel_spawn_count`
+- 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）
 - 変種移動ルーチン: `zombie_tracker_ratio`（足跡追跡型の出現率）
+- 変種移動ルーチン: `zombie_wall_follower_ratio`（壁沿い巡回型の出現率）
 - エイジング速度: `zombie_aging_duration_frames`（値が大きいほど老化が遅い）
 
 ### 3.4 スプライト群 (models.Groups)
@@ -93,6 +95,28 @@
 
 - `circle_rect_collision`, `circle_polygon_collision`, `rect_polygon_collision`
 - `spritecollide_walls`, `spritecollideany_walls` など
+
+## 3.6 ゾンビ移動戦略
+
+ゾンビの移動は `MovementStrategy`（`entities.py` 内の関数群）として切り出し、`Zombie.update()` から呼び出す。
+個体ごとの戦略は `Zombie.movement_strategy` に保持され、生成時に `tracker` フラグに応じて設定される。
+
+- 通常移動 (`zombie_normal_movement`)
+  - 視界範囲 `ZOMBIE_SIGHT_RANGE` でプレイヤーを検知したら直進追尾。
+  - 視界外は `zombie_wander_move` で徘徊移動。
+- 追跡移動 (`zombie_tracker_movement`)
+  - 視界範囲 `ZOMBIE_TRACKER_SIGHT_RANGE` でプレイヤーを検知したら直進追尾。
+  - 視界外は足跡 (`footprints`) から `ZOMBIE_TRACKER_SCENT_RADIUS` 内の最新位置を追跡し、見つからない場合は徘徊。
+- 壁沿い移動 (`zombie_wall_follow_movement`)
+  - 視界範囲 `ZOMBIE_TRACKER_SIGHT_RANGE` でプレイヤーを検知したら直進追尾。
+  - 視界外は右手/左手法で壁沿いに巡回し、一定時間壁を検知できなければ徘徊に切り替える。
+  - 右手/左手の選択は個体ごとにランダム。
+
+補助要素:
+
+- `zombie_wander_move` はランダム角度・壁際の回避挙動で歩行を維持。
+- `Zombie.update()` 側で壁衝突・近接回避・外周逸脱時の補正を処理。
+- `create_zombie()` で `stage.zombie_tracker_ratio` を参照し追跡型の出現率を決定。
 
 ## 4. ゲームロジックの主要関数 (gameplay/logic.py)
 

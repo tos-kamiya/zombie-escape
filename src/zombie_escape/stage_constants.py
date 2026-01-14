@@ -60,8 +60,22 @@ STAGES: list[Stage] = [
         requires_fuel=True,
         exterior_spawn_weight=0.8,
         interior_spawn_weight=0.2,
+        zombie_normal_ratio=0.5,
         zombie_tracker_ratio=0.5,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+    ),
+    Stage(
+        id="stage7",
+        name_key="stages.stage7.name",
+        description_key="stages.stage7.description",
+        available=True,
+        companion_stage=True,
+        requires_fuel=True,
+        exterior_spawn_weight=0.7,
+        interior_spawn_weight=0.3,
+        zombie_normal_ratio=0.4,
+        zombie_tracker_ratio=0.3,
+        zombie_wall_follower_ratio=0.3,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

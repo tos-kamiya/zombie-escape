@@ -107,6 +107,8 @@ class Stage:
     exterior_spawn_weight: float = 1.0
     interior_spawn_weight: float = 0.0
     zombie_tracker_ratio: float = 0.0
+    zombie_wall_follower_ratio: float = 0.0
+    zombie_normal_ratio: float = 1.0
     zombie_aging_duration_frames: int = ZOMBIE_AGING_DURATION_FRAMES
 
     @property

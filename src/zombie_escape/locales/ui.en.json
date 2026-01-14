@@ -65,6 +65,10 @@
       "stage6": {
         "name": "#6 Tracker Run",
         "description": "Escape like stage 2, but some zombies follow your trail."
+      },
+      "stage7": {
+        "name": "#7 Rescue Buddy 2",
+        "description": "Rescue your buddy. Wall-hugging zombies appear."
       }
     },
     "status": {

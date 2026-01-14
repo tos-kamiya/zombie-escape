@@ -36,6 +36,7 @@ from .models import GameData, Stage
 from .render_assets import RenderAssets
 
 DEBUG_TRACKER_OUTLINE_COLOR = (170, 70, 220)
+DEBUG_WALL_FOLLOWER_OUTLINE_COLOR = (140, 140, 140)
 
 
 def show_message(
@@ -412,6 +413,7 @@ def draw_status_bar(
     stage: Stage | None = None,
     seed: int | None = None,
     debug_mode: bool = False,
+    zombie_group: sprite.Group | None = None,
 ) -> None:
     """Render a compact status bar with current config flags and stage info."""
     bar_rect = pygame.Rect(
@@ -445,6 +447,13 @@ def draw_status_bar(
         parts.append(tr("status.steel"))
     if debug_mode:
         parts.append(tr("status.debug"))
+        if zombie_group is not None:
+            zombies = [z for z in zombie_group if getattr(z, "alive", lambda: True)()]
+            total = len(zombies)
+            tracker = sum(1 for z in zombies if getattr(z, "tracker", False))
+            wall = sum(1 for z in zombies if getattr(z, "wall_follower", False))
+            normal = max(0, total - tracker - wall)
+            parts.append(f"Z:{total} N:{normal} T:{tracker} W:{wall}")
 
     status_text = " | ".join(parts)
     color = GREEN if all([footprints_on, fast_on, hint_on]) else LIGHT_GRAY
@@ -607,6 +616,26 @@ def draw(
             pygame.draw.circle(
                 screen,
                 DEBUG_TRACKER_OUTLINE_COLOR,
+                sprite_screen_rect.center,
+                radius + 1,
+                width=2,
+            )
+        for zombie in zombie_group:
+            if not getattr(zombie, "wall_follower", False):
+                continue
+            sprite_screen_rect = camera.apply_rect(zombie.rect)
+            if not sprite_screen_rect.colliderect(screen_rect_inflated):
+                continue
+            radius = int(
+                getattr(
+                    zombie,
+                    "radius",
+                    max(sprite_screen_rect.width, sprite_screen_rect.height) // 2,
+                )
+            )
+            pygame.draw.circle(
+                screen,
+                DEBUG_WALL_FOLLOWER_OUTLINE_COLOR,
                 sprite_screen_rect.center,
                 radius + 1,
                 width=2,
@@ -846,6 +875,7 @@ def draw(
         stage=stage,
         seed=state.seed,
         debug_mode=bool(getattr(state, "debug_mode", False)),
+        zombie_group=zombie_group,
     )
     if do_flip:
         if present_fn:
