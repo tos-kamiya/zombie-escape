@@ -77,11 +77,11 @@ Open **Settings** from the title to toggle gameplay assists:
 -   **Flashlight:** Each pickup expands your visible radius by about 20% (grab two to reach the max boost).
 -   **Steel Beam (optional):** A square post with crossed diagonals; same collision as inner walls but with triple durability. Spawns independently of inner walls (may overlap them). If an inner wall covers a beam, the beam appears once the wall is destroyed.
 -   **Fuel Can (Stages 2 & 3):** A yellow jerrycan that only spawns on the fuel-run stages. Pick it up before driving the car; once collected the on-player indicator appears until you refuel the car.
--   **Buddy (Stage 3):** A green circle survivor who spawns somewhere in the building and waits.
+-   **Buddy (Stage 3):** A green circle survivor with a blue outline who spawns somewhere in the building and waits.
     -   Zombies only choose to pursue the buddy if they are on-screen; otherwise they ignore them.
     -   If a zombie tags the buddy off-screen, the buddy quietly respawns somewhere else instead of ending the run.
     -   Touch the buddy on foot to make them follow you (at 70% of player speed). Touch them while driving to pick them up.
--   **Survivors (Stage 4):** Light blue civilians scattered indoors.
+-   **Survivors (Stage 4):** Pale gray civilians with a blue outline, scattered indoors.
     - They stand still until you get close, then shuffle toward you at about one-third of player speed.
     - Zombies can convert them if both are on-screen; the survivor shouts a line and turns instantly.
     - They only board the car; your safe capacity starts at five but grows by five each time you sideswipe a parked car while already driving. Speed loss is based on how full the car is relative to that capacity, so extra slots mean quicker getaways.
