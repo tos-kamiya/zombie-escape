@@ -37,6 +37,7 @@ python -m venv venv
 venv\Scripts\activate.bat
 
 pip install pygame
+pip install numpy
 pip install platformdirs
 pip install python-i18n
 pip install pyinstaller
