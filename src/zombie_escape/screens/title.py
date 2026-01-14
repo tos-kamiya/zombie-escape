@@ -282,9 +282,18 @@ def title_screen(
             stage_count = len(stage_options)
             # resource_count = len(options) - stage_count
 
-            stage_header = section_font.render(
-                tr("menu.sections.stage_select"), False, LIGHT_GRAY
-            )
+            stage_header_text = tr("menu.sections.stage_select")
+            show_page_arrows = len(stage_pages) > 1 and _page_available(1)
+            if show_page_arrows:
+                left_arrow = "<- " if current_page > 0 else ""
+                right_arrow = (
+                    " ->"
+                    if current_page < len(stage_pages) - 1
+                    and _page_available(current_page + 1)
+                    else ""
+                )
+                stage_header_text = f"{left_arrow}{stage_header_text}{right_arrow}"
+            stage_header = section_font.render(stage_header_text, False, LIGHT_GRAY)
             stage_header_pos = (list_column_x, section_top)
             screen.blit(stage_header, stage_header_pos)
             stage_rows_start = stage_header_pos[1] + stage_header.get_height() + 6
