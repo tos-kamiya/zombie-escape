@@ -5,12 +5,7 @@ from enum import Enum
 from typing import Any, Callable
 
 import pygame
-from pygame import sprite, surface
-
-try:  # Optional dependency (numpy) backs surfarray; gracefully degrade when absent.
-    import pygame.surfarray as pg_surfarray  # type: ignore
-except Exception:  # pragma: no cover - fallback path without numpy
-    pg_surfarray = None
+from pygame import pg_surfarray, sprite, surface
 
 from .colors import (
     BLACK,

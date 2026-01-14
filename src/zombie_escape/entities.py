@@ -848,7 +848,6 @@ def zombie_wall_follow_movement(
         zombie, walls, zombie.wall_follow_angle, sensor_distance
     )
     now = pygame.time.get_ticks()
-    wall_following = side_has_wall or forward_has_wall
     wall_recent = (
         zombie.wall_follow_last_wall_time is not None
         and now - zombie.wall_follow_last_wall_time <= ZOMBIE_WALL_FOLLOW_LOST_WALL_MS
