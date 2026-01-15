@@ -63,6 +63,7 @@ def gameplay_screen(
     )
     paused_manual = False
     paused_focus = False
+    ignore_focus_loss_until = 0
     last_fov_target = None
 
     layout_data = logic.generate_level_from_blueprint(game_data, config)
@@ -156,7 +157,11 @@ def gameplay_screen(
             if event.type == pygame.QUIT:
                 return ScreenTransition(ScreenID.EXIT)
             if event.type == pygame.WINDOWFOCUSLOST:
-                paused_focus = True
+                now = pygame.time.get_ticks()
+                if now >= ignore_focus_loss_until:
+                    paused_focus = True
+            if event.type == pygame.WINDOWFOCUSGAINED:
+                paused_focus = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 paused_focus = False
                 paused_manual = False
@@ -177,6 +182,7 @@ def gameplay_screen(
                     paused_manual = not paused_manual
                 if event.key == pygame.K_F11:
                     toggle_fullscreen(game_data=game_data)
+                    ignore_focus_loss_until = pygame.time.get_ticks() + 250
                     continue
 
         paused = paused_manual or paused_focus
