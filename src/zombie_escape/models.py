@@ -97,7 +97,6 @@ class Stage:
     description_key: str
     available: bool = True
     requires_fuel: bool = False
-    buddy_stage: bool = False
     buddy_required_count: int = 0
     rescue_stage: bool = False
     survival_stage: bool = False

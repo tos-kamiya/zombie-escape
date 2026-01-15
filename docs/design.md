@@ -70,7 +70,7 @@
 
 `Stage` はステージ属性を保持する `dataclass`。
 
-- プレイ特性: `requires_fuel`, `buddy_stage`, `rescue_stage`, `survival_stage`
+- プレイ特性: `requires_fuel`, `buddy_required_count`, `rescue_stage`, `survival_stage`
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`
 - 内外スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`
 - サバイバル設定: `survival_goal_ms`, `fuel_spawn_count`
