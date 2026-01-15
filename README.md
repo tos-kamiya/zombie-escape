@@ -26,7 +26,7 @@ This game is a simple 2D top-down action game where the player aims to escape by
 -   **Enter Car:** Overlap the player with the car.
 -   **Quit Game:** `ESC` key
 -   **Restart:** `R` key (on Game Over/Clear screen)
--   **Window Scale (title/settings only):** `[` to shrink, `]` to enlarge
+-   **Window/Fullscreen (title/settings only):** `[` to shrink, `]` to enlarge, `F` to toggle fullscreen
 -   **Time Acceleration:** Hold either `Shift` key to run the entire world 4x faster; release to return to normal speed.
 
 ## Title Screen
