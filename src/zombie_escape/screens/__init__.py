@@ -220,6 +220,4 @@ def _update_window_size(size: tuple[int, int], *, source: str) -> None:
 
 
 def _update_window_caption(window_width: int, window_height: int) -> None:
-    pygame.display.set_caption(
-        f"{tr('game.title')} v{__version__} ({window_width}x{window_height})"
-    )
+    pygame.display.set_caption(f"Zombie Escape ({window_width}x{window_height})")
