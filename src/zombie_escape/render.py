@@ -762,6 +762,19 @@ def draw(
             objective_lines.append(tr("objectives.get_outside"))
         else:
             objective_lines.append(tr("objectives.survive_until_dawn"))
+    elif stage and stage.buddy_required_count > 0:
+        if stage.requires_fuel and not has_fuel:
+            objective_lines.append(tr("objectives.find_fuel"))
+        elif not player.in_car:
+            objective_lines.append(tr("objectives.find_car"))
+        else:
+            if buddy_rescued < buddy_required:
+                objective_lines.append(tr("objectives.escape_with_buddy"))
+                objective_lines.append(
+                    tr("objectives.buddy_onboard", count=buddy_onboard)
+                )
+            else:
+                objective_lines.append(tr("objectives.escape"))
     elif stage and stage.requires_fuel and not has_fuel:
         objective_lines.append(tr("objectives.find_fuel"))
     elif stage and stage.rescue_stage:
@@ -773,14 +786,6 @@ def draw(
         objective_lines.append(tr("objectives.find_car"))
     else:
         objective_lines.append(tr("objectives.escape"))
-
-    if stage and stage.buddy_required_count > 0:
-        if buddy_rescued < buddy_required:
-            objective_lines.append(tr("objectives.escape_with_buddy"))
-            if buddy_onboard > 0:
-                objective_lines.append(
-                    tr("objectives.buddy_onboard", count=buddy_onboard)
-                )
 
     if stage and stage.rescue_stage and (survivors_onboard is not None):
         limit = state.survivor_capacity
