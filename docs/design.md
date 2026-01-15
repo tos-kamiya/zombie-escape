@@ -52,7 +52,7 @@
 - 進行演出: `footprints`, `last_footprint_pos`, `elapsed_play_ms`
 - アイテム状態: `has_fuel`, `flashlight_count`
 - ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`
-- ステージ特殊処理: `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
+- ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
 - サバイバル用: `survival_elapsed_ms`, `survival_goal_ms`, `dawn_ready`, `dawn_prompt_at`, `dawn_carbonized`
 - 乱数/デバッグ: `seed`, `debug_mode`, `time_accel_active`
 
@@ -64,7 +64,7 @@
 - `areas`: `Areas`（外周/内側/外側セルなど）
 - `fog`: 霧描画用のキャッシュ辞書
 - `stage`: `Stage`（ステージ定義）
-- `fuel`, `flashlights`, `player`, `car`, `waiting_cars`, `buddy` など
+- `fuel`, `flashlights`, `player`, `car`, `waiting_cars` など
 
 ### 3.3 ステージ定義 (models.Stage)
 
@@ -91,8 +91,8 @@
 - `Player`, `Zombie`, `Car`, `Survivor`（`is_buddy` フラグで相棒を表現）
 - `FuelCan`, `Flashlight`（収集アイテム）
 
-相棒 (`is_buddy=True`) は接触で追従を開始し、車で脱出できた時点で救出扱いになる。
-ステージ4の一般 `Survivor` は画面外でゾンビに接触した場合はリスポーンする。
+相棒 (`is_buddy=True`) は一定距離内で追従を開始し、車に乗った数と脱出時の救出数で管理する。
+一般 `Survivor` は画面外でゾンビに接触した場合はリスポーンする。
 
 補助関数:
 
@@ -139,7 +139,7 @@
 
 - `spawn_nearby_zombie`, `spawn_exterior_zombie`, `spawn_weighted_zombie`
   - 画面外スポーン/外周スポーン/重み付けスポーン。
-- `spawn_survivors` / `place_buddy` / `place_fuel_can` / `place_flashlights`
+- `spawn_survivors` / `place_buddies` / `place_fuel_can` / `place_flashlights`
   - ステージ別のアイテムやNPCを配置。
 
 ### 更新
