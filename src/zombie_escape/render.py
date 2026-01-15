@@ -31,9 +31,6 @@ from .localization import translate as tr
 from .models import GameData, Stage
 from .render_assets import RenderAssets
 
-DEBUG_TRACKER_OUTLINE_COLOR = (170, 70, 220)
-DEBUG_WALL_FOLLOWER_OUTLINE_COLOR = (140, 140, 140)
-
 
 def show_message(
     screen: surface.Surface,
@@ -594,48 +591,6 @@ def draw(
             screen.blit(entity.image, sprite_screen_rect)
         if entity is player:
             player_screen_rect = sprite_screen_rect
-
-    if zombie_group:
-        for zombie in zombie_group:
-            if not getattr(zombie, "tracker", False):
-                continue
-            sprite_screen_rect = camera.apply_rect(zombie.rect)
-            if not sprite_screen_rect.colliderect(screen_rect_inflated):
-                continue
-            radius = int(
-                getattr(
-                    zombie,
-                    "radius",
-                    max(sprite_screen_rect.width, sprite_screen_rect.height) // 2,
-                )
-            )
-            pygame.draw.circle(
-                screen,
-                DEBUG_TRACKER_OUTLINE_COLOR,
-                sprite_screen_rect.center,
-                radius + 1,
-                width=1,
-            )
-        for zombie in zombie_group:
-            if not getattr(zombie, "wall_follower", False):
-                continue
-            sprite_screen_rect = camera.apply_rect(zombie.rect)
-            if not sprite_screen_rect.colliderect(screen_rect_inflated):
-                continue
-            radius = int(
-                getattr(
-                    zombie,
-                    "radius",
-                    max(sprite_screen_rect.width, sprite_screen_rect.height) // 2,
-                )
-            )
-            pygame.draw.circle(
-                screen,
-                DEBUG_WALL_FOLLOWER_OUTLINE_COLOR,
-                sprite_screen_rect.center,
-                radius + 1,
-                width=1,
-            )
 
     if player_screen_rect is None:
         player_screen_rect = camera.apply_rect(player.rect)

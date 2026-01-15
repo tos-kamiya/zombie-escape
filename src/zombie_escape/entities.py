@@ -18,6 +18,8 @@ from .colors import (
     RED,
     STEEL_BEAM_COLOR,
     STEEL_BEAM_LINE_COLOR,
+    TRACKER_OUTLINE_COLOR,
+    WALL_FOLLOWER_OUTLINE_COLOR,
     YELLOW,
 )
 from .gameplay_constants import (
@@ -1087,7 +1089,20 @@ class Zombie(pygame.sprite.Sprite):
         super().__init__()
         self.radius = ZOMBIE_RADIUS
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, RED, (self.radius, self.radius), self.radius)
+        if tracker:
+            outline_color = TRACKER_OUTLINE_COLOR
+        elif wall_follower:
+            outline_color = WALL_FOLLOWER_OUTLINE_COLOR
+        else:
+            outline_color = DARK_RED
+        _draw_outlined_circle(
+            self.image,
+            (self.radius, self.radius),
+            self.radius,
+            RED,
+            outline_color,
+            1,
+        )
         if start_pos:
             x, y = start_pos
         elif hint_pos:
