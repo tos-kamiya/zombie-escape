@@ -19,7 +19,7 @@ from ..models import Stage
 from ..render import draw, prewarm_fog_overlays, show_message
 from ..rng import generate_seed, seed_rng
 from ..progress import record_stage_clear
-from ..screens import ScreenID, ScreenTransition, present
+from ..screens import ScreenID, ScreenTransition, present, toggle_fullscreen
 
 if TYPE_CHECKING:
     from ..render import RenderAssets
@@ -175,6 +175,9 @@ def gameplay_screen(
                     return ScreenTransition(ScreenID.TITLE)
                 if event.key == pygame.K_p:
                     paused_manual = not paused_manual
+                if event.key == pygame.K_F11:
+                    toggle_fullscreen(game_data=game_data)
+                    continue
 
         paused = paused_manual or paused_focus
         if paused:

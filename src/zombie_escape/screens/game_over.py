@@ -14,7 +14,7 @@ from ..render import (
     draw_status_bar,
     show_message,
 )
-from ..screens import ScreenID, ScreenTransition, present
+from ..screens import ScreenID, ScreenTransition, present, toggle_fullscreen
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 
 
@@ -160,6 +160,9 @@ def game_over_screen(
             if event.type == pygame.QUIT:
                 return ScreenTransition(ScreenID.EXIT)
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_F11:
+                    toggle_fullscreen(game_data=game_data)
+                    continue
                 if event.key in (pygame.K_ESCAPE, pygame.K_SPACE):
                     return ScreenTransition(ScreenID.TITLE)
                 if event.key == pygame.K_r and stage is not None:

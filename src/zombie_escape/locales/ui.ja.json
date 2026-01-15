@@ -16,7 +16,7 @@
       "settings": "設定",
       "quit": "終了",
       "locked_suffix": "[Locked]",
-      "window_hint": "[キーでウィンドウを小さく、]キーで大きく(タイトル、設定画面のみ)",
+      "window_hint": "[キーでウィンドウを小さく、]キーで大きく(タイトル、設定画面のみ)。\nF11: フルスクリーン切替",
       "seed_label": "シード: %{value}",
       "seed_hint": "数字キーで入力、BSでクリア",
       "seed_empty": "(自動)",
@@ -122,7 +122,8 @@
         "adjust": "左右: 値の設定",
         "toggle": "スペース／エンター: 値のトグル",
         "reset": "R: デフォルト設定に戻す",
-        "exit": "Esc/BS: セーブして戻る"
+        "exit": "Esc/BS: セーブして戻る",
+        "fullscreen": "F11: フルスクリーン切替"
       },
       "config_path": "設定ファイル: %{path}",
       "progress_path": "クリア状況: %{path}"

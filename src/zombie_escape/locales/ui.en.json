@@ -16,7 +16,7 @@
       "settings": "Settings",
       "quit": "Quit",
       "locked_suffix": "[Locked]",
-      "window_hint": "Resize window: [ to shrink, ] to enlarge (title/settings only)",
+      "window_hint": "Resize window: [ to shrink, ] to enlarge (title/settings only).\nF11: toggle fullscreen",
       "seed_label": "Seed: %{value}",
       "seed_hint": "Type 0-9 to set a custom seed, Backspace clears",
       "seed_empty": "(auto)",
@@ -122,7 +122,8 @@
         "adjust": "Left/Right: set value",
         "toggle": "Space/Enter: toggle value",
         "reset": "R: reset to defaults",
-        "exit": "Esc/Backspace: save and return"
+        "exit": "Esc/Backspace: save and return",
+        "fullscreen": "F11: toggle fullscreen"
       },
       "config_path": "Config: %{path}",
       "progress_path": "Progress: %{path}"

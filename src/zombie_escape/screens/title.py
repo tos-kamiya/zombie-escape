@@ -14,7 +14,17 @@ from ..models import Stage
 from ..progress import load_progress
 from ..render import show_message
 from ..rng import generate_seed
-from ..screens import ScreenID, ScreenTransition, nudge_window_scale, present
+from ..screens import (
+    ScreenID,
+    ScreenTransition,
+    nudge_window_scale,
+    present,
+    toggle_fullscreen,
+)
+try:  # pragma: no cover - version fallback not critical for tests
+    from ..__about__ import __version__
+except Exception:  # pragma: no cover - fallback version
+    __version__ = "0.0.0-unknown"
 
 MAX_SEED_DIGITS = 19
 README_URLS: dict[str, str] = {
@@ -209,6 +219,9 @@ def title_screen(
                 if event.key == pygame.K_RIGHTBRACKET:
                     nudge_window_scale(2.0)
                     continue
+                if event.key == pygame.K_F11:
+                    toggle_fullscreen()
+                    continue
                 if event.key == pygame.K_LEFT:
                     if current_page > 0:
                         current_page -= 1
@@ -258,10 +271,14 @@ def title_screen(
                         )
 
         screen.fill(BLACK)
-        show_message(screen, tr("game.title"), 32, LIGHT_GRAY, (width // 2, 40))
+        title_text = tr("game.title")
+        show_message(screen, title_text, 32, LIGHT_GRAY, (width // 2, 40))
 
         try:
             font_settings = get_font_settings()
+            title_font = load_font(
+                font_settings.resource, font_settings.scaled_size(32)
+            )
             option_font = load_font(
                 font_settings.resource, font_settings.scaled_size(14)
             )
@@ -422,6 +439,17 @@ def title_screen(
                 (info_column_x, seed_hint_top),
                 info_column_width,
             )
+
+            title_surface = title_font.render(title_text, False, LIGHT_GRAY)
+            title_rect = title_surface.get_rect(center=(width // 2, 40))
+            version_font = load_font(
+                font_settings.resource, font_settings.scaled_size(15)
+            )
+            version_surface = version_font.render(f"v{__version__}", False, LIGHT_GRAY)
+            version_rect = version_surface.get_rect(
+                topleft=(title_rect.right + 4, title_rect.bottom - 4)
+            )
+            screen.blit(version_surface, version_rect)
 
         except pygame.error as e:
             print(f"Error rendering title screen: {e}")
