@@ -40,7 +40,6 @@ from ..gameplay_constants import (
     SURVIVOR_MIN_SPEED_FACTOR,
     SURVIVOR_OVERLOAD_DAMAGE_RATIO,
     SURVIVOR_RADIUS,
-    SURVIVOR_SPAWN_RATE,
     SURVIVOR_SPEED_PENALTY_PER_PASSENGER,
     SURVIVOR_STAGE_WAITING_CAR_COUNT,
     SURVIVAL_NEAR_SPAWN_CAMERA_MARGIN,
@@ -151,13 +150,22 @@ def create_zombie(
     tracker_ratio = 0.0
     wall_follower_ratio = 0.0
     if stage is not None:
-        normal_ratio = max(
-            0.0, min(1.0, getattr(stage, "zombie_normal_ratio", 1.0))
-        )
+        normal_ratio = max(0.0, min(1.0, getattr(stage, "zombie_normal_ratio", 1.0)))
         tracker_ratio = max(0.0, min(1.0, getattr(stage, "zombie_tracker_ratio", 0.0)))
         wall_follower_ratio = max(
             0.0, min(1.0, getattr(stage, "zombie_wall_follower_ratio", 0.0))
         )
+        if normal_ratio + tracker_ratio + wall_follower_ratio <= 0:
+            # Fall back to normal behavior if all ratios are zero.
+            normal_ratio = 1.0
+            tracker_ratio = 0.0
+            wall_follower_ratio = 0.0
+        if (
+            normal_ratio == 1.0
+            and (tracker_ratio > 0.0 or wall_follower_ratio > 0.0)
+            and tracker_ratio + wall_follower_ratio <= 1.0
+        ):
+            normal_ratio = max(0.0, 1.0 - tracker_ratio - wall_follower_ratio)
         aging_duration_frames = max(
             1.0,
             float(
@@ -612,7 +620,9 @@ def spawn_survivors(
     all_sprites = game_data.groups.all_sprites
 
     if game_data.stage.rescue_stage:
-        for pos in scatter_positions_on_walkable(walkable, SURVIVOR_SPAWN_RATE):
+        for pos in scatter_positions_on_walkable(
+            walkable, game_data.stage.survivor_spawn_rate
+        ):
             s = Survivor(*pos)
             if spritecollideany_walls(s, wall_group):
                 continue
@@ -1298,16 +1308,16 @@ def spawn_weighted_zombie(
 ) -> bool:
     """Spawn a zombie according to the stage's interior/exterior mix."""
     stage = game_data.stage
-    interior_weight = max(0.0, getattr(stage, "interior_spawn_weight", 0.0))
-    exterior_weight = max(0.0, getattr(stage, "exterior_spawn_weight", 1.0))
-    total_weight = interior_weight + exterior_weight
-
     def _spawn(choice: str) -> bool:
         if choice == "interior":
             return spawn_nearby_zombie(game_data, config) is not None
         return spawn_exterior_zombie(game_data, config) is not None
 
+    interior_weight = max(0.0, stage.interior_spawn_weight)
+    exterior_weight = max(0.0, stage.exterior_spawn_weight)
+    total_weight = interior_weight + exterior_weight
     if total_weight <= 0:
+        # Fall back to exterior spawns if weights are unset or invalid.
         return _spawn("exterior")
 
     pick = RNG.uniform(0, total_weight)

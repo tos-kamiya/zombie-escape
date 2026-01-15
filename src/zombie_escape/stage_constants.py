@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .gameplay_constants import ZOMBIE_AGING_DURATION_FRAMES
+from .gameplay_constants import SURVIVOR_SPAWN_RATE, ZOMBIE_AGING_DURATION_FRAMES
 from .models import Stage
 
 STAGES: list[Stage] = [
@@ -39,6 +39,7 @@ STAGES: list[Stage] = [
         description_key="stages.stage4.description",
         available=True,
         rescue_stage=True,
+        survivor_spawn_rate=SURVIVOR_SPAWN_RATE,
     ),
     Stage(
         id="stage5",
@@ -76,6 +77,7 @@ STAGES: list[Stage] = [
         zombie_normal_ratio=0.4,
         zombie_tracker_ratio=0.3,
         zombie_wall_follower_ratio=0.3,
+        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

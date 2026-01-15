@@ -8,7 +8,11 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import sprite, surface
 
-from .gameplay_constants import ZOMBIE_AGING_DURATION_FRAMES, ZOMBIE_SPAWN_DELAY_MS
+from .gameplay_constants import (
+    SURVIVOR_SPAWN_RATE,
+    ZOMBIE_AGING_DURATION_FRAMES,
+    ZOMBIE_SPAWN_DELAY_MS,
+)
 from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -102,6 +106,7 @@ class Stage:
     survival_stage: bool = False
     survival_goal_ms: int = 0
     fuel_spawn_count: int = 1
+    survivor_spawn_rate: float = SURVIVOR_SPAWN_RATE
     spawn_interval_ms: int = ZOMBIE_SPAWN_DELAY_MS
     initial_interior_spawn_rate: float = 0.015
     exterior_spawn_weight: float = 1.0

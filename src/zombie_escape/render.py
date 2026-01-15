@@ -12,7 +12,6 @@ from .colors import (
     BLACK,
     BLUE,
     FOOTPRINT_COLOR,
-    GREEN,
     INTERNAL_WALL_COLOR,
     LIGHT_GRAY,
     ORANGE,
