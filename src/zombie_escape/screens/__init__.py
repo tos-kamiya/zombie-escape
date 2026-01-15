@@ -55,10 +55,12 @@ class ScreenTransition:
 
 current_window_scale = DEFAULT_WINDOW_SCALE  # Applied to the OS window only
 current_fullscreen = False
-last_window_size = (
+last_window_scale = DEFAULT_WINDOW_SCALE
+current_window_size = (
     int(SCREEN_WIDTH * DEFAULT_WINDOW_SCALE),
     int(SCREEN_HEIGHT * DEFAULT_WINDOW_SCALE),
 )
+last_logged_window_size = current_window_size
 
 __all__ = [
     "ScreenID",
@@ -67,6 +69,7 @@ __all__ = [
     "apply_window_scale",
     "nudge_window_scale",
     "toggle_fullscreen",
+    "sync_window_size",
 ]
 
 
@@ -75,7 +78,8 @@ def present(logical_surface: surface.Surface) -> None:
     window = pygame.display.get_surface()
     if window is None:
         return
-    window_size = window.get_size()
+    window_size = _fetch_window_size(window)
+    _update_window_size(window_size, source="frame")
     logical_size = logical_surface.get_size()
     if current_fullscreen:
         scale = max(
@@ -110,20 +114,19 @@ def apply_window_scale(
     scale: float, *, game_data: "GameData | None" = None
 ) -> surface.Surface:
     """Resize the OS window; logical render surface stays constant."""
-    global current_window_scale, current_fullscreen, last_window_size
+    global current_window_scale, current_fullscreen, last_window_scale
 
     clamped_scale = max(WINDOW_SCALE_MIN, min(WINDOW_SCALE_MAX, scale))
     current_window_scale = clamped_scale
+    last_window_scale = clamped_scale
     current_fullscreen = False
 
     window_width = max(1, int(SCREEN_WIDTH * current_window_scale))
     window_height = max(1, int(SCREEN_HEIGHT * current_window_scale))
-    last_window_size = (window_width, window_height)
 
     new_window = pygame.display.set_mode((window_width, window_height))
-    pygame.display.set_caption(
-        f"{tr('game.title')} v{__version__} ({window_width}x{window_height})"
-    )
+    _update_window_size((window_width, window_height), source="apply_scale")
+    _update_window_caption(window_width, window_height)
 
     if game_data is not None:
         game_data.state.overview_created = False
@@ -143,21 +146,80 @@ def toggle_fullscreen(
     *, game_data: "GameData | None" = None
 ) -> surface.Surface | None:
     """Toggle fullscreen without persisting the setting."""
-    global current_fullscreen
+    global current_fullscreen, last_window_scale
     if current_fullscreen:
         current_fullscreen = False
-        window = pygame.display.set_mode(last_window_size)
+        window_width = max(1, int(SCREEN_WIDTH * last_window_scale))
+        window_height = max(1, int(SCREEN_HEIGHT * last_window_scale))
+        window = pygame.display.set_mode((window_width, window_height))
+        _update_window_caption(window_width, window_height)
+        _update_window_size((window_width, window_height), source="toggle_windowed")
     else:
-        info = pygame.display.Info()
+        last_window_scale = current_window_scale
         current_fullscreen = True
-        window = pygame.display.set_mode(
-            (info.current_w, info.current_h), pygame.FULLSCREEN
-        )
-    if window is not None:
-        window_width, window_height = window.get_size()
-        pygame.display.set_caption(
-            f"{tr('game.title')} v{__version__} ({window_width}x{window_height})"
-        )
+        window = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        window_width, window_height = _fetch_window_size(window)
+        _update_window_caption(window_width, window_height)
+        _update_window_size((window_width, window_height), source="toggle_fullscreen")
     if game_data is not None:
         game_data.state.overview_created = False
     return window
+
+
+def sync_window_size(
+    event: pygame.event.Event, *, game_data: "GameData | None" = None
+) -> None:
+    """Synchronize tracked window size with SDL window events."""
+    global current_window_scale, last_window_scale
+    size = getattr(event, "size", None)
+    if not size:
+        width = getattr(event, "x", None)
+        height = getattr(event, "y", None)
+        if width is not None and height is not None:
+            size = (width, height)
+    if not size:
+        return
+    window_width, window_height = _normalize_window_size(size)
+    _update_window_size(
+        (window_width, window_height), source="window_event"
+    )
+    if not current_fullscreen:
+        scale_x = window_width / max(1, SCREEN_WIDTH)
+        scale_y = window_height / max(1, SCREEN_HEIGHT)
+        scale = max(WINDOW_SCALE_MIN, min(WINDOW_SCALE_MAX, min(scale_x, scale_y)))
+        current_window_scale = scale
+        last_window_scale = scale
+    _update_window_caption(window_width, window_height)
+    if game_data is not None:
+        game_data.state.overview_created = False
+
+
+def _fetch_window_size(window: surface.Surface | None) -> tuple[int, int]:
+    if hasattr(pygame.display, "get_window_size"):
+        size = pygame.display.get_window_size()
+        if size != (0, 0):
+            return _normalize_window_size(size)
+    if window is not None:
+        return _normalize_window_size(window.get_size())
+    window_width = max(1, int(SCREEN_WIDTH * last_window_scale))
+    window_height = max(1, int(SCREEN_HEIGHT * last_window_scale))
+    return window_width, window_height
+
+def _normalize_window_size(size: tuple[int, int]) -> tuple[int, int]:
+    width = max(1, int(size[0]))
+    height = max(1, int(size[1]))
+    return width, height
+
+
+def _update_window_size(size: tuple[int, int], *, source: str) -> None:
+    global current_window_size, last_logged_window_size
+    current_window_size = size
+    if size != last_logged_window_size:
+        print(f"WINDOW_SIZE {source}={size[0]}x{size[1]}")
+        last_logged_window_size = size
+
+
+def _update_window_caption(window_width: int, window_height: int) -> None:
+    pygame.display.set_caption(
+        f"{tr('game.title')} v{__version__} ({window_width}x{window_height})"
+    )

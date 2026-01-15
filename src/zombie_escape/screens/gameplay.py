@@ -19,7 +19,13 @@ from ..models import Stage
 from ..render import draw, prewarm_fog_overlays, show_message
 from ..rng import generate_seed, seed_rng
 from ..progress import record_stage_clear
-from ..screens import ScreenID, ScreenTransition, present, toggle_fullscreen
+from ..screens import (
+    ScreenID,
+    ScreenTransition,
+    present,
+    sync_window_size,
+    toggle_fullscreen,
+)
 
 if TYPE_CHECKING:
     from ..render import RenderAssets
@@ -156,6 +162,9 @@ def gameplay_screen(
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return ScreenTransition(ScreenID.EXIT)
+            if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
+                sync_window_size(event, game_data=game_data)
+                continue
             if event.type == pygame.WINDOWFOCUSLOST:
                 now = pygame.time.get_ticks()
                 if now >= ignore_focus_loss_until:
@@ -180,10 +189,6 @@ def gameplay_screen(
                     return ScreenTransition(ScreenID.TITLE)
                 if event.key == pygame.K_p:
                     paused_manual = not paused_manual
-                if event.key == pygame.K_F11:
-                    toggle_fullscreen(game_data=game_data)
-                    ignore_focus_loss_until = pygame.time.get_ticks() + 250
-                    continue
 
         paused = paused_manual or paused_focus
         if paused:

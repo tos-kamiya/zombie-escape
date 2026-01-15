@@ -22,7 +22,12 @@ from ..localization import (
 )
 from ..render import show_message
 from ..progress import user_progress_path
-from ..screens import nudge_window_scale, present, toggle_fullscreen
+from ..screens import (
+    nudge_window_scale,
+    present,
+    sync_window_size,
+    toggle_fullscreen,
+)
 
 
 def _wrap_long_segment(
@@ -209,6 +214,9 @@ def settings_screen(
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return config
+            if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
+                sync_window_size(event)
+                continue
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
                     nudge_window_scale(0.5)
@@ -216,7 +224,7 @@ def settings_screen(
                 if event.key == pygame.K_RIGHTBRACKET:
                     nudge_window_scale(2.0)
                     continue
-                if event.key == pygame.K_F11:
+                if event.key == pygame.K_f:
                     toggle_fullscreen()
                     continue
                 if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):

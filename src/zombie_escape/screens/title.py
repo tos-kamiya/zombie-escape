@@ -19,6 +19,7 @@ from ..screens import (
     ScreenTransition,
     nudge_window_scale,
     present,
+    sync_window_size,
     toggle_fullscreen,
 )
 try:  # pragma: no cover - version fallback not critical for tests
@@ -201,6 +202,9 @@ def title_screen(
                     seed_text=current_seed_text,
                     seed_is_auto=current_seed_auto,
                 )
+            if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
+                sync_window_size(event)
+                continue
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_BACKSPACE:
                     current_seed_text = _generate_auto_seed_text()
@@ -219,7 +223,7 @@ def title_screen(
                 if event.key == pygame.K_RIGHTBRACKET:
                     nudge_window_scale(2.0)
                     continue
-                if event.key == pygame.K_F11:
+                if event.key == pygame.K_f:
                     toggle_fullscreen()
                     continue
                 if event.key == pygame.K_LEFT:
