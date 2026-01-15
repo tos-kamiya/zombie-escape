@@ -445,7 +445,7 @@ def draw_status_bar(
             parts.append(f"Z:{total} N:{normal} T:{tracker} W:{wall}")
 
     status_text = " | ".join(parts)
-    color = GREEN if all([footprints_on, fast_on, hint_on]) else LIGHT_GRAY
+    color = LIGHT_GRAY
 
     try:
         font_settings = get_font_settings()
