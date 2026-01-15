@@ -19,7 +19,6 @@ from ..screens import (
     ScreenTransition,
     present,
     sync_window_size,
-    toggle_fullscreen,
 )
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 

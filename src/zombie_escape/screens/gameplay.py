@@ -24,7 +24,6 @@ from ..screens import (
     ScreenTransition,
     present,
     sync_window_size,
-    toggle_fullscreen,
 )
 
 if TYPE_CHECKING:
