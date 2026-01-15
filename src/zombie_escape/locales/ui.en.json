@@ -99,6 +99,8 @@
       "escape": "Escape the building",
       "pickup_buddy": "Pick up your buddy",
       "find_buddy": "Find your buddy",
+      "escape_with_buddy": "Get your buddy in the car and escape",
+      "buddy_onboard": "Buddy onboard: %{count}",
       "escape_with_survivors": "Escape with the survivors aboard",
       "survivors_onboard": "Survivors aboard: %{count}/%{limit}",
       "survivors_rescued": "Evacuated: %{count}"

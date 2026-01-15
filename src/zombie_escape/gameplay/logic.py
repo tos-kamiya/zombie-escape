@@ -17,7 +17,7 @@ from ..gameplay_constants import (
     CAR_SPEED,
     CAR_WIDTH,
     CAR_ZOMBIE_DAMAGE,
-    COMPANION_RADIUS,
+    BUDDY_RADIUS,
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     FAST_ZOMBIE_BASE_SPEED,
     FLASHLIGHT_HEIGHT,
@@ -34,6 +34,7 @@ from ..gameplay_constants import (
     PLAYER_SPEED,
     STEEL_BEAM_HEALTH,
     SURVIVOR_CONVERSION_LINE_KEYS,
+    SURVIVOR_APPROACH_RADIUS,
     SURVIVOR_MAX_SAFE_PASSENGERS,
     SURVIVOR_MESSAGE_DURATION_MS,
     SURVIVOR_MIN_SPEED_FACTOR,
@@ -64,7 +65,6 @@ from ..rng import get_rng
 from ..entities import (
     Camera,
     Car,
-    Companion,
     Flashlight,
     FuelCan,
     Player,
@@ -92,7 +92,7 @@ __all__ = [
     "place_fuel_can",
     "place_flashlight",
     "place_flashlights",
-    "place_companion",
+    "place_buddies",
     "scatter_positions_on_walkable",
     "spawn_survivors",
     "spawn_nearby_zombie",
@@ -113,7 +113,7 @@ __all__ = [
     "cleanup_survivor_messages",
     "drop_survivors_from_car",
     "handle_survivor_zombie_collisions",
-    "respawn_rescued_companion_near_player",
+    "respawn_buddies_near_player",
     "get_shrunk_sprite",
     "update_footprints",
     "initialize_game_state",
@@ -510,12 +510,12 @@ def place_flashlights(
     return placed
 
 
-def place_companion(
+def place_buddy(
     walkable_cells: list[pygame.Rect],
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
-) -> Companion | None:
+) -> Survivor | None:
     """Spawn the stranded buddy somewhere on a walkable tile away from the player and car."""
     if not walkable_cells:
         return None
@@ -540,10 +540,40 @@ def place_companion(
                 for parked in cars
             ):
                 continue
-        return Companion(cell.centerx, cell.centery)
+        return Survivor(cell.centerx, cell.centery, is_buddy=True)
 
     cell = RNG.choice(walkable_cells)
-    return Companion(cell.centerx, cell.centery)
+    return Survivor(cell.centerx, cell.centery, is_buddy=True)
+
+
+def place_buddies(
+    walkable_cells: list[pygame.Rect],
+    player: Player,
+    *,
+    cars: Sequence[Car] | None = None,
+    count: int = 1,
+) -> list[Survivor]:
+    placed: list[Survivor] = []
+    if count <= 0:
+        return placed
+    attempts = 0
+    max_attempts = max(200, count * 60)
+    while len(placed) < count and attempts < max_attempts:
+        attempts += 1
+        buddy = place_buddy(walkable_cells, player, cars=cars)
+        if not buddy:
+            break
+        if any(
+            math.hypot(
+                other.rect.centerx - buddy.rect.centerx,
+                other.rect.centery - buddy.rect.centery,
+            )
+            < 100
+            for other in placed
+        ):
+            continue
+        placed.append(buddy)
+    return placed
 
 
 def scatter_positions_on_walkable(
@@ -571,9 +601,9 @@ def scatter_positions_on_walkable(
 def spawn_survivors(
     game_data: GameData, layout_data: Mapping[str, list[pygame.Rect]]
 ) -> list[Survivor]:
-    """Populate Stage 4 with passive survivors on open tiles."""
+    """Populate rescue-stage survivors and buddy-stage buddies."""
     survivors: list[Survivor] = []
-    if not game_data.stage.rescue_stage:
+    if not (game_data.stage.rescue_stage or game_data.stage.buddy_required_count > 0):
         return survivors
 
     walkable = layout_data.get("walkable_cells", [])
@@ -581,13 +611,31 @@ def spawn_survivors(
     survivor_group = game_data.groups.survivor_group
     all_sprites = game_data.groups.all_sprites
 
-    for pos in scatter_positions_on_walkable(walkable, SURVIVOR_SPAWN_RATE):
-        s = Survivor(*pos)
-        if spritecollideany_walls(s, wall_group):
-            continue
-        survivor_group.add(s)
-        all_sprites.add(s, layer=1)
-        survivors.append(s)
+    if game_data.stage.rescue_stage:
+        for pos in scatter_positions_on_walkable(walkable, SURVIVOR_SPAWN_RATE):
+            s = Survivor(*pos)
+            if spritecollideany_walls(s, wall_group):
+                continue
+            survivor_group.add(s)
+            all_sprites.add(s, layer=1)
+            survivors.append(s)
+
+    if game_data.stage.buddy_required_count > 0:
+        buddy_count = max(0, game_data.stage.buddy_required_count)
+        buddies: list[Survivor] = []
+        if game_data.player:
+            buddies = place_buddies(
+                walkable,
+                game_data.player,
+                cars=game_data.waiting_cars,
+                count=buddy_count,
+            )
+        for buddy in buddies:
+            if spritecollideany_walls(buddy, wall_group):
+                continue
+            survivor_group.add(buddy)
+            all_sprites.add(buddy, layer=2)
+            survivors.append(buddy)
 
     return survivors
 
@@ -595,7 +643,7 @@ def spawn_survivors(
 def update_survivors(
     game_data: GameData, wall_index: WallIndex | None = None
 ) -> None:
-    if not game_data.stage.rescue_stage:
+    if not (game_data.stage.rescue_stage or game_data.stage.buddy_required_count > 0):
         return
     survivor_group = game_data.groups.survivor_group
     wall_group = game_data.groups.wall_group
@@ -605,7 +653,7 @@ def update_survivors(
         return
     target_rect = car.rect if player.in_car and car and car.alive() else player.rect
     target_pos = target_rect.center
-    survivors = [s for s in survivor_group if getattr(s, "alive", lambda: False)()]
+    survivors = [s for s in survivor_group if s.alive()]
     for survivor in survivors:
         survivor.update_behavior(target_pos, wall_group, wall_index=wall_index)
 
@@ -849,17 +897,18 @@ def handle_survivor_zombie_collisions(
     if not survivor_group:
         return
     zombie_group = game_data.groups.zombie_group
-    zombies = [z for z in zombie_group if getattr(z, "alive", lambda: False)()]
+    zombies = [z for z in zombie_group if z.alive()]
     if not zombies:
         return
     zombies.sort(key=lambda s: s.rect.centerx)
     zombie_xs = [z.rect.centerx for z in zombies]
     camera = game_data.camera
+    walkable_cells = game_data.areas.walkable_cells
 
     for survivor in list(survivor_group):
         if not survivor.alive():
             continue
-        survivor_radius = getattr(survivor, "radius", SURVIVOR_RADIUS)
+        survivor_radius = survivor.radius
         search_radius = survivor_radius + ZOMBIE_RADIUS
         search_radius_sq = search_radius * search_radius
 
@@ -885,6 +934,11 @@ def handle_survivor_zombie_collisions(
         if not collided:
             continue
         if not rect_visible_on_screen(camera, survivor.rect):
+            if walkable_cells:
+                new_cell = RNG.choice(walkable_cells)
+                survivor.teleport(new_cell.center)
+            else:
+                survivor.teleport((LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2))
             continue
         survivor.kill()
         line = random_survivor_conversion_line()
@@ -903,39 +957,37 @@ def handle_survivor_zombie_collisions(
         zombies.insert(insert_idx, new_zombie)
 
 
-def respawn_rescued_companion_near_player(game_data: GameData) -> None:
-    """Bring back the rescued companion near the player after losing the car."""
-    if not (game_data.stage.companion_stage and game_data.state.companion_rescued):
+def respawn_buddies_near_player(game_data: GameData) -> None:
+    """Bring back onboard buddies near the player after losing the car."""
+    if game_data.stage.buddy_required_count <= 0:
         return
-    # If a companion is already active, do nothing
-    if (
-        game_data.companion
-        and game_data.companion.alive()
-        and not game_data.companion.rescued
-    ):
+    count = game_data.state.buddy_onboard
+    if count <= 0:
         return
 
     player = game_data.player
     assert player is not None
     wall_group = game_data.groups.wall_group
     offsets = [
-        (COMPANION_RADIUS * 3, 0),
-        (-COMPANION_RADIUS * 3, 0),
-        (0, COMPANION_RADIUS * 3),
-        (0, -COMPANION_RADIUS * 3),
+        (BUDDY_RADIUS * 3, 0),
+        (-BUDDY_RADIUS * 3, 0),
+        (0, BUDDY_RADIUS * 3),
+        (0, -BUDDY_RADIUS * 3),
         (0, 0),
     ]
-    spawn_pos = (int(player.x), int(player.y))
-    for dx, dy in offsets:
-        candidate = Companion(player.x + dx, player.y + dy)
-        if not spritecollideany_walls(candidate, wall_group):
-            spawn_pos = (candidate.x, candidate.y)
-            break
+    for _ in range(count):
+        spawn_pos = (int(player.x), int(player.y))
+        for dx, dy in offsets:
+            candidate = Survivor(player.x + dx, player.y + dy, is_buddy=True)
+            if not spritecollideany_walls(candidate, wall_group):
+                spawn_pos = (candidate.x, candidate.y)
+                break
 
-    companion = Companion(*spawn_pos)
-    companion.following = True
-    game_data.companion = companion
-    game_data.groups.all_sprites.add(companion, layer=2)
+        buddy = Survivor(*spawn_pos, is_buddy=True)
+        buddy.following = True
+        game_data.groups.all_sprites.add(buddy, layer=2)
+        game_data.groups.survivor_group.add(buddy)
+    game_data.state.buddy_onboard = 0
 
 
 def get_shrunk_sprite(
@@ -1015,7 +1067,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         hint_expires_at=0,
         hint_target_type=None,
         fuel_message_until=0,
-        companion_rescued=False,
+        buddy_rescued=0,
+        buddy_onboard=0,
         survivors_onboard=0,
         survivors_rescued=0,
         survivor_messages=[],
@@ -1067,7 +1120,6 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         stage=stage,
         fuel=None,
         flashlights=[],
-        companion=None,
     )
 
 
@@ -1357,10 +1409,10 @@ def update_entities(
     player = game_data.player
     assert player is not None
     car = game_data.car
-    companion = game_data.companion
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
     zombie_group = game_data.groups.zombie_group
+    survivor_group = game_data.groups.survivor_group
     camera = game_data.camera
     stage = game_data.stage
     active_car = car if car and car.alive() else None
@@ -1391,15 +1443,6 @@ def update_entities(
     target_for_camera = active_car if player.in_car and active_car else player
     camera.update(target_for_camera)
 
-    # Update companion (Stage 3 follow logic)
-    if companion and companion.alive() and not companion.rescued:
-        follow_target = active_car if player.in_car and active_car else player
-        companion.update_follow(
-            follow_target.rect.center, wall_group, wall_index=wall_index
-        )
-        if companion not in all_sprites:
-            all_sprites.add(companion, layer=2)
-
     update_survivors(game_data, wall_index=wall_index)
 
     # Spawn new zombies if needed
@@ -1418,20 +1461,19 @@ def update_entities(
     target_center = (
         active_car.rect.center if player.in_car and active_car else player.rect.center
     )
-    companion_on_screen = False
-    if (
-        game_data.stage.companion_stage
-        and companion
-        and companion.alive()
-        and not companion.rescued
-    ):
-        companion_on_screen = rect_visible_on_screen(camera, companion.rect)
+    buddies = [
+        survivor
+        for survivor in survivor_group
+        if survivor.alive() and survivor.is_buddy and not survivor.rescued
+    ]
+    buddies_on_screen = [
+        buddy for buddy in buddies if rect_visible_on_screen(camera, buddy.rect)
+    ]
 
     survivors_on_screen: list[Survivor] = []
     if stage.rescue_stage:
-        survivor_group = game_data.groups.survivor_group
         for survivor in survivor_group:
-            if getattr(survivor, "alive", lambda: False)():
+            if survivor.alive():
                 if rect_visible_on_screen(camera, survivor.rect):
                     survivors_on_screen.append(survivor)
 
@@ -1457,15 +1499,22 @@ def update_entities(
 
     for idx, zombie in enumerate(zombies_sorted):
         target = target_center
-        if companion_on_screen and companion:
+        if buddies_on_screen:
             dist_to_target = math.hypot(
                 target_center[0] - zombie.x, target_center[1] - zombie.y
             )
-            dist_to_companion = math.hypot(
-                companion.rect.centerx - zombie.x, companion.rect.centery - zombie.y
+            nearest_buddy = min(
+                buddies_on_screen,
+                key=lambda buddy: math.hypot(
+                    buddy.rect.centerx - zombie.x, buddy.rect.centery - zombie.y
+                ),
             )
-            if dist_to_companion < dist_to_target:
-                target = companion.rect.center
+            dist_to_buddy = math.hypot(
+                nearest_buddy.rect.centerx - zombie.x,
+                nearest_buddy.rect.centery - zombie.y,
+            )
+            if dist_to_buddy < dist_to_target:
+                target = nearest_buddy.rect.center
 
         if stage.rescue_stage:
             zombie_on_screen = rect_visible_on_screen(camera, zombie.rect)
@@ -1473,8 +1522,8 @@ def update_entities(
                 candidate_positions: list[tuple[int, int]] = []
                 for survivor in survivors_on_screen:
                     candidate_positions.append(survivor.rect.center)
-                if companion and companion_on_screen:
-                    candidate_positions.append(companion.rect.center)
+                for buddy in buddies_on_screen:
+                    candidate_positions.append(buddy.rect.center)
                 candidate_positions.append(player.rect.center)
                 if candidate_positions:
                     target = min(
@@ -1501,7 +1550,6 @@ def check_interactions(
     player = game_data.player
     assert player is not None
     car = game_data.car
-    companion = game_data.companion
     zombie_group = game_data.groups.zombie_group
     all_sprites = game_data.groups.all_sprites
     survivor_group = game_data.groups.survivor_group
@@ -1515,6 +1563,7 @@ def check_interactions(
     maintain_waiting_car_supply(game_data)
     active_car = car if car and car.alive() else None
     waiting_cars = game_data.waiting_cars
+    shrunk_car = get_shrunk_sprite(active_car, 0.8) if active_car else None
 
     car_interaction_radius = interaction_radius(CAR_WIDTH, CAR_HEIGHT)
     fuel_interaction_radius = interaction_radius(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
@@ -1569,46 +1618,55 @@ def check_interactions(
 
     sync_ambient_palette_with_flashlights(game_data)
 
-    companion_on_screen = False
-    companion_active = (
-        companion and companion.alive() and not getattr(companion, "rescued", False)
-    )
-    if companion_active:
-        assert companion is not None
-        companion_on_screen = rect_visible_on_screen(camera, companion.rect)
+    buddies = [
+        survivor
+        for survivor in survivor_group
+        if survivor.alive() and survivor.is_buddy and not survivor.rescued
+    ]
 
-    # Companion interactions (Stage 3)
-    if companion_active and stage.companion_stage:
-        assert companion is not None
-        if not player.in_car:
-            if pygame.sprite.collide_circle(companion, player):
-                companion.set_following()
-        elif player.in_car and active_car:
-            g = pygame.sprite.Group()
-            g.add(companion)
-            if pygame.sprite.spritecollide(get_shrunk_sprite(active_car, 0.8), g, False):
-                state.companion_rescued = True
-                companion.mark_rescued()
-                companion.kill()
-                game_data.companion = None
-                companion_active = False
-                companion_on_screen = False
+    # Buddy interactions (Stage 3)
+    if stage.buddy_required_count > 0 and buddies:
+        for buddy in list(buddies):
+            if not buddy.alive():
+                continue
+            buddy_on_screen = rect_visible_on_screen(camera, buddy.rect)
+            if not player.in_car:
+                dist_to_player = math.hypot(player.x - buddy.x, player.y - buddy.y)
+                if dist_to_player <= SURVIVOR_APPROACH_RADIUS:
+                    buddy.set_following()
+            elif player.in_car and active_car and shrunk_car:
+                g = pygame.sprite.Group()
+                g.add(buddy)
+                if pygame.sprite.spritecollide(
+                    shrunk_car, g, False, pygame.sprite.collide_circle
+                ):
+                    prospective_passengers = state.survivors_onboard + 1
+                    capacity_limit = state.survivor_capacity
+                    if prospective_passengers > capacity_limit:
+                        overload_damage = max(
+                            1,
+                            int(active_car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO),
+                        )
+                        add_survivor_message(game_data, tr("survivors.too_many_aboard"))
+                        active_car.take_damage(overload_damage)
+                    state.buddy_onboard += 1
+                    buddy.kill()
+                    continue
 
-        # Zombies reaching the companion
-        if companion_active and pygame.sprite.spritecollide(
-            companion, zombie_group, False, pygame.sprite.collide_circle
-        ):
-            if companion_on_screen:
-                state.game_over_message = tr("game_over.scream")
-                state.game_over = True
-                state.game_over_at = state.game_over_at or pygame.time.get_ticks()
-            else:
-                if walkable_cells:
-                    new_cell = RNG.choice(walkable_cells)
-                    companion.teleport(new_cell.center)
+            if buddy.alive() and pygame.sprite.spritecollide(
+                buddy, zombie_group, False, pygame.sprite.collide_circle
+            ):
+                if buddy_on_screen:
+                    state.game_over_message = tr("game_over.scream")
+                    state.game_over = True
+                    state.game_over_at = state.game_over_at or pygame.time.get_ticks()
                 else:
-                    companion.teleport((LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2))
-                companion.following = False
+                    if walkable_cells:
+                        new_cell = RNG.choice(walkable_cells)
+                        buddy.teleport(new_cell.center)
+                    else:
+                        buddy.teleport((LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2))
+                    buddy.following = False
 
     # Player entering an active car already under control
     if (
@@ -1656,8 +1714,6 @@ def check_interactions(
                     now_ms = state.elapsed_play_ms
                     state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
                     state.hint_target_type = "fuel"
-
-    shrunk_car = get_shrunk_sprite(active_car, 0.8) if active_car else None
 
     # Bonus: collide a parked car while driving to repair/extend capabilities
     if player.in_car and active_car and shrunk_car and waiting_cars:
@@ -1736,8 +1792,8 @@ def check_interactions(
         state.survivor_capacity = SURVIVOR_MAX_SAFE_PASSENGERS
         apply_passenger_speed_penalty(game_data)
 
-        # Bring back the rescued companion near the player after losing the car
-        respawn_rescued_companion_near_player(game_data)
+        # Bring back the buddies near the player after losing the car
+        respawn_buddies_near_player(game_data)
         maintain_waiting_car_supply(game_data)
 
     # Player getting caught by zombies
@@ -1763,10 +1819,32 @@ def check_interactions(
 
     # Player escaping the level
     if player.in_car and car and car.alive() and state.has_fuel:
-        companion_ready = not stage.companion_stage or state.companion_rescued
-        if companion_ready and any(
+        buddies_following = [
+            survivor
+            for survivor in survivor_group
+            if survivor.alive()
+            and survivor.is_buddy
+            and survivor.following
+            and not survivor.rescued
+        ]
+        buddy_ready = True
+        if stage.buddy_required_count > 0:
+            total_ready = (
+                state.buddy_rescued + state.buddy_onboard + len(buddies_following)
+            )
+            buddy_ready = total_ready >= stage.buddy_required_count
+        if buddy_ready and any(
             outside.collidepoint(car.rect.center) for outside in outside_rects
         ):
+            if stage.buddy_required_count > 0:
+                rescued_now = state.buddy_onboard + len(buddies_following)
+                state.buddy_rescued = min(
+                    stage.buddy_required_count,
+                    state.buddy_rescued + rescued_now,
+                )
+                state.buddy_onboard = 0
+                for buddy in buddies_following:
+                    buddy.mark_rescued()
             if stage.rescue_stage and state.survivors_onboard:
                 state.survivors_rescued += state.survivors_onboard
                 state.survivors_onboard = 0

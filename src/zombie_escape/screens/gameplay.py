@@ -89,8 +89,7 @@ def gameplay_screen(
     )
     logic.apply_passenger_speed_penalty(game_data)
 
-    if stage.rescue_stage:
-        logic.spawn_survivors(game_data, layout_data)
+    logic.spawn_survivors(game_data, layout_data)
 
     if stage.requires_fuel:
         fuel_spawn_count = getattr(stage, "fuel_spawn_count", 1)
@@ -111,14 +110,6 @@ def gameplay_screen(
     )
     game_data.flashlights = flashlights
     game_data.groups.all_sprites.add(flashlights, layer=1)
-
-    if stage.companion_stage:
-        companion = logic.place_companion(
-            layout_data["walkable_cells"], player, cars=game_data.waiting_cars
-        )
-        if companion:
-            game_data.companion = companion
-            game_data.groups.all_sprites.add(companion, layer=2)
 
     logic.spawn_initial_zombies(game_data, player, layout_data, config)
     logic.update_footprints(game_data, config)

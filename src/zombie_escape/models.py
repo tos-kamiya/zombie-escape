@@ -12,7 +12,7 @@ from .gameplay_constants import ZOMBIE_AGING_DURATION_FRAMES, ZOMBIE_SPAWN_DELAY
 from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
-    from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player
+    from .entities import Camera, Car, Flashlight, FuelCan, Player
 
 
 @dataclass
@@ -45,7 +45,8 @@ class ProgressState:
     hint_expires_at: int
     hint_target_type: str | None
     fuel_message_until: int
-    companion_rescued: bool
+    buddy_rescued: int
+    buddy_onboard: int
     survivors_onboard: int
     survivors_rescued: int
     survivor_messages: list
@@ -86,7 +87,6 @@ class GameData:
     player: Player | None = None
     car: Car | None = None
     waiting_cars: list[Car] = field(default_factory=list)
-    companion: Companion | None = None
     last_logged_waiting_cars: int | None = None
 
 
@@ -97,7 +97,8 @@ class Stage:
     description_key: str
     available: bool = True
     requires_fuel: bool = False
-    companion_stage: bool = False
+    buddy_stage: bool = False
+    buddy_required_count: int = 0
     rescue_stage: bool = False
     survival_stage: bool = False
     survival_goal_ms: int = 0

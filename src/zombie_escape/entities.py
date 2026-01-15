@@ -28,9 +28,9 @@ from .gameplay_constants import (
     CAR_SPEED,
     CAR_WALL_DAMAGE,
     CAR_WIDTH,
-    COMPANION_COLOR,
-    COMPANION_FOLLOW_SPEED,
-    COMPANION_RADIUS,
+    BUDDY_COLOR,
+    BUDDY_FOLLOW_SPEED,
+    BUDDY_RADIUS,
     FAST_ZOMBIE_BASE_SPEED,
     FLASHLIGHT_HEIGHT,
     FLASHLIGHT_WIDTH,
@@ -731,18 +731,20 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = (int(self.x), int(self.y))
 
 
-class Companion(pygame.sprite.Sprite):
-    """Simple survivor sprite used in Stage 3."""
+class Survivor(pygame.sprite.Sprite):
+    """Civilians that gather near the player; optional buddy behavior."""
 
-    def __init__(self: Self, x: float, y: float) -> None:
+    def __init__(self: Self, x: float, y: float, *, is_buddy: bool = False) -> None:
         super().__init__()
-        self.radius = COMPANION_RADIUS
+        self.is_buddy = is_buddy
+        self.radius = BUDDY_RADIUS if is_buddy else SURVIVOR_RADIUS
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
+        fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
         _draw_outlined_circle(
             self.image,
             (self.radius, self.radius),
             self.radius,
-            COMPANION_COLOR,
+            fill_color,
             HUMANOID_OUTLINE_COLOR,
             HUMANOID_OUTLINE_WIDTH,
         )
@@ -753,88 +755,20 @@ class Companion(pygame.sprite.Sprite):
         self.rescued = False
 
     def set_following(self: Self) -> None:
-        if not self.rescued:
+        if self.is_buddy and not self.rescued:
             self.following = True
 
     def mark_rescued(self: Self) -> None:
-        self.following = False
-        self.rescued = True
+        if self.is_buddy:
+            self.following = False
+            self.rescued = True
 
     def teleport(self: Self, pos: tuple[int, int]) -> None:
-        """Reposition the companion (used for quiet respawns)."""
+        """Reposition the survivor (used for quiet respawns)."""
         self.x, self.y = float(pos[0]), float(pos[1])
         self.rect.center = (int(self.x), int(self.y))
-        self.following = False
-
-    def update_follow(
-        self: Self,
-        target_pos: tuple[float, float],
-        walls: pygame.sprite.Group,
-        *,
-        wall_index: WallIndex | None = None,
-    ) -> None:
-        """Follow the target at a slightly slower speed than the player."""
-        if self.rescued or not self.following:
-            self.rect.center = (int(self.x), int(self.y))
-            return
-
-        dx = target_pos[0] - self.x
-        dy = target_pos[1] - self.y
-        dist = math.hypot(dx, dy)
-        if dist <= 0:
-            self.rect.center = (int(self.x), int(self.y))
-            return
-
-        move_x = (dx / dist) * COMPANION_FOLLOW_SPEED
-        move_y = (dy / dist) * COMPANION_FOLLOW_SPEED
-
-        if move_x != 0:
-            self.x += move_x
-            self.rect.centerx = int(self.x)
-            if spritecollideany_walls(self, walls, wall_index=wall_index):
-                self.x -= move_x
-                self.rect.centerx = int(self.x)
-        if move_y != 0:
-            self.y += move_y
-            self.rect.centery = int(self.y)
-            if spritecollideany_walls(self, walls, wall_index=wall_index):
-                self.y -= move_y
-                self.rect.centery = int(self.y)
-
-        # Avoid fully overlapping the player target
-        overlap_radius = (self.radius + PLAYER_RADIUS) * 1.05
-        dx_after = target_pos[0] - self.x
-        dy_after = target_pos[1] - self.y
-        dist_after = math.hypot(dx_after, dy_after)
-        if dist_after > 0 and dist_after < overlap_radius:
-            push_dist = overlap_radius - dist_after
-            self.x -= (dx_after / dist_after) * push_dist
-            self.y -= (dy_after / dist_after) * push_dist
-            self.rect.center = (int(self.x), int(self.y))
-
-        self.x = min(LEVEL_WIDTH, max(0, self.x))
-        self.y = min(LEVEL_HEIGHT, max(0, self.y))
-        self.rect.center = (int(self.x), int(self.y))
-
-
-class Survivor(pygame.sprite.Sprite):
-    """Civilians that gather near the player during Stage 4."""
-
-    def __init__(self: Self, x: float, y: float) -> None:
-        super().__init__()
-        self.radius = SURVIVOR_RADIUS
-        self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
-        _draw_outlined_circle(
-            self.image,
-            (self.radius, self.radius),
-            self.radius,
-            SURVIVOR_COLOR,
-            HUMANOID_OUTLINE_COLOR,
-            HUMANOID_OUTLINE_WIDTH,
-        )
-        self.rect = self.image.get_rect(center=(int(x), int(y)))
-        self.x = float(self.rect.centerx)
-        self.y = float(self.rect.centery)
+        if self.is_buddy:
+            self.following = False
 
     def update_behavior(
         self: Self,
@@ -843,6 +777,49 @@ class Survivor(pygame.sprite.Sprite):
         *,
         wall_index: WallIndex | None = None,
     ) -> None:
+        if self.is_buddy:
+            if self.rescued or not self.following:
+                self.rect.center = (int(self.x), int(self.y))
+                return
+
+            dx = player_pos[0] - self.x
+            dy = player_pos[1] - self.y
+            dist = math.hypot(dx, dy)
+            if dist <= 0:
+                self.rect.center = (int(self.x), int(self.y))
+                return
+
+            move_x = (dx / dist) * BUDDY_FOLLOW_SPEED
+            move_y = (dy / dist) * BUDDY_FOLLOW_SPEED
+
+            if move_x:
+                self.x += move_x
+                self.rect.centerx = int(self.x)
+                if spritecollideany_walls(self, walls, wall_index=wall_index):
+                    self.x -= move_x
+                    self.rect.centerx = int(self.x)
+            if move_y:
+                self.y += move_y
+                self.rect.centery = int(self.y)
+                if spritecollideany_walls(self, walls, wall_index=wall_index):
+                    self.y -= move_y
+                    self.rect.centery = int(self.y)
+
+            overlap_radius = (self.radius + PLAYER_RADIUS) * 1.05
+            dx_after = player_pos[0] - self.x
+            dy_after = player_pos[1] - self.y
+            dist_after = math.hypot(dx_after, dy_after)
+            if dist_after > 0 and dist_after < overlap_radius:
+                push_dist = overlap_radius - dist_after
+                self.x -= (dx_after / dist_after) * push_dist
+                self.y -= (dy_after / dist_after) * push_dist
+                self.rect.center = (int(self.x), int(self.y))
+
+            self.x = min(LEVEL_WIDTH, max(0, self.x))
+            self.y = min(LEVEL_HEIGHT, max(0, self.y))
+            self.rect.center = (int(self.x), int(self.y))
+            return
+
         dx = player_pos[0] - self.x
         dy = player_pos[1] - self.y
         dist = math.hypot(dx, dy)
@@ -1588,7 +1565,6 @@ __all__ = [
     "SteelBeam",
     "Camera",
     "Player",
-    "Companion",
     "Survivor",
     "Zombie",
     "Car",

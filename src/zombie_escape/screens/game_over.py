@@ -62,7 +62,11 @@ def game_over_screen(
                 fuel=game_data.fuel,
                 flashlights=game_data.flashlights or [],
                 stage=stage,
-                companion=game_data.companion,
+                buddies=[
+                    survivor
+                    for survivor in game_data.groups.survivor_group
+                    if survivor.alive() and survivor.is_buddy and not survivor.rescued
+                ],
                 survivors=list(game_data.groups.survivor_group),
                 palette_key=state.ambient_palette_key,
             )
@@ -115,8 +119,9 @@ def game_over_screen(
                         (screen_width // 2, screen_height // 2 + 6),
                     )
             summary_y = screen_height // 2 + 70
-            if stage and stage.rescue_stage:
-                msg = tr("game_over.survivors_summary", count=state.survivors_rescued)
+            if stage and (stage.rescue_stage or stage.buddy_required_count > 0):
+                total_rescued = state.survivors_rescued + state.buddy_rescued
+                msg = tr("game_over.survivors_summary", count=total_rescued)
                 show_message(
                     screen,
                     msg,
@@ -124,9 +129,9 @@ def game_over_screen(
                     LIGHT_GRAY,
                     (screen_width // 2, summary_y),
                 )
-            elif stage and getattr(stage, "survival_stage", False):
-                elapsed_ms = max(0, getattr(state, "survival_elapsed_ms", 0))
-                goal_ms = max(0, getattr(state, "survival_goal_ms", 0))
+            elif stage and stage.survival_stage:
+                elapsed_ms = max(0, state.survival_elapsed_ms)
+                goal_ms = max(0, state.survival_goal_ms)
                 if goal_ms:
                     elapsed_ms = min(elapsed_ms, goal_ms)
                 display_ms = int(elapsed_ms * SURVIVAL_FAKE_CLOCK_RATIO)
@@ -155,7 +160,7 @@ def game_over_screen(
             config,
             stage=stage,
             seed=state.seed,
-            debug_mode=bool(getattr(state, "debug_mode", False)),
+            debug_mode=state.debug_mode,
         )
 
         present(screen)

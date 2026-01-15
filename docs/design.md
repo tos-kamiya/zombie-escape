@@ -64,13 +64,13 @@
 - `areas`: `Areas`（外周/内側/外側セルなど）
 - `fog`: 霧描画用のキャッシュ辞書
 - `stage`: `Stage`（ステージ定義）
-- `fuel`, `flashlights`, `player`, `car`, `waiting_cars`, `companion` など
+- `fuel`, `flashlights`, `player`, `car`, `waiting_cars`, `buddy` など
 
 ### 3.3 ステージ定義 (models.Stage)
 
 `Stage` はステージ属性を保持する `dataclass`。
 
-- プレイ特性: `requires_fuel`, `companion_stage`, `rescue_stage`, `survival_stage`
+- プレイ特性: `requires_fuel`, `buddy_stage`, `rescue_stage`, `survival_stage`
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`
 - 内外スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`
 - サバイバル設定: `survival_goal_ms`, `fuel_spawn_count`
@@ -88,8 +88,11 @@
 - `Wall`: 内壁。体力を持ち、破壊時に `on_destroy` を発火。
 - `SteelBeam`: 簡易な強化障害物。
 - `Camera`: 画面スクロール用の矩形管理。
-- `Player`, `Zombie`, `Car`, `Survivor`, `Companion`
+- `Player`, `Zombie`, `Car`, `Survivor`（`is_buddy` フラグで相棒を表現）
 - `FuelCan`, `Flashlight`（収集アイテム）
+
+相棒 (`is_buddy=True`) は接触で追従を開始し、車で脱出できた時点で救出扱いになる。
+ステージ4の一般 `Survivor` は画面外でゾンビに接触した場合はリスポーンする。
 
 補助関数:
 
@@ -136,7 +139,7 @@
 
 - `spawn_nearby_zombie`, `spawn_exterior_zombie`, `spawn_weighted_zombie`
   - 画面外スポーン/外周スポーン/重み付けスポーン。
-- `spawn_survivors` / `place_companion` / `place_fuel_can` / `place_flashlights`
+- `spawn_survivors` / `place_buddy` / `place_fuel_can` / `place_flashlights`
   - ステージ別のアイテムやNPCを配置。
 
 ### 更新

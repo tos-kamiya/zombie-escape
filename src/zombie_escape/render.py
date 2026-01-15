@@ -22,9 +22,8 @@ from .colors import (
 from .gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     SURVIVAL_FAKE_CLOCK_RATIO,
-    SURVIVOR_MAX_SAFE_PASSENGERS,
 )
-from .entities import Camera, Car, Companion, Flashlight, FuelCan, Player, Survivor
+from .entities import Camera, Car, Flashlight, FuelCan, Player, Survivor
 from .font_utils import load_font
 from .localization import get_font_settings
 from .localization import translate as tr
@@ -69,7 +68,7 @@ def draw_level_overview(
     fuel: FuelCan | None = None,
     flashlights: list[Flashlight] | None = None,
     stage: Stage | None = None,
-    companion: Companion | None = None,
+    buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
     palette_key: str | None = None,
 ) -> None:
@@ -106,7 +105,7 @@ def draw_level_overview(
                 )
     if survivors:
         for survivor in survivors:
-            if hasattr(survivor, "alive") and survivor.alive():
+            if survivor.alive():
                 pygame.draw.circle(
                     surface,
                     (220, 220, 255),
@@ -115,16 +114,13 @@ def draw_level_overview(
                 )
     if player:
         pygame.draw.circle(surface, BLUE, player.rect.center, assets.player_radius * 2)
-    if (
-        companion
-        and hasattr(companion, "alive")
-        and companion.alive()
-        and not getattr(companion, "rescued", False)
-    ):
+    if buddies:
         buddy_color = (0, 200, 70)
-        pygame.draw.circle(
-            surface, buddy_color, companion.rect.center, assets.player_radius * 2
-        )
+        for buddy in buddies:
+            if buddy.alive() and not buddy.rescued:
+                pygame.draw.circle(
+                    surface, buddy_color, buddy.rect.center, assets.player_radius * 2
+                )
     drawn_cars: list[Car] = []
     if car and car.alive():
         car_rect = car.image.get_rect(center=car.rect.center)
@@ -488,7 +484,6 @@ def draw(
 
     camera = game_data.camera
     stage = game_data.stage
-    companion = game_data.companion
     outer_rect = game_data.areas.outer_rect
     outside_rects = game_data.areas.outside_rects or []
     all_sprites = game_data.groups.all_sprites
@@ -498,7 +493,9 @@ def draw(
     flashlight_count = state.flashlight_count
     elapsed_play_ms = state.elapsed_play_ms
     fuel_message_until = state.fuel_message_until
-    companion_rescued = state.companion_rescued
+    buddy_rescued = state.buddy_rescued
+    buddy_onboard = state.buddy_onboard
+    buddy_required = stage.buddy_required_count if stage else 0
     survivors_onboard = state.survivors_onboard
     survivor_messages = list(state.survivor_messages)
     zombie_group = game_data.groups.zombie_group
@@ -673,12 +670,12 @@ def draw(
             print(f"Error rendering objective: {e}")
 
     def _render_survival_timer() -> None:
-        if not (stage and getattr(stage, "survival_stage", False)):
+        if not (stage and stage.survival_stage):
             return
-        goal_ms = getattr(state, "survival_goal_ms", 0)
+        goal_ms = state.survival_goal_ms
         if goal_ms <= 0:
             return
-        elapsed_ms = max(0, min(goal_ms, getattr(state, "survival_elapsed_ms", 0)))
+        elapsed_ms = max(0, min(goal_ms, state.survival_elapsed_ms))
         remaining_ms = max(0, goal_ms - elapsed_ms)
         padding = 12
         bar_height = 8
@@ -698,7 +695,7 @@ def draw(
         progress_width = int(bar_rect.width * max(0.0, min(1.0, progress_ratio)))
         if progress_width > 0:
             fill_color = (120, 20, 20)
-            if getattr(state, "dawn_ready", False):
+            if state.dawn_ready:
                 fill_color = (25, 40, 120)
             fill_rect = pygame.Rect(
                 bar_rect.left,
@@ -739,7 +736,7 @@ def draw(
             print(f"Error rendering survival timer: {e}")
 
     def _render_time_accel_indicator() -> None:
-        if stage and getattr(stage, "survival_stage", False):
+        if stage and stage.survival_stage:
             return
         try:
             font_settings = get_font_settings()
@@ -761,14 +758,14 @@ def draw(
             print(f"Error rendering acceleration indicator: {e}")
 
     objective_lines: list[str] = []
-    if stage and getattr(stage, "survival_stage", False):
+    if stage and stage.survival_stage:
         if state.dawn_ready:
             objective_lines.append(tr("objectives.get_outside"))
         else:
             objective_lines.append(tr("objectives.survive_until_dawn"))
     elif stage and stage.requires_fuel and not has_fuel:
         objective_lines.append(tr("objectives.find_fuel"))
-    elif stage and getattr(stage, "rescue_stage", False):
+    elif stage and stage.rescue_stage:
         if not player.in_car:
             objective_lines.append(tr("objectives.find_car"))
         else:
@@ -778,21 +775,16 @@ def draw(
     else:
         objective_lines.append(tr("objectives.escape"))
 
-    if stage and getattr(stage, "companion_stage", False):
-        if not companion_rescued:
-            buddy_following = companion and getattr(companion, "following", False)
-            if player.in_car:
-                # Cannot escape until the buddy is picked up; suppress the redundant find prompt.
-                objective_lines[-1] = tr("objectives.pickup_buddy")
-            elif not buddy_following:
-                objective_lines.append(tr("objectives.find_buddy"))
+    if stage and stage.buddy_required_count > 0:
+        if buddy_rescued < buddy_required:
+            objective_lines.append(tr("objectives.escape_with_buddy"))
+            if buddy_onboard > 0:
+                objective_lines.append(
+                    tr("objectives.buddy_onboard", count=buddy_onboard)
+                )
 
-    if (
-        stage
-        and getattr(stage, "rescue_stage", False)
-        and (survivors_onboard is not None)
-    ):
-        limit = getattr(state, "survivor_capacity", SURVIVOR_MAX_SAFE_PASSENGERS)
+    if stage and stage.rescue_stage and (survivors_onboard is not None):
+        limit = state.survivor_capacity
         objective_lines.append(
             tr("objectives.survivors_onboard", count=survivors_onboard, limit=limit)
         )
@@ -815,7 +807,7 @@ def draw(
                 screen.blit(msg_surface, msg_rect)
         except pygame.error as e:
             print(f"Error rendering survivor message: {e}")
-    if stage and getattr(stage, "survival_stage", False):
+    if stage and stage.survival_stage:
         _render_survival_timer()
     else:
         _render_time_accel_indicator()
@@ -825,7 +817,7 @@ def draw(
         config,
         stage=stage,
         seed=state.seed,
-        debug_mode=bool(getattr(state, "debug_mode", False)),
+        debug_mode=state.debug_mode,
         zombie_group=zombie_group,
     )
     if do_flip:
