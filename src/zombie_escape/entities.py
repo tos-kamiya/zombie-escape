@@ -57,7 +57,10 @@ from .gameplay_constants import (
     ZOMBIE_TRACKER_WANDER_INTERVAL_MS,
     ZOMBIE_WALL_DAMAGE,
     ZOMBIE_WALL_FOLLOW_LOST_WALL_MS,
+    ZOMBIE_WALL_FOLLOW_PROBE_ANGLE_DEG,
+    ZOMBIE_WALL_FOLLOW_PROBE_STEP,
     ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
+    ZOMBIE_WALL_FOLLOW_TARGET_GAP,
     ZOMBIE_WANDER_INTERVAL_MS,
     car_body_radius,
 )
@@ -832,6 +835,38 @@ def zombie_wall_follow_has_wall(
     )
 
 
+def zombie_wall_follow_wall_distance(
+    zombie: Zombie,
+    walls: list[Wall],
+    angle: float,
+    max_distance: float,
+    *,
+    step: float = ZOMBIE_WALL_FOLLOW_PROBE_STEP,
+) -> float:
+    direction_x = math.cos(angle)
+    direction_y = math.sin(angle)
+    max_search = max_distance + 120
+    candidates = [
+        wall
+        for wall in walls
+        if abs(wall.rect.centerx - zombie.x) < max_search
+        and abs(wall.rect.centery - zombie.y) < max_search
+    ]
+    if not candidates:
+        return max_distance
+    distance = step
+    while distance <= max_distance:
+        check_x = zombie.x + direction_x * distance
+        check_y = zombie.y + direction_y * distance
+        if any(
+            circle_wall_collision((check_x, check_y), zombie.radius, wall)
+            for wall in candidates
+        ):
+            return distance
+        distance += step
+    return max_distance
+
+
 def zombie_wall_follow_movement(
     zombie: Zombie,
     player_center: tuple[int, int],
@@ -844,22 +879,28 @@ def zombie_wall_follow_movement(
     if zombie.wall_follow_side == 0:
         sensor_distance = ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE + zombie.radius
         forward_angle = zombie.wall_follow_angle
-        left_angle = forward_angle + math.pi / 2.0
-        right_angle = forward_angle - math.pi / 2.0
-        left_wall = zombie_wall_follow_has_wall(
+        probe_offset = math.radians(ZOMBIE_WALL_FOLLOW_PROBE_ANGLE_DEG)
+        left_angle = forward_angle + probe_offset
+        right_angle = forward_angle - probe_offset
+        left_dist = zombie_wall_follow_wall_distance(
             zombie, walls, left_angle, sensor_distance
         )
-        right_wall = zombie_wall_follow_has_wall(
+        right_dist = zombie_wall_follow_wall_distance(
             zombie, walls, right_angle, sensor_distance
         )
-        forward_wall = zombie_wall_follow_has_wall(
+        forward_dist = zombie_wall_follow_wall_distance(
             zombie, walls, forward_angle, sensor_distance
         )
+        left_wall = left_dist < sensor_distance
+        right_wall = right_dist < sensor_distance
+        forward_wall = forward_dist < sensor_distance
         if left_wall or right_wall or forward_wall:
             if left_wall and not right_wall:
                 zombie.wall_follow_side = 1.0
             elif right_wall and not left_wall:
                 zombie.wall_follow_side = -1.0
+            elif left_wall and right_wall:
+                zombie.wall_follow_side = 1.0 if left_dist <= right_dist else -1.0
             else:
                 zombie.wall_follow_side = RNG.choice([-1.0, 1.0])
             zombie.wall_follow_last_wall_time = pygame.time.get_ticks()
@@ -870,13 +911,16 @@ def zombie_wall_follow_movement(
             return zombie_wander_move(zombie, walls)
 
     sensor_distance = ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE + zombie.radius
-    side_angle = zombie.wall_follow_angle + zombie.wall_follow_side * (math.pi / 2.0)
-    side_has_wall = zombie_wall_follow_has_wall(
+    probe_offset = math.radians(ZOMBIE_WALL_FOLLOW_PROBE_ANGLE_DEG)
+    side_angle = zombie.wall_follow_angle + zombie.wall_follow_side * probe_offset
+    side_dist = zombie_wall_follow_wall_distance(
         zombie, walls, side_angle, sensor_distance
     )
-    forward_has_wall = zombie_wall_follow_has_wall(
+    forward_dist = zombie_wall_follow_wall_distance(
         zombie, walls, zombie.wall_follow_angle, sensor_distance
     )
+    side_has_wall = side_dist < sensor_distance
+    forward_has_wall = forward_dist < sensor_distance
     now = pygame.time.get_ticks()
     wall_recent = (
         zombie.wall_follow_last_wall_time is not None
@@ -890,16 +934,22 @@ def zombie_wall_follow_movement(
         zombie.wall_follow_last_wall_time = now
     if side_has_wall:
         zombie.wall_follow_last_side_has_wall = True
+        gap_error = ZOMBIE_WALL_FOLLOW_TARGET_GAP - side_dist
+        if abs(gap_error) > 0.1:
+            ratio = min(1.0, abs(gap_error) / ZOMBIE_WALL_FOLLOW_TARGET_GAP)
+            turn = turn_step * ratio
+            if gap_error > 0:
+                zombie.wall_follow_angle -= zombie.wall_follow_side * turn
+            else:
+                zombie.wall_follow_angle += zombie.wall_follow_side * turn
+        if forward_dist < ZOMBIE_WALL_FOLLOW_TARGET_GAP:
+            zombie.wall_follow_angle -= zombie.wall_follow_side * (turn_step * 1.5)
+    else:
+        zombie.wall_follow_last_side_has_wall = False
         if forward_has_wall:
             zombie.wall_follow_angle -= zombie.wall_follow_side * turn_step
-    else:
-        if wall_recent:
-            if zombie.wall_follow_last_side_has_wall and not forward_has_wall:
-                zombie.wall_follow_angle += zombie.wall_follow_side * (math.pi / 2.0)
-                zombie.wall_follow_last_side_has_wall = False
-            elif zombie.wall_follow_last_side_has_wall:
-                zombie.wall_follow_angle += zombie.wall_follow_side * turn_step
-                zombie.wall_follow_last_side_has_wall = False
+        elif wall_recent:
+            zombie.wall_follow_angle += zombie.wall_follow_side * (turn_step * 0.75)
         else:
             zombie.wall_follow_angle += zombie.wall_follow_side * (math.pi / 2.0)
             zombie.wall_follow_side = 0.0
