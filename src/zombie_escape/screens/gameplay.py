@@ -14,6 +14,7 @@ from ..gameplay_constants import (
     SURVIVAL_TIME_ACCEL_MAX_SUBSTEP,
 )
 from ..gameplay import logic
+from ..entities import build_wall_index
 from ..localization import translate as tr
 from ..models import Stage
 from ..render import draw, prewarm_fog_overlays, show_message
@@ -254,6 +255,7 @@ def gameplay_screen(
         sub_dt = (
             min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
         )
+        wall_index = build_wall_index(game_data.groups.wall_group)
         frame_fov_target = None
         for _ in range(substeps):
             player_ref = game_data.player
@@ -264,7 +266,13 @@ def gameplay_screen(
                 keys, player_ref, car_ref
             )
             logic.update_entities(
-                game_data, player_dx, player_dy, car_dx, car_dy, config
+                game_data,
+                player_dx,
+                player_dy,
+                car_dx,
+                car_dy,
+                config,
+                wall_index=wall_index,
             )
             logic.update_footprints(game_data, config)
             step_ms = int(sub_dt * 1000)

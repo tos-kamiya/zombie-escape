@@ -76,6 +76,50 @@ MovementStrategy = Callable[
     ["Zombie", tuple[int, int], list["Wall"], list[dict[str, object]]],
     tuple[float, float],
 ]
+WallIndex = dict[tuple[int, int], list["Wall"]]
+
+
+def build_wall_index(walls: Iterable["Wall"]) -> WallIndex:
+    index: WallIndex = {}
+    for wall in walls:
+        if not wall.alive():
+            continue
+        cell_x = int(wall.rect.centerx // CELL_SIZE)
+        cell_y = int(wall.rect.centery // CELL_SIZE)
+        index.setdefault((cell_x, cell_y), []).append(wall)
+    return index
+
+
+def _sprite_center_and_radius(
+    sprite: pygame.sprite.Sprite,
+) -> tuple[tuple[int, int], float]:
+    center = sprite.rect.center
+    radius = float(
+        getattr(sprite, "radius", max(sprite.rect.width, sprite.rect.height) / 2)
+    )
+    return center, radius
+
+
+def walls_for_radius(
+    wall_index: WallIndex, center: tuple[float, float], radius: float
+) -> list["Wall"]:
+    search_radius = radius + CELL_SIZE
+    min_x = max(0, int((center[0] - search_radius) // CELL_SIZE))
+    max_x = min(GRID_COLS - 1, int((center[0] + search_radius) // CELL_SIZE))
+    min_y = max(0, int((center[1] - search_radius) // CELL_SIZE))
+    max_y = min(GRID_ROWS - 1, int((center[1] + search_radius) // CELL_SIZE))
+    candidates: list[Wall] = []
+    for cy in range(min_y, max_y + 1):
+        for cx in range(min_x, max_x + 1):
+            candidates.extend(wall_index.get((cx, cy), []))
+    return candidates
+
+
+def _walls_for_sprite(
+    sprite: pygame.sprite.Sprite, wall_index: WallIndex
+) -> list["Wall"]:
+    center, radius = _sprite_center_and_radius(sprite)
+    return walls_for_radius(wall_index, center, radius)
 
 
 def circle_rect_collision(
@@ -113,7 +157,7 @@ def _build_beveled_polygon(
     if d == 0 or not any(bevels):
         return [(0, 0), (width, 0), (width, height), (0, height)]
 
-    segments = max(4, d // 2)
+    segments = 4
     tl, tr, br, bl = bevels
     points: list[tuple[int, int]] = []
 
@@ -316,17 +360,36 @@ def spritecollide_walls(
     walls: pygame.sprite.Group,
     *,
     dokill: bool = False,
+    wall_index: WallIndex | None = None,
 ) -> list[pygame.sprite.Sprite]:
-    return pygame.sprite.spritecollide(
-        sprite, walls, dokill, collided=collide_sprite_wall
-    )
+    if wall_index is None:
+        return pygame.sprite.spritecollide(
+            sprite, walls, dokill, collided=collide_sprite_wall
+        )
+    candidates = _walls_for_sprite(sprite, wall_index)
+    if not candidates:
+        return []
+    hit_list = [wall for wall in candidates if collide_sprite_wall(sprite, wall)]
+    if dokill:
+        for wall in hit_list:
+            wall.kill()
+    return hit_list
 
 
 def spritecollideany_walls(
     sprite: pygame.sprite.Sprite,
     walls: pygame.sprite.Group,
+    *,
+    wall_index: WallIndex | None = None,
 ) -> pygame.sprite.Sprite | None:
-    return pygame.sprite.spritecollideany(sprite, walls, collided=collide_sprite_wall)
+    if wall_index is None:
+        return pygame.sprite.spritecollideany(
+            sprite, walls, collided=collide_sprite_wall
+        )
+    for wall in _walls_for_sprite(sprite, wall_index):
+        if collide_sprite_wall(sprite, wall):
+            return wall
+    return None
 
 
 def circle_wall_collision(
@@ -495,8 +558,10 @@ class Wall(pygame.sprite.Sprite):
         return rect_polygon_collision(rect_obj, self._collision_polygon)
 
     def collides_circle(self: Self, center: tuple[float, float], radius: float) -> bool:
+        if not circle_rect_collision(center, radius, self.rect):
+            return False
         if self._collision_polygon is None:
-            return circle_rect_collision(center, radius, self.rect)
+            return True
         return circle_polygon_collision(center, radius, self._collision_polygon)
 
     def set_palette_colors(
@@ -626,7 +691,14 @@ class Player(pygame.sprite.Sprite):
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
 
-    def move(self: Self, dx: float, dy: float, walls: pygame.sprite.Group) -> None:
+    def move(
+        self: Self,
+        dx: float,
+        dy: float,
+        walls: pygame.sprite.Group,
+        *,
+        wall_index: WallIndex | None = None,
+    ) -> None:
         if self.in_car:
             return
 
@@ -634,7 +706,7 @@ class Player(pygame.sprite.Sprite):
             self.x += dx
             self.x = min(LEVEL_WIDTH, max(0, self.x))
             self.rect.centerx = int(self.x)
-            hit_list_x = spritecollide_walls(self, walls)
+            hit_list_x = spritecollide_walls(self, walls, wall_index=wall_index)
             if hit_list_x:
                 damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_x))
                 for wall in hit_list_x:
@@ -647,7 +719,7 @@ class Player(pygame.sprite.Sprite):
             self.y += dy
             self.y = min(LEVEL_HEIGHT, max(0, self.y))
             self.rect.centery = int(self.y)
-            hit_list_y = spritecollide_walls(self, walls)
+            hit_list_y = spritecollide_walls(self, walls, wall_index=wall_index)
             if hit_list_y:
                 damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_y))
                 for wall in hit_list_y:
@@ -695,7 +767,11 @@ class Companion(pygame.sprite.Sprite):
         self.following = False
 
     def update_follow(
-        self: Self, target_pos: tuple[float, float], walls: pygame.sprite.Group
+        self: Self,
+        target_pos: tuple[float, float],
+        walls: pygame.sprite.Group,
+        *,
+        wall_index: WallIndex | None = None,
     ) -> None:
         """Follow the target at a slightly slower speed than the player."""
         if self.rescued or not self.following:
@@ -715,13 +791,13 @@ class Companion(pygame.sprite.Sprite):
         if move_x != 0:
             self.x += move_x
             self.rect.centerx = int(self.x)
-            if spritecollideany_walls(self, walls):
+            if spritecollideany_walls(self, walls, wall_index=wall_index):
                 self.x -= move_x
                 self.rect.centerx = int(self.x)
         if move_y != 0:
             self.y += move_y
             self.rect.centery = int(self.y)
-            if spritecollideany_walls(self, walls):
+            if spritecollideany_walls(self, walls, wall_index=wall_index):
                 self.y -= move_y
                 self.rect.centery = int(self.y)
 
@@ -761,7 +837,11 @@ class Survivor(pygame.sprite.Sprite):
         self.y = float(self.rect.centery)
 
     def update_behavior(
-        self: Self, player_pos: tuple[int, int], walls: pygame.sprite.Group
+        self: Self,
+        player_pos: tuple[int, int],
+        walls: pygame.sprite.Group,
+        *,
+        wall_index: WallIndex | None = None,
     ) -> None:
         dx = player_pos[0] - self.x
         dy = player_pos[1] - self.y
@@ -775,13 +855,13 @@ class Survivor(pygame.sprite.Sprite):
         if move_x:
             self.x += move_x
             self.rect.centerx = int(self.x)
-            if spritecollideany_walls(self, walls):
+            if spritecollideany_walls(self, walls, wall_index=wall_index):
                 self.x -= move_x
                 self.rect.centerx = int(self.x)
         if move_y:
             self.y += move_y
             self.rect.centery = int(self.y)
-            if spritecollideany_walls(self, walls):
+            if spritecollideany_walls(self, walls, wall_index=wall_index):
                 self.y -= move_y
                 self.rect.centery = int(self.y)
 

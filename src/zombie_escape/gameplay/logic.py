@@ -53,6 +53,7 @@ from ..gameplay_constants import (
     ZOMBIE_SPEED,
     ZOMBIE_TRACKER_AGING_DURATION_FRAMES,
     interaction_radius,
+    ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
 )
 from ..level_constants import CELL_SIZE, GRID_COLS, GRID_ROWS, LEVEL_HEIGHT, LEVEL_WIDTH
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
@@ -72,6 +73,8 @@ from ..entities import (
     Wall,
     Zombie,
     spritecollideany_walls,
+    walls_for_radius,
+    WallIndex,
 )
 
 LOGICAL_SCREEN_RECT = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -589,7 +592,9 @@ def spawn_survivors(
     return survivors
 
 
-def update_survivors(game_data: GameData) -> None:
+def update_survivors(
+    game_data: GameData, wall_index: WallIndex | None = None
+) -> None:
     if not game_data.stage.rescue_stage:
         return
     survivor_group = game_data.groups.survivor_group
@@ -602,7 +607,7 @@ def update_survivors(game_data: GameData) -> None:
     target_pos = target_rect.center
     survivors = [s for s in survivor_group if getattr(s, "alive", lambda: False)()]
     for survivor in survivors:
-        survivor.update_behavior(target_pos, wall_group)
+        survivor.update_behavior(target_pos, wall_group, wall_index=wall_index)
 
     # Gently prevent survivors from overlapping the player or each other
     def _separate_from_point(
@@ -1346,6 +1351,7 @@ def update_entities(
     car_dx: float,
     car_dy: float,
     config: dict[str, Any],
+    wall_index: WallIndex | None = None,
 ) -> None:
     """Update positions and states of game entities."""
     player = game_data.player
@@ -1359,16 +1365,24 @@ def update_entities(
     stage = game_data.stage
     active_car = car if car and car.alive() else None
 
+    all_walls = list(wall_group) if wall_index is None else None
+
+    def walls_near(center: tuple[float, float], radius: float) -> list[Wall]:
+        if wall_index is None:
+            return all_walls or []
+        return walls_for_radius(wall_index, center, radius)
+
     # Update player/car movement
     if player.in_car and active_car:
-        active_car.move(car_dx, car_dy, wall_group)
+        car_walls = walls_near((active_car.x, active_car.y), 150.0)
+        active_car.move(car_dx, car_dy, car_walls)
         player.rect.center = active_car.rect.center
         player.x, player.y = active_car.x, active_car.y
     elif not player.in_car:
         # Ensure player is in all_sprites if not in car
         if player not in all_sprites:
             all_sprites.add(player, layer=2)
-        player.move(player_dx, player_dy, wall_group)
+        player.move(player_dx, player_dy, wall_group, wall_index=wall_index)
     else:
         # Player flagged as in-car but car is gone; drop them back to foot control
         player.in_car = False
@@ -1380,11 +1394,13 @@ def update_entities(
     # Update companion (Stage 3 follow logic)
     if companion and companion.alive() and not companion.rescued:
         follow_target = active_car if player.in_car and active_car else player
-        companion.update_follow(follow_target.rect.center, wall_group)
+        companion.update_follow(
+            follow_target.rect.center, wall_group, wall_index=wall_index
+        )
         if companion not in all_sprites:
             all_sprites.add(companion, layer=2)
 
-    update_survivors(game_data)
+    update_survivors(game_data, wall_index=wall_index)
 
     # Spawn new zombies if needed
     current_time = pygame.time.get_ticks()
@@ -1468,8 +1484,13 @@ def update_entities(
                         ),
                     )
         nearby_candidates = _nearby_zombies(idx)
+        zombie_search_radius = ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE + zombie.radius + 120
+        nearby_walls = walls_near((zombie.x, zombie.y), zombie_search_radius)
         zombie.update(
-            target, wall_group, nearby_candidates, footprints=game_data.state.footprints
+            target,
+            nearby_walls,
+            nearby_candidates,
+            footprints=game_data.state.footprints,
         )
 
 

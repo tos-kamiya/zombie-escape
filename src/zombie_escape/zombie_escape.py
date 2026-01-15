@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 import sys
 import traceback  # For error reporting
 from typing import Any, Tuple
@@ -37,6 +38,12 @@ from .gameplay.logic import calculate_car_speed_for_passengers
 def _parse_cli_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--debug", action="store_true", help="Enable debugging aids for Stage 5 and hide pause overlay")
+    parser.add_argument("--profile", action="store_true", help="Profile gameplay and write cProfile output to disk")
+    parser.add_argument(
+        "--profile-output",
+        default="profile.prof",
+        help="cProfile output path (default: profile.prof)",
+    )
     parser.add_argument("--seed")
     return parser.parse_known_args(argv)
 
@@ -136,17 +143,45 @@ def main() -> None:
             else:
                 last_stage_id = stage.id
                 try:
-                    transition = gameplay_screen(
-                        screen,
-                        clock,
-                        config,
-                        FPS,
-                        stage,
-                        show_pause_overlay=not debug_mode,
-                        seed=seed_value,
-                        render_assets=RENDER_ASSETS,
-                        debug_mode=debug_mode,
-                    )
+                    if args.profile:
+                        import cProfile
+                        import pstats
+
+                        profiler = cProfile.Profile()
+                        try:
+                            transition = profiler.runcall(
+                                gameplay_screen,
+                                screen,
+                                clock,
+                                config,
+                                FPS,
+                                stage,
+                                show_pause_overlay=not debug_mode,
+                                seed=seed_value,
+                                render_assets=RENDER_ASSETS,
+                                debug_mode=debug_mode,
+                            )
+                        finally:
+                            output_path = Path(args.profile_output)
+                            profiler.dump_stats(output_path)
+                            summary_path = output_path.with_suffix(".txt")
+                            stats = pstats.Stats(profiler).sort_stats("tottime")
+                            with summary_path.open("w", encoding="utf-8") as handle:
+                                stats.stream = handle
+                                stats.print_stats(50)
+                            print(f"Profile saved to {output_path} and {summary_path}")
+                    else:
+                        transition = gameplay_screen(
+                            screen,
+                            clock,
+                            config,
+                            FPS,
+                            stage,
+                            show_pause_overlay=not debug_mode,
+                            seed=seed_value,
+                            render_assets=RENDER_ASSETS,
+                            debug_mode=debug_mode,
+                        )
                 except SystemExit:
                     running = False
                     break
