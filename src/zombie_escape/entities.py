@@ -825,11 +825,12 @@ class Survivor(pygame.sprite.Sprite):
 
             dx = player_pos[0] - self.x
             dy = player_pos[1] - self.y
-            dist = math.hypot(dx, dy)
-            if dist <= 0:
+            dist_sq = dx * dx + dy * dy
+            if dist_sq <= 0:
                 self.rect.center = (int(self.x), int(self.y))
                 return
 
+            dist = math.sqrt(dist_sq)
             move_x = (dx / dist) * BUDDY_FOLLOW_SPEED
             move_y = (dy / dist) * BUDDY_FOLLOW_SPEED
 
@@ -859,8 +860,9 @@ class Survivor(pygame.sprite.Sprite):
             overlap_radius = (self.radius + PLAYER_RADIUS) * 1.05
             dx_after = player_pos[0] - self.x
             dy_after = player_pos[1] - self.y
-            dist_after = math.hypot(dx_after, dy_after)
-            if dist_after > 0 and dist_after < overlap_radius:
+            dist_after_sq = dx_after * dx_after + dy_after * dy_after
+            if 0 < dist_after_sq < overlap_radius * overlap_radius:
+                dist_after = math.sqrt(dist_after_sq)
                 push_dist = overlap_radius - dist_after
                 self.x -= (dx_after / dist_after) * push_dist
                 self.y -= (dy_after / dist_after) * push_dist
@@ -873,10 +875,11 @@ class Survivor(pygame.sprite.Sprite):
 
         dx = player_pos[0] - self.x
         dy = player_pos[1] - self.y
-        dist = math.hypot(dx, dy)
-        if dist <= 0 or dist > SURVIVOR_APPROACH_RADIUS:
+        dist_sq = dx * dx + dy * dy
+        if dist_sq <= 0 or dist_sq > SURVIVOR_APPROACH_RADIUS * SURVIVOR_APPROACH_RADIUS:
             return
 
+        dist = math.sqrt(dist_sq)
         move_x = (dx / dist) * SURVIVOR_APPROACH_SPEED
         move_y = (dy / dist) * SURVIVOR_APPROACH_SPEED
 
@@ -1116,7 +1119,7 @@ def zombie_update_tracker_target(
             continue
         dx = pos[0] - zombie.x
         dy = pos[1] - zombie.y
-        if math.hypot(dx, dy) <= ZOMBIE_TRACKER_SCENT_RADIUS:
+        if dx * dx + dy * dy <= ZOMBIE_TRACKER_SCENT_RADIUS * ZOMBIE_TRACKER_SCENT_RADIUS:
             nearby.append(fp)
 
     if not nearby:
@@ -1242,7 +1245,7 @@ class Zombie(pygame.sprite.Sprite):
                 for _ in range(5)
             ]
             points.sort(
-                key=lambda p: math.hypot(p[0] - hint_pos[0], p[1] - hint_pos[1])
+                key=lambda p: (p[0] - hint_pos[0]) ** 2 + (p[1] - hint_pos[1]) ** 2
             )
             x, y = points[0]
         else:
@@ -1294,8 +1297,8 @@ class Zombie(pygame.sprite.Sprite):
     ) -> bool:
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
-        dist_to_player = math.hypot(dx_target, dy_target)
-        is_in_sight = dist_to_player <= sight_range
+        dist_to_player_sq = dx_target * dx_target + dy_target * dy_target
+        is_in_sight = dist_to_player_sq <= sight_range * sight_range
         self.was_in_sight = is_in_sight
         return is_in_sight
 
@@ -1341,7 +1344,7 @@ class Zombie(pygame.sprite.Sprite):
         next_y = self.y + move_y
 
         closest: Zombie | None = None
-        closest_dist = ZOMBIE_SEPARATION_DISTANCE
+        closest_dist_sq = ZOMBIE_SEPARATION_DISTANCE * ZOMBIE_SEPARATION_DISTANCE
         for other in zombies:
             if other is self or not other.alive():
                 continue
@@ -1352,18 +1355,18 @@ class Zombie(pygame.sprite.Sprite):
                 or abs(dy) > ZOMBIE_SEPARATION_DISTANCE
             ):
                 continue
-            dist = math.hypot(dx, dy)
-            if dist < closest_dist:
+            dist_sq = dx * dx + dy * dy
+            if dist_sq < closest_dist_sq:
                 closest = other
-                closest_dist = dist
+                closest_dist_sq = dist_sq
 
         if closest is None:
             return move_x, move_y
 
         if self.wall_follower:
             other_radius = float(getattr(closest, "radius", self.radius))
-            bump_dist = self.radius + other_radius
-            if closest_dist < bump_dist and RNG.random() < 0.1:
+            bump_dist_sq = (self.radius + other_radius) ** 2
+            if closest_dist_sq < bump_dist_sq and RNG.random() < 0.1:
                 if self.wall_follow_angle is None:
                     self.wall_follow_angle = self.wander_angle
                 self.wall_follow_angle = (self.wall_follow_angle + math.pi) % math.tau
@@ -1427,12 +1430,13 @@ class Zombie(pygame.sprite.Sprite):
         self._apply_aging()
         dx_player = player_center[0] - self.x
         dy_player = player_center[1] - self.y
-        dist_to_player = math.hypot(dx_player, dy_player)
+        dist_to_player_sq = dx_player * dx_player + dy_player * dy_player
         avoid_radius = max(SCREEN_WIDTH, SCREEN_HEIGHT) * 2
+        avoid_radius_sq = avoid_radius * avoid_radius
         move_x, move_y = self.movement_strategy(
             self, player_center, walls, footprints or []
         )
-        if dist_to_player <= avoid_radius or self.wall_follower:
+        if dist_to_player_sq <= avoid_radius_sq or self.wall_follower:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
         final_x, final_y = self._handle_wall_collision(
             self.x + move_x, self.y + move_y, walls

@@ -438,21 +438,21 @@ def place_fuel_can(
 
     min_player_dist = 250
     min_car_dist = 200
+    min_player_dist_sq = min_player_dist * min_player_dist
+    min_car_dist_sq = min_car_dist * min_car_dist
 
     for attempt in range(200):
         cell = RNG.choice(walkable_cells)
-        if (
-            math.hypot(cell.centerx - player.x, cell.centery - player.y)
-            < min_player_dist
-        ):
+        dx = cell.centerx - player.x
+        dy = cell.centery - player.y
+        if dx * dx + dy * dy < min_player_dist_sq:
             continue
         if cars:
             too_close = False
             for parked_car in cars:
-                if math.hypot(
-                    cell.centerx - parked_car.rect.centerx,
-                    cell.centery - parked_car.rect.centery,
-                ) < min_car_dist:
+                dx = cell.centerx - parked_car.rect.centerx
+                dy = cell.centery - parked_car.rect.centery
+                if dx * dx + dy * dy < min_car_dist_sq:
                     too_close = True
                     break
             if too_close:
@@ -476,21 +476,20 @@ def place_flashlight(
 
     min_player_dist = 260
     min_car_dist = 200
+    min_player_dist_sq = min_player_dist * min_player_dist
+    min_car_dist_sq = min_car_dist * min_car_dist
 
     for attempt in range(200):
         cell = RNG.choice(walkable_cells)
-        if (
-            math.hypot(cell.centerx - player.x, cell.centery - player.y)
-            < min_player_dist
-        ):
+        dx = cell.centerx - player.x
+        dy = cell.centery - player.y
+        if dx * dx + dy * dy < min_player_dist_sq:
             continue
         if cars:
             if any(
-                math.hypot(
-                    cell.centerx - parked.rect.centerx,
-                    cell.centery - parked.rect.centery,
-                )
-                < min_car_dist
+                (cell.centerx - parked.rect.centerx) ** 2
+                + (cell.centery - parked.rect.centery) ** 2
+                < min_car_dist_sq
                 for parked in cars
             ):
                 continue
@@ -518,11 +517,9 @@ def place_flashlights(
             break
         # Avoid clustering too tightly
         if any(
-            math.hypot(
-                other.rect.centerx - fl.rect.centerx,
-                other.rect.centery - fl.rect.centery,
-            )
-            < 120
+            (other.rect.centerx - fl.rect.centerx) ** 2
+            + (other.rect.centery - fl.rect.centery) ** 2
+            < 120 * 120
             for other in placed
         ):
             continue
@@ -542,21 +539,20 @@ def place_buddy(
 
     min_player_dist = 240
     min_car_dist = 180
+    min_player_dist_sq = min_player_dist * min_player_dist
+    min_car_dist_sq = min_car_dist * min_car_dist
 
     for attempt in range(200):
         cell = RNG.choice(walkable_cells)
-        if (
-            math.hypot(cell.centerx - player.x, cell.centery - player.y)
-            < min_player_dist
-        ):
+        dx = cell.centerx - player.x
+        dy = cell.centery - player.y
+        if dx * dx + dy * dy < min_player_dist_sq:
             continue
         if cars:
             if any(
-                math.hypot(
-                    cell.centerx - parked.rect.centerx,
-                    cell.centery - parked.rect.centery,
-                )
-                < min_car_dist
+                (cell.centerx - parked.rect.centerx) ** 2
+                + (cell.centery - parked.rect.centery) ** 2
+                < min_car_dist_sq
                 for parked in cars
             ):
                 continue
@@ -584,11 +580,9 @@ def place_buddies(
         if not buddy:
             break
         if any(
-            math.hypot(
-                other.rect.centerx - buddy.rect.centerx,
-                other.rect.centery - buddy.rect.centery,
-            )
-            < 100
+            (other.rect.centerx - buddy.rect.centerx) ** 2
+            + (other.rect.centery - buddy.rect.centery) ** 2
+            < 100 * 100
             for other in placed
         ):
             continue
@@ -861,7 +855,8 @@ def nearest_waiting_car(
         return None
     return min(
         cars,
-        key=lambda car: math.hypot(car.rect.centerx - origin[0], car.rect.centery - origin[1]),
+        key=lambda car: (car.rect.centerx - origin[0]) ** 2
+        + (car.rect.centery - origin[1]) ** 2,
     )
 
 
@@ -1062,12 +1057,15 @@ def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
     footprints = state.footprints
     if not player.in_car:
         last_pos = state.last_footprint_pos
-        dist = (
-            math.hypot(player.x - last_pos[0], player.y - last_pos[1])
+        dist_sq = (
+            (player.x - last_pos[0]) ** 2 + (player.y - last_pos[1]) ** 2
             if last_pos
             else None
         )
-        if last_pos is None or (dist is not None and dist >= FOOTPRINT_STEP_DISTANCE):
+        if last_pos is None or (
+            dist_sq is not None
+            and dist_sq >= FOOTPRINT_STEP_DISTANCE * FOOTPRINT_STEP_DISTANCE
+        ):
             footprints.append({"pos": (player.x, player.y), "time": now})
             state.last_footprint_pos = (player.x, player.y)
 
@@ -1194,11 +1192,9 @@ def setup_player_and_cars(
         RNG.shuffle(car_candidates)
         for candidate in car_candidates:
             if (
-                math.hypot(
-                    candidate.centerx - player_pos[0],
-                    candidate.centery - player_pos[1],
-                )
-                >= 400
+                (candidate.centerx - player_pos[0]) ** 2
+                + (candidate.centery - player_pos[1]) ** 2
+                >= 400 * 400
             ):
                 car_candidates.remove(candidate)
                 return candidate.center
@@ -1239,10 +1235,9 @@ def spawn_initial_zombies(
         positions = scatter_positions_on_walkable(spawn_cells, spawn_rate * 1.5)
 
     for pos in positions:
-        if (
-            math.hypot(pos[0] - player.x, pos[1] - player.y)
-            < ZOMBIE_SPAWN_PLAYER_BUFFER
-        ):
+        dx = pos[0] - player.x
+        dy = pos[1] - player.y
+        if dx * dx + dy * dy < ZOMBIE_SPAWN_PLAYER_BUFFER * ZOMBIE_SPAWN_PLAYER_BUFFER:
             continue
         tentative = create_zombie(
             config,
@@ -1557,20 +1552,18 @@ def update_entities(
     for idx, zombie in enumerate(zombies_sorted):
         target = target_center
         if buddies_on_screen:
-            dist_to_target = math.hypot(
-                target_center[0] - zombie.x, target_center[1] - zombie.y
-            )
+            dist_to_target_sq = (target_center[0] - zombie.x) ** 2 + (
+                target_center[1] - zombie.y
+            ) ** 2
             nearest_buddy = min(
                 buddies_on_screen,
-                key=lambda buddy: math.hypot(
-                    buddy.rect.centerx - zombie.x, buddy.rect.centery - zombie.y
-                ),
+                key=lambda buddy: (buddy.rect.centerx - zombie.x) ** 2
+                + (buddy.rect.centery - zombie.y) ** 2,
             )
-            dist_to_buddy = math.hypot(
-                nearest_buddy.rect.centerx - zombie.x,
-                nearest_buddy.rect.centery - zombie.y,
-            )
-            if dist_to_buddy < dist_to_target:
+            dist_to_buddy_sq = (nearest_buddy.rect.centerx - zombie.x) ** 2 + (
+                nearest_buddy.rect.centery - zombie.y
+            ) ** 2
+            if dist_to_buddy_sq < dist_to_target_sq:
                 target = nearest_buddy.rect.center
 
         if stage.rescue_stage:
@@ -1585,9 +1578,8 @@ def update_entities(
                 if candidate_positions:
                     target = min(
                         candidate_positions,
-                        key=lambda pos: math.hypot(
-                            pos[0] - zombie.x, pos[1] - zombie.y
-                        ),
+                        key=lambda pos: (pos[0] - zombie.x) ** 2
+                        + (pos[1] - zombie.y) ** 2,
                     )
         nearby_candidates = _nearby_zombies(idx)
         zombie_search_radius = ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE + zombie.radius + 120
@@ -1629,7 +1621,9 @@ def check_interactions(
     )
 
     def player_near_point(point: tuple[float, float], radius: float) -> bool:
-        return math.hypot(point[0] - player.x, point[1] - player.y) <= radius
+        dx = point[0] - player.x
+        dy = point[1] - player.y
+        return dx * dx + dy * dy <= radius * radius
 
     def player_near_sprite(
         sprite_obj: pygame.sprite.Sprite | None, radius: float
@@ -1688,8 +1682,13 @@ def check_interactions(
                 continue
             buddy_on_screen = rect_visible_on_screen(camera, buddy.rect)
             if not player.in_car:
-                dist_to_player = math.hypot(player.x - buddy.x, player.y - buddy.y)
-                if dist_to_player <= SURVIVOR_APPROACH_RADIUS:
+                dist_to_player_sq = (player.x - buddy.x) ** 2 + (
+                    player.y - buddy.y
+                ) ** 2
+                if (
+                    dist_to_player_sq
+                    <= SURVIVOR_APPROACH_RADIUS * SURVIVOR_APPROACH_RADIUS
+                ):
                     buddy.set_following()
             elif player.in_car and active_car and shrunk_car:
                 g = pygame.sprite.Group()
