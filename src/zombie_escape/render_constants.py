@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from .gameplay_constants import FOV_RADIUS, PLAYER_RADIUS
-from .level_constants import TILE_SIZE
 from .render_assets import FogRing, RenderAssets
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH, STATUS_BAR_HEIGHT
 
@@ -45,11 +44,8 @@ def build_render_assets(cell_size: int) -> RenderAssets:
     )
 
 
-RENDER_ASSETS = build_render_assets(TILE_SIZE)
-
 __all__ = [
     "FOG_RADIUS_SCALE",
     "FLASHLIGHT_FOG_SCALE_STEP",
     "build_render_assets",
-    "RENDER_ASSETS",
 ]
