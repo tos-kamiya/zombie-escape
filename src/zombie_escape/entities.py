@@ -937,6 +937,15 @@ def zombie_tracker_movement(
     return zombie_move_toward(zombie, player_center)
 
 
+def zombie_wander_movement(
+    zombie: Zombie,
+    _player_center: tuple[int, int],
+    walls: list[Wall],
+    _footprints: list[dict[str, object]],
+) -> tuple[float, float]:
+    return zombie_wander_move(zombie, walls)
+
+
 def zombie_wall_follow_has_wall(
     zombie: Zombie,
     walls: list[Wall],
@@ -1266,9 +1275,8 @@ class Zombie(pygame.sprite.Sprite):
         self.wall_follow_angle = RNG.uniform(0, math.tau) if wall_follower else None
         self.wall_follow_last_wall_time: int | None = None
         self.wall_follow_last_side_has_wall = False
-        self.wall_follow_flip_timer = 0
         self.wall_follow_stuck_flag = False
-        self.wall_follow_pos_history: list[tuple[float, float]] = []
+        self.pos_history: list[tuple[float, float]] = []
         self.wander_angle = RNG.uniform(0, math.tau)
         self.wander_interval_ms = (
             ZOMBIE_TRACKER_WANDER_INTERVAL_MS if tracker else ZOMBIE_WANDER_INTERVAL_MS
@@ -1355,16 +1363,11 @@ class Zombie(pygame.sprite.Sprite):
         if self.wall_follower:
             other_radius = float(getattr(closest, "radius", self.radius))
             bump_dist = self.radius + other_radius
-            if (
-                closest_dist < bump_dist
-                and RNG.random() < 0.1
-                and self.wall_follow_flip_timer == 0
-            ):
+            if closest_dist < bump_dist and RNG.random() < 0.1:
                 if self.wall_follow_angle is None:
                     self.wall_follow_angle = self.wander_angle
                 self.wall_follow_angle = (self.wall_follow_angle + math.pi) % math.tau
                 self.wall_follow_side *= -1.0
-                self.wall_follow_flip_timer = 10
                 return (
                     math.cos(self.wall_follow_angle) * self.speed,
                     math.sin(self.wall_follow_angle) * self.speed,
@@ -1392,6 +1395,25 @@ class Zombie(pygame.sprite.Sprite):
         slowdown_ratio = 1.0 - progress * (1.0 - ZOMBIE_AGING_MIN_SPEED_RATIO)
         self.speed = self.initial_speed * slowdown_ratio
 
+    def _update_stuck_state(self: Self) -> None:
+        history = self.pos_history
+        history.append((self.x, self.y))
+        if len(history) > 20:
+            history.pop(0)
+            max_dist_sq = max(
+                (self.x - hx) ** 2 + (self.y - hy) ** 2 for hx, hy in history
+            )
+            self.wall_follow_stuck_flag = max_dist_sq < 25
+        if not self.wall_follow_stuck_flag:
+            return
+        if self.wall_follower:
+            if self.wall_follow_angle is None:
+                self.wall_follow_angle = self.wander_angle
+            self.wall_follow_angle = (self.wall_follow_angle + math.pi) % math.tau
+            self.wall_follow_side *= -1.0
+        self.wall_follow_stuck_flag = False
+        self.pos_history = []
+
     def update(
         self: Self,
         player_center: tuple[int, int],
@@ -1401,17 +1423,7 @@ class Zombie(pygame.sprite.Sprite):
     ) -> None:
         if self.carbonized:
             return
-        if self.wall_follower and self.wall_follow_flip_timer > 0:
-            self.wall_follow_flip_timer -= 1
-        if self.wall_follower:
-            history = self.wall_follow_pos_history
-            history.append((self.x, self.y))
-            if len(history) > 20:
-                history.pop(0)
-                max_dist_sq = max(
-                    (self.x - hx) ** 2 + (self.y - hy) ** 2 for hx, hy in history
-                )
-                self.wall_follow_stuck_flag = max_dist_sq < 25
+        self._update_stuck_state()
         self._apply_aging()
         dx_player = player_center[0] - self.x
         dy_player = player_center[1] - self.y
@@ -1430,14 +1442,6 @@ class Zombie(pygame.sprite.Sprite):
             final_x, final_y = random_position_outside_building(
                 self.level_width, self.level_height
             )
-
-        if self.wall_follower and self.wall_follow_stuck_flag:
-            if self.wall_follow_angle is None:
-                self.wall_follow_angle = self.wander_angle
-            self.wall_follow_angle = (self.wall_follow_angle + math.pi) % math.tau
-            self.wall_follow_side *= -1.0
-            self.wall_follow_stuck_flag = False
-            self.wall_follow_pos_history = []
 
         self.x = final_x
         self.y = final_y
