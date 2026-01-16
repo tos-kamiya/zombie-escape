@@ -1267,7 +1267,7 @@ class Zombie(pygame.sprite.Sprite):
         self.wall_follow_last_wall_time: int | None = None
         self.wall_follow_last_side_has_wall = False
         self.wall_follow_flip_timer = 0
-        self.wall_follow_stuck_timer = 0
+        self.wall_follow_stuck_flag = False
         self.wall_follow_pos_history: list[tuple[float, float]] = []
         self.wander_angle = RNG.uniform(0, math.tau)
         self.wander_interval_ms = (
@@ -1408,13 +1408,10 @@ class Zombie(pygame.sprite.Sprite):
             history.append((self.x, self.y))
             if len(history) > 20:
                 history.pop(0)
-                max_dist = max(
-                    math.hypot(self.x - hx, self.y - hy) for hx, hy in history
+                max_dist_sq = max(
+                    (self.x - hx) ** 2 + (self.y - hy) ** 2 for hx, hy in history
                 )
-                if max_dist < 5:
-                    self.wall_follow_stuck_timer = 1
-                else:
-                    self.wall_follow_stuck_timer = 0
+                self.wall_follow_stuck_flag = max_dist_sq < 25
         self._apply_aging()
         dx_player = player_center[0] - self.x
         dy_player = player_center[1] - self.y
@@ -1434,12 +1431,12 @@ class Zombie(pygame.sprite.Sprite):
                 self.level_width, self.level_height
             )
 
-        if self.wall_follower and self.wall_follow_stuck_timer != 0:
+        if self.wall_follower and self.wall_follow_stuck_flag:
             if self.wall_follow_angle is None:
                 self.wall_follow_angle = self.wander_angle
             self.wall_follow_angle = (self.wall_follow_angle + math.pi) % math.tau
             self.wall_follow_side *= -1.0
-            self.wall_follow_stuck_timer = 0
+            self.wall_follow_stuck_flag = False
             self.wall_follow_pos_history = []
 
         self.x = final_x
