@@ -18,13 +18,14 @@ from .gameplay_constants import (
     SURVIVOR_MAX_SAFE_PASSENGERS,
     SURVIVOR_MIN_SPEED_FACTOR,
 )
-from .render_constants import RENDER_ASSETS
+from .render_constants import build_render_assets
 from .screen_constants import (
     DEFAULT_WINDOW_SCALE,
     FPS,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
 )
+from .level_constants import TILE_SIZE
 from .localization import set_language
 from .models import GameData, Stage
 from .stage_constants import DEFAULT_STAGE_ID, STAGES
@@ -149,6 +150,7 @@ def main() -> None:
 
                         profiler = cProfile.Profile()
                         try:
+                            render_assets = build_render_assets(stage.tile_size)
                             transition = profiler.runcall(
                                 gameplay_screen,
                                 screen,
@@ -158,7 +160,7 @@ def main() -> None:
                                 stage,
                                 show_pause_overlay=not debug_mode,
                                 seed=seed_value,
-                                render_assets=RENDER_ASSETS,
+                                render_assets=render_assets,
                                 debug_mode=debug_mode,
                             )
                         finally:
@@ -171,6 +173,7 @@ def main() -> None:
                                 stats.print_stats(50)
                             print(f"Profile saved to {output_path} and {summary_path}")
                     else:
+                        render_assets = build_render_assets(stage.tile_size)
                         transition = gameplay_screen(
                             screen,
                             clock,
@@ -179,7 +182,7 @@ def main() -> None:
                             stage,
                             show_pause_overlay=not debug_mode,
                             seed=seed_value,
-                            render_assets=RENDER_ASSETS,
+                            render_assets=render_assets,
                             debug_mode=debug_mode,
                         )
                 except SystemExit:
@@ -197,6 +200,12 @@ def main() -> None:
             pending_game_data = None
             pending_stage = None
             pending_config = None
+            if game_data is not None:
+                render_assets = build_render_assets(game_data.cell_size)
+            elif stage is not None:
+                render_assets = build_render_assets(stage.tile_size)
+            else:
+                render_assets = build_render_assets(TILE_SIZE)
             transition = game_over_screen(
                 screen,
                 clock,
@@ -204,7 +213,7 @@ def main() -> None:
                 FPS,
                 game_data=game_data,
                 stage=stage,
-                render_assets=RENDER_ASSETS,
+                render_assets=render_assets,
             )
         elif next_screen == ScreenID.EXIT:
             break

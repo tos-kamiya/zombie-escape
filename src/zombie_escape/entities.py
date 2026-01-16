@@ -66,7 +66,7 @@ from .gameplay_constants import (
     ZOMBIE_WANDER_INTERVAL_MS,
     car_body_radius,
 )
-from .level_constants import CELL_SIZE, GRID_COLS, GRID_ROWS, LEVEL_HEIGHT, LEVEL_WIDTH
+from .level_constants import GRID_COLS, GRID_ROWS
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from .rng import get_rng
 
@@ -79,13 +79,13 @@ MovementStrategy = Callable[
 WallIndex = dict[tuple[int, int], list["Wall"]]
 
 
-def build_wall_index(walls: Iterable["Wall"]) -> WallIndex:
+def build_wall_index(walls: Iterable["Wall"], *, cell_size: int) -> WallIndex:
     index: WallIndex = {}
     for wall in walls:
         if not wall.alive():
             continue
-        cell_x = int(wall.rect.centerx // CELL_SIZE)
-        cell_y = int(wall.rect.centery // CELL_SIZE)
+        cell_x = int(wall.rect.centerx // cell_size)
+        cell_y = int(wall.rect.centery // cell_size)
         index.setdefault((cell_x, cell_y), []).append(wall)
     return index
 
@@ -101,13 +101,17 @@ def _sprite_center_and_radius(
 
 
 def walls_for_radius(
-    wall_index: WallIndex, center: tuple[float, float], radius: float
+    wall_index: WallIndex,
+    center: tuple[float, float],
+    radius: float,
+    *,
+    cell_size: int,
 ) -> list["Wall"]:
-    search_radius = radius + CELL_SIZE
-    min_x = max(0, int((center[0] - search_radius) // CELL_SIZE))
-    max_x = min(GRID_COLS - 1, int((center[0] + search_radius) // CELL_SIZE))
-    min_y = max(0, int((center[1] - search_radius) // CELL_SIZE))
-    max_y = min(GRID_ROWS - 1, int((center[1] + search_radius) // CELL_SIZE))
+    search_radius = radius + cell_size
+    min_x = max(0, int((center[0] - search_radius) // cell_size))
+    max_x = min(GRID_COLS - 1, int((center[0] + search_radius) // cell_size))
+    min_y = max(0, int((center[1] - search_radius) // cell_size))
+    max_y = min(GRID_ROWS - 1, int((center[1] + search_radius) // cell_size))
     candidates: list[Wall] = []
     for cy in range(min_y, max_y + 1):
         for cx in range(min_x, max_x + 1):
@@ -116,10 +120,10 @@ def walls_for_radius(
 
 
 def _walls_for_sprite(
-    sprite: pygame.sprite.Sprite, wall_index: WallIndex
+    sprite: pygame.sprite.Sprite, wall_index: WallIndex, *, cell_size: int
 ) -> list["Wall"]:
     center, radius = _sprite_center_and_radius(sprite)
-    return walls_for_radius(wall_index, center, radius)
+    return walls_for_radius(wall_index, center, radius, cell_size=cell_size)
 
 
 def circle_rect_collision(
@@ -361,12 +365,15 @@ def spritecollide_walls(
     *,
     dokill: bool = False,
     wall_index: WallIndex | None = None,
+    cell_size: int | None = None,
 ) -> list[pygame.sprite.Sprite]:
     if wall_index is None:
         return pygame.sprite.spritecollide(
             sprite, walls, dokill, collided=collide_sprite_wall
         )
-    candidates = _walls_for_sprite(sprite, wall_index)
+    if cell_size is None:
+        raise ValueError("cell_size is required when using wall_index")
+    candidates = _walls_for_sprite(sprite, wall_index, cell_size=cell_size)
     if not candidates:
         return []
     hit_list = [wall for wall in candidates if collide_sprite_wall(sprite, wall)]
@@ -381,12 +388,15 @@ def spritecollideany_walls(
     walls: pygame.sprite.Group,
     *,
     wall_index: WallIndex | None = None,
+    cell_size: int | None = None,
 ) -> pygame.sprite.Sprite | None:
     if wall_index is None:
         return pygame.sprite.spritecollideany(
             sprite, walls, collided=collide_sprite_wall
         )
-    for wall in _walls_for_sprite(sprite, wall_index):
+    if cell_size is None:
+        raise ValueError("cell_size is required when using wall_index")
+    for wall in _walls_for_sprite(sprite, wall_index, cell_size=cell_size):
         if collide_sprite_wall(sprite, wall):
             return wall
     return None
@@ -671,7 +681,11 @@ class Camera:
 
 # --- Game Classes ---
 class Player(pygame.sprite.Sprite):
-    def __init__(self: Self, x: float, y: float) -> None:
+    def __init__(
+        self: Self,
+        x: float,
+        y: float,
+    ) -> None:
         super().__init__()
         self.radius = PLAYER_RADIUS
         self.image = pygame.Surface(
@@ -698,15 +712,26 @@ class Player(pygame.sprite.Sprite):
         walls: pygame.sprite.Group,
         *,
         wall_index: WallIndex | None = None,
+        cell_size: int | None = None,
+        level_width: int | None = None,
+        level_height: int | None = None,
     ) -> None:
         if self.in_car:
             return
 
+        if level_width is None or level_height is None:
+            raise ValueError("level_width/level_height are required for movement")
+
         if dx != 0:
             self.x += dx
-            self.x = min(LEVEL_WIDTH, max(0, self.x))
+            self.x = min(level_width, max(0, self.x))
             self.rect.centerx = int(self.x)
-            hit_list_x = spritecollide_walls(self, walls, wall_index=wall_index)
+            hit_list_x = spritecollide_walls(
+                self,
+                walls,
+                wall_index=wall_index,
+                cell_size=cell_size,
+            )
             if hit_list_x:
                 damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_x))
                 for wall in hit_list_x:
@@ -717,9 +742,14 @@ class Player(pygame.sprite.Sprite):
 
         if dy != 0:
             self.y += dy
-            self.y = min(LEVEL_HEIGHT, max(0, self.y))
+            self.y = min(level_height, max(0, self.y))
             self.rect.centery = int(self.y)
-            hit_list_y = spritecollide_walls(self, walls, wall_index=wall_index)
+            hit_list_y = spritecollide_walls(
+                self,
+                walls,
+                wall_index=wall_index,
+                cell_size=cell_size,
+            )
             if hit_list_y:
                 damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_y))
                 for wall in hit_list_y:
@@ -734,7 +764,13 @@ class Player(pygame.sprite.Sprite):
 class Survivor(pygame.sprite.Sprite):
     """Civilians that gather near the player; optional buddy behavior."""
 
-    def __init__(self: Self, x: float, y: float, *, is_buddy: bool = False) -> None:
+    def __init__(
+        self: Self,
+        x: float,
+        y: float,
+        *,
+        is_buddy: bool = False,
+    ) -> None:
         super().__init__()
         self.is_buddy = is_buddy
         self.radius = BUDDY_RADIUS if is_buddy else SURVIVOR_RADIUS
@@ -776,7 +812,12 @@ class Survivor(pygame.sprite.Sprite):
         walls: pygame.sprite.Group,
         *,
         wall_index: WallIndex | None = None,
+        cell_size: int | None = None,
+        level_width: int | None = None,
+        level_height: int | None = None,
     ) -> None:
+        if level_width is None or level_height is None:
+            raise ValueError("level_width/level_height are required for movement")
         if self.is_buddy:
             if self.rescued or not self.following:
                 self.rect.center = (int(self.x), int(self.y))
@@ -795,13 +836,23 @@ class Survivor(pygame.sprite.Sprite):
             if move_x:
                 self.x += move_x
                 self.rect.centerx = int(self.x)
-                if spritecollideany_walls(self, walls, wall_index=wall_index):
+                if spritecollideany_walls(
+                    self,
+                    walls,
+                    wall_index=wall_index,
+                    cell_size=cell_size,
+                ):
                     self.x -= move_x
                     self.rect.centerx = int(self.x)
             if move_y:
                 self.y += move_y
                 self.rect.centery = int(self.y)
-                if spritecollideany_walls(self, walls, wall_index=wall_index):
+                if spritecollideany_walls(
+                    self,
+                    walls,
+                    wall_index=wall_index,
+                    cell_size=cell_size,
+                ):
                     self.y -= move_y
                     self.rect.centery = int(self.y)
 
@@ -815,8 +866,8 @@ class Survivor(pygame.sprite.Sprite):
                 self.y -= (dy_after / dist_after) * push_dist
                 self.rect.center = (int(self.x), int(self.y))
 
-            self.x = min(LEVEL_WIDTH, max(0, self.x))
-            self.y = min(LEVEL_HEIGHT, max(0, self.y))
+            self.x = min(level_width, max(0, self.x))
+            self.y = min(level_height, max(0, self.y))
             self.rect.center = (int(self.x), int(self.y))
             return
 
@@ -832,30 +883,42 @@ class Survivor(pygame.sprite.Sprite):
         if move_x:
             self.x += move_x
             self.rect.centerx = int(self.x)
-            if spritecollideany_walls(self, walls, wall_index=wall_index):
+            if spritecollideany_walls(
+                self,
+                walls,
+                wall_index=wall_index,
+                cell_size=cell_size,
+            ):
                 self.x -= move_x
                 self.rect.centerx = int(self.x)
         if move_y:
             self.y += move_y
             self.rect.centery = int(self.y)
-            if spritecollideany_walls(self, walls, wall_index=wall_index):
+            if spritecollideany_walls(
+                self,
+                walls,
+                wall_index=wall_index,
+                cell_size=cell_size,
+            ):
                 self.y -= move_y
                 self.rect.centery = int(self.y)
 
         self.rect.center = (int(self.x), int(self.y))
 
 
-def random_position_outside_building() -> tuple[int, int]:
+def random_position_outside_building(
+    level_width: int, level_height: int
+) -> tuple[int, int]:
     side = RNG.choice(["top", "bottom", "left", "right"])
     margin = 0
     if side == "top":
-        x, y = RNG.randint(0, LEVEL_WIDTH), -margin
+        x, y = RNG.randint(0, level_width), -margin
     elif side == "bottom":
-        x, y = RNG.randint(0, LEVEL_WIDTH), LEVEL_HEIGHT + margin
+        x, y = RNG.randint(0, level_width), level_height + margin
     elif side == "left":
-        x, y = -margin, RNG.randint(0, LEVEL_HEIGHT)
+        x, y = -margin, RNG.randint(0, level_height)
     else:
-        x, y = LEVEL_WIDTH + margin, RNG.randint(0, LEVEL_HEIGHT)
+        x, y = level_width + margin, RNG.randint(0, level_height)
     return x, y
 
 
@@ -1069,8 +1132,8 @@ def zombie_wander_move(zombie: Zombie, walls: list[Wall]) -> tuple[float, float]
         jitter = RNG.randint(-500, 500)
         zombie.wander_change_interval = max(0, zombie.wander_interval_ms + jitter)
 
-    cell_x = int(zombie.x // CELL_SIZE)
-    cell_y = int(zombie.y // CELL_SIZE)
+    cell_x = int(zombie.x // zombie.cell_size)
+    cell_y = int(zombie.y // zombie.cell_size)
     at_x_edge = cell_x in (0, GRID_COLS - 1)
     at_y_edge = cell_y in (0, GRID_ROWS - 1)
 
@@ -1142,6 +1205,9 @@ class Zombie(pygame.sprite.Sprite):
         movement_strategy: MovementStrategy | None = None,
         aging_duration_frames: float = ZOMBIE_AGING_DURATION_FRAMES,
         outer_wall_cells: set[tuple[int, int]] | None = None,
+        level_width: int,
+        level_height: int,
+        cell_size: int,
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
@@ -1163,13 +1229,16 @@ class Zombie(pygame.sprite.Sprite):
         if start_pos:
             x, y = start_pos
         elif hint_pos:
-            points = [random_position_outside_building() for _ in range(5)]
+            points = [
+                random_position_outside_building(level_width, level_height)
+                for _ in range(5)
+            ]
             points.sort(
                 key=lambda p: math.hypot(p[0] - hint_pos[0], p[1] - hint_pos[1])
             )
             x, y = points[0]
         else:
-            x, y = random_position_outside_building()
+            x, y = random_position_outside_building(level_width, level_height)
         self.rect = self.image.get_rect(center=(x, y))
         jitter_base = FAST_ZOMBIE_BASE_SPEED if speed > ZOMBIE_SPEED else ZOMBIE_SPEED
         jitter = jitter_base * 0.2
@@ -1208,6 +1277,9 @@ class Zombie(pygame.sprite.Sprite):
         self.wander_change_interval = max(
             0, self.wander_interval_ms + RNG.randint(-500, 500)
         )
+        self.level_width = level_width
+        self.level_height = level_height
+        self.cell_size = cell_size
 
     def _update_mode(
         self: Self, player_center: tuple[int, int], sight_range: float
@@ -1325,8 +1397,10 @@ class Zombie(pygame.sprite.Sprite):
             self.x + move_x, self.y + move_y, walls
         )
 
-        if not (0 <= final_x < LEVEL_WIDTH and 0 <= final_y < LEVEL_HEIGHT):
-            final_x, final_y = random_position_outside_building()
+        if not (0 <= final_x < self.level_width and 0 <= final_y < self.level_height):
+            final_x, final_y = random_position_outside_building(
+                self.level_width, self.level_height
+            )
 
         self.x = final_x
         self.y = final_y

@@ -61,9 +61,10 @@
 - `state`: `ProgressState`
 - `groups`: `Groups`（Sprite Groupの集合）
 - `camera`: `Camera`
-- `areas`: `Areas`（外周/内側/外側セルなど）
+- `layout`: `LevelLayout`（外周/内側/外側セルなど）
 - `fog`: 霧描画用のキャッシュ辞書
 - `stage`: `Stage`（ステージ定義）
+- `cell_size`, `level_width`, `level_height`: ステージ別のタイルサイズに応じたワールド寸法
 - `fuel`, `flashlights`, `player`, `car`, `waiting_cars` など
 
 ### 3.3 ステージ定義 (models.Stage)
@@ -78,12 +79,17 @@
 - 変種移動ルーチン: `zombie_tracker_ratio`（足跡追跡型の出現率）
 - 変種移動ルーチン: `zombie_wall_follower_ratio`（壁沿い巡回型の出現率）
 - エイジング速度: `zombie_aging_duration_frames`（値が大きいほど老化が遅い）
+- タイルサイズ: `tile_size`（ステージごとのワールド縮尺）
 
-### 3.4 スプライト群 (models.Groups)
+### 3.4 レベルレイアウト (models.LevelLayout)
+
+- `outer_rect`, `inner_rect`, `outside_rects`, `walkable_cells`, `outer_wall_cells` を保持。
+
+### 3.5 スプライト群 (models.Groups)
 
 - `all_sprites` (`LayeredUpdates`) と `wall_group`, `zombie_group`, `survivor_group` を保持。
 
-### 3.5 エンティティ (entities.py)
+### 3.6 エンティティ (entities.py)
 
 - `Wall`: 内壁。体力を持ち、破壊時に `on_destroy` を発火。
 - `SteelBeam`: 簡易な強化障害物。
@@ -99,7 +105,7 @@
 - `circle_rect_collision`, `circle_polygon_collision`, `rect_polygon_collision`
 - `spritecollide_walls`, `spritecollideany_walls` など
 
-## 3.6 ゾンビ移動戦略
+## 3.7 ゾンビ移動戦略
 
 ゾンビの移動は `MovementStrategy`（`entities.py` 内の関数群）として切り出し、`Zombie.update()` から呼び出す。
 個体ごとの戦略は `Zombie.movement_strategy` に保持され、生成時に `tracker` フラグに応じて設定される。

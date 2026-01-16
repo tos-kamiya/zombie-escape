@@ -69,6 +69,10 @@
       "stage7": {
         "name": "#7 Rescue Buddy 2",
         "description": "Rescue your buddy. Wall-hugging zombies appear."
+      },
+      "stage8": {
+        "name": "#8 Tight Grid",
+        "description": "Same mission, smaller tiles. Movement feels tighter."
       }
     },
     "status": {

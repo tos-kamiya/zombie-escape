@@ -79,6 +79,20 @@ STAGES: list[Stage] = [
         zombie_wall_follower_ratio=0.3,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
     ),
+    Stage(
+        id="stage8",
+        name_key="stages.stage8.name",
+        description_key="stages.stage8.description",
+        available=True,
+        tile_size=30,
+        requires_fuel=True,
+        exterior_spawn_weight=0.5,
+        interior_spawn_weight=0.5,
+        zombie_normal_ratio=0.1,
+        zombie_tracker_ratio=0.2,
+        zombie_wall_follower_ratio=0.7,
+        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 

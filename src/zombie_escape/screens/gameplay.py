@@ -246,7 +246,9 @@ def gameplay_screen(
         sub_dt = (
             min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
         )
-        wall_index = build_wall_index(game_data.groups.wall_group)
+        wall_index = build_wall_index(
+            game_data.groups.wall_group, cell_size=game_data.cell_size
+        )
         frame_fov_target = None
         for _ in range(substeps):
             player_ref = game_data.player

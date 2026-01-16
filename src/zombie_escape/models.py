@@ -20,8 +20,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
 
 
 @dataclass
-class Areas:
-    """Container for level area rectangles."""
+class LevelLayout:
+    """Container for level layout rectangles and cell sets."""
 
     outer_rect: tuple[int, int, int, int]
     inner_rect: tuple[int, int, int, int]
@@ -83,9 +83,12 @@ class GameData:
     state: ProgressState
     groups: Groups
     camera: Camera
-    areas: Areas
+    layout: LevelLayout
     fog: dict
     stage: Stage
+    cell_size: int
+    level_width: int
+    level_height: int
     fuel: FuelCan | None = None
     flashlights: list[Flashlight] | None = None
     player: Player | None = None
@@ -100,6 +103,7 @@ class Stage:
     name_key: str
     description_key: str
     available: bool = True
+    tile_size: int = 50
     requires_fuel: bool = False
     buddy_required_count: int = 0
     rescue_stage: bool = False
@@ -126,7 +130,7 @@ class Stage:
 
 
 __all__ = [
-    "Areas",
+    "LevelLayout",
     "ProgressState",
     "Groups",
     "GameData",

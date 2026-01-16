@@ -55,11 +55,11 @@ from ..gameplay_constants import (
     interaction_radius,
     ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
 )
-from ..level_constants import CELL_SIZE, GRID_COLS, GRID_ROWS, LEVEL_HEIGHT, LEVEL_WIDTH
+from ..level_constants import GRID_COLS, GRID_ROWS
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from ..localization import translate as tr
 from ..level_blueprints import choose_blueprint
-from ..models import Areas, GameData, Groups, ProgressState, Stage
+from ..models import GameData, Groups, LevelLayout, ProgressState, Stage
 from ..rng import get_rng
 from ..entities import (
     Camera,
@@ -137,6 +137,9 @@ def create_zombie(
     outer_wall_cells: set[tuple[int, int]] | None = None,
     tracker: bool | None = None,
     wall_follower: bool | None = None,
+    cell_size: int,
+    level_width: int,
+    level_height: int,
 ) -> Zombie:
     """Factory to create zombies with optional fast variants."""
     fast_conf = config.get("fast_zombies", {})
@@ -208,11 +211,19 @@ def create_zombie(
         wall_follower=wall_follower,
         aging_duration_frames=aging_duration_frames,
         outer_wall_cells=outer_wall_cells,
+        cell_size=cell_size,
+        level_width=level_width,
+        level_height=level_height,
     )
 
 
-def rect_for_cell(x_idx: int, y_idx: int) -> pygame.Rect:
-    return pygame.Rect(x_idx * CELL_SIZE, y_idx * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+def rect_for_cell(x_idx: int, y_idx: int, cell_size: int) -> pygame.Rect:
+    return pygame.Rect(
+        x_idx * cell_size,
+        y_idx * cell_size,
+        cell_size,
+        cell_size,
+    )
 
 
 def generate_level_from_blueprint(
@@ -236,6 +247,7 @@ def generate_level_from_blueprint(
     steel_cells = (
         {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
     )
+    cell_size = game_data.cell_size
     outer_wall_cells = {
         (x, y)
         for y, row in enumerate(blueprint)
@@ -274,7 +286,7 @@ def generate_level_from_blueprint(
                 f"Blueprint width mismatch at row {y}: {len(row)} != {GRID_COLS}"
             )
         for x, ch in enumerate(row):
-            cell_rect = rect_for_cell(x, y)
+            cell_rect = rect_for_cell(x, y, cell_size)
             cell_has_beam = steel_enabled and (x, y) in steel_cells
             if ch == "O":
                 outside_rects.append(cell_rect)
@@ -359,11 +371,11 @@ def generate_level_from_blueprint(
                 )
                 add_beam_to_groups(beam)
 
-    game_data.areas.outer_rect = (0, 0, LEVEL_WIDTH, LEVEL_HEIGHT)
-    game_data.areas.inner_rect = (0, 0, LEVEL_WIDTH, LEVEL_HEIGHT)
-    game_data.areas.outside_rects = outside_rects
-    game_data.areas.walkable_cells = walkable_cells
-    game_data.areas.outer_wall_cells = outer_wall_cells
+    game_data.layout.outer_rect = (0, 0, game_data.level_width, game_data.level_height)
+    game_data.layout.inner_rect = (0, 0, game_data.level_width, game_data.level_height)
+    game_data.layout.outside_rects = outside_rects
+    game_data.layout.walkable_cells = walkable_cells
+    game_data.layout.outer_wall_cells = outer_wall_cells
     # level_rect no longer used
 
     return {
@@ -665,7 +677,14 @@ def update_survivors(
     target_pos = target_rect.center
     survivors = [s for s in survivor_group if s.alive()]
     for survivor in survivors:
-        survivor.update_behavior(target_pos, wall_group, wall_index=wall_index)
+        survivor.update_behavior(
+            target_pos,
+            wall_group,
+            wall_index=wall_index,
+            cell_size=game_data.cell_size,
+            level_width=game_data.level_width,
+            level_height=game_data.level_height,
+        )
 
     # Gently prevent survivors from overlapping the player or each other
     def _separate_from_point(
@@ -772,7 +791,7 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
     player = game_data.player
     if not player:
         return None
-    walkable_cells = game_data.areas.walkable_cells
+    walkable_cells = game_data.layout.walkable_cells
     if not walkable_cells:
         return None
     wall_group = game_data.groups.wall_group
@@ -913,7 +932,7 @@ def handle_survivor_zombie_collisions(
     zombies.sort(key=lambda s: s.rect.centerx)
     zombie_xs = [z.rect.centerx for z in zombies]
     camera = game_data.camera
-    walkable_cells = game_data.areas.walkable_cells
+    walkable_cells = game_data.layout.walkable_cells
 
     for survivor in list(survivor_group):
         if not survivor.alive():
@@ -948,7 +967,9 @@ def handle_survivor_zombie_collisions(
                 new_cell = RNG.choice(walkable_cells)
                 survivor.teleport(new_cell.center)
             else:
-                survivor.teleport((LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2))
+                survivor.teleport(
+                    (game_data.level_width // 2, game_data.level_height // 2)
+                )
             continue
         survivor.kill()
         line = random_survivor_conversion_line()
@@ -958,7 +979,10 @@ def handle_survivor_zombie_collisions(
             config,
             start_pos=survivor.rect.center,
             stage=game_data.stage,
-            outer_wall_cells=game_data.areas.outer_wall_cells,
+            outer_wall_cells=game_data.layout.outer_wall_cells,
+            cell_size=game_data.cell_size,
+            level_width=game_data.level_width,
+            level_height=game_data.level_height,
         )
         zombie_group.add(new_zombie)
         game_data.groups.all_sprites.add(new_zombie, layer=1)
@@ -1101,10 +1125,13 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     survivor_group = pygame.sprite.Group()
 
     # Create camera
-    camera = Camera(LEVEL_WIDTH, LEVEL_HEIGHT)
+    cell_size = stage.tile_size
+    level_width = GRID_COLS * cell_size
+    level_height = GRID_ROWS * cell_size
+    camera = Camera(level_width, level_height)
 
-    # Define level areas (will be filled by blueprint generation)
-    outer_rect = 0, 0, LEVEL_WIDTH, LEVEL_HEIGHT
+    # Define level layout (will be filled by blueprint generation)
+    outer_rect = 0, 0, level_width, level_height
     inner_rect = outer_rect
 
     return GameData(
@@ -1116,7 +1143,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             survivor_group=survivor_group,
         ),
         camera=camera,
-        areas=Areas(
+        layout=LevelLayout(
             outer_rect=outer_rect,
             inner_rect=inner_rect,
             outside_rects=[],
@@ -1128,6 +1155,9 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             "overlays": {},
         },
         stage=stage,
+        cell_size=cell_size,
+        level_width=level_width,
+        level_height=level_height,
         fuel=None,
         flashlights=[],
     )
@@ -1147,7 +1177,7 @@ def setup_player_and_cars(
         return (
             RNG.choice(cells).center
             if cells
-            else (LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2)
+            else (game_data.level_width // 2, game_data.level_height // 2)
         )
 
     player_pos = pick_center(layout_data["player_cells"] or walkable_cells)
@@ -1218,7 +1248,10 @@ def spawn_initial_zombies(
             config,
             start_pos=pos,
             stage=game_data.stage,
-            outer_wall_cells=game_data.areas.outer_wall_cells,
+            outer_wall_cells=game_data.layout.outer_wall_cells,
+            cell_size=game_data.cell_size,
+            level_width=game_data.level_width,
+            level_height=game_data.level_height,
         )
         if spritecollideany_walls(tentative, wall_group):
             continue
@@ -1262,8 +1295,8 @@ def spawn_nearby_zombie(
         spawn_x = player.x + math.cos(angle) * distance
         spawn_y = player.y + math.sin(angle) * distance
         candidate = (
-            int(max(0, min(LEVEL_WIDTH, spawn_x))),
-            int(max(0, min(LEVEL_HEIGHT, spawn_y))),
+            int(max(0, min(game_data.level_width, spawn_x))),
+            int(max(0, min(game_data.level_height, spawn_y))),
         )
         if view_rect.collidepoint(candidate):
             continue
@@ -1271,7 +1304,10 @@ def spawn_nearby_zombie(
             config,
             start_pos=candidate,
             stage=game_data.stage,
-            outer_wall_cells=game_data.areas.outer_wall_cells,
+            outer_wall_cells=game_data.layout.outer_wall_cells,
+            cell_size=game_data.cell_size,
+            level_width=game_data.level_width,
+            level_height=game_data.level_height,
         )
         if spritecollideany_walls(new_zombie, wall_group):
             continue
@@ -1295,7 +1331,10 @@ def spawn_exterior_zombie(
         config,
         hint_pos=(player.x, player.y),
         stage=game_data.stage,
-        outer_wall_cells=game_data.areas.outer_wall_cells,
+        outer_wall_cells=game_data.layout.outer_wall_cells,
+        cell_size=game_data.cell_size,
+        level_width=game_data.level_width,
+        level_height=game_data.level_height,
     )
     zombie_group.add(new_zombie)
     all_sprites.add(new_zombie, layer=1)
@@ -1332,7 +1371,7 @@ def spawn_weighted_zombie(
 
 def carbonize_outdoor_zombies(game_data: GameData) -> None:
     """Petrify zombies that have already broken through to the exterior."""
-    outside_rects = game_data.areas.outside_rects or []
+    outside_rects = game_data.layout.outside_rects or []
     if not outside_rects:
         return
     group = game_data.groups.zombie_group
@@ -1432,7 +1471,7 @@ def update_entities(
     def walls_near(center: tuple[float, float], radius: float) -> list[Wall]:
         if wall_index is None:
             return all_walls or []
-        return walls_for_radius(wall_index, center, radius)
+        return walls_for_radius(wall_index, center, radius, cell_size=game_data.cell_size)
 
     # Update player/car movement
     if player.in_car and active_car:
@@ -1444,7 +1483,15 @@ def update_entities(
         # Ensure player is in all_sprites if not in car
         if player not in all_sprites:
             all_sprites.add(player, layer=2)
-        player.move(player_dx, player_dy, wall_group, wall_index=wall_index)
+        player.move(
+            player_dx,
+            player_dy,
+            wall_group,
+            wall_index=wall_index,
+            cell_size=game_data.cell_size,
+            level_width=game_data.level_width,
+            level_height=game_data.level_height,
+        )
     else:
         # Player flagged as in-car but car is gone; drop them back to foot control
         player.in_car = False
@@ -1564,8 +1611,8 @@ def check_interactions(
     all_sprites = game_data.groups.all_sprites
     survivor_group = game_data.groups.survivor_group
     state = game_data.state
-    walkable_cells = game_data.areas.walkable_cells
-    outside_rects = game_data.areas.outside_rects
+    walkable_cells = game_data.layout.walkable_cells
+    outside_rects = game_data.layout.outside_rects
     fuel = game_data.fuel
     flashlights = game_data.flashlights or []
     camera = game_data.camera
@@ -1675,7 +1722,9 @@ def check_interactions(
                         new_cell = RNG.choice(walkable_cells)
                         buddy.teleport(new_cell.center)
                     else:
-                        buddy.teleport((LEVEL_WIDTH // 2, LEVEL_HEIGHT // 2))
+                        buddy.teleport(
+                            (game_data.level_width // 2, game_data.level_height // 2)
+                        )
                     buddy.following = False
 
     # Player entering an active car already under control

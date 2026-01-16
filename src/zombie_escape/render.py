@@ -483,8 +483,8 @@ def draw(
 
     camera = game_data.camera
     stage = game_data.stage
-    outer_rect = game_data.areas.outer_rect
-    outside_rects = game_data.areas.outside_rects or []
+    outer_rect = game_data.layout.outer_rect
+    outside_rects = game_data.layout.outside_rects or []
     all_sprites = game_data.groups.all_sprites
     fog_surfaces = game_data.fog
     footprints = state.footprints

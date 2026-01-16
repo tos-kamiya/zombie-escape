@@ -46,7 +46,7 @@ def game_over_screen(
 
     while True:
         if not state.overview_created:
-            level_rect = game_data.areas.outer_rect
+            level_rect = game_data.layout.outer_rect
             level_width = level_rect[2]
             level_height = level_rect[3]
             overview_surface = pygame.Surface((level_width, level_height))
