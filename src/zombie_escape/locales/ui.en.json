@@ -71,8 +71,8 @@
         "description": "Rescue your buddy. Wall-hugging zombies appear."
       },
       "stage8": {
-        "name": "#8 Tight Grid",
-        "description": "Same mission, smaller tiles. Movement feels tighter."
+        "name": "#8 Assembly Floor",
+        "description": "Narrow corridors. Get surrounded, and there’s no escape."
       }
     },
     "status": {
