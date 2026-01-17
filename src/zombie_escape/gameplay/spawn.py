@@ -21,16 +21,14 @@ from ..entities_constants import (
     ZOMBIE_SPEED,
 )
 from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT, ZOMBIE_SPAWN_DELAY_MS
-from .constants import (
-    MAX_ZOMBIES,
-    SURVIVAL_NEAR_SPAWN_MAX_DISTANCE,
-    SURVIVAL_NEAR_SPAWN_MIN_DISTANCE,
-    ZOMBIE_SPAWN_PLAYER_BUFFER,
-    ZOMBIE_TRACKER_AGING_DURATION_FRAMES,
-)
 from ..level_constants import GRID_COLS, GRID_ROWS, TILE_SIZE
 from ..models import GameData, Stage
 from ..rng import get_rng
+from .constants import (
+    MAX_ZOMBIES,
+    ZOMBIE_SPAWN_PLAYER_BUFFER,
+    ZOMBIE_TRACKER_AGING_DURATION_FRAMES,
+)
 from .utils import (
     find_exterior_spawn_position,
     find_interior_spawn_positions,
@@ -404,11 +402,9 @@ def setup_player_and_cars(
             return (player_pos[0] + 200, player_pos[1])
         RNG.shuffle(car_candidates)
         for candidate in car_candidates:
-            if (
-                (candidate.centerx - player_pos[0]) ** 2
-                + (candidate.centery - player_pos[1]) ** 2
-                >= 400 * 400
-            ):
+            if (candidate.centerx - player_pos[0]) ** 2 + (
+                candidate.centery - player_pos[1]
+            ) ** 2 >= 400 * 400:
                 car_candidates.remove(candidate)
                 return candidate.center
         choice = car_candidates.pop()
@@ -460,7 +456,9 @@ def spawn_initial_zombies(
         zombie_group.add(tentative)
         all_sprites.add(tentative, layer=1)
 
-    interval = max(1, getattr(game_data.stage, "spawn_interval_ms", ZOMBIE_SPAWN_DELAY_MS))
+    interval = max(
+        1, getattr(game_data.stage, "spawn_interval_ms", ZOMBIE_SPAWN_DELAY_MS)
+    )
     game_data.state.last_zombie_spawn_time = pygame.time.get_ticks() - interval
 
 
@@ -530,9 +528,7 @@ def log_waiting_car_count(game_data: GameData, *, force: bool = False) -> None:
     game_data.last_logged_waiting_cars = current
 
 
-def nearest_waiting_car(
-    game_data: GameData, origin: tuple[float, float]
-) -> Car | None:
+def nearest_waiting_car(game_data: GameData, origin: tuple[float, float]) -> Car | None:
     """Find the closest waiting car to an origin point."""
     cars = alive_waiting_cars(game_data)
     if not cars:
@@ -562,8 +558,6 @@ def spawn_nearby_zombie(
         game_data.layout.walkable_cells,
         player=player,
         camera=camera,
-        min_player_dist=SURVIVAL_NEAR_SPAWN_MIN_DISTANCE,
-        max_player_dist=SURVIVAL_NEAR_SPAWN_MAX_DISTANCE,
         attempts=50,
     )
     new_zombie = create_zombie(
