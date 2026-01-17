@@ -1345,6 +1345,7 @@ def spawn_nearby_zombie(
         camera=camera,
         min_player_dist=SURVIVAL_NEAR_SPAWN_MIN_DISTANCE,
         max_player_dist=SURVIVAL_NEAR_SPAWN_MAX_DISTANCE,
+        attempts=50,
     )
     new_zombie = create_zombie(
         config,
