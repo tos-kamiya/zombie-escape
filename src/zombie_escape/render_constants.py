@@ -2,9 +2,39 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from .entities_constants import FOV_RADIUS, PLAYER_RADIUS
-from .render_assets import FogRing, RenderAssets
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH, STATUS_BAR_HEIGHT
+
+HUMANOID_OUTLINE_COLOR = (0, 80, 200)
+HUMANOID_OUTLINE_WIDTH = 1
+BUDDY_COLOR = (0, 180, 63)
+SURVIVOR_COLOR = (198, 198, 198)
+
+
+@dataclass(frozen=True)
+class FogRing:
+    radius_factor: float
+    thickness: int
+
+
+@dataclass(frozen=True)
+class RenderAssets:
+    screen_width: int
+    screen_height: int
+    status_bar_height: int
+    player_radius: int
+    fov_radius: int
+    fog_radius_scale: float
+    fog_hatch_pixel_scale: int
+    fog_rings: list[FogRing]
+    footprint_radius: int
+    footprint_overview_radius: int
+    footprint_lifetime_ms: int
+    footprint_min_fade: float
+    internal_wall_grid_snap: int
+    flashlight_bonus_step: float
 
 FOG_RADIUS_SCALE = 1.2
 FOG_HATCH_PIXEL_SCALE = 2
@@ -45,6 +75,12 @@ def build_render_assets(cell_size: int) -> RenderAssets:
 
 
 __all__ = [
+    "BUDDY_COLOR",
+    "HUMANOID_OUTLINE_COLOR",
+    "HUMANOID_OUTLINE_WIDTH",
+    "SURVIVOR_COLOR",
+    "FogRing",
+    "RenderAssets",
     "FOG_RADIUS_SCALE",
     "FLASHLIGHT_FOG_SCALE_STEP",
     "build_render_assets",
