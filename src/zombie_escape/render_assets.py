@@ -15,6 +15,11 @@ from .colors import (
     TRACKER_OUTLINE_COLOR,
     WALL_FOLLOWER_OUTLINE_COLOR,
     YELLOW,
+    EnvironmentPalette,
+    ORANGE,
+    STEEL_BEAM_COLOR,
+    STEEL_BEAM_LINE_COLOR,
+    get_environment_palette,
 )
 from .entities_constants import (
     BUDDY_COLOR,
@@ -122,6 +127,78 @@ def build_beveled_polygon(
         add_point(0, d)
         add_arc(d, d, d, 180, 270, skip_first=True, skip_last=True)
     return points
+
+
+def resolve_wall_colors(
+    *,
+    health_ratio: float,
+    palette_category: str,
+    palette: EnvironmentPalette | None,
+) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
+    if palette is None:
+        palette = get_environment_palette(None)
+    if palette_category == "outer_wall":
+        base_color = palette.outer_wall
+        border_base_color = palette.outer_wall_border
+    else:
+        base_color = palette.inner_wall
+        border_base_color = palette.inner_wall_border
+
+    if health_ratio <= 0:
+        fill_color = (40, 40, 40)
+        ratio = 0.0
+    else:
+        ratio = max(0.0, min(1.0, health_ratio))
+        mix = 0.6 + 0.4 * ratio
+        fill_color = (
+            int(base_color[0] * mix),
+            int(base_color[1] * mix),
+            int(base_color[2] * mix),
+        )
+    border_mix = 0.6 + 0.4 * ratio
+    border_color = (
+        int(border_base_color[0] * border_mix),
+        int(border_base_color[1] * border_mix),
+        int(border_base_color[2] * border_mix),
+    )
+    return fill_color, border_color
+
+
+CAR_COLOR_SCHEMES: dict[str, dict[str, tuple[int, int, int]]] = {
+    "default": {
+        "healthy": YELLOW,
+        "damaged": ORANGE,
+        "critical": DARK_RED,
+    },
+    "disabled": {
+        "healthy": (185, 185, 185),
+        "damaged": (150, 150, 150),
+        "critical": (110, 110, 110),
+    },
+}
+
+
+def resolve_car_color(
+    *,
+    health_ratio: float,
+    appearance: str,
+    palette: EnvironmentPalette | None = None,
+) -> tuple[int, int, int]:
+    palette = CAR_COLOR_SCHEMES.get(appearance, CAR_COLOR_SCHEMES["default"])
+    color = palette["healthy"]
+    if health_ratio < 0.6:
+        color = palette["damaged"]
+    if health_ratio < 0.3:
+        color = palette["critical"]
+    return color
+
+
+def resolve_steel_beam_colors(
+    *,
+    health_ratio: float,
+    palette: EnvironmentPalette | None = None,
+) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
+    return STEEL_BEAM_COLOR, STEEL_BEAM_LINE_COLOR
 
 
 def build_player_surface(radius: int) -> pygame.Surface:
@@ -467,10 +544,15 @@ def build_flashlight_surface(width: int, height: int) -> pygame.Surface:
 
 
 __all__ = [
+    "EnvironmentPalette",
     "FogRing",
     "RenderAssets",
     "draw_outlined_circle",
     "build_beveled_polygon",
+    "resolve_wall_colors",
+    "resolve_car_color",
+    "resolve_steel_beam_colors",
+    "CAR_COLOR_SCHEMES",
     "build_player_surface",
     "build_survivor_surface",
     "build_zombie_surface",

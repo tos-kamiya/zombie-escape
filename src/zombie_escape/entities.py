@@ -8,15 +8,6 @@ from typing import Callable, Iterable, Self, Sequence
 import pygame
 from pygame import rect
 
-from .colors import (
-    DARK_RED,
-    INTERNAL_WALL_BORDER_COLOR,
-    INTERNAL_WALL_COLOR,
-    ORANGE,
-    STEEL_BEAM_COLOR,
-    STEEL_BEAM_LINE_COLOR,
-    YELLOW,
-)
 from .entities_constants import (
     BUDDY_FOLLOW_SPEED,
     BUDDY_RADIUS,
@@ -58,6 +49,7 @@ from .entities_constants import (
 )
 from .level_constants import GRID_COLS, GRID_ROWS
 from .render_assets import (
+    EnvironmentPalette,
     build_beveled_polygon,
     build_car_surface,
     build_flashlight_surface,
@@ -69,6 +61,9 @@ from .render_assets import (
     paint_steel_beam_surface,
     paint_wall_surface,
     paint_zombie_surface,
+    resolve_car_color,
+    resolve_steel_beam_colors,
+    resolve_wall_colors,
 )
 from .rng import get_rng
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
@@ -355,7 +350,6 @@ def circle_wall_collision(
     return circle_rect_collision(center, radius, wall.rect)
 
 
-# --- Camera Class ---
 class Wall(pygame.sprite.Sprite):
     def __init__(
         self: Self,
@@ -365,8 +359,7 @@ class Wall(pygame.sprite.Sprite):
         height: int,
         *,
         health: int = INTERNAL_WALL_HEALTH,
-        color: tuple[int, int, int] = INTERNAL_WALL_COLOR,
-        border_color: tuple[int, int, int] = INTERNAL_WALL_BORDER_COLOR,
+        palette: EnvironmentPalette | None = None,
         palette_category: str = "inner_wall",
         bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
         bevel_mask: tuple[bool, bool, bool, bool] | None = None,
@@ -379,8 +372,7 @@ class Wall(pygame.sprite.Sprite):
         safe_width = max(1, width)
         safe_height = max(1, height)
         self.image = pygame.Surface((safe_width, safe_height), pygame.SRCALPHA)
-        self.base_color = color
-        self.border_base_color = border_color
+        self.palette = palette
         self.palette_category = palette_category
         self.health = health
         self.max_health = max(1, health)
@@ -412,22 +404,14 @@ class Wall(pygame.sprite.Sprite):
 
     def update_color(self: Self) -> None:
         if self.health <= 0:
-            health_ratio = 0
-            fill_color = (40, 40, 40)
+            health_ratio = 0.0
         else:
-            health_ratio = max(0, self.health / self.max_health)
-            mix = (
-                0.6 + 0.4 * health_ratio
-            )  # keep at least 60% of the base color even when nearly destroyed
-            r = int(self.base_color[0] * mix)
-            g = int(self.base_color[1] * mix)
-            b = int(self.base_color[2] * mix)
-            fill_color = (r, g, b)
-        # Bright edge to separate walls from floor
-        br = int(self.border_base_color[0] * (0.6 + 0.4 * health_ratio))
-        bg = int(self.border_base_color[1] * (0.6 + 0.4 * health_ratio))
-        bb = int(self.border_base_color[2] * (0.6 + 0.4 * health_ratio))
-        border_color = (br, bg, bb)
+            health_ratio = max(0.0, self.health / self.max_health)
+        fill_color, border_color = resolve_wall_colors(
+            health_ratio=health_ratio,
+            palette_category=self.palette_category,
+            palette=self.palette,
+        )
         paint_wall_surface(
             self.image,
             fill_color=fill_color,
@@ -451,23 +435,14 @@ class Wall(pygame.sprite.Sprite):
             return True
         return circle_polygon_collision(center, radius, self._collision_polygon)
 
-    def set_palette_colors(
-        self: Self,
-        *,
-        color: tuple[int, int, int],
-        border_color: tuple[int, int, int],
-        force: bool = False,
+    def set_palette(
+        self: Self, palette: EnvironmentPalette | None, *, force: bool = False
     ) -> None:
-        """Update the wall's base colors to match the current ambient palette."""
+        """Update the wall's palette to match the current ambient palette."""
 
-        if (
-            not force
-            and self.base_color == color
-            and self.border_base_color == border_color
-        ):
+        if not force and self.palette is palette:
             return
-        self.base_color = color
-        self.border_base_color = border_color
+        self.palette = palette
         self.update_color()
 
 
@@ -475,7 +450,13 @@ class SteelBeam(pygame.sprite.Sprite):
     """Single-cell obstacle that behaves like a tougher internal wall."""
 
     def __init__(
-        self: Self, x: int, y: int, size: int, *, health: int = STEEL_BEAM_HEALTH
+        self: Self,
+        x: int,
+        y: int,
+        size: int,
+        *,
+        health: int = STEEL_BEAM_HEALTH,
+        palette: EnvironmentPalette | None = None,
     ) -> None:
         super().__init__()
         # Slightly inset from the cell size so it reads as a separate object.
@@ -484,8 +465,7 @@ class SteelBeam(pygame.sprite.Sprite):
         self.image = pygame.Surface((inset_size, inset_size), pygame.SRCALPHA)
         self.health = health
         self.max_health = max(1, health)
-        self.base_color = STEEL_BEAM_COLOR
-        self.line_color = STEEL_BEAM_LINE_COLOR
+        self.palette = palette
         self.update_color()
         self.rect = self.image.get_rect(center=(x + size // 2, y + size // 2))
 
@@ -501,10 +481,13 @@ class SteelBeam(pygame.sprite.Sprite):
         if self.health <= 0:
             return
         health_ratio = max(0, self.health / self.max_health)
+        base_color, line_color = resolve_steel_beam_colors(
+            health_ratio=health_ratio, palette=self.palette
+        )
         paint_steel_beam_surface(
             self.image,
-            base_color=self.base_color,
-            line_color=self.line_color,
+            base_color=base_color,
+            line_color=line_color,
             health_ratio=health_ratio,
         )
 
@@ -1377,24 +1360,10 @@ class Zombie(pygame.sprite.Sprite):
 
 
 class Car(pygame.sprite.Sprite):
-    COLOR_SCHEMES: dict[str, dict[str, tuple[int, int, int]]] = {
-        "default": {
-            "healthy": YELLOW,
-            "damaged": ORANGE,
-            "critical": DARK_RED,
-        },
-        "disabled": {
-            "healthy": (185, 185, 185),
-            "damaged": (150, 150, 150),
-            "critical": (110, 110, 110),
-        },
-    }
-
     def __init__(self: Self, x: int, y: int, *, appearance: str = "default") -> None:
         super().__init__()
         self.original_image = build_car_surface(CAR_WIDTH, CAR_HEIGHT)
-        self.appearance = appearance if appearance in self.COLOR_SCHEMES else "default"
-        self.base_color = self.COLOR_SCHEMES[self.appearance]["healthy"]
+        self.appearance = appearance
         self.image = self.original_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = CAR_SPEED
@@ -1413,12 +1382,7 @@ class Car(pygame.sprite.Sprite):
 
     def update_color(self: Self) -> None:
         health_ratio = max(0, self.health / self.max_health)
-        palette = self.COLOR_SCHEMES.get(self.appearance, self.COLOR_SCHEMES["default"])
-        color = palette["healthy"]
-        if health_ratio < 0.6:
-            color = palette["damaged"]
-        if health_ratio < 0.3:
-            color = palette["critical"]
+        color = resolve_car_color(health_ratio=health_ratio, appearance=self.appearance)
         paint_car_surface(
             self.original_image,
             width=CAR_WIDTH,

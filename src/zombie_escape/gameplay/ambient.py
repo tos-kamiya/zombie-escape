@@ -45,13 +45,6 @@ def _apply_palette_to_walls(
         return
     wall_group = game_data.groups.wall_group
     for wall in wall_group:
-        if not hasattr(wall, "set_palette_colors"):
+        if not hasattr(wall, "set_palette"):
             continue
-        category = getattr(wall, "palette_category", "inner_wall")
-        if category == "outer_wall":
-            color = palette.outer_wall
-            border_color = palette.outer_wall_border
-        else:
-            color = palette.inner_wall
-            border_color = palette.inner_wall_border
-        wall.set_palette_colors(color=color, border_color=border_color, force=force)
+        wall.set_palette(palette, force=force)

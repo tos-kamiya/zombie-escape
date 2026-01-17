@@ -100,8 +100,7 @@ def generate_level_from_blueprint(
                     cell_rect.width,
                     cell_rect.height,
                     health=OUTER_WALL_HEALTH,
-                    color=palette.outer_wall,
-                    border_color=palette.outer_wall_border,
+                    palette=palette,
                     palette_category="outer_wall",
                     bevel_depth=0,
                     draw_bottom_side=draw_bottom_side,
@@ -120,6 +119,7 @@ def generate_level_from_blueprint(
                         cell_rect.y,
                         cell_rect.width,
                         health=STEEL_BEAM_HEALTH,
+                        palette=palette,
                     )
                 draw_bottom_side = not has_wall(x, y + 1)
                 bevel_mask = (
@@ -142,8 +142,7 @@ def generate_level_from_blueprint(
                     cell_rect.width,
                     cell_rect.height,
                     health=INTERNAL_WALL_HEALTH,
-                    color=palette.inner_wall,
-                    border_color=palette.inner_wall_border,
+                    palette=palette,
                     palette_category="inner_wall",
                     bevel_mask=bevel_mask,
                     draw_bottom_side=draw_bottom_side,
@@ -166,7 +165,11 @@ def generate_level_from_blueprint(
 
             if cell_has_beam and ch != "1":
                 beam = SteelBeam(
-                    cell_rect.x, cell_rect.y, cell_rect.width, health=STEEL_BEAM_HEALTH
+                    cell_rect.x,
+                    cell_rect.y,
+                    cell_rect.width,
+                    health=STEEL_BEAM_HEALTH,
+                    palette=palette,
                 )
                 add_beam_to_groups(beam)
 
