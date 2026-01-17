@@ -10,8 +10,8 @@
 - `src/zombie_escape/screens/*.py`
   - `title`, `settings`, `gameplay`, `game_over` の各画面。
   - `screens/__init__.py` に画面遷移と表示ユーティリティ。
-- `src/zombie_escape/gameplay/logic.py`
-  - ゲームロジックの集約。初期化、スポーン、移動、当たり判定、勝敗条件など。
+- `src/zombie_escape/gameplay/*.py`
+  - ゲームロジックの分割モジュール。初期化、スポーン、移動、当たり判定、勝敗条件など。
 - `src/zombie_escape/entities.py`
   - `pygame.sprite.Sprite` を使ったゲーム内エンティティ定義と衝突判定補助。
 - `src/zombie_escape/models.py`
@@ -31,7 +31,7 @@
 - `src/zombie_escape/colors.py`
   - 環境パレットと基本色定義。
 - `src/zombie_escape/render_assets.py`, `render_constants.py`
-  - 描画系アセットと定数の集約。
+  - 描画系アセットと定数の集約（`render_constants.py` にレンダリング用定数/データ構造、`render_assets.py` に描画関数）。
 - `src/zombie_escape/level_constants.py`, `screen_constants.py`, `gameplay_constants.py`
   - マップ・画面・ゲームプレイの各種パラメータ。
 
@@ -40,7 +40,7 @@
 - `ScreenID` は `TITLE`, `SETTINGS`, `GAMEPLAY`, `GAME_OVER`, `EXIT` の5種。
 - `zombie_escape.main()` が `ScreenTransition` を受け取りながら画面遷移を管理。
 - ゲームプレイ本体は `screens/gameplay.py:gameplay_screen()`。
-  - ここで `logic.initialize_game_state()` -> `logic.generate_level_from_blueprint()` -> 各種スポーン -> メインループへ。
+  - ここで `gameplay/state.py:initialize_game_state()` -> `gameplay/layout.py:generate_level_from_blueprint()` -> 各種スポーン -> メインループへ。
 
 ## 3. 主要データ構造
 
@@ -75,6 +75,7 @@
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`
 - 内外スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`
 - サバイバル設定: `survival_goal_ms`, `fuel_spawn_count`
+- 待機車両: `waiting_car_target_count`（ステージ別の待機車両数の目安）
 - 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）
 - 変種移動ルーチン: `zombie_tracker_ratio`（足跡追跡型の出現率）
 - 変種移動ルーチン: `zombie_wall_follower_ratio`（壁沿い巡回型の出現率）
@@ -128,37 +129,37 @@
 - `Zombie.update()` 側で壁衝突・近接回避・外周逸脱時の補正を処理。
 - `create_zombie()` で `stage.zombie_tracker_ratio` を参照し追跡型の出現率を決定。
 
-## 4. ゲームロジックの主要関数 (gameplay/logic.py)
+## 4. ゲームロジックの主要関数 (gameplay/*.py)
 
 ### 初期化・生成
 
-- `initialize_game_state(config, stage)`
+- `initialize_game_state(config, stage)` (`gameplay/state.py`)
   - `GameData` の基本セットアップ。
-- `generate_level_from_blueprint(game_data, config)`
+- `generate_level_from_blueprint(game_data, config)` (`gameplay/layout.py`)
   - `level_blueprints` から壁・歩行セル・外部セルを作成。
-- `setup_player_and_cars(game_data, layout_data, car_count)`
+- `setup_player_and_cars(game_data, layout_data, car_count)` (`gameplay/spawn.py`)
   - プレイヤーと待機車両を配置。
-- `spawn_initial_zombies(game_data, player, layout_data, config)`
+- `spawn_initial_zombies(game_data, player, layout_data, config)` (`gameplay/spawn.py`)
   - 初期ゾンビを内側エリア中心に配置。
 
 ### スポーン
 
-- `spawn_nearby_zombie`, `spawn_exterior_zombie`, `spawn_weighted_zombie`
+- `spawn_nearby_zombie`, `spawn_exterior_zombie`, `spawn_weighted_zombie` (`gameplay/spawn.py`)
   - 画面外スポーン/外周スポーン/重み付けスポーン。
-- `spawn_survivors` / `place_buddies` / `place_fuel_can` / `place_flashlights`
+- `spawn_survivors` / `place_buddies` / `place_fuel_can` / `place_flashlights` (`gameplay/spawn.py`)
   - ステージ別のアイテムやNPCを配置。
 
 ### 更新
 
-- `process_player_input(keys, player, car)`
+- `process_player_input(keys, player, car)` (`gameplay/movement.py`)
   - プレイヤー/車両の入力速度を決定。
-- `update_entities(game_data, player_dx, player_dy, car_dx, car_dy, config)`
+- `update_entities(game_data, player_dx, player_dy, car_dx, car_dy, config)` (`gameplay/movement.py`)
   - 移動、カメラ更新、ゾンビAI、サバイバー移動など。
-- `check_interactions(game_data, config)`
+- `check_interactions(game_data, config)` (`gameplay/interactions.py`)
   - アイテム収集、車両/救助/敗北判定などの相互作用。
-- `update_footprints(game_data, config)`
+- `update_footprints(game_data, config)` (`gameplay/footprints.py`)
   - 足跡を記録し寿命で削除。
-- `update_survival_timer(game_data, dt_ms)`
+- `update_survival_timer(game_data, dt_ms)` (`gameplay/state.py`)
   - サバイバル用の時間管理と夜明け切り替え。
 
 ### 速度/容量補助
