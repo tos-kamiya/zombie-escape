@@ -11,6 +11,7 @@ from ..entities import (
     Player,
     Survivor,
     Zombie,
+    random_position_outside_building,
     spritecollideany_walls,
 )
 from ..gameplay_constants import (
@@ -27,6 +28,7 @@ from ..gameplay_constants import (
     ZOMBIE_AGING_DURATION_FRAMES,
     ZOMBIE_TRACKER_AGING_DURATION_FRAMES,
 )
+from ..level_constants import GRID_COLS, GRID_ROWS, TILE_SIZE
 from ..models import GameData, Stage
 from ..rng import get_rng
 from .utils import (
@@ -73,8 +75,6 @@ def create_zombie(
     stage: Stage | None = None,
     tracker: bool | None = None,
     wall_follower: bool | None = None,
-    level_width: int,
-    level_height: int,
 ) -> Zombie:
     """Factory to create zombies with optional fast variants."""
     fast_conf = config.get("fast_zombies", {})
@@ -137,15 +137,28 @@ def create_zombie(
             else 1.0
         )
         aging_duration_frames = max(1.0, aging_duration_frames * ratio)
+    if start_pos is None:
+        tile_size = getattr(stage, "tile_size", TILE_SIZE) if stage else TILE_SIZE
+        level_width = GRID_COLS * tile_size
+        level_height = GRID_ROWS * tile_size
+        if hint_pos is not None:
+            points = [
+                random_position_outside_building(level_width, level_height)
+                for _ in range(5)
+            ]
+            points.sort(
+                key=lambda p: (p[0] - hint_pos[0]) ** 2 + (p[1] - hint_pos[1]) ** 2
+            )
+            start_pos = points[0]
+        else:
+            start_pos = random_position_outside_building(level_width, level_height)
     return Zombie(
-        start_pos=start_pos,
-        hint_pos=hint_pos,
+        x=float(start_pos[0]),
+        y=float(start_pos[1]),
         speed=base_speed,
         tracker=tracker,
         wall_follower=wall_follower,
         aging_duration_frames=aging_duration_frames,
-        level_width=level_width,
-        level_height=level_height,
     )
 
 
@@ -442,8 +455,6 @@ def spawn_initial_zombies(
             config,
             start_pos=pos,
             stage=game_data.stage,
-            level_width=game_data.level_width,
-            level_height=game_data.level_height,
         )
         if spritecollideany_walls(tentative, wall_group):
             continue
@@ -564,8 +575,6 @@ def spawn_nearby_zombie(
         config,
         start_pos=spawn_pos,
         stage=game_data.stage,
-        level_width=game_data.level_width,
-        level_height=game_data.level_height,
     )
     if spritecollideany_walls(new_zombie, wall_group):
         return None
@@ -593,8 +602,6 @@ def spawn_exterior_zombie(
         config,
         start_pos=spawn_pos,
         stage=game_data.stage,
-        level_width=game_data.level_width,
-        level_height=game_data.level_height,
     )
     zombie_group.add(new_zombie)
     all_sprites.add(new_zombie, layer=1)

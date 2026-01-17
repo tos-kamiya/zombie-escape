@@ -1,4 +1,4 @@
-from zombie_escape.gameplay.logic import create_zombie
+from zombie_escape.gameplay import create_zombie
 from zombie_escape.models import Stage
 
 

@@ -13,7 +13,27 @@ from ..gameplay_constants import (
     SURVIVAL_TIME_ACCEL_SUBSTEPS,
     SURVIVAL_TIME_ACCEL_MAX_SUBSTEP,
 )
-from ..gameplay import logic
+from ..gameplay import (
+    alive_waiting_cars,
+    apply_passenger_speed_penalty,
+    check_interactions,
+    cleanup_survivor_messages,
+    generate_level_from_blueprint,
+    initialize_game_state,
+    maintain_waiting_car_supply,
+    nearest_waiting_car,
+    place_flashlights,
+    place_fuel_can,
+    process_player_input,
+    setup_player_and_cars,
+    spawn_initial_zombies,
+    spawn_survivors,
+    sync_ambient_palette_with_flashlights,
+    update_entities,
+    update_footprints,
+    update_survival_timer,
+    waiting_car_target_count,
+)
 from ..entities import build_wall_index
 from ..localization import translate as tr
 from ..models import Stage
@@ -51,7 +71,7 @@ def gameplay_screen(
     seed_value = seed if seed is not None else generate_seed()
     applied_seed = seed_rng(seed_value)
 
-    game_data = logic.initialize_game_state(config, stage)
+    game_data = initialize_game_state(config, stage)
     game_data.state.seed = applied_seed
     game_data.state.debug_mode = debug_mode
     if debug_mode and stage.survival_stage:
@@ -72,28 +92,28 @@ def gameplay_screen(
     ignore_focus_loss_until = 0
     last_fov_target = None
 
-    layout_data = logic.generate_level_from_blueprint(game_data, config)
-    logic.sync_ambient_palette_with_flashlights(game_data, force=True)
+    layout_data = generate_level_from_blueprint(game_data, config)
+    sync_ambient_palette_with_flashlights(game_data, force=True)
     initial_waiting = (
         SURVIVOR_STAGE_WAITING_CAR_COUNT if stage.rescue_stage else 1
     )
-    player, waiting_cars = logic.setup_player_and_cars(
+    player, waiting_cars = setup_player_and_cars(
         game_data, layout_data, car_count=initial_waiting
     )
     game_data.player = player
     game_data.waiting_cars = waiting_cars
     game_data.car = None
     # Only top up if initial placement spawned fewer than the intended baseline (shouldn't happen)
-    logic.maintain_waiting_car_supply(
-        game_data, minimum=logic.waiting_car_target_count(stage)
+    maintain_waiting_car_supply(
+        game_data, minimum=waiting_car_target_count(stage)
     )
-    logic.apply_passenger_speed_penalty(game_data)
+    apply_passenger_speed_penalty(game_data)
 
-    logic.spawn_survivors(game_data, layout_data)
+    spawn_survivors(game_data, layout_data)
 
     if stage.requires_fuel:
         fuel_spawn_count = getattr(stage, "fuel_spawn_count", 1)
-        fuel_can = logic.place_fuel_can(
+        fuel_can = place_fuel_can(
             layout_data["walkable_cells"],
             player,
             cars=game_data.waiting_cars,
@@ -102,7 +122,7 @@ def gameplay_screen(
         if fuel_can:
             game_data.fuel = fuel_can
             game_data.groups.all_sprites.add(fuel_can, layer=1)
-    flashlights = logic.place_flashlights(
+    flashlights = place_flashlights(
         layout_data["walkable_cells"],
         player,
         cars=game_data.waiting_cars,
@@ -111,8 +131,8 @@ def gameplay_screen(
     game_data.flashlights = flashlights
     game_data.groups.all_sprites.add(flashlights, layer=1)
 
-    logic.spawn_initial_zombies(game_data, player, layout_data, config)
-    logic.update_footprints(game_data, config)
+    spawn_initial_zombies(game_data, player, layout_data, config)
+    update_footprints(game_data, config)
     last_fov_target = player
 
     while True:
@@ -255,10 +275,10 @@ def gameplay_screen(
             if player_ref is None:
                 break
             car_ref = game_data.car
-            player_dx, player_dy, car_dx, car_dy = logic.process_player_input(
+            player_dx, player_dy, car_dx, car_dy = process_player_input(
                 keys, player_ref, car_ref
             )
-            logic.update_entities(
+            update_entities(
                 game_data,
                 player_dx,
                 player_dy,
@@ -267,14 +287,14 @@ def gameplay_screen(
                 config,
                 wall_index=wall_index,
             )
-            logic.update_footprints(game_data, config)
+            update_footprints(game_data, config)
             step_ms = int(sub_dt * 1000)
             if accel_active:
                 step_ms = max(1, step_ms)
             game_data.state.elapsed_play_ms += step_ms
-            logic.update_survival_timer(game_data, step_ms)
-            logic.cleanup_survivor_messages(game_data.state)
-            sub_fov_target = logic.check_interactions(game_data, config)
+            update_survival_timer(game_data, step_ms)
+            cleanup_survivor_messages(game_data.state)
+            sub_fov_target = check_interactions(game_data, config)
             if sub_fov_target:
                 frame_fov_target = sub_fov_target
             if game_data.state.game_over or game_data.state.game_won:
@@ -304,7 +324,7 @@ def gameplay_screen(
             if not has_fuel and game_data.fuel and game_data.fuel.alive():
                 target_type = "fuel"
             elif not player.in_car and (
-                active_car or logic.alive_waiting_cars(game_data)
+                active_car or alive_waiting_cars(game_data)
             ):
                 target_type = "car"
             else:
@@ -330,7 +350,7 @@ def gameplay_screen(
                     if active_car:
                         hint_target = active_car.rect.center
                     else:
-                        waiting_target = logic.nearest_waiting_car(
+                        waiting_target = nearest_waiting_car(
                             game_data, (player.x, player.y)
                         )
                         if waiting_target:

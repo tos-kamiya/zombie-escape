@@ -1251,16 +1251,14 @@ def zombie_move_toward(
 class Zombie(pygame.sprite.Sprite):
     def __init__(
         self: Self,
+        x: float,
+        y: float,
         *,
-        start_pos: tuple[int, int] | None = None,
-        hint_pos: tuple[float, float] | None = None,
         speed: float = ZOMBIE_SPEED,
         tracker: bool = False,
         wall_follower: bool = False,
         movement_strategy: MovementStrategy | None = None,
         aging_duration_frames: float = ZOMBIE_AGING_DURATION_FRAMES,
-        level_width: int,
-        level_height: int,
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
@@ -1273,19 +1271,6 @@ class Zombie(pygame.sprite.Sprite):
             outline_color = DARK_RED
         self.outline_color = outline_color
         self._redraw_image()
-        if start_pos:
-            x, y = start_pos
-        elif hint_pos:
-            points = [
-                random_position_outside_building(level_width, level_height)
-                for _ in range(5)
-            ]
-            points.sort(
-                key=lambda p: (p[0] - hint_pos[0]) ** 2 + (p[1] - hint_pos[1]) ** 2
-            )
-            x, y = points[0]
-        else:
-            x, y = random_position_outside_building(level_width, level_height)
         self.rect = self.image.get_rect(center=(x, y))
         jitter_base = FAST_ZOMBIE_BASE_SPEED if speed > ZOMBIE_SPEED else ZOMBIE_SPEED
         jitter = jitter_base * 0.2

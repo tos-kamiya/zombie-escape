@@ -7,7 +7,7 @@ from zombie_escape.zombie_escape import (
     SURVIVOR_MIN_SPEED_FACTOR,
     calculate_car_speed_for_passengers,
 )
-from zombie_escape.gameplay.logic import (
+from zombie_escape.gameplay import (
     apply_passenger_speed_penalty,
     increase_survivor_capacity,
 )

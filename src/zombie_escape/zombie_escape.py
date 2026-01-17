@@ -33,7 +33,7 @@ from .screens import ScreenID, ScreenTransition, apply_window_scale
 from .screens.game_over import game_over_screen
 from .screens.settings import settings_screen
 from .screens.title import MAX_SEED_DIGITS, title_screen
-from .gameplay.logic import calculate_car_speed_for_passengers
+from .gameplay import calculate_car_speed_for_passengers
 
 
 def _parse_cli_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:

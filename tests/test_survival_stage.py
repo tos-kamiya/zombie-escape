@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
-from zombie_escape.gameplay import logic
+from zombie_escape import gameplay
+from zombie_escape.gameplay import spawn as gameplay_spawn
 
 
 def _make_game_data(**state_overrides):
@@ -25,15 +26,29 @@ def _make_game_data(**state_overrides):
     state = SimpleNamespace(**default_state)
     dummy_group = SimpleNamespace(add=lambda *args, **kwargs: None)
     groups = SimpleNamespace(zombie_group=[], all_sprites=dummy_group)
-    areas = SimpleNamespace(outside_rects=[])
+    layout = SimpleNamespace(
+        outside_rects=[],
+        walkable_cells=[],
+        outer_wall_cells=set(),
+    )
     player = SimpleNamespace(x=0, y=0)
-    return SimpleNamespace(stage=stage, state=state, groups=groups, areas=areas, player=player)
+    camera = SimpleNamespace()
+    return SimpleNamespace(
+        stage=stage,
+        state=state,
+        groups=groups,
+        layout=layout,
+        camera=camera,
+        level_width=0,
+        level_height=0,
+        player=player,
+    )
 
 
 def test_update_survival_timer_marks_dawn_ready() -> None:
     game_data = _make_game_data(survival_elapsed_ms=950)
 
-    logic.update_survival_timer(game_data, 100)
+    gameplay.update_survival_timer(game_data, 100)
 
     assert game_data.state.survival_elapsed_ms == 1000
     assert game_data.state.dawn_ready is True
@@ -52,14 +67,14 @@ def test_spawn_weighted_prefers_interior(monkeypatch) -> None:
         calls.append("exterior")
         return object()
 
-    monkeypatch.setattr(logic, "spawn_nearby_zombie", fake_interior)
-    monkeypatch.setattr(logic, "spawn_exterior_zombie", fake_exterior)
+    monkeypatch.setattr(gameplay_spawn, "spawn_nearby_zombie", fake_interior)
+    monkeypatch.setattr(gameplay_spawn, "spawn_exterior_zombie", fake_exterior)
 
     game_data = _make_game_data()
     game_data.stage.interior_spawn_weight = 1.0
     game_data.stage.exterior_spawn_weight = 0.0
 
-    spawned = logic.spawn_weighted_zombie(game_data, {})
+    spawned = gameplay.spawn_weighted_zombie(game_data, {})
 
     assert spawned is True
     assert calls[0] == "interior"
