@@ -42,7 +42,6 @@ from ..gameplay_constants import (
     SURVIVOR_RADIUS,
     SURVIVOR_SPEED_PENALTY_PER_PASSENGER,
     SURVIVOR_STAGE_WAITING_CAR_COUNT,
-    SURVIVAL_NEAR_SPAWN_CAMERA_MARGIN,
     SURVIVAL_NEAR_SPAWN_MAX_DISTANCE,
     SURVIVAL_NEAR_SPAWN_MIN_DISTANCE,
     ZOMBIE_AGING_DURATION_FRAMES,
@@ -71,6 +70,7 @@ from ..entities import (
     Survivor,
     Wall,
     Zombie,
+    random_position_outside_building,
     spritecollideany_walls,
     walls_for_radius,
     WallIndex,
@@ -92,7 +92,9 @@ __all__ = [
     "place_flashlight",
     "place_flashlights",
     "place_buddies",
-    "scatter_positions_on_walkable",
+    "find_interior_spawn_positions",
+    "find_nearby_offscreen_spawn_position",
+    "find_exterior_spawn_position",
     "spawn_survivors",
     "spawn_nearby_zombie",
     "spawn_exterior_zombie",
@@ -134,10 +136,8 @@ def create_zombie(
     start_pos: tuple[int, int] | None = None,
     hint_pos: tuple[float, float] | None = None,
     stage: Stage | None = None,
-    outer_wall_cells: set[tuple[int, int]] | None = None,
     tracker: bool | None = None,
     wall_follower: bool | None = None,
-    cell_size: int,
     level_width: int,
     level_height: int,
 ) -> Zombie:
@@ -210,8 +210,6 @@ def create_zombie(
         tracker=tracker,
         wall_follower=wall_follower,
         aging_duration_frames=aging_duration_frames,
-        outer_wall_cells=outer_wall_cells,
-        cell_size=cell_size,
         level_width=level_width,
         level_height=level_height,
     )
@@ -527,41 +525,6 @@ def place_flashlights(
     return placed
 
 
-def place_buddy(
-    walkable_cells: list[pygame.Rect],
-    player: Player,
-    *,
-    cars: Sequence[Car] | None = None,
-) -> Survivor | None:
-    """Spawn the stranded buddy somewhere on a walkable tile away from the player and car."""
-    if not walkable_cells:
-        return None
-
-    min_player_dist = 240
-    min_car_dist = 180
-    min_player_dist_sq = min_player_dist * min_player_dist
-    min_car_dist_sq = min_car_dist * min_car_dist
-
-    for attempt in range(200):
-        cell = RNG.choice(walkable_cells)
-        dx = cell.centerx - player.x
-        dy = cell.centery - player.y
-        if dx * dx + dy * dy < min_player_dist_sq:
-            continue
-        if cars:
-            if any(
-                (cell.centerx - parked.rect.centerx) ** 2
-                + (cell.centery - parked.rect.centery) ** 2
-                < min_car_dist_sq
-                for parked in cars
-            ):
-                continue
-        return Survivor(cell.centerx, cell.centery, is_buddy=True)
-
-    cell = RNG.choice(walkable_cells)
-    return Survivor(cell.centerx, cell.centery, is_buddy=True)
-
-
 def place_buddies(
     walkable_cells: list[pygame.Rect],
     player: Player,
@@ -570,27 +533,26 @@ def place_buddies(
     count: int = 1,
 ) -> list[Survivor]:
     placed: list[Survivor] = []
-    if count <= 0:
+    if count <= 0 or not walkable_cells:
         return placed
-    attempts = 0
-    max_attempts = max(200, count * 60)
-    while len(placed) < count and attempts < max_attempts:
-        attempts += 1
-        buddy = place_buddy(walkable_cells, player, cars=cars)
-        if not buddy:
-            break
-        if any(
-            (other.rect.centerx - buddy.rect.centerx) ** 2
-            + (other.rect.centery - buddy.rect.centery) ** 2
-            < 100 * 100
-            for other in placed
-        ):
-            continue
-        placed.append(buddy)
+    min_player_dist = 240
+    positions = find_interior_spawn_positions(
+        walkable_cells,
+        1.0,
+        player=player,
+        min_player_dist=min_player_dist,
+    )
+    RNG.shuffle(positions)
+    for pos in positions[:count]:
+        placed.append(Survivor(pos[0], pos[1], is_buddy=True))
+    remaining = count - len(placed)
+    for _ in range(max(0, remaining)):
+        spawn_pos = find_nearby_offscreen_spawn_position(walkable_cells)
+        placed.append(Survivor(spawn_pos[0], spawn_pos[1], is_buddy=True))
     return placed
 
 
-def scatter_positions_on_walkable(
+def _scatter_positions_on_walkable(
     walkable_cells: list[pygame.Rect],
     spawn_rate: float,
     *,
@@ -626,9 +588,11 @@ def spawn_survivors(
     all_sprites = game_data.groups.all_sprites
 
     if game_data.stage.rescue_stage:
-        for pos in scatter_positions_on_walkable(
-            walkable, game_data.stage.survivor_spawn_rate
-        ):
+        positions = find_interior_spawn_positions(
+            walkable,
+            game_data.stage.survivor_spawn_rate,
+        )
+        for pos in positions:
             s = Survivor(*pos)
             if spritecollideany_walls(s, wall_group):
                 continue
@@ -774,6 +738,109 @@ def rect_visible_on_screen(camera: Camera | None, rect: pygame.Rect) -> bool:
     if camera is None:
         return False
     return camera.apply_rect(rect).colliderect(LOGICAL_SCREEN_RECT)
+
+
+def find_interior_spawn_positions(
+    walkable_cells: list[pygame.Rect],
+    spawn_rate: float,
+    *,
+    player: Player | None = None,
+    min_player_dist: float | None = None,
+) -> list[tuple[int, int]]:
+    positions = _scatter_positions_on_walkable(
+        walkable_cells,
+        spawn_rate,
+        jitter_ratio=0.35,
+    )
+    if not positions and spawn_rate > 0:
+        positions = _scatter_positions_on_walkable(
+            walkable_cells,
+            spawn_rate * 1.5,
+            jitter_ratio=0.35,
+        )
+    if not positions:
+        return []
+    if player is None or min_player_dist is None or min_player_dist <= 0:
+        return positions
+    min_player_dist_sq = min_player_dist * min_player_dist
+    filtered: list[tuple[int, int]] = []
+    for pos in positions:
+        dx = pos[0] - player.x
+        dy = pos[1] - player.y
+        if dx * dx + dy * dy < min_player_dist_sq:
+            continue
+        filtered.append(pos)
+    return filtered
+
+
+def find_nearby_offscreen_spawn_position(
+    walkable_cells: list[pygame.Rect],
+    *,
+    player: Player | None = None,
+    camera: Camera | None = None,
+    min_player_dist: float | None = None,
+    max_player_dist: float | None = None,
+    attempts: int = 18,
+) -> tuple[int, int]:
+    if not walkable_cells:
+        raise ValueError("walkable_cells must not be empty")
+    view_rect = None
+    if camera is not None:
+        view_rect = pygame.Rect(
+            -camera.camera.x,
+            -camera.camera.y,
+            SCREEN_WIDTH,
+            SCREEN_HEIGHT,
+        )
+        view_rect.inflate_ip(SCREEN_WIDTH, SCREEN_HEIGHT)
+    min_distance_sq = (
+        None if min_player_dist is None else min_player_dist * min_player_dist
+    )
+    max_distance_sq = (
+        None if max_player_dist is None else max_player_dist * max_player_dist
+    )
+    for _ in range(max(1, attempts)):
+        cell = RNG.choice(walkable_cells)
+        jitter_x = RNG.uniform(-cell.width * 0.35, cell.width * 0.35)
+        jitter_y = RNG.uniform(-cell.height * 0.35, cell.height * 0.35)
+        candidate = (int(cell.centerx + jitter_x), int(cell.centery + jitter_y))
+        if player is not None and (min_distance_sq is not None or max_distance_sq is not None):
+            dx = candidate[0] - player.x
+            dy = candidate[1] - player.y
+            dist_sq = dx * dx + dy * dy
+            if min_distance_sq is not None and dist_sq < min_distance_sq:
+                continue
+            if max_distance_sq is not None and dist_sq > max_distance_sq:
+                continue
+        if view_rect is not None and view_rect.collidepoint(candidate):
+            continue
+        return candidate
+    fallback_cell = RNG.choice(walkable_cells)
+    fallback_x = RNG.uniform(-fallback_cell.width * 0.35, fallback_cell.width * 0.35)
+    fallback_y = RNG.uniform(-fallback_cell.height * 0.35, fallback_cell.height * 0.35)
+    return (
+        int(fallback_cell.centerx + fallback_x),
+        int(fallback_cell.centery + fallback_y),
+    )
+
+
+def find_exterior_spawn_position(
+    level_width: int,
+    level_height: int,
+    *,
+    hint_pos: tuple[float, float] | None = None,
+    attempts: int = 5,
+) -> tuple[int, int]:
+    if hint_pos is None:
+        return random_position_outside_building(level_width, level_height)
+    points = [
+        random_position_outside_building(level_width, level_height)
+        for _ in range(max(1, attempts))
+    ]
+    return min(
+        points,
+        key=lambda pos: (pos[0] - hint_pos[0]) ** 2 + (pos[1] - hint_pos[1]) ** 2,
+    )
 
 
 def waiting_car_target_count(stage: Stage) -> int:
@@ -958,13 +1025,11 @@ def handle_survivor_zombie_collisions(
         if not collided:
             continue
         if not rect_visible_on_screen(camera, survivor.rect):
-            if walkable_cells:
-                new_cell = RNG.choice(walkable_cells)
-                survivor.teleport(new_cell.center)
-            else:
-                survivor.teleport(
-                    (game_data.level_width // 2, game_data.level_height // 2)
-                )
+            spawn_pos = find_nearby_offscreen_spawn_position(
+                walkable_cells,
+                camera=camera,
+            )
+            survivor.teleport(spawn_pos)
             continue
         survivor.kill()
         line = random_survivor_conversion_line()
@@ -974,8 +1039,6 @@ def handle_survivor_zombie_collisions(
             config,
             start_pos=survivor.rect.center,
             stage=game_data.stage,
-            outer_wall_cells=game_data.layout.outer_wall_cells,
-            cell_size=game_data.cell_size,
             level_width=game_data.level_width,
             level_height=game_data.level_height,
         )
@@ -997,6 +1060,8 @@ def respawn_buddies_near_player(game_data: GameData) -> None:
     player = game_data.player
     assert player is not None
     wall_group = game_data.groups.wall_group
+    camera = game_data.camera
+    walkable_cells = game_data.layout.walkable_cells
     offsets = [
         (BUDDY_RADIUS * 3, 0),
         (-BUDDY_RADIUS * 3, 0),
@@ -1005,7 +1070,13 @@ def respawn_buddies_near_player(game_data: GameData) -> None:
         (0, 0),
     ]
     for _ in range(count):
-        spawn_pos = (int(player.x), int(player.y))
+        if walkable_cells:
+            spawn_pos = find_nearby_offscreen_spawn_position(
+                walkable_cells,
+                camera=camera,
+            )
+        else:
+            spawn_pos = (int(player.x), int(player.y))
         for dx, dy in offsets:
             candidate = Survivor(player.x + dx, player.y + dy, is_buddy=True)
             if not spritecollideany_walls(candidate, wall_group):
@@ -1230,21 +1301,18 @@ def spawn_initial_zombies(
         return
 
     spawn_rate = max(0.0, getattr(game_data.stage, "initial_interior_spawn_rate", 0.0))
-    positions = scatter_positions_on_walkable(spawn_cells, spawn_rate)
-    if not positions:
-        positions = scatter_positions_on_walkable(spawn_cells, spawn_rate * 1.5)
+    positions = find_interior_spawn_positions(
+        spawn_cells,
+        spawn_rate,
+        player=player,
+        min_player_dist=ZOMBIE_SPAWN_PLAYER_BUFFER,
+    )
 
     for pos in positions:
-        dx = pos[0] - player.x
-        dy = pos[1] - player.y
-        if dx * dx + dy * dy < ZOMBIE_SPAWN_PLAYER_BUFFER * ZOMBIE_SPAWN_PLAYER_BUFFER:
-            continue
         tentative = create_zombie(
             config,
             start_pos=pos,
             stage=game_data.stage,
-            outer_wall_cells=game_data.layout.outer_wall_cells,
-            cell_size=game_data.cell_size,
             level_width=game_data.level_width,
             level_height=game_data.level_height,
         )
@@ -1269,47 +1337,27 @@ def spawn_nearby_zombie(
     if len(zombie_group) >= MAX_ZOMBIES:
         return None
     camera = game_data.camera
-    view_rect = pygame.Rect(
-        -camera.camera.x,
-        -camera.camera.y,
-        SCREEN_WIDTH,
-        SCREEN_HEIGHT,
-    )
-    view_rect.inflate_ip(
-        SURVIVAL_NEAR_SPAWN_CAMERA_MARGIN * 2,
-        SURVIVAL_NEAR_SPAWN_CAMERA_MARGIN * 2,
-    )
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
-    for _ in range(18):
-        angle = RNG.uniform(0, math.tau)
-        distance = RNG.uniform(
-            SURVIVAL_NEAR_SPAWN_MIN_DISTANCE,
-            SURVIVAL_NEAR_SPAWN_MAX_DISTANCE,
-        )
-        spawn_x = player.x + math.cos(angle) * distance
-        spawn_y = player.y + math.sin(angle) * distance
-        candidate = (
-            int(max(0, min(game_data.level_width, spawn_x))),
-            int(max(0, min(game_data.level_height, spawn_y))),
-        )
-        if view_rect.collidepoint(candidate):
-            continue
-        new_zombie = create_zombie(
-            config,
-            start_pos=candidate,
-            stage=game_data.stage,
-            outer_wall_cells=game_data.layout.outer_wall_cells,
-            cell_size=game_data.cell_size,
-            level_width=game_data.level_width,
-            level_height=game_data.level_height,
-        )
-        if spritecollideany_walls(new_zombie, wall_group):
-            continue
-        zombie_group.add(new_zombie)
-        all_sprites.add(new_zombie, layer=1)
-        return new_zombie
-    return None
+    spawn_pos = find_nearby_offscreen_spawn_position(
+        game_data.layout.walkable_cells,
+        player=player,
+        camera=camera,
+        min_player_dist=SURVIVAL_NEAR_SPAWN_MIN_DISTANCE,
+        max_player_dist=SURVIVAL_NEAR_SPAWN_MAX_DISTANCE,
+    )
+    new_zombie = create_zombie(
+        config,
+        start_pos=spawn_pos,
+        stage=game_data.stage,
+        level_width=game_data.level_width,
+        level_height=game_data.level_height,
+    )
+    if spritecollideany_walls(new_zombie, wall_group):
+        return None
+    zombie_group.add(new_zombie)
+    all_sprites.add(new_zombie, layer=1)
+    return new_zombie
 
 
 def spawn_exterior_zombie(
@@ -1322,12 +1370,15 @@ def spawn_exterior_zombie(
         return None
     zombie_group = game_data.groups.zombie_group
     all_sprites = game_data.groups.all_sprites
+    spawn_pos = find_exterior_spawn_position(
+        game_data.level_width,
+        game_data.level_height,
+        hint_pos=(player.x, player.y),
+    )
     new_zombie = create_zombie(
         config,
-        hint_pos=(player.x, player.y),
+        start_pos=spawn_pos,
         stage=game_data.stage,
-        outer_wall_cells=game_data.layout.outer_wall_cells,
-        cell_size=game_data.cell_size,
         level_width=game_data.level_width,
         level_height=game_data.level_height,
     )
@@ -1589,6 +1640,10 @@ def update_entities(
             nearby_walls,
             nearby_candidates,
             footprints=game_data.state.footprints,
+            cell_size=game_data.cell_size,
+            level_width=game_data.level_width,
+            level_height=game_data.level_height,
+            outer_wall_cells=game_data.layout.outer_wall_cells,
         )
 
 

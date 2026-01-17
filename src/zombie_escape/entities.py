@@ -73,7 +73,14 @@ from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 RNG = get_rng()
 
 MovementStrategy = Callable[
-    ["Zombie", tuple[int, int], list["Wall"], list[dict[str, object]]],
+    [
+        "Zombie",
+        tuple[int, int],
+        list["Wall"],
+        list[dict[str, object]],
+        int,
+        set[tuple[int, int]] | None,
+    ],
     tuple[float, float],
 ]
 WallIndex = dict[tuple[int, int], list["Wall"]]
@@ -930,13 +937,20 @@ def zombie_tracker_movement(
     player_center: tuple[int, int],
     walls: list[Wall],
     footprints: list[dict[str, object]],
+    cell_size: int,
+    outer_wall_cells: set[tuple[int, int]] | None,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if not is_in_sight:
         zombie_update_tracker_target(zombie, footprints)
         if zombie.tracker_target_pos is not None:
             return zombie_move_toward(zombie, zombie.tracker_target_pos)
-        return zombie_wander_move(zombie, walls)
+        return zombie_wander_move(
+            zombie,
+            walls,
+            cell_size=cell_size,
+            outer_wall_cells=outer_wall_cells,
+        )
     return zombie_move_toward(zombie, player_center)
 
 
@@ -945,8 +959,15 @@ def zombie_wander_movement(
     _player_center: tuple[int, int],
     walls: list[Wall],
     _footprints: list[dict[str, object]],
+    cell_size: int,
+    outer_wall_cells: set[tuple[int, int]] | None,
 ) -> tuple[float, float]:
-    return zombie_wander_move(zombie, walls)
+    return zombie_wander_move(
+        zombie,
+        walls,
+        cell_size=cell_size,
+        outer_wall_cells=outer_wall_cells,
+    )
 
 
 def zombie_wall_follow_has_wall(
@@ -1006,6 +1027,8 @@ def zombie_wall_follow_movement(
     player_center: tuple[int, int],
     walls: list[Wall],
     _footprints: list[dict[str, object]],
+    cell_size: int,
+    outer_wall_cells: set[tuple[int, int]] | None,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if zombie.wall_follow_angle is None:
@@ -1042,7 +1065,12 @@ def zombie_wall_follow_movement(
         else:
             if is_in_sight:
                 return zombie_move_toward(zombie, player_center)
-            return zombie_wander_move(zombie, walls)
+            return zombie_wander_move(
+                zombie,
+                walls,
+                cell_size=cell_size,
+                outer_wall_cells=outer_wall_cells,
+            )
 
     sensor_distance = ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE + zombie.radius
     probe_offset = math.radians(ZOMBIE_WALL_FOLLOW_PROBE_ANGLE_DEG)
@@ -1099,10 +1127,17 @@ def zombie_normal_movement(
     player_center: tuple[int, int],
     walls: list[Wall],
     _footprints: list[dict[str, object]],
+    cell_size: int,
+    outer_wall_cells: set[tuple[int, int]] | None,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_SIGHT_RANGE)
     if not is_in_sight:
-        return zombie_wander_move(zombie, walls)
+        return zombie_wander_move(
+            zombie,
+            walls,
+            cell_size=cell_size,
+            outer_wall_cells=outer_wall_cells,
+        )
     return zombie_move_toward(zombie, player_center)
 
 
@@ -1134,7 +1169,13 @@ def zombie_update_tracker_target(
         zombie.tracker_target_pos = pos
 
 
-def zombie_wander_move(zombie: Zombie, walls: list[Wall]) -> tuple[float, float]:
+def zombie_wander_move(
+    zombie: Zombie,
+    walls: list[Wall],
+    *,
+    cell_size: int,
+    outer_wall_cells: set[tuple[int, int]] | None,
+) -> tuple[float, float]:
     now = pygame.time.get_ticks()
     if now - zombie.last_wander_change_time > zombie.wander_change_interval:
         zombie.wander_angle = RNG.uniform(0, math.tau)
@@ -1142,21 +1183,21 @@ def zombie_wander_move(zombie: Zombie, walls: list[Wall]) -> tuple[float, float]
         jitter = RNG.randint(-500, 500)
         zombie.wander_change_interval = max(0, zombie.wander_interval_ms + jitter)
 
-    cell_x = int(zombie.x // zombie.cell_size)
-    cell_y = int(zombie.y // zombie.cell_size)
+    cell_x = int(zombie.x // cell_size)
+    cell_y = int(zombie.y // cell_size)
     at_x_edge = cell_x in (0, GRID_COLS - 1)
     at_y_edge = cell_y in (0, GRID_ROWS - 1)
 
     if at_x_edge or at_y_edge:
-        if zombie.outer_wall_cells is not None:
+        if outer_wall_cells is not None:
             if at_x_edge:
                 inward_cell = (1, cell_y) if cell_x == 0 else (GRID_COLS - 2, cell_y)
-                if inward_cell not in zombie.outer_wall_cells:
+                if inward_cell not in outer_wall_cells:
                     inward_dx = zombie.speed if cell_x == 0 else -zombie.speed
                     return inward_dx, 0.0
             if at_y_edge:
                 inward_cell = (cell_x, 1) if cell_y == 0 else (cell_x, GRID_ROWS - 2)
-                if inward_cell not in zombie.outer_wall_cells:
+                if inward_cell not in outer_wall_cells:
                     inward_dy = zombie.speed if cell_y == 0 else -zombie.speed
                     return 0.0, inward_dy
         else:
@@ -1215,10 +1256,8 @@ class Zombie(pygame.sprite.Sprite):
         wall_follower: bool = False,
         movement_strategy: MovementStrategy | None = None,
         aging_duration_frames: float = ZOMBIE_AGING_DURATION_FRAMES,
-        outer_wall_cells: set[tuple[int, int]] | None = None,
         level_width: int,
         level_height: int,
-        cell_size: int,
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
@@ -1272,7 +1311,6 @@ class Zombie(pygame.sprite.Sprite):
             else:
                 movement_strategy = zombie_normal_movement
         self.movement_strategy = movement_strategy
-        self.outer_wall_cells = outer_wall_cells
         self.tracker_target_pos: tuple[float, float] | None = None
         self.wall_follow_side = RNG.choice([-1.0, 1.0]) if wall_follower else 0.0
         self.wall_follow_angle = RNG.uniform(0, math.tau) if wall_follower else None
@@ -1288,9 +1326,6 @@ class Zombie(pygame.sprite.Sprite):
         self.wander_change_interval = max(
             0, self.wander_interval_ms + RNG.randint(-500, 500)
         )
-        self.level_width = level_width
-        self.level_height = level_height
-        self.cell_size = cell_size
 
     def _update_mode(
         self: Self, player_center: tuple[int, int], sight_range: float
@@ -1423,6 +1458,11 @@ class Zombie(pygame.sprite.Sprite):
         walls: list[Wall],
         nearby_zombies: Iterable[Zombie],
         footprints: list[dict[str, object]] | None = None,
+        *,
+        cell_size: int,
+        level_width: int,
+        level_height: int,
+        outer_wall_cells: set[tuple[int, int]] | None = None,
     ) -> None:
         if self.carbonized:
             return
@@ -1434,7 +1474,12 @@ class Zombie(pygame.sprite.Sprite):
         avoid_radius = max(SCREEN_WIDTH, SCREEN_HEIGHT) * 2
         avoid_radius_sq = avoid_radius * avoid_radius
         move_x, move_y = self.movement_strategy(
-            self, player_center, walls, footprints or []
+            self,
+            player_center,
+            walls,
+            footprints or [],
+            cell_size,
+            outer_wall_cells,
         )
         if dist_to_player_sq <= avoid_radius_sq or self.wall_follower:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
@@ -1442,9 +1487,9 @@ class Zombie(pygame.sprite.Sprite):
             self.x + move_x, self.y + move_y, walls
         )
 
-        if not (0 <= final_x < self.level_width and 0 <= final_y < self.level_height):
+        if not (0 <= final_x < level_width and 0 <= final_y < level_height):
             final_x, final_y = random_position_outside_building(
-                self.level_width, self.level_height
+                level_width, level_height
             )
 
         self.x = final_x
