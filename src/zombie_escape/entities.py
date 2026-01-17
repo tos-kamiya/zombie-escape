@@ -15,8 +15,6 @@ from .colors import (
     ORANGE,
     STEEL_BEAM_COLOR,
     STEEL_BEAM_LINE_COLOR,
-    TRACKER_OUTLINE_COLOR,
-    WALL_FOLLOWER_OUTLINE_COLOR,
     YELLOW,
 )
 from .entities_constants import (
@@ -59,7 +57,6 @@ from .entities_constants import (
     ZOMBIE_WANDER_INTERVAL_MS,
 )
 from .level_constants import GRID_COLS, GRID_ROWS
-from .rng import get_rng
 from .render_assets import (
     build_beveled_polygon,
     build_car_surface,
@@ -73,6 +70,7 @@ from .render_assets import (
     paint_wall_surface,
     paint_zombie_surface,
 )
+from .rng import get_rng
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
 RNG = get_rng()
@@ -1094,16 +1092,11 @@ class Zombie(pygame.sprite.Sprite):
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
-        if tracker:
-            outline_color = TRACKER_OUTLINE_COLOR
-        elif wall_follower:
-            outline_color = WALL_FOLLOWER_OUTLINE_COLOR
-        else:
-            outline_color = DARK_RED
-        self.outline_color = outline_color
+        self.tracker = tracker
+        self.wall_follower = wall_follower
+        self.carbonized = False
         self.image = build_zombie_surface(
-            self.radius,
-            outline_color=self.outline_color,
+            self.radius, tracker=self.tracker, wall_follower=self.wall_follower
         )
         self._redraw_image()
         self.rect = self.image.get_rect(center=(x, y))
@@ -1115,11 +1108,8 @@ class Zombie(pygame.sprite.Sprite):
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
         self.was_in_sight = False
-        self.carbonized = False
         self.age_frames = 0.0
         self.aging_duration_frames = aging_duration_frames
-        self.tracker = tracker
-        self.wall_follower = wall_follower
         if movement_strategy is None:
             if tracker:
                 movement_strategy = zombie_tracker_movement
@@ -1148,8 +1138,9 @@ class Zombie(pygame.sprite.Sprite):
         paint_zombie_surface(
             self.image,
             radius=self.radius,
-            outline_color=self.outline_color,
             palm_angle=palm_angle,
+            tracker=self.tracker,
+            wall_follower=self.wall_follower,
         )
 
     def _update_mode(

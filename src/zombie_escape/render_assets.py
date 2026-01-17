@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 
 import pygame
 
-from .colors import BLACK, BLUE, DARK_RED, RED, YELLOW
+from .colors import (
+    BLACK,
+    BLUE,
+    DARK_RED,
+    RED,
+    TRACKER_OUTLINE_COLOR,
+    WALL_FOLLOWER_OUTLINE_COLOR,
+    YELLOW,
+)
 from .entities_constants import (
     BUDDY_COLOR,
     HUMANOID_OUTLINE_COLOR,
@@ -146,8 +154,15 @@ def build_survivor_surface(radius: int, *, is_buddy: bool) -> pygame.Surface:
 def build_zombie_surface(
     radius: int,
     *,
-    outline_color: tuple[int, int, int] = DARK_RED,
+    tracker: bool = False,
+    wall_follower: bool = False,
 ) -> pygame.Surface:
+    if tracker:
+        outline_color = TRACKER_OUTLINE_COLOR
+    elif wall_follower:
+        outline_color = WALL_FOLLOWER_OUTLINE_COLOR
+    else:
+        outline_color = DARK_RED
     surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
     draw_outlined_circle(
         surface,
@@ -361,9 +376,16 @@ def paint_zombie_surface(
     surface: pygame.Surface,
     *,
     radius: int,
-    outline_color: tuple[int, int, int],
     palm_angle: float | None = None,
+    tracker: bool = False,
+    wall_follower: bool = False,
 ) -> None:
+    if tracker:
+        outline_color = TRACKER_OUTLINE_COLOR
+    elif wall_follower:
+        outline_color = WALL_FOLLOWER_OUTLINE_COLOR
+    else:
+        outline_color = DARK_RED
     surface.fill((0, 0, 0, 0))
     draw_outlined_circle(
         surface,
