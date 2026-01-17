@@ -310,9 +310,10 @@ def check_interactions(
     # Player getting caught by zombies
     if not player.in_car and player in all_sprites:
         shrunk_player = get_shrunk_sprite(player, 0.8)
-        if pygame.sprite.spritecollide(
+        collisions = pygame.sprite.spritecollide(
             shrunk_player, zombie_group, False, pygame.sprite.collide_circle
-        ):
+        )
+        if any(not zombie.carbonized for zombie in collisions):
             if not state.game_over:
                 state.game_over = True
                 state.game_over_at = pygame.time.get_ticks()
