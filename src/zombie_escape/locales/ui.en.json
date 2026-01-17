@@ -73,6 +73,15 @@
       "stage8": {
         "name": "#8 Assembly Floor",
         "description": "Narrow corridors. Get surrounded, and there’s no escape."
+      },
+      "stage9": {
+        "name": "#4 Evacuate Survivors 2",
+        "description": "Evacuate like stage 4, but narrow corridors.",
+        "conversion_lines": {
+          "line1": "It hurts!",
+          "line2": "I can't hold on!",
+          "line3": "Stay back!"
+        }
       }
     },
     "status": {
