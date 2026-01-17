@@ -9,7 +9,7 @@
     "fonts": {
       "primary": {
         "resource": "assets/fonts/Silkscreen-Regular.ttf",
-        "scale": 0.7
+        "scale": 0.75
       }
     },
     "menu": {
@@ -75,7 +75,7 @@
         "description": "Narrow corridors. Get surrounded, and there’s no escape."
       },
       "stage9": {
-        "name": "#4 Evacuate Survivors 2",
+        "name": "# Evacuate Survivors 2",
         "description": "Evacuate like stage 4, but narrow corridors. Requires fuel."
       }
     },
