@@ -11,13 +11,15 @@ from ..gameplay_constants import (
     BUDDY_RADIUS,
     CAR_SPEED,
     PLAYER_RADIUS,
-    SURVIVOR_CONVERSION_LINE_KEYS,
     SURVIVOR_MAX_SAFE_PASSENGERS,
-    SURVIVOR_MESSAGE_DURATION_MS,
     SURVIVOR_MIN_SPEED_FACTOR,
     SURVIVOR_RADIUS,
-    SURVIVOR_SPEED_PENALTY_PER_PASSENGER,
     ZOMBIE_RADIUS,
+)
+from .constants import (
+    SURVIVOR_CONVERSION_LINE_KEYS,
+    SURVIVOR_MESSAGE_DURATION_MS,
+    SURVIVOR_SPEED_PENALTY_PER_PASSENGER,
 )
 from ..localization import translate as tr
 from ..models import GameData, ProgressState

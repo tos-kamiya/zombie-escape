@@ -7,16 +7,18 @@ import pygame
 from ..gameplay_constants import (
     CAR_HEIGHT,
     CAR_WIDTH,
-    CAR_ZOMBIE_DAMAGE,
     FLASHLIGHT_HEIGHT,
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
-    FUEL_HINT_DURATION_MS,
     SURVIVOR_APPROACH_RADIUS,
     SURVIVOR_MAX_SAFE_PASSENGERS,
-    SURVIVOR_OVERLOAD_DAMAGE_RATIO,
     interaction_radius,
+)
+from .constants import (
+    CAR_ZOMBIE_DAMAGE,
+    FUEL_HINT_DURATION_MS,
+    SURVIVOR_OVERLOAD_DAMAGE_RATIO,
 )
 from ..localization import translate as tr
 from ..models import GameData

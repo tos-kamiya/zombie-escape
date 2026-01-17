@@ -4,7 +4,7 @@ from typing import Any
 
 import pygame
 
-from ..gameplay_constants import FOOTPRINT_MAX, FOOTPRINT_STEP_DISTANCE
+from .constants import FOOTPRINT_MAX, FOOTPRINT_STEP_DISTANCE
 from ..models import GameData
 
 

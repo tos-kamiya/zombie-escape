@@ -1,0 +1,52 @@
+"""Gameplay-only constants."""
+
+from __future__ import annotations
+
+from ..gameplay_constants import ZOMBIE_AGING_DURATION_FRAMES
+
+# --- Survival stage settings ---
+SURVIVAL_NEAR_SPAWN_MIN_DISTANCE = 140
+SURVIVAL_NEAR_SPAWN_MAX_DISTANCE = 280
+
+# --- Survivor settings (Stage 4) ---
+SURVIVOR_SPEED_PENALTY_PER_PASSENGER = 0.08
+SURVIVOR_OVERLOAD_DAMAGE_RATIO = 0.2
+SURVIVOR_MESSAGE_DURATION_MS = 2000
+SURVIVOR_CONVERSION_LINE_KEYS = [
+    "stages.stage4.conversion_lines.line1",
+    "stages.stage4.conversion_lines.line2",
+    "stages.stage4.conversion_lines.line3",
+]
+
+# --- Footprint settings (gameplay) ---
+FOOTPRINT_STEP_DISTANCE = 40
+FOOTPRINT_MAX = 320
+
+# --- Zombie settings ---
+MAX_ZOMBIES = 400
+ZOMBIE_SPAWN_PLAYER_BUFFER = 140
+ZOMBIE_TRACKER_AGING_DURATION_FRAMES = ZOMBIE_AGING_DURATION_FRAMES
+
+# --- Car and fuel settings ---
+CAR_ZOMBIE_DAMAGE = 1
+FUEL_HINT_DURATION_MS = 1600
+
+# --- Wall settings ---
+OUTER_WALL_HEALTH = 999999
+
+__all__ = [
+    "SURVIVAL_NEAR_SPAWN_MIN_DISTANCE",
+    "SURVIVAL_NEAR_SPAWN_MAX_DISTANCE",
+    "SURVIVOR_SPEED_PENALTY_PER_PASSENGER",
+    "SURVIVOR_OVERLOAD_DAMAGE_RATIO",
+    "SURVIVOR_MESSAGE_DURATION_MS",
+    "SURVIVOR_CONVERSION_LINE_KEYS",
+    "FOOTPRINT_STEP_DISTANCE",
+    "FOOTPRINT_MAX",
+    "MAX_ZOMBIES",
+    "ZOMBIE_SPAWN_PLAYER_BUFFER",
+    "ZOMBIE_TRACKER_AGING_DURATION_FRAMES",
+    "CAR_ZOMBIE_DAMAGE",
+    "FUEL_HINT_DURATION_MS",
+    "OUTER_WALL_HEALTH",
+]
