@@ -20,11 +20,7 @@ from ..entities_constants import (
     ZOMBIE_AGING_DURATION_FRAMES,
     ZOMBIE_SPEED,
 )
-from ..gameplay_constants import (
-    DEFAULT_FLASHLIGHT_SPAWN_COUNT,
-    SURVIVOR_STAGE_WAITING_CAR_COUNT,
-    ZOMBIE_SPAWN_DELAY_MS,
-)
+from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT, ZOMBIE_SPAWN_DELAY_MS
 from .constants import (
     MAX_ZOMBIES,
     SURVIVAL_NEAR_SPAWN_MAX_DISTANCE,
@@ -55,7 +51,6 @@ __all__ = [
     "spawn_survivors",
     "setup_player_and_cars",
     "spawn_initial_zombies",
-    "waiting_car_target_count",
     "spawn_waiting_car",
     "maintain_waiting_car_supply",
     "alive_waiting_cars",
@@ -467,10 +462,6 @@ def spawn_initial_zombies(
 
     interval = max(1, getattr(game_data.stage, "spawn_interval_ms", ZOMBIE_SPAWN_DELAY_MS))
     game_data.state.last_zombie_spawn_time = pygame.time.get_ticks() - interval
-
-
-def waiting_car_target_count(stage: Stage) -> int:
-    return SURVIVOR_STAGE_WAITING_CAR_COUNT if stage.rescue_stage else 1
 
 
 def spawn_waiting_car(game_data: GameData) -> Car | None:

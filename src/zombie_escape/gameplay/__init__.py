@@ -25,7 +25,6 @@ from .spawn import (
     spawn_survivors,
     spawn_waiting_car,
     spawn_weighted_zombie,
-    waiting_car_target_count,
 )
 from .state import carbonize_outdoor_zombies, initialize_game_state, update_survival_timer
 from .survivors import (
@@ -70,7 +69,6 @@ __all__ = [
     "calculate_car_speed_for_passengers",
     "apply_passenger_speed_penalty",
     "increase_survivor_capacity",
-    "waiting_car_target_count",
     "spawn_waiting_car",
     "maintain_waiting_car_supply",
     "add_survivor_message",

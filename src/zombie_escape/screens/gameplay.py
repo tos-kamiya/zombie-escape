@@ -9,7 +9,6 @@ from ..colors import LIGHT_GRAY, RED, WHITE, YELLOW
 from ..gameplay_constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
-    SURVIVOR_STAGE_WAITING_CAR_COUNT,
     SURVIVAL_TIME_ACCEL_SUBSTEPS,
     SURVIVAL_TIME_ACCEL_MAX_SUBSTEP,
 )
@@ -32,7 +31,6 @@ from ..gameplay import (
     update_entities,
     update_footprints,
     update_survival_timer,
-    waiting_car_target_count,
 )
 from ..entities import build_wall_index
 from ..localization import translate as tr
@@ -94,9 +92,7 @@ def gameplay_screen(
 
     layout_data = generate_level_from_blueprint(game_data, config)
     sync_ambient_palette_with_flashlights(game_data, force=True)
-    initial_waiting = (
-        SURVIVOR_STAGE_WAITING_CAR_COUNT if stage.rescue_stage else 1
-    )
+    initial_waiting = max(0, stage.waiting_car_target_count)
     player, waiting_cars = setup_player_and_cars(
         game_data, layout_data, car_count=initial_waiting
     )
@@ -105,7 +101,7 @@ def gameplay_screen(
     game_data.car = None
     # Only top up if initial placement spawned fewer than the intended baseline (shouldn't happen)
     maintain_waiting_car_supply(
-        game_data, minimum=waiting_car_target_count(stage)
+        game_data, minimum=stage.waiting_car_target_count
     )
     apply_passenger_speed_penalty(game_data)
 
