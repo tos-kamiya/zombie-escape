@@ -459,11 +459,8 @@ class Wall(pygame.sprite.Sprite):
         )
         self.update_color()
         self.rect = self.image.get_rect(topleft=(x, y))
-        self._collision_polygon = (
-            [(px + self.rect.x, py + self.rect.y) for px, py in self._local_polygon]
-            if self.bevel_depth > 0 and any(self.bevel_mask)
-            else None
-        )
+        # Keep collision rectangular even when beveled visually.
+        self._collision_polygon = None
 
     def take_damage(self: Self, *, amount: int = 1) -> None:
         if self.health > 0:
@@ -1366,7 +1363,46 @@ class Zombie(pygame.sprite.Sprite):
                     final_y = self.y
                     break
 
+        for wall in possible_walls:
+            final_x, final_y = self._apply_bevel_corner_repulsion(
+                final_x, final_y, wall
+            )
+
         return final_x, final_y
+
+    def _apply_bevel_corner_repulsion(
+        self: Self, x: float, y: float, wall: Wall
+    ) -> tuple[float, float]:
+        bevel_depth = int(getattr(wall, "bevel_depth", 0) or 0)
+        bevel_mask = getattr(wall, "bevel_mask", None)
+        if bevel_depth <= 0 or not bevel_mask or not any(bevel_mask):
+            return x, y
+
+        influence = self.radius + bevel_depth
+        repel_ratio = 0.05
+        corners = (
+            (bevel_mask[0], wall.rect.left, wall.rect.top, -1.0, -1.0),  # tl
+            (bevel_mask[1], wall.rect.right, wall.rect.top, 1.0, -1.0),  # tr
+            (bevel_mask[2], wall.rect.right, wall.rect.bottom, 1.0, 1.0),  # br
+            (bevel_mask[3], wall.rect.left, wall.rect.bottom, -1.0, 1.0),  # bl
+        )
+        for enabled, corner_x, corner_y, dir_x, dir_y in corners:
+            if not enabled:
+                continue
+            dx = x - corner_x
+            dy = y - corner_y
+            if abs(dx) > influence or abs(dy) > influence:
+                continue
+            dist = math.hypot(dx, dy)
+            if dist >= influence:
+                continue
+            push = (influence - dist) * repel_ratio
+            if push <= 0:
+                continue
+            x += dir_x * push
+            y += dir_y * push
+
+        return x, y
 
     def _avoid_other_zombies(
         self: Self,
