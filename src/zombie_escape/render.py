@@ -492,12 +492,12 @@ def draw(
     flashlight_count = state.flashlight_count
     elapsed_play_ms = state.elapsed_play_ms
     fuel_message_until = state.fuel_message_until
-    buddy_rescued = state.buddy_rescued
     buddy_onboard = state.buddy_onboard
     buddy_required = stage.buddy_required_count if stage else 0
     survivors_onboard = state.survivors_onboard
     survivor_messages = list(state.survivor_messages)
     zombie_group = game_data.groups.zombie_group
+    active_car = game_data.car if game_data.car and game_data.car.alive() else None
 
     palette = get_environment_palette(state.ambient_palette_key)
     screen.fill(palette.outside)
@@ -763,16 +763,22 @@ def draw(
         else:
             objective_lines.append(tr("objectives.survive_until_dawn"))
     elif stage and stage.buddy_required_count > 0:
-        if stage.requires_fuel and not has_fuel:
-            objective_lines.append(tr("objectives.find_fuel"))
-        elif not player.in_car:
-            objective_lines.append(tr("objectives.find_car"))
+        buddy_ready = buddy_onboard >= buddy_required
+        if not active_car:
+            objective_lines.append(tr("objectives.pickup_buddy"))
+            if stage.requires_fuel and not has_fuel:
+                objective_lines.append(tr("objectives.find_fuel"))
+            else:
+                objective_lines.append(tr("objectives.find_car"))
         else:
-            if buddy_rescued < buddy_required:
-                objective_lines.append(tr("objectives.escape_with_buddy"))
+            if stage.requires_fuel and not has_fuel:
+                objective_lines.append(tr("objectives.find_fuel"))
+            elif not buddy_ready:
+                objective_lines.append(tr("objectives.board_buddy"))
                 objective_lines.append(
                     tr("objectives.buddy_onboard", count=buddy_onboard)
                 )
+                objective_lines.append(tr("objectives.escape"))
             else:
                 objective_lines.append(tr("objectives.escape"))
     elif stage and stage.requires_fuel and not has_fuel:

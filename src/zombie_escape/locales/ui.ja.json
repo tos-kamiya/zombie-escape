@@ -113,6 +113,7 @@
       "pickup_buddy": "相棒を救出する",
       "find_buddy": "相棒を探す",
       "escape_with_buddy": "相棒を車に乗せて脱出する",
+      "board_buddy": "相棒を車に乗せる",
       "buddy_onboard": "相棒乗車中: %{count}",
       "escape_with_survivors": "生存者を車に乗せて脱出する",
       "survivors_onboard": "乗車中: %{count}/%{limit}",

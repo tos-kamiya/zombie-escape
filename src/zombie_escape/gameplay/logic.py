@@ -1932,32 +1932,16 @@ def check_interactions(
 
     # Player escaping the level
     if player.in_car and car and car.alive() and state.has_fuel:
-        buddies_following = [
-            survivor
-            for survivor in survivor_group
-            if survivor.alive()
-            and survivor.is_buddy
-            and survivor.following
-            and not survivor.rescued
-        ]
         buddy_ready = True
         if stage.buddy_required_count > 0:
-            total_ready = (
-                state.buddy_rescued + state.buddy_onboard + len(buddies_following)
-            )
-            buddy_ready = total_ready >= stage.buddy_required_count
+            buddy_ready = state.buddy_onboard >= stage.buddy_required_count
         if buddy_ready and any(
             outside.collidepoint(car.rect.center) for outside in outside_rects
         ):
             if stage.buddy_required_count > 0:
-                rescued_now = state.buddy_onboard + len(buddies_following)
                 state.buddy_rescued = min(
-                    stage.buddy_required_count,
-                    state.buddy_rescued + rescued_now,
+                    stage.buddy_required_count, state.buddy_onboard
                 )
-                state.buddy_onboard = 0
-                for buddy in buddies_following:
-                    buddy.mark_rescued()
             if stage.rescue_stage and state.survivors_onboard:
                 state.survivors_rescued += state.survivors_onboard
                 state.survivors_onboard = 0
