@@ -76,12 +76,7 @@
       },
       "stage9": {
         "name": "#4 生存者救出2",
-        "description": "ステージ4と同じだが、狭い通路。",
-        "conversion_lines": {
-          "line1": "痛いぃ！",
-          "line2": "無理！無理！",
-          "line3": "来るなぁ！"
-        }
+        "description": "ステージ4と同じだが、狭い通路。燃料も必要。"
       }
     },
     "status": {

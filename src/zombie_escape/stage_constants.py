@@ -40,6 +40,7 @@ STAGES: list[Stage] = [
         description_key="stages.stage4.description",
         available=True,
         rescue_stage=True,
+        waiting_car_target_count=2,
         survivor_spawn_rate=SURVIVOR_SPAWN_RATE,
     ),
     Stage(
@@ -101,6 +102,10 @@ STAGES: list[Stage] = [
         available=True,
         rescue_stage=True,
         tile_size=35,
+        requires_fuel=True,
+        exterior_spawn_weight=0.4,
+        interior_spawn_weight=0.6,
+        waiting_car_target_count=1,
         survivor_spawn_rate=SURVIVOR_SPAWN_RATE,
     ),
 ]
