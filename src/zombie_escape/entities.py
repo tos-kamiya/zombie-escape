@@ -880,7 +880,10 @@ class Survivor(pygame.sprite.Sprite):
         dx = player_pos[0] - self.x
         dy = player_pos[1] - self.y
         dist_sq = dx * dx + dy * dy
-        if dist_sq <= 0 or dist_sq > SURVIVOR_APPROACH_RADIUS * SURVIVOR_APPROACH_RADIUS:
+        if (
+            dist_sq <= 0
+            or dist_sq > SURVIVOR_APPROACH_RADIUS * SURVIVOR_APPROACH_RADIUS
+        ):
             return
 
         dist = math.sqrt(dist_sq)
@@ -1151,7 +1154,10 @@ def zombie_update_tracker_target(
             continue
         dx = pos[0] - zombie.x
         dy = pos[1] - zombie.y
-        if dx * dx + dy * dy <= ZOMBIE_TRACKER_SCENT_RADIUS * ZOMBIE_TRACKER_SCENT_RADIUS:
+        if (
+            dx * dx + dy * dy
+            <= ZOMBIE_TRACKER_SCENT_RADIUS * ZOMBIE_TRACKER_SCENT_RADIUS
+        ):
             nearby.append(fp)
 
     if not nearby:
@@ -1265,14 +1271,8 @@ class Zombie(pygame.sprite.Sprite):
             outline_color = WALL_FOLLOWER_OUTLINE_COLOR
         else:
             outline_color = DARK_RED
-        _draw_outlined_circle(
-            self.image,
-            (self.radius, self.radius),
-            self.radius,
-            RED,
-            outline_color,
-            1,
-        )
+        self.outline_color = outline_color
+        self._redraw_image()
         if start_pos:
             x, y = start_pos
         elif hint_pos:
@@ -1322,6 +1322,29 @@ class Zombie(pygame.sprite.Sprite):
         self.last_wander_change_time = pygame.time.get_ticks()
         self.wander_change_interval = max(
             0, self.wander_interval_ms + RNG.randint(-500, 500)
+        )
+
+    def _redraw_image(self: Self, palm_angle: float | None = None) -> None:
+        self.image.fill((0, 0, 0, 0))
+        _draw_outlined_circle(
+            self.image,
+            (self.radius, self.radius),
+            self.radius,
+            RED,
+            self.outline_color,
+            1,
+        )
+        if palm_angle is None:
+            return
+        palm_radius = max(1, self.radius // 3)
+        palm_offset = self.radius - palm_radius * 0.3
+        palm_x = self.radius + math.cos(palm_angle) * palm_offset
+        palm_y = self.radius + math.sin(palm_angle) * palm_offset
+        pygame.draw.circle(
+            self.image,
+            self.outline_color,
+            (int(palm_x), int(palm_y)),
+            palm_radius,
         )
 
     def _update_mode(
@@ -1519,6 +1542,18 @@ class Zombie(pygame.sprite.Sprite):
         )
         if dist_to_player_sq <= avoid_radius_sq or self.wall_follower:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
+        if self.wall_follower and self.wall_follow_side != 0:
+            if move_x != 0 or move_y != 0:
+                heading = math.atan2(move_y, move_x)
+            elif self.wall_follow_angle is not None:
+                heading = self.wall_follow_angle
+            else:
+                heading = self.wander_angle
+            if self.wall_follow_side > 0:
+                palm_angle = heading + (math.pi / 2.0)
+            else:
+                palm_angle = heading - (math.pi / 2.0)
+            self._redraw_image(palm_angle)
         final_x, final_y = self._handle_wall_collision(
             self.x + move_x, self.y + move_y, walls
         )
