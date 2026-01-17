@@ -77,6 +77,10 @@ def present(logical_surface: surface.Surface) -> None:
     window = pygame.display.get_surface()
     if window is None:
         return
+    if current_fullscreen:
+        window.blit(logical_surface, (0, 0))
+        pygame.display.flip()
+        return
     window_size = _fetch_window_size(window)
     _update_window_size(window_size, source="frame")
     logical_size = logical_surface.get_size()
@@ -156,7 +160,9 @@ def toggle_fullscreen(
     else:
         last_window_scale = current_window_scale
         current_fullscreen = True
-        window = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        window = pygame.display.set_mode(
+            (SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN | pygame.SCALED
+        )
         window_width, window_height = _fetch_window_size(window)
         _update_window_caption(window_width, window_height)
         _update_window_size((window_width, window_height), source="toggle_fullscreen")
