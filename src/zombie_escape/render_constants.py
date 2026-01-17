@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .gameplay_constants import FOV_RADIUS, PLAYER_RADIUS
+from .entities_constants import FOV_RADIUS, PLAYER_RADIUS
 from .render_assets import FogRing, RenderAssets
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH, STATUS_BAR_HEIGHT
 

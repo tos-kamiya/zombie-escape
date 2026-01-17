@@ -4,16 +4,16 @@ from typing import Any
 
 import pygame
 
-from ..gameplay_constants import (
+from ..entities_constants import (
     CAR_HEIGHT,
     CAR_WIDTH,
     FLASHLIGHT_HEIGHT,
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
+    HUMANOID_RADIUS,
     SURVIVOR_APPROACH_RADIUS,
     SURVIVOR_MAX_SAFE_PASSENGERS,
-    interaction_radius,
 )
 from .constants import (
     CAR_ZOMBIE_DAMAGE,
@@ -36,6 +36,11 @@ from .survivors import (
 )
 from .utils import rect_visible_on_screen
 from .ambient import sync_ambient_palette_with_flashlights
+
+
+def _interaction_radius(width: float, height: float) -> float:
+    """Approximate interaction reach for a humanoid and an object."""
+    return HUMANOID_RADIUS + (width + height) / 4
 
 RNG = get_rng()
 
@@ -62,9 +67,9 @@ def check_interactions(
     waiting_cars = game_data.waiting_cars
     shrunk_car = get_shrunk_sprite(active_car, 0.8) if active_car else None
 
-    car_interaction_radius = interaction_radius(CAR_WIDTH, CAR_HEIGHT)
-    fuel_interaction_radius = interaction_radius(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
-    flashlight_interaction_radius = interaction_radius(
+    car_interaction_radius = _interaction_radius(CAR_WIDTH, CAR_HEIGHT)
+    fuel_interaction_radius = _interaction_radius(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
+    flashlight_interaction_radius = _interaction_radius(
         FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT
     )
 

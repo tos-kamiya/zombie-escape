@@ -7,7 +7,7 @@ import math
 
 import pygame
 
-from ..gameplay_constants import (
+from ..entities_constants import (
     BUDDY_RADIUS,
     CAR_SPEED,
     PLAYER_RADIUS,

@@ -9,21 +9,17 @@ import pygame
 from pygame import rect
 
 from .colors import (
-    BLACK,
-    BLUE,
     DARK_RED,
     INTERNAL_WALL_BORDER_COLOR,
     INTERNAL_WALL_COLOR,
     ORANGE,
-    RED,
     STEEL_BEAM_COLOR,
     STEEL_BEAM_LINE_COLOR,
     TRACKER_OUTLINE_COLOR,
     WALL_FOLLOWER_OUTLINE_COLOR,
     YELLOW,
 )
-from .gameplay_constants import (
-    BUDDY_COLOR,
+from .entities_constants import (
     BUDDY_FOLLOW_SPEED,
     BUDDY_RADIUS,
     CAR_HEALTH,
@@ -36,8 +32,6 @@ from .gameplay_constants import (
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
-    HUMANOID_OUTLINE_COLOR,
-    HUMANOID_OUTLINE_WIDTH,
     INTERNAL_WALL_BEVEL_DEPTH,
     INTERNAL_WALL_HEALTH,
     PLAYER_RADIUS,
@@ -46,7 +40,6 @@ from .gameplay_constants import (
     STEEL_BEAM_HEALTH,
     SURVIVOR_APPROACH_RADIUS,
     SURVIVOR_APPROACH_SPEED,
-    SURVIVOR_COLOR,
     SURVIVOR_RADIUS,
     ZOMBIE_AGING_DURATION_FRAMES,
     ZOMBIE_AGING_MIN_SPEED_RATIO,
@@ -64,10 +57,22 @@ from .gameplay_constants import (
     ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
     ZOMBIE_WALL_FOLLOW_TARGET_GAP,
     ZOMBIE_WANDER_INTERVAL_MS,
-    car_body_radius,
 )
 from .level_constants import GRID_COLS, GRID_ROWS
 from .rng import get_rng
+from .render_assets import (
+    build_beveled_polygon,
+    build_car_surface,
+    build_flashlight_surface,
+    build_fuel_can_surface,
+    build_player_surface,
+    build_survivor_surface,
+    build_zombie_surface,
+    paint_car_surface,
+    paint_steel_beam_surface,
+    paint_wall_surface,
+    paint_zombie_surface,
+)
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
 RNG = get_rng()
@@ -145,80 +150,13 @@ def circle_rect_collision(
     return dx * dx + dy * dy <= radius * radius
 
 
-def _draw_outlined_circle(
-    surface: pygame.Surface,
-    center: tuple[int, int],
-    radius: int,
-    fill_color: tuple[int, int, int],
-    outline_color: tuple[int, int, int],
-    outline_width: int,
-) -> None:
-    pygame.draw.circle(surface, fill_color, center, radius)
-    if outline_width > 0:
-        pygame.draw.circle(surface, outline_color, center, radius, width=outline_width)
-
-
 def _build_beveled_polygon(
     width: int,
     height: int,
     depth: int,
     bevels: tuple[bool, bool, bool, bool],
 ) -> list[tuple[int, int]]:
-    d = max(0, min(depth, width // 2, height // 2))
-    if d == 0 or not any(bevels):
-        return [(0, 0), (width, 0), (width, height), (0, height)]
-
-    segments = 4
-    tl, tr, br, bl = bevels
-    points: list[tuple[int, int]] = []
-
-    def add_point(x: float, y: float) -> None:
-        point = (int(round(x)), int(round(y)))
-        if not points or points[-1] != point:
-            points.append(point)
-
-    def add_arc(
-        center_x: float,
-        center_y: float,
-        radius: float,
-        start_deg: float,
-        end_deg: float,
-        *,
-        skip_first: bool = False,
-        skip_last: bool = False,
-    ) -> None:
-        for i in range(segments + 1):
-            if skip_first and i == 0:
-                continue
-            if skip_last and i == segments:
-                continue
-            t = i / segments
-            angle = math.radians(start_deg + (end_deg - start_deg) * t)
-            add_point(
-                center_x + radius * math.cos(angle),
-                center_y + radius * math.sin(angle),
-            )
-
-    add_point(d if tl else 0, 0)
-    if tr:
-        add_point(width - d, 0)
-        add_arc(width - d, d, d, -90, 0, skip_first=True)
-    else:
-        add_point(width, 0)
-    if br:
-        add_point(width, height - d)
-        add_arc(width - d, height - d, d, 0, 90, skip_first=True)
-    else:
-        add_point(width, height)
-    if bl:
-        add_point(d, height)
-        add_arc(d, height - d, d, 90, 180, skip_first=True)
-    else:
-        add_point(0, height)
-    if tl:
-        add_point(0, d)
-        add_arc(d, d, d, 180, 270, skip_first=True, skip_last=True)
-    return points
+    return build_beveled_polygon(width, height, depth, bevels)
 
 
 def _point_in_polygon(
@@ -475,7 +413,6 @@ class Wall(pygame.sprite.Sprite):
                 self.kill()
 
     def update_color(self: Self) -> None:
-        self.image.fill((0, 0, 0, 0))
         if self.health <= 0:
             health_ratio = 0
             fill_color = (40, 40, 40)
@@ -493,78 +430,16 @@ class Wall(pygame.sprite.Sprite):
         bg = int(self.border_base_color[1] * (0.6 + 0.4 * health_ratio))
         bb = int(self.border_base_color[2] * (0.6 + 0.4 * health_ratio))
         border_color = (br, bg, bb)
-
-        rect_obj = self.image.get_rect()
-        side_height = 0
-        if self.draw_bottom_side:
-            side_height = max(1, int(rect_obj.height * self.bottom_side_ratio))
-
-        def draw_face(
-            target: pygame.Surface,
-            *,
-            face_size: tuple[int, int] | None = None,
-        ) -> None:
-            face_width, face_height = face_size or target.get_size()
-            if self.bevel_depth > 0 and any(self.bevel_mask):
-                face_polygon = _build_beveled_polygon(
-                    face_width, face_height, self.bevel_depth, self.bevel_mask
-                )
-                pygame.draw.polygon(target, border_color, face_polygon)
-            else:
-                target.fill(border_color)
-            border_width = 18
-            inner_rect = target.get_rect().inflate(-border_width, -border_width)
-            if inner_rect.width > 0 and inner_rect.height > 0:
-                inner_depth = max(0, self.bevel_depth - border_width)
-                if inner_depth > 0 and any(self.bevel_mask):
-                    inner_polygon = _build_beveled_polygon(
-                        inner_rect.width,
-                        inner_rect.height,
-                        inner_depth,
-                        self.bevel_mask,
-                    )
-                    inner_points = [
-                        (px + inner_rect.x, py + inner_rect.y)
-                        for px, py in inner_polygon
-                    ]
-                    pygame.draw.polygon(target, fill_color, inner_points)
-                else:
-                    pygame.draw.rect(target, fill_color, inner_rect)
-
-        if self.draw_bottom_side:
-            extra_height = max(0, int(self.bevel_depth / 2))
-            side_draw_height = min(rect_obj.height, side_height + extra_height)
-            side_rect = pygame.Rect(
-                rect_obj.left,
-                rect_obj.bottom - side_draw_height,
-                rect_obj.width,
-                side_draw_height,
-            )
-            side_color = tuple(int(c * self.side_shade_ratio) for c in fill_color)
-            side_surface = pygame.Surface(rect_obj.size, pygame.SRCALPHA)
-            if self.bevel_depth > 0 and any(self.bevel_mask):
-                pygame.draw.polygon(side_surface, side_color, self._local_polygon)
-            else:
-                pygame.draw.rect(side_surface, side_color, rect_obj)
-            self.image.blit(side_surface, side_rect.topleft, area=side_rect)
-
-        if self.draw_bottom_side:
-            top_height = max(0, rect_obj.height - side_height)
-            top_rect = pygame.Rect(
-                rect_obj.left,
-                rect_obj.top,
-                rect_obj.width,
-                rect_obj.height - side_height,
-            )
-            top_surface = pygame.Surface((rect_obj.width, top_height), pygame.SRCALPHA)
-            draw_face(
-                top_surface,
-                face_size=(rect_obj.width, top_height),
-            )
-            if top_rect.height > 0:
-                self.image.blit(top_surface, top_rect.topleft, area=top_rect)
-        else:
-            draw_face(self.image)
+        paint_wall_surface(
+            self.image,
+            fill_color=fill_color,
+            border_color=border_color,
+            bevel_depth=self.bevel_depth,
+            bevel_mask=self.bevel_mask,
+            draw_bottom_side=self.draw_bottom_side,
+            bottom_side_ratio=self.bottom_side_ratio,
+            side_shade_ratio=self.side_shade_ratio,
+        )
 
     def collides_rect(self: Self, rect_obj: rect.Rect) -> bool:
         if self._collision_polygon is None:
@@ -625,42 +500,15 @@ class SteelBeam(pygame.sprite.Sprite):
 
     def update_color(self: Self) -> None:
         """Render a simple square with crossed diagonals that darkens as damaged."""
-        self.image.fill((0, 0, 0, 0))
         if self.health <= 0:
             return
         health_ratio = max(0, self.health / self.max_health)
-        fill_mix = 0.55 + 0.45 * health_ratio
-        fill_color = tuple(int(c * fill_mix) for c in self.base_color)
-        rect_obj = self.image.get_rect()
-        side_height = max(1, int(rect_obj.height * 0.1))
-        top_rect = pygame.Rect(
-            rect_obj.left,
-            rect_obj.top,
-            rect_obj.width,
-            rect_obj.height - side_height,
+        paint_steel_beam_surface(
+            self.image,
+            base_color=self.base_color,
+            line_color=self.line_color,
+            health_ratio=health_ratio,
         )
-        side_mix = 0.45 + 0.35 * health_ratio
-        side_color = tuple(int(c * side_mix * 0.9) for c in self.base_color)
-        side_rect = pygame.Rect(
-            rect_obj.left,
-            rect_obj.bottom - side_height,
-            rect_obj.width,
-            side_height,
-        )
-        pygame.draw.rect(self.image, side_color, side_rect)
-        line_mix = 0.7 + 0.3 * health_ratio
-        line_color = tuple(int(c * line_mix) for c in self.line_color)
-        top_surface = pygame.Surface(top_rect.size, pygame.SRCALPHA)
-        local_rect = top_surface.get_rect()
-        pygame.draw.rect(top_surface, fill_color, local_rect)
-        pygame.draw.rect(top_surface, line_color, local_rect, width=6)
-        pygame.draw.line(
-            top_surface, line_color, local_rect.topleft, local_rect.bottomright, width=6
-        )
-        pygame.draw.line(
-            top_surface, line_color, local_rect.topright, local_rect.bottomleft, width=6
-        )
-        self.image.blit(top_surface, top_rect.topleft)
 
 
 class Camera:
@@ -692,17 +540,7 @@ class Player(pygame.sprite.Sprite):
     ) -> None:
         super().__init__()
         self.radius = PLAYER_RADIUS
-        self.image = pygame.Surface(
-            (self.radius * 2 + 2, self.radius * 2 + 2), pygame.SRCALPHA
-        )
-        _draw_outlined_circle(
-            self.image,
-            (self.radius + 1, self.radius + 1),
-            self.radius,
-            BLUE,
-            HUMANOID_OUTLINE_COLOR,
-            HUMANOID_OUTLINE_WIDTH,
-        )
+        self.image = build_player_surface(self.radius)
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = PLAYER_SPEED
         self.in_car = False
@@ -778,15 +616,9 @@ class Survivor(pygame.sprite.Sprite):
         super().__init__()
         self.is_buddy = is_buddy
         self.radius = BUDDY_RADIUS if is_buddy else SURVIVOR_RADIUS
-        self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
-        fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
-        _draw_outlined_circle(
-            self.image,
-            (self.radius, self.radius),
+        self.image = build_survivor_surface(
             self.radius,
-            fill_color,
-            HUMANOID_OUTLINE_COLOR,
-            HUMANOID_OUTLINE_WIDTH,
+            is_buddy=is_buddy,
         )
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.x = float(self.rect.centerx)
@@ -1262,7 +1094,6 @@ class Zombie(pygame.sprite.Sprite):
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
-        self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
         if tracker:
             outline_color = TRACKER_OUTLINE_COLOR
         elif wall_follower:
@@ -1270,6 +1101,10 @@ class Zombie(pygame.sprite.Sprite):
         else:
             outline_color = DARK_RED
         self.outline_color = outline_color
+        self.image = build_zombie_surface(
+            self.radius,
+            outline_color=self.outline_color,
+        )
         self._redraw_image()
         self.rect = self.image.get_rect(center=(x, y))
         jitter_base = FAST_ZOMBIE_BASE_SPEED if speed > ZOMBIE_SPEED else ZOMBIE_SPEED
@@ -1310,26 +1145,11 @@ class Zombie(pygame.sprite.Sprite):
         )
 
     def _redraw_image(self: Self, palm_angle: float | None = None) -> None:
-        self.image.fill((0, 0, 0, 0))
-        _draw_outlined_circle(
+        paint_zombie_surface(
             self.image,
-            (self.radius, self.radius),
-            self.radius,
-            RED,
-            self.outline_color,
-            1,
-        )
-        if palm_angle is None:
-            return
-        palm_radius = max(1, self.radius // 3)
-        palm_offset = self.radius - palm_radius * 0.3
-        palm_x = self.radius + math.cos(palm_angle) * palm_offset
-        palm_y = self.radius + math.sin(palm_angle) * palm_offset
-        pygame.draw.circle(
-            self.image,
-            self.outline_color,
-            (int(palm_x), int(palm_y)),
-            palm_radius,
+            radius=self.radius,
+            outline_color=self.outline_color,
+            palm_angle=palm_angle,
         )
 
     def _update_mode(
@@ -1581,7 +1401,7 @@ class Car(pygame.sprite.Sprite):
 
     def __init__(self: Self, x: int, y: int, *, appearance: str = "default") -> None:
         super().__init__()
-        self.original_image = pygame.Surface((CAR_WIDTH, CAR_HEIGHT), pygame.SRCALPHA)
+        self.original_image = build_car_surface(CAR_WIDTH, CAR_HEIGHT)
         self.appearance = appearance if appearance in self.COLOR_SCHEMES else "default"
         self.base_color = self.COLOR_SCHEMES[self.appearance]["healthy"]
         self.image = self.original_image.copy()
@@ -1592,7 +1412,7 @@ class Car(pygame.sprite.Sprite):
         self.y = float(self.rect.centery)
         self.health = CAR_HEALTH
         self.max_health = CAR_HEALTH
-        self.collision_radius = car_body_radius(CAR_WIDTH, CAR_HEIGHT)
+        self.collision_radius = _car_body_radius(CAR_WIDTH, CAR_HEIGHT)
         self.update_color()
 
     def take_damage(self: Self, amount: int) -> None:
@@ -1608,69 +1428,12 @@ class Car(pygame.sprite.Sprite):
             color = palette["damaged"]
         if health_ratio < 0.3:
             color = palette["critical"]
-        self.original_image.fill((0, 0, 0, 0))
-
-        body_rect = pygame.Rect(1, 4, CAR_WIDTH - 2, CAR_HEIGHT - 8)
-        front_cap_height = max(8, body_rect.height // 3)
-        front_cap = pygame.Rect(
-            body_rect.left, body_rect.top, body_rect.width, front_cap_height
+        paint_car_surface(
+            self.original_image,
+            width=CAR_WIDTH,
+            height=CAR_HEIGHT,
+            color=color,
         )
-        windshield_rect = pygame.Rect(
-            body_rect.left + 4,
-            body_rect.top + 3,
-            body_rect.width - 8,
-            front_cap_height - 5,
-        )
-
-        trim_color = tuple(int(c * 0.55) for c in color)
-        front_cap_color = tuple(min(255, int(c * 1.08)) for c in color)
-        body_color = color
-        window_color = (70, 110, 150)
-        wheel_color = (35, 35, 35)
-
-        wheel_width = CAR_WIDTH // 3
-        wheel_height = 6
-        for y in (body_rect.top + 4, body_rect.bottom - wheel_height - 4):
-            left_wheel = pygame.Rect(2, y, wheel_width, wheel_height)
-            right_wheel = pygame.Rect(
-                CAR_WIDTH - wheel_width - 2, y, wheel_width, wheel_height
-            )
-            pygame.draw.rect(
-                self.original_image, wheel_color, left_wheel, border_radius=3
-            )
-            pygame.draw.rect(
-                self.original_image, wheel_color, right_wheel, border_radius=3
-            )
-
-        pygame.draw.rect(self.original_image, body_color, body_rect, border_radius=4)
-        pygame.draw.rect(
-            self.original_image, trim_color, body_rect, width=2, border_radius=4
-        )
-        pygame.draw.rect(
-            self.original_image, front_cap_color, front_cap, border_radius=10
-        )
-        pygame.draw.rect(
-            self.original_image, trim_color, front_cap, width=2, border_radius=10
-        )
-        pygame.draw.rect(
-            self.original_image, window_color, windshield_rect, border_radius=4
-        )
-
-        headlight_color = (245, 245, 200)
-        for x in (front_cap.left + 5, front_cap.right - 5):
-            pygame.draw.circle(
-                self.original_image, headlight_color, (x, body_rect.top + 5), 2
-            )
-        grille_rect = pygame.Rect(front_cap.centerx - 6, front_cap.top + 2, 12, 6)
-        pygame.draw.rect(self.original_image, trim_color, grille_rect, border_radius=2)
-        tail_light_color = (255, 80, 50)
-        for x in (body_rect.left + 5, body_rect.right - 5):
-            pygame.draw.rect(
-                self.original_image,
-                tail_light_color,
-                (x - 2, body_rect.bottom - 5, 4, 3),
-                border_radius=1,
-            )
         self.image = pygame.transform.rotate(self.original_image, self.angle)
         old_center = self.rect.center
         self.rect = self.image.get_rect(center=old_center)
@@ -1719,31 +1482,7 @@ class FuelCan(pygame.sprite.Sprite):
 
     def __init__(self: Self, x: int, y: int) -> None:
         super().__init__()
-        self.image = pygame.Surface((FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT), pygame.SRCALPHA)
-
-        # Jerrycan silhouette with cut corner
-        w, h = FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT
-        body_pts = [
-            (1, 4),
-            (w - 2, 4),
-            (w - 2, h - 2),
-            (1, h - 2),
-            (1, 8),
-            (4, 4),
-        ]
-        pygame.draw.polygon(self.image, YELLOW, body_pts)
-        pygame.draw.polygon(self.image, BLACK, body_pts, width=2)
-
-        cap_size = max(2, w // 4)
-        cap_rect = pygame.Rect(w - cap_size - 2, 1, cap_size, 3)
-        pygame.draw.rect(self.image, YELLOW, cap_rect, border_radius=1)
-        pygame.draw.rect(self.image, BLACK, cap_rect, width=1, border_radius=1)
-
-        # Cross brace accent
-        brace_color = (240, 200, 40)
-        pygame.draw.line(self.image, brace_color, (3, h // 2), (w - 4, h // 2), width=2)
-        pygame.draw.line(self.image, BLACK, (3, h // 2), (w - 4, h // 2), width=1)
-
+        self.image = build_fuel_can_surface(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
         self.rect = self.image.get_rect(center=(x, y))
 
 
@@ -1752,32 +1491,13 @@ class Flashlight(pygame.sprite.Sprite):
 
     def __init__(self: Self, x: int, y: int) -> None:
         super().__init__()
-        self.image = pygame.Surface(
-            (FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT), pygame.SRCALPHA
-        )
-
-        body_color = (230, 200, 70)
-        trim_color = (80, 70, 40)
-        head_color = (200, 180, 90)
-        beam_color = (255, 240, 180, 150)
-
-        body_rect = pygame.Rect(1, 2, FLASHLIGHT_WIDTH - 4, FLASHLIGHT_HEIGHT - 4)
-        head_rect = pygame.Rect(
-            body_rect.right - 3, body_rect.top - 1, 4, body_rect.height + 2
-        )
-        beam_points = [
-            (head_rect.right + 4, head_rect.centery),
-            (head_rect.right + 2, head_rect.top),
-            (head_rect.right + 2, head_rect.bottom),
-        ]
-
-        pygame.draw.rect(self.image, body_color, body_rect, border_radius=2)
-        pygame.draw.rect(self.image, trim_color, body_rect, width=1, border_radius=2)
-        pygame.draw.rect(self.image, head_color, head_rect, border_radius=2)
-        pygame.draw.rect(self.image, trim_color, head_rect, width=1, border_radius=2)
-        pygame.draw.polygon(self.image, beam_color, beam_points)
-
+        self.image = build_flashlight_surface(FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT)
         self.rect = self.image.get_rect(center=(x, y))
+
+
+def _car_body_radius(width: float, height: float) -> float:
+    """Approximate car collision radius using only its own dimensions."""
+    return min(width, height) / 2
 
 
 __all__ = [

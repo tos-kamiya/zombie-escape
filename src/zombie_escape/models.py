@@ -8,11 +8,8 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import sprite, surface
 
-from .gameplay_constants import (
-    SURVIVOR_SPAWN_RATE,
-    ZOMBIE_AGING_DURATION_FRAMES,
-    ZOMBIE_SPAWN_DELAY_MS,
-)
+from .entities_constants import ZOMBIE_AGING_DURATION_FRAMES
+from .gameplay_constants import SURVIVOR_SPAWN_RATE, ZOMBIE_SPAWN_DELAY_MS
 from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports

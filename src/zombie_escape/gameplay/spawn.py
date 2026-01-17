@@ -14,14 +14,16 @@ from ..entities import (
     random_position_outside_building,
     spritecollideany_walls,
 )
-from ..gameplay_constants import (
-    DEFAULT_FLASHLIGHT_SPAWN_COUNT,
+from ..entities_constants import (
     FAST_ZOMBIE_BASE_SPEED,
     PLAYER_SPEED,
-    SURVIVOR_STAGE_WAITING_CAR_COUNT,
     ZOMBIE_AGING_DURATION_FRAMES,
-    ZOMBIE_SPAWN_DELAY_MS,
     ZOMBIE_SPEED,
+)
+from ..gameplay_constants import (
+    DEFAULT_FLASHLIGHT_SPAWN_COUNT,
+    SURVIVOR_STAGE_WAITING_CAR_COUNT,
+    ZOMBIE_SPAWN_DELAY_MS,
 )
 from .constants import (
     MAX_ZOMBIES,

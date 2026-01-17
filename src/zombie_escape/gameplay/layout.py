@@ -6,7 +6,7 @@ import pygame
 
 from ..colors import get_environment_palette
 from ..entities import SteelBeam, Wall
-from ..gameplay_constants import INTERNAL_WALL_HEALTH, STEEL_BEAM_HEALTH
+from ..entities_constants import INTERNAL_WALL_HEALTH, STEEL_BEAM_HEALTH
 from .constants import OUTER_WALL_HEALTH
 from ..level_blueprints import choose_blueprint
 from ..level_constants import GRID_COLS, GRID_ROWS

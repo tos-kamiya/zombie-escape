@@ -6,13 +6,13 @@ import math
 
 import pygame
 
-from ..gameplay_constants import (
+from ..entities_constants import (
     CAR_SPEED,
     PLAYER_SPEED,
     ZOMBIE_SEPARATION_DISTANCE,
-    ZOMBIE_SPAWN_DELAY_MS,
     ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
 )
+from ..gameplay_constants import ZOMBIE_SPAWN_DELAY_MS
 from .constants import MAX_ZOMBIES
 from ..models import GameData
 from ..entities import Car, Player, Survivor, Wall, Zombie, walls_for_radius, WallIndex

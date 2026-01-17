@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from .gameplay_constants import SURVIVOR_SPAWN_RATE, ZOMBIE_AGING_DURATION_FRAMES
+from .entities_constants import ZOMBIE_AGING_DURATION_FRAMES
+from .gameplay_constants import SURVIVOR_SPAWN_RATE
 from .models import Stage
 
 STAGES: list[Stage] = [

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ..gameplay_constants import ZOMBIE_AGING_DURATION_FRAMES
+from ..entities_constants import ZOMBIE_AGING_DURATION_FRAMES
 
 # --- Survival stage settings ---
 SURVIVAL_NEAR_SPAWN_MIN_DISTANCE = 140

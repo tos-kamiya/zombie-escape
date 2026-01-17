@@ -5,7 +5,7 @@ from typing import Any
 import pygame
 
 from ..colors import DAWN_AMBIENT_PALETTE_KEY, ambient_palette_key_for_flashlights
-from ..gameplay_constants import SURVIVOR_MAX_SAFE_PASSENGERS
+from ..entities_constants import SURVIVOR_MAX_SAFE_PASSENGERS
 from ..level_constants import GRID_COLS, GRID_ROWS
 from ..models import GameData, Groups, LevelLayout, ProgressState, Stage
 from ..entities import Camera

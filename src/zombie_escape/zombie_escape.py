@@ -13,7 +13,7 @@ try:
 except Exception:  # pragma: no cover - fallback version
     __version__ = "0.0.0-unknown"
 from .config import load_config, save_config
-from .gameplay_constants import (
+from .entities_constants import (
     CAR_SPEED,
     SURVIVOR_MAX_SAFE_PASSENGERS,
     SURVIVOR_MIN_SPEED_FACTOR,
