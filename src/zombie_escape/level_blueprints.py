@@ -1,6 +1,5 @@
 # Blueprint generator for randomized layouts.
 
-from .level_constants import GRID_COLS, GRID_ROWS
 from .rng import get_rng
 
 EXITS_PER_SIDE = 1  # currently fixed to 1 per side (can be tuned)
@@ -150,8 +149,8 @@ def _pick_empty_cell(
     return cols // 2, rows // 2
 
 
-def generate_random_blueprint(steel_chance: float) -> dict:
-    grid = _init_grid(GRID_COLS, GRID_ROWS)
+def generate_random_blueprint(steel_chance: float, *, cols: int, rows: int) -> dict:
+    grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE)
     _place_internal_walls(grid)
     steel_beams = _place_steel_beams(grid, chance=steel_chance)
@@ -169,11 +168,11 @@ def generate_random_blueprint(steel_chance: float) -> dict:
     return {"grid": blueprint_rows, "steel_cells": steel_beams}
 
 
-def choose_blueprint(config: dict) -> dict:
+def choose_blueprint(config: dict, *, cols: int, rows: int) -> dict:
     # Currently only random generation; hook for future variants.
     steel_conf = config.get("steel_beams", {})
     try:
         steel_chance = float(steel_conf.get("chance", STEEL_BEAM_CHANCE))
     except (TypeError, ValueError):
         steel_chance = STEEL_BEAM_CHANCE
-    return generate_random_blueprint(steel_chance=steel_chance)
+    return generate_random_blueprint(steel_chance=steel_chance, cols=cols, rows=rows)

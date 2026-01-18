@@ -136,8 +136,14 @@ def create_zombie(
         aging_duration_frames = max(1.0, aging_duration_frames * ratio)
     if start_pos is None:
         tile_size = getattr(stage, "tile_size", TILE_SIZE) if stage else TILE_SIZE
-        level_width = GRID_COLS * tile_size
-        level_height = GRID_ROWS * tile_size
+        if stage is None:
+            grid_cols = GRID_COLS
+            grid_rows = GRID_ROWS
+        else:
+            grid_cols = stage.grid_cols
+            grid_rows = stage.grid_rows
+        level_width = grid_cols * tile_size
+        level_height = grid_rows * tile_size
         if hint_pos is not None:
             points = [
                 random_position_outside_building(level_width, level_height)

@@ -83,7 +83,14 @@ def update_entities(
     def walls_near(center: tuple[float, float], radius: float) -> list[Wall]:
         if wall_index is None:
             return all_walls or []
-        return walls_for_radius(wall_index, center, radius, cell_size=game_data.cell_size)
+        return walls_for_radius(
+            wall_index,
+            center,
+            radius,
+            cell_size=game_data.cell_size,
+            grid_cols=stage.grid_cols,
+            grid_rows=stage.grid_rows,
+        )
 
     # Update player/car movement
     if player.in_car and active_car:
@@ -207,6 +214,8 @@ def update_entities(
             nearby_candidates,
             footprints=game_data.state.footprints,
             cell_size=game_data.cell_size,
+            grid_cols=stage.grid_cols,
+            grid_rows=stage.grid_rows,
             level_width=game_data.level_width,
             level_height=game_data.level_height,
             outer_wall_cells=game_data.layout.outer_wall_cells,

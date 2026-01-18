@@ -6,7 +6,6 @@ import pygame
 
 from ..colors import DAWN_AMBIENT_PALETTE_KEY, ambient_palette_key_for_flashlights
 from ..entities_constants import SURVIVOR_MAX_SAFE_PASSENGERS
-from ..level_constants import GRID_COLS, GRID_ROWS
 from ..models import GameData, Groups, LevelLayout, ProgressState, Stage
 from ..entities import Camera
 from .ambient import set_ambient_palette
@@ -61,8 +60,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
 
     # Create camera
     cell_size = stage.tile_size
-    level_width = GRID_COLS * cell_size
-    level_height = GRID_ROWS * cell_size
+    level_width = stage.grid_cols * cell_size
+    level_height = stage.grid_rows * cell_size
     camera = Camera(level_width, level_height)
 
     # Define level layout (will be filled by blueprint generation)

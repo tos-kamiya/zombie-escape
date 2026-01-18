@@ -81,6 +81,7 @@
 - 変種移動ルーチン: `zombie_wall_follower_ratio`（壁沿い巡回型の出現率）
 - エイジング速度: `zombie_aging_duration_frames`（値が大きいほど老化が遅い）
 - タイルサイズ: `tile_size`（ステージごとのワールド縮尺）
+- グリッドサイズ: `grid_cols`, `grid_rows`（タイル数。デフォルトは `level_constants.py` の値）
 
 ### 3.4 レベルレイアウト (models.LevelLayout)
 
@@ -230,7 +231,7 @@
 ## 10. 重要な定数
 
 - `screen_constants.py`: 400x300 の論理解像度、`DEFAULT_WINDOW_SCALE=2.0`。
-- `level_constants.py`: 48x30 グリッドで全体サイズを決定。
+- `level_constants.py`: グリッドのデフォルト値（48x30）。
 - `gameplay_constants.py`: 速度、判定半径、スポーンレートなど。
 - `render_constants.py`: 霧や足跡の描画パラメータ。
 

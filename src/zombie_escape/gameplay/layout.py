@@ -9,7 +9,6 @@ from ..entities import SteelBeam, Wall
 from ..entities_constants import INTERNAL_WALL_HEALTH, STEEL_BEAM_HEALTH
 from .constants import OUTER_WALL_HEALTH
 from ..level_blueprints import choose_blueprint
-from ..level_constants import GRID_COLS, GRID_ROWS
 from ..models import GameData
 
 __all__ = [
@@ -33,11 +32,16 @@ def generate_level_from_blueprint(
     """Build walls/spawn candidates/outside area from a blueprint grid."""
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
+    stage = game_data.stage
 
     steel_conf = config.get("steel_beams", {})
     steel_enabled = steel_conf.get("enabled", False)
 
-    blueprint_data = choose_blueprint(config)
+    blueprint_data = choose_blueprint(
+        config,
+        cols=stage.grid_cols,
+        rows=stage.grid_rows,
+    )
     if isinstance(blueprint_data, dict):
         blueprint = blueprint_data.get("grid", [])
         steel_cells_raw = blueprint_data.get("steel_cells", set())
@@ -63,7 +67,7 @@ def generate_level_from_blueprint(
     }
 
     def has_wall(nx: int, ny: int) -> bool:
-        if nx < 0 or ny < 0 or nx >= GRID_COLS or ny >= GRID_ROWS:
+        if nx < 0 or ny < 0 or nx >= stage.grid_cols or ny >= stage.grid_rows:
             return True
         return (nx, ny) in wall_cells
 
@@ -82,9 +86,10 @@ def generate_level_from_blueprint(
         beam._added_to_groups = True
 
     for y, row in enumerate(blueprint):
-        if len(row) != GRID_COLS:
+        if len(row) != stage.grid_cols:
             raise ValueError(
-                f"Blueprint width mismatch at row {y}: {len(row)} != {GRID_COLS}"
+                "Blueprint width mismatch at row "
+                f"{y}: {len(row)} != {stage.grid_cols}"
             )
         for x, ch in enumerate(row):
             cell_rect = rect_for_cell(x, y, cell_size)

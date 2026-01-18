@@ -10,6 +10,7 @@ from pygame import sprite, surface
 
 from .entities_constants import ZOMBIE_AGING_DURATION_FRAMES
 from .gameplay_constants import SURVIVOR_SPAWN_RATE, ZOMBIE_SPAWN_DELAY_MS
+from .level_constants import GRID_COLS, GRID_ROWS
 from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -101,6 +102,8 @@ class Stage:
     description_key: str
     available: bool = True
     tile_size: int = 50
+    grid_cols: int = GRID_COLS
+    grid_rows: int = GRID_ROWS
     requires_fuel: bool = False
     buddy_required_count: int = 0
     rescue_stage: bool = False
