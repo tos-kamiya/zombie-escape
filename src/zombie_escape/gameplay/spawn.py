@@ -20,8 +20,8 @@ from ..entities_constants import (
     ZOMBIE_AGING_DURATION_FRAMES,
     ZOMBIE_SPEED,
 )
-from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT, ZOMBIE_SPAWN_DELAY_MS
-from ..level_constants import GRID_COLS, GRID_ROWS, TILE_SIZE
+from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
+from ..level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS, DEFAULT_TILE_SIZE
 from ..models import GameData, Stage
 from ..rng import get_rng
 from .constants import (
@@ -85,11 +85,9 @@ def create_zombie(
     tracker_ratio = 0.0
     wall_follower_ratio = 0.0
     if stage is not None:
-        normal_ratio = max(0.0, min(1.0, getattr(stage, "zombie_normal_ratio", 1.0)))
-        tracker_ratio = max(0.0, min(1.0, getattr(stage, "zombie_tracker_ratio", 0.0)))
-        wall_follower_ratio = max(
-            0.0, min(1.0, getattr(stage, "zombie_wall_follower_ratio", 0.0))
-        )
+        normal_ratio = max(0.0, min(1.0, stage.zombie_normal_ratio))
+        tracker_ratio = max(0.0, min(1.0, stage.zombie_tracker_ratio))
+        wall_follower_ratio = max(0.0, min(1.0, stage.zombie_wall_follower_ratio))
         if normal_ratio + tracker_ratio + wall_follower_ratio <= 0:
             normal_ratio = 1.0
             tracker_ratio = 0.0
@@ -102,11 +100,7 @@ def create_zombie(
             normal_ratio = max(0.0, 1.0 - tracker_ratio - wall_follower_ratio)
         aging_duration_frames = max(
             1.0,
-            float(
-                getattr(
-                    stage, "zombie_aging_duration_frames", ZOMBIE_AGING_DURATION_FRAMES
-                )
-            ),
+            float(stage.zombie_aging_duration_frames),
         )
     else:
         aging_duration_frames = ZOMBIE_AGING_DURATION_FRAMES
@@ -135,10 +129,10 @@ def create_zombie(
         )
         aging_duration_frames = max(1.0, aging_duration_frames * ratio)
     if start_pos is None:
-        tile_size = getattr(stage, "tile_size", TILE_SIZE) if stage else TILE_SIZE
+        tile_size = stage.tile_size if stage else DEFAULT_TILE_SIZE
         if stage is None:
-            grid_cols = GRID_COLS
-            grid_rows = GRID_ROWS
+            grid_cols = DEFAULT_GRID_COLS
+            grid_rows = DEFAULT_GRID_ROWS
         else:
             grid_cols = stage.grid_cols
             grid_rows = stage.grid_rows
@@ -443,7 +437,7 @@ def spawn_initial_zombies(
     if not spawn_cells:
         return
 
-    spawn_rate = max(0.0, getattr(game_data.stage, "initial_interior_spawn_rate", 0.0))
+    spawn_rate = max(0.0, game_data.stage.initial_interior_spawn_rate)
     positions = find_interior_spawn_positions(
         spawn_cells,
         spawn_rate,
@@ -462,9 +456,7 @@ def spawn_initial_zombies(
         zombie_group.add(tentative)
         all_sprites.add(tentative, layer=1)
 
-    interval = max(
-        1, getattr(game_data.stage, "spawn_interval_ms", ZOMBIE_SPAWN_DELAY_MS)
-    )
+    interval = max(1, game_data.stage.spawn_interval_ms)
     game_data.state.last_zombie_spawn_time = pygame.time.get_ticks() - interval
 
 

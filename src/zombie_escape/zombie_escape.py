@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 import sys
 import traceback  # For error reporting
+from pathlib import Path
 from typing import Any, Tuple
 
 import pygame
@@ -18,6 +18,10 @@ from .entities_constants import (
     SURVIVOR_MAX_SAFE_PASSENGERS,
     SURVIVOR_MIN_SPEED_FACTOR,
 )
+from .gameplay import calculate_car_speed_for_passengers
+from .level_constants import DEFAULT_TILE_SIZE
+from .localization import set_language
+from .models import GameData, Stage
 from .render_constants import build_render_assets
 from .screen_constants import (
     DEFAULT_WINDOW_SCALE,
@@ -25,21 +29,25 @@ from .screen_constants import (
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
 )
-from .level_constants import TILE_SIZE
-from .localization import set_language
-from .models import GameData, Stage
-from .stage_constants import DEFAULT_STAGE_ID, STAGES
 from .screens import ScreenID, ScreenTransition, apply_window_scale
 from .screens.game_over import game_over_screen
 from .screens.settings import settings_screen
 from .screens.title import MAX_SEED_DIGITS, title_screen
-from .gameplay import calculate_car_speed_for_passengers
+from .stage_constants import DEFAULT_STAGE_ID, STAGES
 
 
 def _parse_cli_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--debug", action="store_true", help="Enable debugging aids for Stage 5 and hide pause overlay")
-    parser.add_argument("--profile", action="store_true", help="Profile gameplay and write cProfile output to disk")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debugging aids for Stage 5 and hide pause overlay",
+    )
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="Profile gameplay and write cProfile output to disk",
+    )
     parser.add_argument(
         "--profile-output",
         default="profile.prof",
@@ -57,6 +65,7 @@ def _sanitize_seed_text(raw: str | None) -> tuple[str | None, bool]:
         print("Ignoring --seed value because it must contain only digits.")
         return None, True
     return stripped[:MAX_SEED_DIGITS], False
+
 
 # Re-export the gameplay helpers constants for external callers/tests.
 __all__ = [
@@ -205,7 +214,7 @@ def main() -> None:
             elif stage is not None:
                 render_assets = build_render_assets(stage.tile_size)
             else:
-                render_assets = build_render_assets(TILE_SIZE)
+                render_assets = build_render_assets(DEFAULT_TILE_SIZE)
             transition = game_over_screen(
                 screen,
                 clock,

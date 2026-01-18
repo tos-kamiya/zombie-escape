@@ -1,21 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Sequence
-
 import math
+from typing import Any, Sequence
 
 import pygame
 
+from ..entities import Car, Player, Survivor, Wall, WallIndex, Zombie, walls_for_radius
 from ..entities_constants import (
     CAR_SPEED,
     PLAYER_SPEED,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
 )
-from ..gameplay_constants import ZOMBIE_SPAWN_DELAY_MS
-from .constants import MAX_ZOMBIES
 from ..models import GameData
-from ..entities import Car, Player, Survivor, Wall, Zombie, walls_for_radius, WallIndex
+from .constants import MAX_ZOMBIES
 from .spawn import spawn_weighted_zombie
 from .survivors import update_survivors
 from .utils import rect_visible_on_screen
@@ -123,7 +121,7 @@ def update_entities(
 
     # Spawn new zombies if needed
     current_time = pygame.time.get_ticks()
-    spawn_interval = max(1, getattr(stage, "spawn_interval_ms", ZOMBIE_SPAWN_DELAY_MS))
+    spawn_interval = max(1, stage.spawn_interval_ms)
     spawn_blocked = stage.survival_stage and game_data.state.dawn_ready
     if (
         len(zombie_group) < MAX_ZOMBIES

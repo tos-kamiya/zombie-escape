@@ -108,7 +108,7 @@ def gameplay_screen(
     spawn_survivors(game_data, layout_data)
 
     if stage.requires_fuel:
-        fuel_spawn_count = getattr(stage, "fuel_spawn_count", 1)
+        fuel_spawn_count = stage.fuel_spawn_count
         fuel_can = place_fuel_can(
             layout_data["walkable_cells"],
             player,

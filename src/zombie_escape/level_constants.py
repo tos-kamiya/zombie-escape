@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-GRID_COLS = 48
-GRID_ROWS = 30
-TILE_SIZE = 50  # world units per cell; adjust to scale the whole map
+DEFAULT_GRID_COLS = 48
+DEFAULT_GRID_ROWS = 30
+DEFAULT_TILE_SIZE = 50  # world units per cell; adjust to scale the whole map
 
 __all__ = [
-    "GRID_COLS",
-    "GRID_ROWS",
-    "TILE_SIZE",
+    "DEFAULT_GRID_COLS",
+    "DEFAULT_GRID_ROWS",
+    "DEFAULT_TILE_SIZE",
 ]
