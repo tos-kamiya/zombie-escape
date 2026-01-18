@@ -1181,7 +1181,7 @@ class Zombie(pygame.sprite.Sprite):
             return x, y
 
         influence = self.radius + bevel_depth
-        repel_ratio = 0.05
+        repel_ratio = 0.03
         corners = (
             (bevel_mask[0], wall.rect.left, wall.rect.top, -1.0, -1.0),  # tl
             (bevel_mask[1], wall.rect.right, wall.rect.top, 1.0, -1.0),  # tr

@@ -158,7 +158,7 @@
 - `check_interactions(game_data, config)` (`gameplay/interactions.py`)
   - アイテム収集、車両/救助/敗北判定などの相互作用。
 - `update_footprints(game_data, config)` (`gameplay/footprints.py`)
-  - 足跡を記録し寿命で削除。
+  - 足跡を記録し寿命で削除（表示は設定で制御し、記録は常時行う）。
 - `update_survival_timer(game_data, dt_ms)` (`gameplay/state.py`)
   - サバイバル用の時間管理と夜明け切り替え。
 

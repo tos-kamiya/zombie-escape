@@ -32,14 +32,10 @@ def get_shrunk_sprite(
 
 def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
     """Record player steps and clean up old footprints."""
+    _ = config  # Footprints are always tracked; config only affects rendering.
     state = game_data.state
     player = game_data.player
     assert player is not None
-    footprints_enabled = config.get("footprints", {}).get("enabled", True)
-    if not footprints_enabled:
-        state.footprints = []
-        state.last_footprint_pos = None
-        return
 
     now = pygame.time.get_ticks()
 
