@@ -427,8 +427,11 @@ def title_screen(
                 current_seed_text if current_seed_text else tr("menu.seed_empty")
             )
             seed_label = tr("menu.seed_label", value=seed_value_display)
-            seed_surface = hint_font.render(seed_label, False, WHITE)
-            seed_rect = seed_surface.get_rect(bottomleft=(info_column_x, height - 30))
+            seed_surface = hint_font.render(seed_label, False, LIGHT_GRAY)
+            seed_offset_y = hint_line_height
+            seed_rect = seed_surface.get_rect(
+                bottomleft=(info_column_x, height - 30 + seed_offset_y)
+            )
             screen.blit(seed_surface, seed_rect)
 
             seed_hint = tr("menu.seed_hint")
