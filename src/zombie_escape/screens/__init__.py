@@ -53,7 +53,7 @@ class ScreenTransition:
 
 
 current_window_scale = DEFAULT_WINDOW_SCALE  # Applied to the OS window only
-current_fullscreen = False
+current_maximized = False
 last_window_scale = DEFAULT_WINDOW_SCALE
 current_window_size = (
     int(SCREEN_WIDTH * DEFAULT_WINDOW_SCALE),
@@ -77,25 +77,20 @@ def present(logical_surface: surface.Surface) -> None:
     window = pygame.display.get_surface()
     if window is None:
         return
-    if current_fullscreen:
-        window.blit(logical_surface, (0, 0))
-        pygame.display.flip()
-        return
     window_size = _fetch_window_size(window)
     _update_window_size(window_size, source="frame")
     logical_size = logical_surface.get_size()
-    if current_fullscreen:
-        scale = max(
-            1,
-            min(
-                window_size[0] // logical_size[0],
-                window_size[1] // logical_size[1],
-            ),
-        )
-        scaled_width = logical_size[0] * scale
-        scaled_height = logical_size[1] * scale
+    if window_size == logical_size:
+        window.blit(logical_surface, (0, 0))
+    else:
+        # Preserve aspect ratio with letterboxing.
+        scale_x = window_size[0] / max(1, logical_size[0])
+        scale_y = window_size[1] / max(1, logical_size[1])
+        scale = min(scale_x, scale_y)
+        scaled_width = max(1, int(logical_size[0] * scale))
+        scaled_height = max(1, int(logical_size[1] * scale))
         window.fill((0, 0, 0))
-        if scale == 1 and (scaled_width, scaled_height) == logical_size:
+        if (scaled_width, scaled_height) == logical_size:
             scaled_surface = logical_surface
         else:
             scaled_surface = pygame.transform.scale(
@@ -104,12 +99,6 @@ def present(logical_surface: surface.Surface) -> None:
         offset_x = (window_size[0] - scaled_width) // 2
         offset_y = (window_size[1] - scaled_height) // 2
         window.blit(scaled_surface, (offset_x, offset_y))
-        pygame.display.flip()
-        return
-    if window_size == logical_size:
-        window.blit(logical_surface, (0, 0))
-    else:
-        pygame.transform.scale(logical_surface, window_size, window)
     pygame.display.flip()
 
 
@@ -117,17 +106,19 @@ def apply_window_scale(
     scale: float, *, game_data: "GameData | None" = None
 ) -> surface.Surface:
     """Resize the OS window; logical render surface stays constant."""
-    global current_window_scale, current_fullscreen, last_window_scale
+    global current_window_scale, current_maximized, last_window_scale
 
     clamped_scale = max(WINDOW_SCALE_MIN, min(WINDOW_SCALE_MAX, scale))
     current_window_scale = clamped_scale
     last_window_scale = clamped_scale
-    current_fullscreen = False
+    current_maximized = False
 
     window_width = max(1, int(SCREEN_WIDTH * current_window_scale))
     window_height = max(1, int(SCREEN_HEIGHT * current_window_scale))
 
-    new_window = pygame.display.set_mode((window_width, window_height))
+    new_window = pygame.display.set_mode(
+        (window_width, window_height), pygame.RESIZABLE
+    )
     _update_window_size((window_width, window_height), source="apply_scale")
     _update_window_caption(window_width, window_height)
 
@@ -148,21 +139,23 @@ def nudge_window_scale(
 def toggle_fullscreen(
     *, game_data: "GameData | None" = None
 ) -> surface.Surface | None:
-    """Toggle fullscreen without persisting the setting."""
-    global current_fullscreen, last_window_scale
-    if current_fullscreen:
-        current_fullscreen = False
+    """Toggle a maximized window without persisting the setting."""
+    global current_maximized, last_window_scale
+    if current_maximized:
+        current_maximized = False
         window_width = max(1, int(SCREEN_WIDTH * last_window_scale))
         window_height = max(1, int(SCREEN_HEIGHT * last_window_scale))
-        window = pygame.display.set_mode((window_width, window_height))
+        window = pygame.display.set_mode(
+            (window_width, window_height), pygame.RESIZABLE
+        )
+        _restore_window()
         _update_window_caption(window_width, window_height)
         _update_window_size((window_width, window_height), source="toggle_windowed")
     else:
         last_window_scale = current_window_scale
-        current_fullscreen = True
-        window = pygame.display.set_mode(
-            (SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN | pygame.SCALED
-        )
+        current_maximized = True
+        window = pygame.display.set_mode(_fetch_window_size(None), pygame.RESIZABLE)
+        _maximize_window()
         window_width, window_height = _fetch_window_size(window)
         _update_window_caption(window_width, window_height)
         _update_window_size((window_width, window_height), source="toggle_fullscreen")
@@ -188,7 +181,7 @@ def sync_window_size(
     _update_window_size(
         (window_width, window_height), source="window_event"
     )
-    if not current_fullscreen:
+    if not current_maximized:
         scale_x = window_width / max(1, SCREEN_WIDTH)
         scale_y = window_height / max(1, SCREEN_HEIGHT)
         scale = max(WINDOW_SCALE_MIN, min(WINDOW_SCALE_MAX, min(scale_x, scale_y)))
@@ -210,6 +203,7 @@ def _fetch_window_size(window: surface.Surface | None) -> tuple[int, int]:
     window_height = max(1, int(SCREEN_HEIGHT * last_window_scale))
     return window_width, window_height
 
+
 def _normalize_window_size(size: tuple[int, int]) -> tuple[int, int]:
     width = max(1, int(size[0]))
     height = max(1, int(size[1]))
@@ -226,3 +220,33 @@ def _update_window_size(size: tuple[int, int], *, source: str) -> None:
 
 def _update_window_caption(window_width: int, window_height: int) -> None:
     pygame.display.set_caption(f"Zombie Escape ({window_width}x{window_height})")
+
+
+def _maximize_window() -> None:
+    try:
+        from pygame import _sdl2 as sdl2  # type: ignore[import-not-found]
+    except Exception:
+        return
+    try:
+        window = sdl2.Window.from_display_module()
+    except Exception:
+        return
+    try:
+        window.maximize()
+    except Exception:
+        return
+
+
+def _restore_window() -> None:
+    try:
+        from pygame import _sdl2 as sdl2  # type: ignore[import-not-found]
+    except Exception:
+        return
+    try:
+        window = sdl2.Window.from_display_module()
+    except Exception:
+        return
+    try:
+        window.restore()
+    except Exception:
+        return
