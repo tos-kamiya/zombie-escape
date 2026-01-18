@@ -22,12 +22,12 @@ from .gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     SURVIVAL_FAKE_CLOCK_RATIO,
 )
-from .entities import Camera, Car, Flashlight, FuelCan, Player, Survivor
+from .entities import Camera, Car, Flashlight, FuelCan, Player, Survivor, Wall
 from .font_utils import load_font
 from .localization import get_font_settings
 from .localization import translate as tr
 from .models import GameData, Stage
-from .render_assets import RenderAssets
+from .render_assets import RenderAssets, resolve_wall_colors
 
 
 def show_message(
@@ -76,8 +76,18 @@ def draw_level_overview(
     dark_floor = tuple(max(0, int(channel * 0.55)) for channel in base_floor)
     surface.fill(dark_floor)
     for wall in wall_group:
-        color = getattr(wall, "base_color", INTERNAL_WALL_COLOR)
-        pygame.draw.rect(surface, color, wall.rect)
+        if not isinstance(wall, Wall):
+            raise TypeError("wall_group must contain Wall instances")
+        if wall.max_health > 0:
+            health_ratio = max(0.0, min(1.0, wall.health / wall.max_health))
+        else:
+            health_ratio = 0.0
+        fill_color, _ = resolve_wall_colors(
+            health_ratio=health_ratio,
+            palette_category=wall.palette_category,
+            palette=palette,
+        )
+        pygame.draw.rect(surface, fill_color, wall.rect)
     now = pygame.time.get_ticks()
     for fp in footprints:
         age = now - fp["time"]
