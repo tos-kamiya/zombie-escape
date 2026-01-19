@@ -38,6 +38,7 @@ def generate_level_from_blueprint(
         config,
         cols=stage.grid_cols,
         rows=stage.grid_rows,
+        wall_algo=stage.wall_algorithm,
     )
     if isinstance(blueprint_data, dict):
         blueprint = blueprint_data.get("grid", [])

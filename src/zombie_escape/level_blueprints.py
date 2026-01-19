@@ -83,7 +83,7 @@ def _place_exits(grid: list[list[str]], exits_per_side: int) -> None:
             grid[y][x] = "E"
 
 
-def _place_internal_walls(grid: list[list[str]]) -> None:
+def _place_walls_default(grid: list[list[str]]) -> None:
     cols, rows = len(grid[0]), len(grid)
     rng = RNG.randint
     # Avoid placing walls adjacent to exits: collect forbidden cells (exits + neighbors)
@@ -108,6 +108,104 @@ def _place_internal_walls(grid: list[list[str]]) -> None:
                     continue
                 if grid[y + i][x] in (".", "Z"):
                     grid[y + i][x] = "1"
+
+
+def _place_walls_empty(grid: list[list[str]]) -> None:
+    """Place no internal walls (open floor plan)."""
+    pass
+
+
+def _place_walls_grid_wire(grid: list[list[str]]) -> None:
+    """
+    Place walls using a 2-pass approach with independent layers.
+    Vertical and horizontal walls are generated on separate grids to ensure
+    one orientation doesn't block the other during generation.
+    Finally, they are merged.
+    Strictly forbids parallel adjacency within the same orientation layer.
+    """
+    cols, rows = len(grid[0]), len(grid)
+    rng = RNG.randint
+    forbidden = _collect_exit_adjacent_cells(grid)
+
+    # Temporary grids for independent generation
+    # They only track the internal walls ("1").
+    grid_v = [["." for _ in range(cols)] for _ in range(rows)]
+    grid_h = [["." for _ in range(cols)] for _ in range(rows)]
+
+    # Use a similar density to default.
+    lines_per_pass = int(NUM_WALL_LINES * 0.7)
+
+    # --- Pass 1: Vertical Walls (on grid_v) ---
+    for _ in range(lines_per_pass):
+        length = rng(WALL_MIN_LEN, WALL_MAX_LEN)
+        x = rng(2, cols - 3)
+        y = rng(2, rows - 2 - length)
+
+        can_place = True
+        for i in range(length):
+            cy = y + i
+            # 1. Global forbidden check (exits, outer walls in main grid)
+            if (x, cy) in forbidden:
+                can_place = False
+                break
+            if grid[cy][x] not in (".",):
+                can_place = False
+                break
+            # 2. Local self-overlap check
+            if grid_v[cy][x] != ".":
+                can_place = False
+                break
+            # 3. Parallel adjacency check (only against other vertical walls)
+            if grid_v[cy][x - 1] == "1" or grid_v[cy][x + 1] == "1":
+                can_place = False
+                break
+
+        if can_place:
+            for i in range(length):
+                grid_v[y + i][x] = "1"
+
+    # --- Pass 2: Horizontal Walls (on grid_h) ---
+    for _ in range(lines_per_pass):
+        length = rng(WALL_MIN_LEN, WALL_MAX_LEN)
+        x = rng(2, cols - 2 - length)
+        y = rng(2, rows - 3)
+
+        can_place = True
+        for i in range(length):
+            cx = x + i
+            # 1. Global forbidden check
+            if (cx, y) in forbidden:
+                can_place = False
+                break
+            if grid[y][cx] not in (".",):
+                can_place = False
+                break
+            # 2. Local self-overlap check
+            if grid_h[y][cx] != ".":
+                can_place = False
+                break
+            # 3. Parallel adjacency check (only against other horizontal walls)
+            if grid_h[y - 1][cx] == "1" or grid_h[y + 1][cx] == "1":
+                can_place = False
+                break
+
+        if can_place:
+            for i in range(length):
+                grid_h[y][x + i] = "1"
+
+    # --- Merge Phase ---
+    for y in range(rows):
+        for x in range(cols):
+            # If either layer has a wall, and the main grid is empty, place it.
+            if (grid_v[y][x] == "1" or grid_h[y][x] == "1") and grid[y][x] == ".":
+                grid[y][x] = "1"
+
+
+WALL_ALGORITHMS = {
+    "default": _place_walls_default,
+    "empty": _place_walls_empty,
+    "grid_wire": _place_walls_grid_wire,
+}
 
 
 def _place_steel_beams(
@@ -149,10 +247,22 @@ def _pick_empty_cell(
     return cols // 2, rows // 2
 
 
-def _generate_random_blueprint(steel_chance: float, *, cols: int, rows: int) -> dict:
+def _generate_random_blueprint(
+    steel_chance: float, *, cols: int, rows: int, wall_algo: str = "default"
+) -> dict:
     grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE)
-    _place_internal_walls(grid)
+
+    # Select and run the wall placement algorithm
+    if wall_algo not in WALL_ALGORITHMS:
+        print(
+            f"WARNING: Unknown wall algorithm '{wall_algo}'. Falling back to 'default'."
+        )
+        wall_algo = "default"
+
+    algo_func = WALL_ALGORITHMS[wall_algo]
+    algo_func(grid)
+
     steel_beams = _place_steel_beams(grid, chance=steel_chance)
 
     # Spawns: player, car, zombies
@@ -168,11 +278,15 @@ def _generate_random_blueprint(steel_chance: float, *, cols: int, rows: int) -> 
     return {"grid": blueprint_rows, "steel_cells": steel_beams}
 
 
-def choose_blueprint(config: dict, *, cols: int, rows: int) -> dict:
+def choose_blueprint(
+    config: dict, *, cols: int, rows: int, wall_algo: str = "default"
+) -> dict:
     # Currently only random generation; hook for future variants.
     steel_conf = config.get("steel_beams", {})
     try:
         steel_chance = float(steel_conf.get("chance", STEEL_BEAM_CHANCE))
     except (TypeError, ValueError):
         steel_chance = STEEL_BEAM_CHANCE
-    return _generate_random_blueprint(steel_chance=steel_chance, cols=cols, rows=rows)
+    return _generate_random_blueprint(
+        steel_chance=steel_chance, cols=cols, rows=rows, wall_algo=wall_algo
+    )

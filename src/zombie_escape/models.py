@@ -120,6 +120,7 @@ class Stage:
     zombie_normal_ratio: float = 1.0
     zombie_aging_duration_frames: int = ZOMBIE_AGING_DURATION_FRAMES
     waiting_car_target_count: int = 1
+    wall_algorithm: str = "default"
 
     @property
     def name(self) -> str:
