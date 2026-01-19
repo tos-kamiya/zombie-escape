@@ -80,6 +80,7 @@
 - 変種移動ルーチン: `zombie_tracker_ratio`（足跡追跡型の出現率）
 - 変種移動ルーチン: `zombie_wall_follower_ratio`（壁沿い巡回型の出現率）
 - エイジング速度: `zombie_aging_duration_frames`（値が大きいほど老化が遅い）
+- 壁生成アルゴリズム: `wall_algorithm` ("default", "empty", "grid_wire")
 - タイルサイズ: `tile_size`（ステージごとのワールド縮尺）
 - グリッドサイズ: `grid_cols`, `grid_rows`（タイル数。デフォルトは `level_constants.py` の値）
 
@@ -204,8 +205,12 @@
   - `C`: 車候補
   - `Z`: ゾンビ候補
 
-- `generate_random_blueprint()`
+- `generate_random_blueprint(wall_algo)`
   - 外周 -> 出口 -> 壁 -> スポーン候補 の順に生成。
+  - `wall_algo` により壁配置戦略を切り替え可能。
+    - `"default"`: ランダムな長さの直線をランダム配置。
+    - `"empty"`: 内部壁なし。
+    - `"grid_wire"`: 縦横を独立グリッドで生成しマージ。平行な壁の隣接（2x2ブロック）を禁止する。
 
 ## 7. 設定と進行データ
 
