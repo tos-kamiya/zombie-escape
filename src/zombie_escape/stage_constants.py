@@ -54,6 +54,7 @@ STAGES: list[Stage] = [
         fuel_spawn_count=0,
         exterior_spawn_weight=0.4,
         interior_spawn_weight=0.6,
+        initial_interior_spawn_rate=0.04,
     ),
     Stage(
         id="stage6",
