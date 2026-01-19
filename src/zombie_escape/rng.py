@@ -25,10 +25,10 @@ class DeterministicRNG:
     def __init__(self, seed: int | None = None) -> None:
         self._state = [0] * self._N
         self._index = self._N
-        self._seed_value: int | None = None
-        self.seed(seed)
+        self.__seed_value: int | None = None
+        self._seed(seed)
 
-    def seed(self, value: int | None) -> None:
+    def _seed(self, value: int | None) -> None:
         """Seed using the MT19937 initialization routine."""
         if value is None:
             value = generate_seed()
@@ -36,7 +36,7 @@ class DeterministicRNG:
             normalized = int(value)
         except (TypeError, ValueError) as exc:
             raise ValueError(f"Invalid seed value: {value}") from exc
-        self._seed_value = normalized
+        self.__seed_value = normalized
         seed32 = normalized & 0xFFFFFFFF
         if seed32 == 0:
             seed32 = 5489  # default MT seed
@@ -49,8 +49,8 @@ class DeterministicRNG:
         self._index = self._N
 
     @property
-    def seed_value(self) -> int | None:
-        return self._seed_value
+    def _seed_value(self) -> int | None:
+        return self.__seed_value
 
     def random(self) -> float:
         """Return a float in the range [0.0, 1.0)."""
@@ -119,9 +119,9 @@ def get_rng() -> DeterministicRNG:
 
 
 def seed_rng(seed: int | None) -> int:
-    _GLOBAL_RNG.seed(seed)
-    assert _GLOBAL_RNG.seed_value is not None
-    return _GLOBAL_RNG.seed_value
+    _GLOBAL_RNG._seed(seed)
+    assert _GLOBAL_RNG._seed_value is not None
+    return _GLOBAL_RNG._seed_value
 
 
 __all__ = [

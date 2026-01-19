@@ -62,7 +62,7 @@ def _place_exits(grid: list[list[str]], exits_per_side: int) -> None:
     rng = RNG.randint
     used = set()
 
-    def pick_pos(side: str) -> tuple[int, int]:
+    def _pick_pos(side: str) -> tuple[int, int]:
         if side in ("top", "bottom"):
             x = rng(2, cols - 3)
             y = 1 if side == "top" else rows - 2
@@ -73,12 +73,12 @@ def _place_exits(grid: list[list[str]], exits_per_side: int) -> None:
 
     for side in ("top", "bottom", "left", "right"):
         for _ in range(exits_per_side):
-            x, y = pick_pos(side)
+            x, y = _pick_pos(side)
             # avoid duplicates; retry a few times
             for _ in range(10):
                 if (x, y) not in used:
                     break
-                x, y = pick_pos(side)
+                x, y = _pick_pos(side)
             used.add((x, y))
             grid[y][x] = "E"
 
@@ -149,7 +149,7 @@ def _pick_empty_cell(
     return cols // 2, rows // 2
 
 
-def generate_random_blueprint(steel_chance: float, *, cols: int, rows: int) -> dict:
+def _generate_random_blueprint(steel_chance: float, *, cols: int, rows: int) -> dict:
     grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE)
     _place_internal_walls(grid)
@@ -175,4 +175,4 @@ def choose_blueprint(config: dict, *, cols: int, rows: int) -> dict:
         steel_chance = float(steel_conf.get("chance", STEEL_BEAM_CHANCE))
     except (TypeError, ValueError):
         steel_chance = STEEL_BEAM_CHANCE
-    return generate_random_blueprint(steel_chance=steel_chance, cols=cols, rows=rows)
+    return _generate_random_blueprint(steel_chance=steel_chance, cols=cols, rows=rows)

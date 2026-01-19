@@ -2,26 +2,21 @@
 
 # ruff: noqa: F401
 
-from .ambient import set_ambient_palette, sync_ambient_palette_with_flashlights
+from .ambient import sync_ambient_palette_with_flashlights
 from .footprints import get_shrunk_sprite, update_footprints
 from .interactions import check_interactions
-from .layout import generate_level_from_blueprint, rect_for_cell
+from .layout import generate_level_from_blueprint
 from .movement import process_player_input, update_entities
 from .spawn import (
-    alive_waiting_cars,
-    create_zombie,
-    log_waiting_car_count,
     maintain_waiting_car_supply,
     nearest_waiting_car,
     place_buddies,
-    place_flashlight,
     place_flashlights,
     place_fuel_can,
     place_new_car,
     setup_player_and_cars,
     spawn_exterior_zombie,
     spawn_initial_zombies,
-    spawn_nearby_zombie,
     spawn_survivors,
     spawn_waiting_car,
     spawn_weighted_zombie,
@@ -47,24 +42,18 @@ from .utils import (
 )
 
 __all__ = [
-    "create_zombie",
-    "rect_for_cell",
     "generate_level_from_blueprint",
     "place_new_car",
     "place_fuel_can",
-    "place_flashlight",
     "place_flashlights",
     "place_buddies",
     "find_interior_spawn_positions",
     "find_nearby_offscreen_spawn_position",
     "find_exterior_spawn_position",
     "spawn_survivors",
-    "spawn_nearby_zombie",
     "spawn_exterior_zombie",
     "spawn_weighted_zombie",
     "update_survivors",
-    "alive_waiting_cars",
-    "log_waiting_car_count",
     "nearest_waiting_car",
     "calculate_car_speed_for_passengers",
     "apply_passenger_speed_penalty",
@@ -87,6 +76,5 @@ __all__ = [
     "process_player_input",
     "update_entities",
     "check_interactions",
-    "set_ambient_palette",
     "sync_ambient_palette_with_flashlights",
 ]

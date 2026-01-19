@@ -8,7 +8,7 @@ from ..colors import DAWN_AMBIENT_PALETTE_KEY, ambient_palette_key_for_flashligh
 from ..entities_constants import SURVIVOR_MAX_SAFE_PASSENGERS
 from ..models import GameData, Groups, LevelLayout, ProgressState, Stage
 from ..entities import Camera
-from .ambient import set_ambient_palette
+from .ambient import _set_ambient_palette
 
 
 def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
@@ -131,7 +131,7 @@ def update_survival_timer(game_data: GameData, dt_ms: int) -> None:
     if not state.dawn_ready and state.survival_elapsed_ms >= state.survival_goal_ms:
         state.dawn_ready = True
         state.dawn_prompt_at = pygame.time.get_ticks()
-        set_ambient_palette(game_data, DAWN_AMBIENT_PALETTE_KEY, force=True)
+        _set_ambient_palette(game_data, DAWN_AMBIENT_PALETTE_KEY, force=True)
     if state.dawn_ready:
         carbonize_outdoor_zombies(game_data)
         state.dawn_carbonized = True

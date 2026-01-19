@@ -25,7 +25,7 @@ from ..localization import translate as tr
 from ..models import GameData, ProgressState
 from ..rng import get_rng
 from ..entities import Survivor, spritecollideany_walls, WallIndex
-from .spawn import create_zombie
+from .spawn import _create_zombie
 from .utils import find_nearby_offscreen_spawn_position, rect_visible_on_screen
 
 RNG = get_rng()
@@ -253,7 +253,7 @@ def handle_survivor_zombie_collisions(
         line = random_survivor_conversion_line()
         if line:
             add_survivor_message(game_data, line)
-        new_zombie = create_zombie(
+        new_zombie = _create_zombie(
             config,
             start_pos=survivor.rect.center,
             stage=game_data.stage,

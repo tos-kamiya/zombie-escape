@@ -78,7 +78,7 @@ def update_entities(
 
     all_walls = list(wall_group) if wall_index is None else None
 
-    def walls_near(center: tuple[float, float], radius: float) -> list[Wall]:
+    def _walls_near(center: tuple[float, float], radius: float) -> list[Wall]:
         if wall_index is None:
             return all_walls or []
         return walls_for_radius(
@@ -92,7 +92,7 @@ def update_entities(
 
     # Update player/car movement
     if player.in_car and active_car:
-        car_walls = walls_near((active_car.x, active_car.y), 150.0)
+        car_walls = _walls_near((active_car.x, active_car.y), 150.0)
         active_car.move(car_dx, car_dy, car_walls)
         player.rect.center = active_car.rect.center
         player.x, player.y = active_car.x, active_car.y
@@ -205,7 +205,7 @@ def update_entities(
                     )
         nearby_candidates = _nearby_zombies(idx)
         zombie_search_radius = ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE + zombie.radius + 120
-        nearby_walls = walls_near((zombie.x, zombie.y), zombie_search_radius)
+        nearby_walls = _walls_near((zombie.x, zombie.y), zombie_search_radius)
         zombie.update(
             target,
             nearby_walls,

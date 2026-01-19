@@ -8,7 +8,7 @@ from ..colors import (
 from ..models import GameData
 
 
-def set_ambient_palette(
+def _set_ambient_palette(
     game_data: GameData, key: str, *, force: bool = False
 ) -> None:
     """Apply a named ambient palette to all walls in the level."""
@@ -29,10 +29,10 @@ def sync_ambient_palette_with_flashlights(
 
     state = game_data.state
     if state.dawn_ready:
-        set_ambient_palette(game_data, DAWN_AMBIENT_PALETTE_KEY, force=force)
+        _set_ambient_palette(game_data, DAWN_AMBIENT_PALETTE_KEY, force=force)
         return
     key = ambient_palette_key_for_flashlights(state.flashlight_count)
-    set_ambient_palette(game_data, key, force=force)
+    _set_ambient_palette(game_data, key, force=force)
 
 
 def _apply_palette_to_walls(

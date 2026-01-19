@@ -39,11 +39,8 @@ from .utils import (
 RNG = get_rng()
 
 __all__ = [
-    "car_appearance_for_stage",
-    "create_zombie",
     "place_new_car",
     "place_fuel_can",
-    "place_flashlight",
     "place_flashlights",
     "place_buddies",
     "spawn_survivors",
@@ -51,20 +48,17 @@ __all__ = [
     "spawn_initial_zombies",
     "spawn_waiting_car",
     "maintain_waiting_car_supply",
-    "alive_waiting_cars",
-    "log_waiting_car_count",
     "nearest_waiting_car",
-    "spawn_nearby_zombie",
     "spawn_exterior_zombie",
     "spawn_weighted_zombie",
 ]
 
 
-def car_appearance_for_stage(stage: Stage | None) -> str:
+def _car_appearance_for_stage(stage: Stage | None) -> str:
     return "disabled" if stage and stage.survival_stage else "default"
 
 
-def create_zombie(
+def _create_zombie(
     config: dict[str, Any],
     *,
     start_pos: tuple[int, int] | None = None,
@@ -197,7 +191,7 @@ def place_fuel_can(
     return FuelCan(cell.centerx, cell.centery)
 
 
-def place_flashlight(
+def _place_flashlight(
     walkable_cells: list[pygame.Rect],
     player: Player,
     *,
@@ -245,7 +239,7 @@ def place_flashlights(
     max_attempts = max(200, count * 80)
     while len(placed) < count and attempts < max_attempts:
         attempts += 1
-        fl = place_flashlight(walkable_cells, player, cars=cars)
+        fl = _place_flashlight(walkable_cells, player, cars=cars)
         if not fl:
             break
         # Avoid clustering too tightly
@@ -382,19 +376,19 @@ def setup_player_and_cars(
     all_sprites = game_data.groups.all_sprites
     walkable_cells: list[pygame.Rect] = layout_data["walkable_cells"]
 
-    def pick_center(cells: list[pygame.Rect]) -> tuple[int, int]:
+    def _pick_center(cells: list[pygame.Rect]) -> tuple[int, int]:
         return (
             RNG.choice(cells).center
             if cells
             else (game_data.level_width // 2, game_data.level_height // 2)
         )
 
-    player_pos = pick_center(layout_data["player_cells"] or walkable_cells)
+    player_pos = _pick_center(layout_data["player_cells"] or walkable_cells)
     player = Player(*player_pos)
 
     car_candidates = list(layout_data["car_cells"] or walkable_cells)
     waiting_cars: list[Car] = []
-    car_appearance = car_appearance_for_stage(game_data.stage)
+    car_appearance = _car_appearance_for_stage(game_data.stage)
 
     def _pick_car_position() -> tuple[int, int]:
         """Favor distant cells for the first car, otherwise fall back to random picks."""
@@ -446,7 +440,7 @@ def spawn_initial_zombies(
     )
 
     for pos in positions:
-        tentative = create_zombie(
+        tentative = _create_zombie(
             config,
             start_pos=pos,
             stage=game_data.stage,
@@ -471,12 +465,12 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
     active_car = game_data.car if game_data.car and game_data.car.alive() else None
-    waiting = alive_waiting_cars(game_data)
+    waiting = _alive_waiting_cars(game_data)
     obstacles: list[Car] = list(waiting)
     if active_car:
         obstacles.append(active_car)
     camera = game_data.camera
-    appearance = car_appearance_for_stage(game_data.stage)
+    appearance = _car_appearance_for_stage(game_data.stage)
     offscreen_attempts = 6
     while offscreen_attempts > 0:
         new_car = place_new_car(
@@ -502,7 +496,7 @@ def maintain_waiting_car_supply(
 ) -> None:
     """Ensure a baseline count of parked cars exists."""
     target = 1 if minimum is None else max(0, minimum)
-    current = len(alive_waiting_cars(game_data))
+    current = len(_alive_waiting_cars(game_data))
     while current < target:
         new_car = spawn_waiting_car(game_data)
         if not new_car:
@@ -510,15 +504,15 @@ def maintain_waiting_car_supply(
         current += 1
 
 
-def alive_waiting_cars(game_data: GameData) -> list[Car]:
+def _alive_waiting_cars(game_data: GameData) -> list[Car]:
     """Return the list of parked cars that still exist, pruning any destroyed sprites."""
     cars = [car for car in game_data.waiting_cars if car.alive()]
     game_data.waiting_cars = cars
-    log_waiting_car_count(game_data)
+    _log_waiting_car_count(game_data)
     return cars
 
 
-def log_waiting_car_count(game_data: GameData, *, force: bool = False) -> None:
+def _log_waiting_car_count(game_data: GameData, *, force: bool = False) -> None:
     """Print the number of waiting cars when it changes."""
     current = len(game_data.waiting_cars)
     if not force and current == game_data.last_logged_waiting_cars:
@@ -528,7 +522,7 @@ def log_waiting_car_count(game_data: GameData, *, force: bool = False) -> None:
 
 def nearest_waiting_car(game_data: GameData, origin: tuple[float, float]) -> Car | None:
     """Find the closest waiting car to an origin point."""
-    cars = alive_waiting_cars(game_data)
+    cars = _alive_waiting_cars(game_data)
     if not cars:
         return None
     return min(
@@ -538,7 +532,7 @@ def nearest_waiting_car(game_data: GameData, origin: tuple[float, float]) -> Car
     )
 
 
-def spawn_nearby_zombie(
+def _spawn_nearby_zombie(
     game_data: GameData,
     config: dict[str, Any],
 ) -> Zombie | None:
@@ -558,7 +552,7 @@ def spawn_nearby_zombie(
         camera=camera,
         attempts=50,
     )
-    new_zombie = create_zombie(
+    new_zombie = _create_zombie(
         config,
         start_pos=spawn_pos,
         stage=game_data.stage,
@@ -585,7 +579,7 @@ def spawn_exterior_zombie(
         game_data.level_height,
         hint_pos=(player.x, player.y),
     )
-    new_zombie = create_zombie(
+    new_zombie = _create_zombie(
         config,
         start_pos=spawn_pos,
         stage=game_data.stage,
@@ -604,7 +598,7 @@ def spawn_weighted_zombie(
 
     def _spawn(choice: str) -> bool:
         if choice == "interior":
-            return spawn_nearby_zombie(game_data, config) is not None
+            return _spawn_nearby_zombie(game_data, config) is not None
         return spawn_exterior_zombie(game_data, config) is not None
 
     interior_weight = max(0.0, stage.interior_spawn_weight)

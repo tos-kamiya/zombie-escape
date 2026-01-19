@@ -73,26 +73,26 @@ def check_interactions(
         FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT
     )
 
-    def player_near_point(point: tuple[float, float], radius: float) -> bool:
+    def _player_near_point(point: tuple[float, float], radius: float) -> bool:
         dx = point[0] - player.x
         dy = point[1] - player.y
         return dx * dx + dy * dy <= radius * radius
 
-    def player_near_sprite(
+    def _player_near_sprite(
         sprite_obj: pygame.sprite.Sprite | None, radius: float
     ) -> bool:
         return bool(
             sprite_obj
             and sprite_obj.alive()
-            and player_near_point(sprite_obj.rect.center, radius)
+            and _player_near_point(sprite_obj.rect.center, radius)
         )
 
-    def player_near_car(car_obj: Car | None) -> bool:
-        return player_near_sprite(car_obj, car_interaction_radius)
+    def _player_near_car(car_obj: Car | None) -> bool:
+        return _player_near_sprite(car_obj, car_interaction_radius)
 
     # Fuel pickup
     if fuel and fuel.alive() and not state.has_fuel and not player.in_car:
-        if player_near_point(fuel.rect.center, fuel_interaction_radius):
+        if _player_near_point(fuel.rect.center, fuel_interaction_radius):
             state.has_fuel = True
             state.fuel_message_until = 0
             state.hint_expires_at = 0
@@ -106,7 +106,7 @@ def check_interactions(
         for flashlight in list(flashlights):
             if not flashlight.alive():
                 continue
-            if player_near_point(
+            if _player_near_point(
                 flashlight.rect.center, flashlight_interaction_radius
             ):
                 state.flashlight_count += 1
@@ -157,7 +157,7 @@ def check_interactions(
                             int(active_car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO),
                         )
                         add_survivor_message(game_data, tr("survivors.too_many_aboard"))
-                        active_car.take_damage(overload_damage)
+                        active_car._take_damage(overload_damage)
                     state.buddy_onboard += 1
                     buddy.kill()
                     continue
@@ -182,7 +182,7 @@ def check_interactions(
     # Player entering an active car already under control
     if (
         not player.in_car
-        and player_near_car(active_car)
+        and _player_near_car(active_car)
         and active_car
         and active_car.health > 0
     ):
@@ -202,7 +202,7 @@ def check_interactions(
     if not player.in_car and not active_car and waiting_cars:
         claimed_car: Car | None = None
         for parked_car in waiting_cars:
-            if player_near_car(parked_car):
+            if _player_near_car(parked_car):
                 claimed_car = parked_car
                 break
         if claimed_car:
@@ -244,7 +244,7 @@ def check_interactions(
                 except ValueError:
                     pass
                 active_car.health = active_car.max_health
-                active_car.update_color()
+                active_car._update_color()
                 removed_any = True
                 if stage.rescue_stage:
                     capacity_increments += 1
@@ -257,7 +257,7 @@ def check_interactions(
     if player.in_car and active_car and active_car.health > 0 and shrunk_car:
         zombies_hit = pygame.sprite.spritecollide(shrunk_car, zombie_group, True)
         if zombies_hit:
-            active_car.take_damage(CAR_ZOMBIE_DAMAGE * len(zombies_hit))
+            active_car._take_damage(CAR_ZOMBIE_DAMAGE * len(zombies_hit))
 
     if (
         stage.rescue_stage
@@ -279,7 +279,7 @@ def check_interactions(
                     int(active_car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO),
                 )
                 add_survivor_message(game_data, tr("survivors.too_many_aboard"))
-                active_car.take_damage(overload_damage)
+                active_car._take_damage(overload_damage)
 
     if stage.rescue_stage:
         handle_survivor_zombie_collisions(game_data, config)

@@ -2,8 +2,9 @@ import math
 
 import pygame
 
-from zombie_escape.entities import Wall, Zombie, zombie_wall_follow_movement
-from zombie_escape.level_constants import TILE_SIZE
+from src.zombie_escape.level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
+from zombie_escape.entities import Wall, Zombie, _zombie_wall_follow_movement
+from zombie_escape.level_constants import DEFAULT_TILE_SIZE
 
 
 def _init_pygame() -> None:
@@ -19,12 +20,14 @@ def test_wall_follow_turns_away_when_too_close() -> None:
     wall = Wall(105, 105, 8, 8)
 
     before = zombie.wall_follow_angle
-    zombie_wall_follow_movement(
+    _zombie_wall_follow_movement(
         zombie,
         (9999, 9999),
         [wall],
         [],
-        cell_size=TILE_SIZE,
+        cell_size=DEFAULT_TILE_SIZE,
+        grid_cols=DEFAULT_GRID_COLS,
+        grid_rows=DEFAULT_GRID_ROWS,
         outer_wall_cells=set(),
     )
     delta = (zombie.wall_follow_angle - before + math.pi) % (2 * math.pi) - math.pi

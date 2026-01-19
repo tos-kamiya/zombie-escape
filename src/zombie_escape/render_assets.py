@@ -30,7 +30,7 @@ from .render_constants import (
 )
 
 
-def draw_outlined_circle(
+def _draw_outlined_circle(
     surface: pygame.Surface,
     center: tuple[int, int],
     radius: int,
@@ -57,12 +57,12 @@ def build_beveled_polygon(
     tl, tr, br, bl = bevels
     points: list[tuple[int, int]] = []
 
-    def add_point(x: float, y: float) -> None:
+    def _add_point(x: float, y: float) -> None:
         point = (int(round(x)), int(round(y)))
         if not points or points[-1] != point:
             points.append(point)
 
-    def add_arc(
+    def _add_arc(
         center_x: float,
         center_y: float,
         radius: float,
@@ -79,30 +79,30 @@ def build_beveled_polygon(
                 continue
             t = i / segments
             angle = math.radians(start_deg + (end_deg - start_deg) * t)
-            add_point(
+            _add_point(
                 center_x + radius * math.cos(angle),
                 center_y + radius * math.sin(angle),
             )
 
-    add_point(d if tl else 0, 0)
+    _add_point(d if tl else 0, 0)
     if tr:
-        add_point(width - d, 0)
-        add_arc(width - d, d, d, -90, 0, skip_first=True)
+        _add_point(width - d, 0)
+        _add_arc(width - d, d, d, -90, 0, skip_first=True)
     else:
-        add_point(width, 0)
+        _add_point(width, 0)
     if br:
-        add_point(width, height - d)
-        add_arc(width - d, height - d, d, 0, 90, skip_first=True)
+        _add_point(width, height - d)
+        _add_arc(width - d, height - d, d, 0, 90, skip_first=True)
     else:
-        add_point(width, height)
+        _add_point(width, height)
     if bl:
-        add_point(d, height)
-        add_arc(d, height - d, d, 90, 180, skip_first=True)
+        _add_point(d, height)
+        _add_arc(d, height - d, d, 90, 180, skip_first=True)
     else:
-        add_point(0, height)
+        _add_point(0, height)
     if tl:
-        add_point(0, d)
-        add_arc(d, d, d, 180, 270, skip_first=True, skip_last=True)
+        _add_point(0, d)
+        _add_arc(d, d, d, 180, 270, skip_first=True, skip_last=True)
     return points
 
 
@@ -180,7 +180,7 @@ def resolve_steel_beam_colors(
 
 def build_player_surface(radius: int) -> pygame.Surface:
     surface = pygame.Surface((radius * 2 + 2, radius * 2 + 2), pygame.SRCALPHA)
-    draw_outlined_circle(
+    _draw_outlined_circle(
         surface,
         (radius + 1, radius + 1),
         radius,
@@ -194,7 +194,7 @@ def build_player_surface(radius: int) -> pygame.Surface:
 def build_survivor_surface(radius: int, *, is_buddy: bool) -> pygame.Surface:
     surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
     fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
-    draw_outlined_circle(
+    _draw_outlined_circle(
         surface,
         (radius, radius),
         radius,
@@ -218,7 +218,7 @@ def build_zombie_surface(
     else:
         outline_color = DARK_RED
     surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-    draw_outlined_circle(
+    _draw_outlined_circle(
         surface,
         (radius, radius),
         radius,
@@ -306,7 +306,7 @@ def paint_wall_surface(
     if draw_bottom_side:
         side_height = max(1, int(rect_obj.height * bottom_side_ratio))
 
-    def draw_face(
+    def _draw_face(
         target: pygame.Surface,
         *,
         face_size: tuple[int, int] | None = None,
@@ -366,14 +366,14 @@ def paint_wall_surface(
 
         top_height = max(0, rect_obj.height - side_height)
         top_surface = pygame.Surface((rect_obj.width, top_height), pygame.SRCALPHA)
-        draw_face(
+        _draw_face(
             top_surface,
             face_size=(rect_obj.width, top_height),
         )
         if top_rect.height > 0:
             surface.blit(top_surface, top_rect.topleft, area=top_rect)
     else:
-        draw_face(surface)
+        _draw_face(surface)
 
 
 def paint_steel_beam_surface(
@@ -441,7 +441,7 @@ def paint_zombie_surface(
     else:
         outline_color = DARK_RED
     surface.fill((0, 0, 0, 0))
-    draw_outlined_circle(
+    _draw_outlined_circle(
         surface,
         (radius, radius),
         radius,
@@ -524,7 +524,6 @@ __all__ = [
     "EnvironmentPalette",
     "FogRing",
     "RenderAssets",
-    "draw_outlined_circle",
     "build_beveled_polygon",
     "resolve_wall_colors",
     "resolve_car_color",

@@ -11,7 +11,7 @@ from ..models import GameData, Stage
 from ..render import (
     RenderAssets,
     draw_level_overview,
-    draw_status_bar,
+    _draw_status_bar,
     show_message,
 )
 from ..screens import (
@@ -154,7 +154,7 @@ def game_over_screen(
             WHITE,
             (screen_width // 2, screen_height // 2 + 24),
         )
-        draw_status_bar(
+        _draw_status_bar(
             screen,
             render_assets,
             config,

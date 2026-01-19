@@ -23,5 +23,5 @@ def test_rounded_wall_corner_collision() -> None:
         bevel_depth=10,
         bevel_mask=(True, True, True, True),
     )
-    assert wall.collides_circle((0, 0), 0)
-    assert wall.collides_circle((5, 5), 0)
+    assert wall._collides_circle((0, 0), 0)
+    assert wall._collides_circle((5, 5), 0)

@@ -158,7 +158,7 @@ def _infer_grid_size_from_index(wall_index: WallIndex) -> tuple[int | None, int 
     return max_col + 1, max_row + 1
 
 
-def circle_rect_collision(
+def _circle_rect_collision(
     center: tuple[float, float], radius: float, rect_obj: rect.Rect
 ) -> bool:
     """Return True if a circle overlaps the provided rectangle."""
@@ -314,9 +314,9 @@ def collide_sprite_wall(
     if hasattr(sprite, "radius"):
         center = sprite.rect.center
         radius = float(getattr(sprite, "radius"))
-        if hasattr(wall, "collides_circle"):
-            return wall.collides_circle(center, radius)
-        return circle_rect_collision(center, radius, wall.rect)
+        if hasattr(wall, "_collides_circle"):
+            return wall._collides_circle(center, radius)
+        return _circle_rect_collision(center, radius, wall.rect)
     if hasattr(wall, "collides_rect"):
         return wall.collides_rect(sprite.rect)
     if hasattr(sprite, "collides_rect"):
@@ -324,7 +324,7 @@ def collide_sprite_wall(
     return sprite.rect.colliderect(wall.rect)
 
 
-def spritecollide_walls(
+def _spritecollide_walls(
     sprite: pygame.sprite.Sprite,
     walls: pygame.sprite.Group,
     *,
@@ -383,14 +383,14 @@ def spritecollideany_walls(
     return None
 
 
-def circle_wall_collision(
+def _circle_wall_collision(
     center: tuple[float, float],
     radius: float,
     wall: pygame.sprite.Sprite,
 ) -> bool:
-    if hasattr(wall, "collides_circle"):
-        return wall.collides_circle(center, radius)
-    return circle_rect_collision(center, radius, wall.rect)
+    if hasattr(wall, "_collides_circle"):
+        return wall._collides_circle(center, radius)
+    return _circle_rect_collision(center, radius, wall.rect)
 
 
 class Wall(pygame.sprite.Sprite):
@@ -428,15 +428,15 @@ class Wall(pygame.sprite.Sprite):
         self._local_polygon = _build_beveled_polygon(
             safe_width, safe_height, self.bevel_depth, self.bevel_mask
         )
-        self.update_color()
+        self._update_color()
         self.rect = self.image.get_rect(topleft=(x, y))
         # Keep collision rectangular even when beveled visually.
         self._collision_polygon = None
 
-    def take_damage(self: Self, *, amount: int = 1) -> None:
+    def _take_damage(self: Self, *, amount: int = 1) -> None:
         if self.health > 0:
             self.health -= amount
-            self.update_color()
+            self._update_color()
             if self.health <= 0:
                 if self.on_destroy:
                     try:
@@ -445,7 +445,7 @@ class Wall(pygame.sprite.Sprite):
                         print(f"Wall destroy callback failed: {exc}")
                 self.kill()
 
-    def update_color(self: Self) -> None:
+    def _update_color(self: Self) -> None:
         if self.health <= 0:
             health_ratio = 0.0
         else:
@@ -471,8 +471,8 @@ class Wall(pygame.sprite.Sprite):
             return self.rect.colliderect(rect_obj)
         return rect_polygon_collision(rect_obj, self._collision_polygon)
 
-    def collides_circle(self: Self, center: tuple[float, float], radius: float) -> bool:
-        if not circle_rect_collision(center, radius, self.rect):
+    def _collides_circle(self: Self, center: tuple[float, float], radius: float) -> bool:
+        if not _circle_rect_collision(center, radius, self.rect):
             return False
         if self._collision_polygon is None:
             return True
@@ -486,7 +486,7 @@ class Wall(pygame.sprite.Sprite):
         if not force and self.palette is palette:
             return
         self.palette = palette
-        self.update_color()
+        self._update_color()
 
 
 class SteelBeam(pygame.sprite.Sprite):
@@ -509,17 +509,17 @@ class SteelBeam(pygame.sprite.Sprite):
         self.health = health
         self.max_health = max(1, health)
         self.palette = palette
-        self.update_color()
+        self._update_color()
         self.rect = self.image.get_rect(center=(x + size // 2, y + size // 2))
 
-    def take_damage(self: Self, *, amount: int = 1) -> None:
+    def _take_damage(self: Self, *, amount: int = 1) -> None:
         if self.health > 0:
             self.health -= amount
-            self.update_color()
+            self._update_color()
             if self.health <= 0:
                 self.kill()
 
-    def update_color(self: Self) -> None:
+    def _update_color(self: Self) -> None:
         """Render a simple square with crossed diagonals that darkens as damaged."""
         if self.health <= 0:
             return
@@ -592,7 +592,7 @@ class Player(pygame.sprite.Sprite):
             self.x += dx
             self.x = min(level_width, max(0, self.x))
             self.rect.centerx = int(self.x)
-            hit_list_x = spritecollide_walls(
+            hit_list_x = _spritecollide_walls(
                 self,
                 walls,
                 wall_index=wall_index,
@@ -602,7 +602,7 @@ class Player(pygame.sprite.Sprite):
                 damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_x))
                 for wall in hit_list_x:
                     if wall.alive():
-                        wall.take_damage(amount=damage)
+                        wall._take_damage(amount=damage)
                 self.x -= dx * 1.5
                 self.rect.centerx = int(self.x)
 
@@ -610,7 +610,7 @@ class Player(pygame.sprite.Sprite):
             self.y += dy
             self.y = min(level_height, max(0, self.y))
             self.rect.centery = int(self.y)
-            hit_list_y = spritecollide_walls(
+            hit_list_y = _spritecollide_walls(
                 self,
                 walls,
                 wall_index=wall_index,
@@ -620,7 +620,7 @@ class Player(pygame.sprite.Sprite):
                 damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_y))
                 for wall in hit_list_y:
                     if wall.alive():
-                        wall.take_damage(amount=damage)
+                        wall._take_damage(amount=damage)
                 self.y -= dy * 1.5
                 self.rect.centery = int(self.y)
 
@@ -788,7 +788,7 @@ def random_position_outside_building(
     return x, y
 
 
-def zombie_tracker_movement(
+def _zombie_tracker_movement(
     zombie: Zombie,
     player_center: tuple[int, int],
     walls: list[Wall],
@@ -800,10 +800,10 @@ def zombie_tracker_movement(
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if not is_in_sight:
-        zombie_update_tracker_target(zombie, footprints)
+        _zombie_update_tracker_target(zombie, footprints)
         if zombie.tracker_target_pos is not None:
             return zombie_move_toward(zombie, zombie.tracker_target_pos)
-        return zombie_wander_move(
+        return _zombie_wander_move(
             zombie,
             walls,
             cell_size=cell_size,
@@ -824,7 +824,7 @@ def zombie_wander_movement(
     grid_rows: int,
     outer_wall_cells: set[tuple[int, int]] | None,
 ) -> tuple[float, float]:
-    return zombie_wander_move(
+    return _zombie_wander_move(
         zombie,
         walls,
         cell_size=cell_size,
@@ -849,12 +849,12 @@ def zombie_wall_follow_has_wall(
         and abs(wall.rect.centery - check_y) < 120
     ]
     return any(
-        circle_wall_collision((check_x, check_y), zombie.radius, wall)
+        _circle_wall_collision((check_x, check_y), zombie.radius, wall)
         for wall in candidates
     )
 
 
-def zombie_wall_follow_wall_distance(
+def _zombie_wall_follow_wall_distance(
     zombie: Zombie,
     walls: list[Wall],
     angle: float,
@@ -878,7 +878,7 @@ def zombie_wall_follow_wall_distance(
         check_x = zombie.x + direction_x * distance
         check_y = zombie.y + direction_y * distance
         if any(
-            circle_wall_collision((check_x, check_y), zombie.radius, wall)
+            _circle_wall_collision((check_x, check_y), zombie.radius, wall)
             for wall in candidates
         ):
             return distance
@@ -886,7 +886,7 @@ def zombie_wall_follow_wall_distance(
     return max_distance
 
 
-def zombie_wall_follow_movement(
+def _zombie_wall_follow_movement(
     zombie: Zombie,
     player_center: tuple[int, int],
     walls: list[Wall],
@@ -905,13 +905,13 @@ def zombie_wall_follow_movement(
         probe_offset = math.radians(ZOMBIE_WALL_FOLLOW_PROBE_ANGLE_DEG)
         left_angle = forward_angle + probe_offset
         right_angle = forward_angle - probe_offset
-        left_dist = zombie_wall_follow_wall_distance(
+        left_dist = _zombie_wall_follow_wall_distance(
             zombie, walls, left_angle, sensor_distance
         )
-        right_dist = zombie_wall_follow_wall_distance(
+        right_dist = _zombie_wall_follow_wall_distance(
             zombie, walls, right_angle, sensor_distance
         )
-        forward_dist = zombie_wall_follow_wall_distance(
+        forward_dist = _zombie_wall_follow_wall_distance(
             zombie, walls, forward_angle, sensor_distance
         )
         left_wall = left_dist < sensor_distance
@@ -931,7 +931,7 @@ def zombie_wall_follow_movement(
         else:
             if is_in_sight:
                 return zombie_move_toward(zombie, player_center)
-            return zombie_wander_move(
+            return _zombie_wander_move(
                 zombie,
                 walls,
                 cell_size=cell_size,
@@ -943,10 +943,10 @@ def zombie_wall_follow_movement(
     sensor_distance = ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE + zombie.radius
     probe_offset = math.radians(ZOMBIE_WALL_FOLLOW_PROBE_ANGLE_DEG)
     side_angle = zombie.wall_follow_angle + zombie.wall_follow_side * probe_offset
-    side_dist = zombie_wall_follow_wall_distance(
+    side_dist = _zombie_wall_follow_wall_distance(
         zombie, walls, side_angle, sensor_distance
     )
-    forward_dist = zombie_wall_follow_wall_distance(
+    forward_dist = _zombie_wall_follow_wall_distance(
         zombie, walls, zombie.wall_follow_angle, sensor_distance
     )
     side_has_wall = side_dist < sensor_distance
@@ -1002,7 +1002,7 @@ def zombie_normal_movement(
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_SIGHT_RANGE)
     if not is_in_sight:
-        return zombie_wander_move(
+        return _zombie_wander_move(
             zombie,
             walls,
             cell_size=cell_size,
@@ -1013,7 +1013,7 @@ def zombie_normal_movement(
     return zombie_move_toward(zombie, player_center)
 
 
-def zombie_update_tracker_target(
+def _zombie_update_tracker_target(
     zombie: Zombie, footprints: list[dict[str, object]]
 ) -> None:
     zombie.tracker_target_pos = None
@@ -1044,7 +1044,7 @@ def zombie_update_tracker_target(
         zombie.tracker_target_pos = pos
 
 
-def zombie_wander_move(
+def _zombie_wander_move(
     zombie: Zombie,
     walls: list[Wall],
     *,
@@ -1091,7 +1091,7 @@ def zombie_wander_move(
                     and abs(wall.rect.centery - next_y) < 120
                 ]
                 return not any(
-                    circle_wall_collision((next_x, next_y), zombie.radius, wall)
+                    _circle_wall_collision((next_x, next_y), zombie.radius, wall)
                     for wall in nearby_walls
                 )
 
@@ -1160,9 +1160,9 @@ class Zombie(pygame.sprite.Sprite):
         self.aging_duration_frames = aging_duration_frames
         if movement_strategy is None:
             if tracker:
-                movement_strategy = zombie_tracker_movement
+                movement_strategy = _zombie_tracker_movement
             elif wall_follower:
-                movement_strategy = zombie_wall_follow_movement
+                movement_strategy = _zombie_wall_follow_movement
             else:
                 movement_strategy = zombie_normal_movement
         self.movement_strategy = movement_strategy
@@ -1213,19 +1213,19 @@ class Zombie(pygame.sprite.Sprite):
         ]
 
         for wall in possible_walls:
-            collides = circle_wall_collision((next_x, self.y), self.radius, wall)
+            collides = _circle_wall_collision((next_x, self.y), self.radius, wall)
             if collides:
                 if wall.alive():
-                    wall.take_damage(amount=ZOMBIE_WALL_DAMAGE)
+                    wall._take_damage(amount=ZOMBIE_WALL_DAMAGE)
                 if wall.alive():
                     final_x = self.x
                     break
 
         for wall in possible_walls:
-            collides = circle_wall_collision((final_x, next_y), self.radius, wall)
+            collides = _circle_wall_collision((final_x, next_y), self.radius, wall)
             if collides:
                 if wall.alive():
-                    wall.take_damage(amount=ZOMBIE_WALL_DAMAGE)
+                    wall._take_damage(amount=ZOMBIE_WALL_DAMAGE)
                 if wall.alive():
                     final_y = self.y
                     break
@@ -1442,14 +1442,14 @@ class Car(pygame.sprite.Sprite):
         self.health = CAR_HEALTH
         self.max_health = CAR_HEALTH
         self.collision_radius = _car_body_radius(CAR_WIDTH, CAR_HEIGHT)
-        self.update_color()
+        self._update_color()
 
-    def take_damage(self: Self, amount: int) -> None:
+    def _take_damage(self: Self, amount: int) -> None:
         if self.health > 0:
             self.health -= amount
-            self.update_color()
+            self._update_color()
 
-    def update_color(self: Self) -> None:
+    def _update_color(self: Self) -> None:
         health_ratio = max(0, self.health / self.max_health)
         color = resolve_car_color(health_ratio=health_ratio, appearance=self.appearance)
         paint_car_surface(
@@ -1484,10 +1484,10 @@ class Car(pygame.sprite.Sprite):
         ]
         car_center = (new_x, new_y)
         for wall in possible_walls:
-            if circle_wall_collision(car_center, self.collision_radius, wall):
+            if _circle_wall_collision(car_center, self.collision_radius, wall):
                 hit_walls.append(wall)
         if hit_walls:
-            self.take_damage(CAR_WALL_DAMAGE)
+            self._take_damage(CAR_WALL_DAMAGE)
             hit_walls.sort(
                 key=lambda w: (w.rect.centery - self.y) ** 2
                 + (w.rect.centerx - self.x) ** 2

@@ -67,7 +67,7 @@ def test_spawn_weighted_prefers_interior(monkeypatch) -> None:
         calls.append("exterior")
         return object()
 
-    monkeypatch.setattr(gameplay_spawn, "spawn_nearby_zombie", fake_interior)
+    monkeypatch.setattr(gameplay_spawn, "_spawn_nearby_zombie", fake_interior)
     monkeypatch.setattr(gameplay_spawn, "spawn_exterior_zombie", fake_exterior)
 
     game_data = _make_game_data()

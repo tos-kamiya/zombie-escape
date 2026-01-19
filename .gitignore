@@ -3,6 +3,7 @@ node_modules/
 **/__pycache__/**
 dist/
 dev-samples/
+dev-refactoring/
 mplus_bitmap_fonts/
 shot*.png
 *.log

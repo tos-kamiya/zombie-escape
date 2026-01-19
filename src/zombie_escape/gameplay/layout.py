@@ -11,13 +11,10 @@ from .constants import OUTER_WALL_HEALTH
 from ..level_blueprints import choose_blueprint
 from ..models import GameData
 
-__all__ = [
-    "rect_for_cell",
-    "generate_level_from_blueprint",
-]
+__all__ = ["generate_level_from_blueprint"]
 
 
-def rect_for_cell(x_idx: int, y_idx: int, cell_size: int) -> pygame.Rect:
+def _rect_for_cell(x_idx: int, y_idx: int, cell_size: int) -> pygame.Rect:
     return pygame.Rect(
         x_idx * cell_size,
         y_idx * cell_size,
@@ -66,7 +63,7 @@ def generate_level_from_blueprint(
         if ch in {"B", "1"}
     }
 
-    def has_wall(nx: int, ny: int) -> bool:
+    def _has_wall(nx: int, ny: int) -> bool:
         if nx < 0 or ny < 0 or nx >= stage.grid_cols or ny >= stage.grid_rows:
             return True
         return (nx, ny) in wall_cells
@@ -92,13 +89,13 @@ def generate_level_from_blueprint(
                 f"{y}: {len(row)} != {stage.grid_cols}"
             )
         for x, ch in enumerate(row):
-            cell_rect = rect_for_cell(x, y, cell_size)
+            cell_rect = _rect_for_cell(x, y, cell_size)
             cell_has_beam = steel_enabled and (x, y) in steel_cells
             if ch == "O":
                 outside_rects.append(cell_rect)
                 continue
             if ch == "B":
-                draw_bottom_side = not has_wall(x, y + 1)
+                draw_bottom_side = not _has_wall(x, y + 1)
                 wall = Wall(
                     cell_rect.x,
                     cell_rect.y,
@@ -126,20 +123,20 @@ def generate_level_from_blueprint(
                         health=STEEL_BEAM_HEALTH,
                         palette=palette,
                     )
-                draw_bottom_side = not has_wall(x, y + 1)
+                draw_bottom_side = not _has_wall(x, y + 1)
                 bevel_mask = (
-                    not has_wall(x, y - 1)
-                    and not has_wall(x - 1, y)
-                    and not has_wall(x - 1, y - 1),
-                    not has_wall(x, y - 1)
-                    and not has_wall(x + 1, y)
-                    and not has_wall(x + 1, y - 1),
-                    not has_wall(x, y + 1)
-                    and not has_wall(x + 1, y)
-                    and not has_wall(x + 1, y + 1),
-                    not has_wall(x, y + 1)
-                    and not has_wall(x - 1, y)
-                    and not has_wall(x - 1, y + 1),
+                    not _has_wall(x, y - 1)
+                    and not _has_wall(x - 1, y)
+                    and not _has_wall(x - 1, y - 1),
+                    not _has_wall(x, y - 1)
+                    and not _has_wall(x + 1, y)
+                    and not _has_wall(x + 1, y - 1),
+                    not _has_wall(x, y + 1)
+                    and not _has_wall(x + 1, y)
+                    and not _has_wall(x + 1, y + 1),
+                    not _has_wall(x, y + 1)
+                    and not _has_wall(x - 1, y)
+                    and not _has_wall(x - 1, y + 1),
                 )
                 wall = Wall(
                     cell_rect.x,

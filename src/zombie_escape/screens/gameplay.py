@@ -13,7 +13,6 @@ from ..gameplay_constants import (
     SURVIVAL_TIME_ACCEL_MAX_SUBSTEP,
 )
 from ..gameplay import (
-    alive_waiting_cars,
     apply_passenger_speed_penalty,
     check_interactions,
     cleanup_survivor_messages,
@@ -32,6 +31,7 @@ from ..gameplay import (
     update_footprints,
     update_survival_timer,
 )
+from ..gameplay.spawn import _alive_waiting_cars
 from ..entities import build_wall_index
 from ..localization import translate as tr
 from ..models import Stage
@@ -320,7 +320,7 @@ def gameplay_screen(
             if not has_fuel and game_data.fuel and game_data.fuel.alive():
                 target_type = "fuel"
             elif not player.in_car and (
-                active_car or alive_waiting_cars(game_data)
+                active_car or _alive_waiting_cars(game_data)
             ):
                 target_type = "car"
             else:

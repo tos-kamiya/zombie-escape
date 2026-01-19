@@ -5,25 +5,24 @@ from enum import Enum
 from typing import Any, Callable
 
 import pygame
-from pygame import sprite, surface
 import pygame.surfarray as pg_surfarray  # type: ignore
+from pygame import sprite, surface
 
 from .colors import (
     BLACK,
     BLUE,
     FOOTPRINT_COLOR,
-    INTERNAL_WALL_COLOR,
     LIGHT_GRAY,
     ORANGE,
     YELLOW,
     get_environment_palette,
 )
+from .entities import Camera, Car, Flashlight, FuelCan, Player, Survivor, Wall
+from .font_utils import load_font
 from .gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     SURVIVAL_FAKE_CLOCK_RATIO,
 )
-from .entities import Camera, Car, Flashlight, FuelCan, Player, Survivor, Wall
-from .font_utils import load_font
 from .localization import get_font_settings
 from .localization import translate as tr
 from .models import GameData, Stage
@@ -143,7 +142,7 @@ def draw_level_overview(
             surface.blit(parked.image, parked_rect)
 
 
-def get_fog_scale(
+def _get_fog_scale(
     assets: RenderAssets,
     stage: Stage | None,
     flashlight_count: int,
@@ -172,12 +171,12 @@ class FogProfile(Enum):
         self.flashlight_count = flashlight_count
         self.color = color
 
-    def scale(self, assets: RenderAssets, stage: Stage | None) -> float:
+    def _scale(self, assets: RenderAssets, stage: Stage | None) -> float:
         count = max(0, min(self.flashlight_count, _max_flashlight_pickups()))
-        return get_fog_scale(assets, stage, count)
+        return _get_fog_scale(assets, stage, count)
 
     @staticmethod
-    def from_flashlight_count(count: int) -> "FogProfile":
+    def _from_flashlight_count(count: int) -> "FogProfile":
         safe_count = max(0, count)
         if safe_count >= 2:
             return FogProfile.DARK2
@@ -203,7 +202,7 @@ def prewarm_fog_overlays(
         )
 
 
-def get_hatch_pattern(
+def _get_hatch_pattern(
     fog_data: dict[str, Any],
     thickness: int,
     *,
@@ -258,7 +257,7 @@ def _get_fog_overlay_surfaces(
     if key in overlays:
         return overlays[key]
 
-    scale = profile.scale(assets, stage)
+    scale = profile._scale(assets, stage)
     max_radius = int(assets.fov_radius * scale)
     padding = 32
     coverage_width = max(assets.screen_width * 2, max_radius * 2)
@@ -275,7 +274,7 @@ def _get_fog_overlay_surfaces(
     ring_surfaces: list[surface.Surface] = []
     for ring in assets.fog_rings:
         ring_surface = pygame.Surface((width, height), pygame.SRCALPHA)
-        pattern = get_hatch_pattern(
+        pattern = _get_hatch_pattern(
             fog_data,
             ring.thickness,
             pixel_scale=assets.fog_hatch_pixel_scale,
@@ -403,7 +402,7 @@ def _draw_hint_arrow(
     pygame.draw.polygon(screen, color, [tip, left, right])
 
 
-def draw_status_bar(
+def _draw_status_bar(
     screen: surface.Surface,
     assets: RenderAssets,
     config: dict[str, Any],
@@ -614,7 +613,7 @@ def draw(
         pygame.draw.rect(screen, (180, 160, 40), indicator_rect, width=1)
 
     if hint_target and player:
-        current_fov_scale = get_fog_scale(
+        current_fov_scale = _get_fog_scale(
             assets,
             stage,
             flashlight_count,
@@ -643,7 +642,7 @@ def draw(
         if state.dawn_ready:
             profile = FogProfile.DAWN
         else:
-            profile = FogProfile.from_flashlight_count(flashlight_count)
+            profile = FogProfile._from_flashlight_count(flashlight_count)
         overlay = _get_fog_overlay_surfaces(
             fog_surfaces,
             assets,
@@ -831,7 +830,7 @@ def draw(
         _render_survival_timer()
     else:
         _render_time_accel_indicator()
-    draw_status_bar(
+    _draw_status_bar(
         screen,
         assets,
         config,
