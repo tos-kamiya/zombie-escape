@@ -117,11 +117,13 @@
     "settings": {
       "title": "Settings",
       "sections": {
+        "menu": "Menu",
         "localization": "Localization",
         "player_support": "Player support",
         "tougher_enemies": "Tougher enemies"
       },
       "rows": {
+        "return_to_title": "Return to Title",
         "language": "Language",
         "footprints": "Footprints",
         "car_hint": "Car hint",
@@ -133,7 +135,7 @@
         "adjust": "Left/Right: set value",
         "toggle": "Space/Enter: toggle value",
         "reset": "R: reset to defaults",
-        "exit": "Esc/Backspace: save and return",
+        "exit": "Esc/BS/Select: save and return",
         "fullscreen": "F: toggle fullscreen"
       },
       "config_path": "Config: %{path}",

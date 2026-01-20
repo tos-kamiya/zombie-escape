@@ -117,11 +117,13 @@
     "settings": {
       "title": "設定",
       "sections": {
+        "menu": "メニュー",
         "localization": "言語設定",
         "player_support": "サポート",
         "tougher_enemies": "強敵"
       },
       "rows": {
+        "return_to_title": "タイトルに戻る",
         "language": "テキスト言語",
         "footprints": "足跡",
         "car_hint": "車のヒント",
@@ -133,7 +135,7 @@
         "adjust": "左右: 値の設定",
         "toggle": "スペース／エンター: 値のトグル",
         "reset": "R: デフォルト設定に戻す",
-        "exit": "Esc/BS: セーブして戻る",
+        "exit": "Esc/BS/Select: セーブして戻る",
         "fullscreen": "F: フルスクリーン切替"
       },
       "config_path": "設定ファイル: %{path}",

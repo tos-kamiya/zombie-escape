@@ -144,6 +144,15 @@ def settings_screen(
     def build_sections() -> list[dict]:
         return [
             {
+                "label": tr("settings.sections.menu"),
+                "rows": [
+                    {
+                        "type": "action",
+                        "label": tr("settings.rows.return_to_title"),
+                    }
+                ],
+            },
+            {
                 "label": tr("settings.sections.localization"),
                 "rows": [
                     {
@@ -210,6 +219,18 @@ def settings_screen(
     row_count = len(rows)
     last_language = get_language()
 
+    def _exit_settings() -> dict[str, Any]:
+        save_config(working, config_path)
+        return working
+
+    def _is_select_event(event: pygame.event.Event) -> bool:
+        if event.type == pygame.CONTROLLERBUTTONDOWN:
+            back_button = getattr(pygame, "CONTROLLER_BUTTON_BACK", None)
+            return back_button is not None and event.button == back_button
+        if event.type == pygame.JOYBUTTONDOWN:
+            return event.button in {6}
+        return False
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -217,6 +238,8 @@ def settings_screen(
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event)
                 continue
+            if _is_select_event(event):
+                return _exit_settings()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
                     nudge_window_scale(0.5)
@@ -228,8 +251,7 @@ def settings_screen(
                     toggle_fullscreen()
                     continue
                 if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
-                    save_config(working, config_path)
-                    return working
+                    return _exit_settings()
                 if event.key in (pygame.K_UP, pygame.K_w):
                     selected = (selected - 1) % row_count
                 if event.key in (pygame.K_DOWN, pygame.K_s):
@@ -237,16 +259,18 @@ def settings_screen(
                 current_row = rows[selected]
                 row_type = current_row.get("type", "toggle")
                 if event.key in (pygame.K_SPACE, pygame.K_RETURN):
+                    if row_type == "action":
+                        return _exit_settings()
                     if row_type == "toggle":
                         toggle_row(current_row)
                     elif row_type == "choice":
                         cycle_choice(current_row, 1)
-                if event.key == pygame.K_LEFT:
+                if event.key == pygame.K_LEFT and row_type != "action":
                     if row_type == "toggle":
                         set_easy_value(current_row, True)
                     elif row_type == "choice":
                         cycle_choice(current_row, -1)
-                if event.key == pygame.K_RIGHT:
+                if event.key == pygame.K_RIGHT and row_type != "action":
                     if row_type == "toggle":
                         set_easy_value(current_row, False)
                     elif row_type == "choice":
@@ -284,8 +308,8 @@ def settings_screen(
             )
             highlight_color = (70, 70, 70)
 
-            row_height = 22
-            start_y = 52
+            row_height = 20
+            start_y = 46
 
             segment_width = 30
             segment_height = 18
@@ -294,7 +318,7 @@ def settings_screen(
 
             column_margin = 24
             column_width = screen_width // 2 - column_margin * 2
-            section_spacing = 6
+            section_spacing = 4
             row_indent = 12
             value_padding = 20
 
@@ -305,7 +329,7 @@ def settings_screen(
                     section["label"], False, LIGHT_GRAY
                 )
                 section_states[section["label"]] = {
-                    "next_y": y_cursor + header_surface.get_height() + 6,
+                    "next_y": y_cursor + header_surface.get_height() + 4,
                     "header_surface": header_surface,
                     "header_pos": (column_margin, y_cursor),
                 }
@@ -324,9 +348,13 @@ def settings_screen(
                 state = section_states[section_label]
                 col_x = column_margin + row_indent
                 row_width = column_width - row_indent + value_padding
-                value = _get_value(
-                    row["path"], row.get("easy_value", row.get("choices", [None])[0])
-                )
+                row_type = row.get("type", "toggle")
+                value = None
+                if row_type != "action":
+                    value = _get_value(
+                        row["path"],
+                        row.get("easy_value", row.get("choices", [None])[0]),
+                    )
                 row_y_current = state["next_y"]
                 state["next_y"] += row_height
 
@@ -344,7 +372,7 @@ def settings_screen(
                     )
                 )
                 screen.blit(label_surface, label_rect)
-                if row.get("type", "toggle") == "choice":
+                if row_type == "choice":
                     display_fn = row.get("get_display")
                     display_text = (
                         display_fn(value)
@@ -359,7 +387,7 @@ def settings_screen(
                         )
                     )
                     screen.blit(value_surface, value_rect)
-                else:
+                elif row_type == "toggle":
                     slider_y = row_y_current + (row_height - segment_height) // 2 - 2
                     slider_x = col_x + row_width - segment_total_width
                     left_rect = pygame.Rect(
