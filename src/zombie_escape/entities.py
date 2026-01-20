@@ -551,7 +551,9 @@ class Wall(pygame.sprite.Sprite):
             return self.rect.colliderect(rect_obj)
         return rect_polygon_collision(rect_obj, self._collision_polygon)
 
-    def _collides_circle(self: Self, center: tuple[float, float], radius: float) -> bool:
+    def _collides_circle(
+        self: Self, center: tuple[float, float], radius: float
+    ) -> bool:
         if not _circle_rect_collision(center, radius, self.rect):
             return False
         if self._collision_polygon is None:
@@ -1189,17 +1191,13 @@ def _zombie_wander_move(
     if at_x_edge or at_y_edge:
         if outer_wall_cells is not None:
             if at_x_edge:
-                inward_cell = (
-                    (1, cell_y) if cell_x == 0 else (grid_cols - 2, cell_y)
-                )
+                inward_cell = (1, cell_y) if cell_x == 0 else (grid_cols - 2, cell_y)
                 if inward_cell not in outer_wall_cells:
                     target_x = (inward_cell[0] + 0.5) * cell_size
                     target_y = (inward_cell[1] + 0.5) * cell_size
                     return zombie_move_toward(zombie, (target_x, target_y))
             if at_y_edge:
-                inward_cell = (
-                    (cell_x, 1) if cell_y == 0 else (cell_x, grid_rows - 2)
-                )
+                inward_cell = (cell_x, 1) if cell_y == 0 else (cell_x, grid_rows - 2)
                 if inward_cell not in outer_wall_cells:
                     target_x = (inward_cell[0] + 0.5) * cell_size
                     target_y = (inward_cell[1] + 0.5) * cell_size
@@ -1226,12 +1224,12 @@ def _zombie_wander_move(
                 inward_dy = zombie.speed if cell_y == 0 else -zombie.speed
                 if path_clear(zombie.x, zombie.y + inward_dy):
                     return 0.0, inward_dy
-        if at_x_edge:
-            direction = 1.0 if math.sin(zombie.wander_angle) >= 0 else -1.0
-            return 0.0, direction * zombie.speed
-        if at_y_edge:
-            direction = 1.0 if math.cos(zombie.wander_angle) >= 0 else -1.0
-            return direction * zombie.speed, 0.0
+        # if at_x_edge:
+        #     direction = 1.0 if math.sin(zombie.wander_angle) >= 0 else -1.0
+        #     return 0.0, direction * zombie.speed
+        # if at_y_edge:
+        #     direction = 1.0 if math.cos(zombie.wander_angle) >= 0 else -1.0
+        #     return direction * zombie.speed, 0.0
 
     move_x = math.cos(zombie.wander_angle) * zombie.speed
     move_y = math.sin(zombie.wander_angle) * zombie.speed
@@ -1453,7 +1451,8 @@ class Zombie(pygame.sprite.Sprite):
         level_height: int,
         outer_wall_cells: set[tuple[int, int]] | None = None,
         wall_cells: set[tuple[int, int]] | None = None,
-        bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] | None = None,
+        bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
+        | None = None,
     ) -> None:
         if self.carbonized:
             return
