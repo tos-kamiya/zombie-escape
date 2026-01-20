@@ -14,6 +14,7 @@ from ..render import (
     _draw_status_bar,
     show_message,
 )
+from ..input_utils import is_confirm_event, is_select_event
 from ..screens import (
     ScreenID,
     ScreenTransition,
@@ -181,3 +182,6 @@ def game_over_screen(
                         stage=stage,
                         seed=state.seed,
                     )
+            if event.type in (pygame.CONTROLLERBUTTONDOWN, pygame.JOYBUTTONDOWN):
+                if is_select_event(event) or is_confirm_event(event):
+                    return ScreenTransition(ScreenID.TITLE)

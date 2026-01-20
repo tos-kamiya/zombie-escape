@@ -31,6 +31,17 @@ from ..gameplay import (
     update_footprints,
     update_survival_timer,
 )
+from ..input_utils import (
+    CONTROLLER_BUTTON_DOWN,
+    CONTROLLER_DEVICE_ADDED,
+    CONTROLLER_DEVICE_REMOVED,
+    init_first_controller,
+    init_first_joystick,
+    is_accel_active,
+    is_select_event,
+    is_start_event,
+    read_gamepad_move,
+)
 from ..gameplay.spawn import _alive_waiting_cars
 from ..entities import build_wall_index
 from ..localization import translate as tr
@@ -89,6 +100,8 @@ def gameplay_screen(
     paused_focus = False
     ignore_focus_loss_until = 0
     last_fov_target = None
+    controller = init_first_controller()
+    joystick = init_first_joystick() if controller is None else None
 
     layout_data = generate_level_from_blueprint(game_data, config)
     sync_ambient_palette_with_flashlights(game_data, force=True)
@@ -180,6 +193,22 @@ def gameplay_screen(
                 paused_focus = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 paused_focus = False
+            if event.type == pygame.JOYDEVICEADDED or (
+                CONTROLLER_DEVICE_ADDED is not None
+                and event.type == CONTROLLER_DEVICE_ADDED
+            ):
+                if controller is None:
+                    controller = init_first_controller()
+                if controller is None:
+                    joystick = init_first_joystick()
+            if event.type == pygame.JOYDEVICEREMOVED or (
+                CONTROLLER_DEVICE_REMOVED is not None
+                and event.type == CONTROLLER_DEVICE_REMOVED
+            ):
+                if controller and not controller.get_init():
+                    controller = None
+                if joystick and not joystick.get_init():
+                    joystick = None
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_s and (
                     pygame.key.get_mods() & pygame.KMOD_CTRL
@@ -204,6 +233,25 @@ def gameplay_screen(
                         paused_manual = False
                     continue
                 if event.key in (pygame.K_ESCAPE, pygame.K_p):
+                    paused_manual = True
+                    continue
+            if event.type == pygame.JOYBUTTONDOWN or (
+                CONTROLLER_BUTTON_DOWN is not None
+                and event.type == CONTROLLER_BUTTON_DOWN
+            ):
+                if debug_mode:
+                    if is_select_event(event):
+                        return ScreenTransition(ScreenID.TITLE)
+                    if is_start_event(event):
+                        paused_manual = not paused_manual
+                    continue
+                if paused_manual:
+                    if is_select_event(event):
+                        return ScreenTransition(ScreenID.TITLE)
+                    if is_start_event(event):
+                        paused_manual = False
+                    continue
+                if is_select_event(event) or is_start_event(event):
                     paused_manual = True
                     continue
 
@@ -266,8 +314,8 @@ def gameplay_screen(
         accel_allowed = not (
             game_data.state.game_over or game_data.state.game_won
         )
-        accel_active = accel_allowed and (
-            keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
+        accel_active = accel_allowed and is_accel_active(
+            keys, controller, joystick
         )
         game_data.state.time_accel_active = accel_active
         substeps = SURVIVAL_TIME_ACCEL_SUBSTEPS if accel_active else 1
@@ -283,8 +331,9 @@ def gameplay_screen(
             if player_ref is None:
                 break
             car_ref = game_data.car
+            pad_vector = read_gamepad_move(controller, joystick)
             player_dx, player_dy, car_dx, car_dy = process_player_input(
-                keys, player_ref, car_ref
+                keys, player_ref, car_ref, pad_input=pad_vector
             )
             update_entities(
                 game_data,

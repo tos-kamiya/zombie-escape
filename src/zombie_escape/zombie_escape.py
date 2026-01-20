@@ -83,6 +83,9 @@ def main() -> None:
     sys.argv = [sys.argv[0]] + remaining
 
     pygame.init()
+    pygame.joystick.init()
+    if hasattr(pygame, "controller"):
+        pygame.controller.init()
     try:
         pygame.font.init()
     except pygame.error as e:

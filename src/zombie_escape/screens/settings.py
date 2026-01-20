@@ -10,6 +10,19 @@ from pygame import surface, time
 from ..colors import BLACK, GREEN, LIGHT_GRAY, WHITE
 from ..config import DEFAULT_CONFIG, save_config
 from ..font_utils import load_font
+from ..input_utils import (
+    CONTROLLER_BUTTON_DOWN,
+    CONTROLLER_BUTTON_DPAD_DOWN,
+    CONTROLLER_BUTTON_DPAD_LEFT,
+    CONTROLLER_BUTTON_DPAD_RIGHT,
+    CONTROLLER_BUTTON_DPAD_UP,
+    CONTROLLER_DEVICE_ADDED,
+    CONTROLLER_DEVICE_REMOVED,
+    init_first_controller,
+    init_first_joystick,
+    is_confirm_event,
+    is_select_event,
+)
 from ..localization import (
     get_font_settings,
     get_language,
@@ -95,6 +108,8 @@ def settings_screen(
     selected = 0
     languages = language_options()
     language_codes = [lang.code for lang in languages]
+    controller = init_first_controller()
+    joystick = init_first_joystick() if controller is None else None
 
     def _ensure_parent(path: tuple[str, ...]) -> tuple[dict, str]:
         node = working
@@ -223,14 +238,6 @@ def settings_screen(
         save_config(working, config_path)
         return working
 
-    def _is_select_event(event: pygame.event.Event) -> bool:
-        if event.type == pygame.CONTROLLERBUTTONDOWN:
-            back_button = getattr(pygame, "CONTROLLER_BUTTON_BACK", None)
-            return back_button is not None and event.button == back_button
-        if event.type == pygame.JOYBUTTONDOWN:
-            return event.button in {6}
-        return False
-
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -238,7 +245,23 @@ def settings_screen(
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event)
                 continue
-            if _is_select_event(event):
+            if event.type == pygame.JOYDEVICEADDED or (
+                CONTROLLER_DEVICE_ADDED is not None
+                and event.type == CONTROLLER_DEVICE_ADDED
+            ):
+                if controller is None:
+                    controller = init_first_controller()
+                if controller is None:
+                    joystick = init_first_joystick()
+            if event.type == pygame.JOYDEVICEREMOVED or (
+                CONTROLLER_DEVICE_REMOVED is not None
+                and event.type == CONTROLLER_DEVICE_REMOVED
+            ):
+                if controller and not controller.get_init():
+                    controller = None
+                if joystick and not joystick.get_init():
+                    joystick = None
+            if is_select_event(event):
                 return _exit_settings()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
@@ -278,6 +301,66 @@ def settings_screen(
                 if event.key == pygame.K_r:
                     working = copy.deepcopy(DEFAULT_CONFIG)
                     set_language(working.get("language"))
+            if event.type == pygame.JOYBUTTONDOWN or (
+                CONTROLLER_BUTTON_DOWN is not None
+                and event.type == CONTROLLER_BUTTON_DOWN
+            ):
+                current_row = rows[selected]
+                row_type = current_row.get("type", "toggle")
+                if is_confirm_event(event):
+                    if row_type == "action":
+                        return _exit_settings()
+                    if row_type == "toggle":
+                        toggle_row(current_row)
+                    elif row_type == "choice":
+                        cycle_choice(current_row, 1)
+                if CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN:
+                    if (
+                        CONTROLLER_BUTTON_DPAD_UP is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_UP
+                    ):
+                        selected = (selected - 1) % row_count
+                    if (
+                        CONTROLLER_BUTTON_DPAD_DOWN is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_DOWN
+                    ):
+                        selected = (selected + 1) % row_count
+                    if (
+                        CONTROLLER_BUTTON_DPAD_LEFT is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_LEFT
+                        and row_type != "action"
+                    ):
+                        if row_type == "toggle":
+                            set_easy_value(current_row, True)
+                        elif row_type == "choice":
+                            cycle_choice(current_row, -1)
+                    if (
+                        CONTROLLER_BUTTON_DPAD_RIGHT is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_RIGHT
+                        and row_type != "action"
+                    ):
+                        if row_type == "toggle":
+                            set_easy_value(current_row, False)
+                        elif row_type == "choice":
+                            cycle_choice(current_row, 1)
+            if event.type == pygame.JOYHATMOTION:
+                current_row = rows[selected]
+                row_type = current_row.get("type", "toggle")
+                hat_x, hat_y = event.value
+                if hat_y == 1:
+                    selected = (selected - 1) % row_count
+                elif hat_y == -1:
+                    selected = (selected + 1) % row_count
+                if hat_x == -1 and row_type != "action":
+                    if row_type == "toggle":
+                        set_easy_value(current_row, True)
+                    elif row_type == "choice":
+                        cycle_choice(current_row, -1)
+                elif hat_x == 1 and row_type != "action":
+                    if row_type == "toggle":
+                        set_easy_value(current_row, False)
+                    elif row_type == "choice":
+                        cycle_choice(current_row, 1)
 
         current_language = get_language()
         if current_language != last_language:

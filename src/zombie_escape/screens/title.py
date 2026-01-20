@@ -14,6 +14,18 @@ from ..models import Stage
 from ..progress import load_progress
 from ..render import show_message
 from ..rng import generate_seed
+from ..input_utils import (
+    CONTROLLER_BUTTON_DOWN,
+    CONTROLLER_BUTTON_DPAD_DOWN,
+    CONTROLLER_BUTTON_DPAD_LEFT,
+    CONTROLLER_BUTTON_DPAD_RIGHT,
+    CONTROLLER_BUTTON_DPAD_UP,
+    CONTROLLER_DEVICE_ADDED,
+    CONTROLLER_DEVICE_REMOVED,
+    init_first_controller,
+    init_first_joystick,
+    is_confirm_event,
+)
 from ..screens import (
     ScreenID,
     ScreenTransition,
@@ -193,6 +205,8 @@ def title_screen(
         0,
     )
     selected = min(selected_stage_index, len(options) - 1)
+    controller = init_first_controller()
+    joystick = init_first_joystick() if controller is None else None
 
     while True:
         for event in pygame.event.get():
@@ -205,6 +219,22 @@ def title_screen(
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event)
                 continue
+            if event.type == pygame.JOYDEVICEADDED or (
+                CONTROLLER_DEVICE_ADDED is not None
+                and event.type == CONTROLLER_DEVICE_ADDED
+            ):
+                if controller is None:
+                    controller = init_first_controller()
+                if controller is None:
+                    joystick = init_first_joystick()
+            if event.type == pygame.JOYDEVICEREMOVED or (
+                CONTROLLER_DEVICE_REMOVED is not None
+                and event.type == CONTROLLER_DEVICE_REMOVED
+            ):
+                if controller and not controller.get_init():
+                    controller = None
+                if joystick and not joystick.get_init():
+                    joystick = None
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_BACKSPACE:
                     current_seed_text = _generate_auto_seed_text()
@@ -273,6 +303,87 @@ def title_screen(
                             seed_text=current_seed_text,
                             seed_is_auto=current_seed_auto,
                         )
+            if event.type == pygame.JOYBUTTONDOWN or (
+                CONTROLLER_BUTTON_DOWN is not None
+                and event.type == CONTROLLER_BUTTON_DOWN
+            ):
+                if is_confirm_event(event):
+                    current = options[selected]
+                    if current["type"] == "stage" and current.get("available"):
+                        seed_value = (
+                            int(current_seed_text) if current_seed_text else None
+                        )
+                        return ScreenTransition(
+                            ScreenID.GAMEPLAY,
+                            stage=current["stage"],
+                            seed=seed_value,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
+                        )
+                    if current["type"] == "settings":
+                        return ScreenTransition(
+                            ScreenID.SETTINGS,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
+                        )
+                    if current["type"] == "readme":
+                        _open_readme_link()
+                        continue
+                    if current["type"] == "quit":
+                        return ScreenTransition(
+                            ScreenID.EXIT,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
+                        )
+                if CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN:
+                    if (
+                        CONTROLLER_BUTTON_DPAD_UP is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_UP
+                    ):
+                        selected = (selected - 1) % len(options)
+                    if (
+                        CONTROLLER_BUTTON_DPAD_DOWN is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_DOWN
+                    ):
+                        selected = (selected + 1) % len(options)
+                    if (
+                        CONTROLLER_BUTTON_DPAD_LEFT is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_LEFT
+                    ):
+                        if current_page > 0:
+                            current_page -= 1
+                            options, stage_options = _build_options(current_page)
+                            selected = 0
+                    if (
+                        CONTROLLER_BUTTON_DPAD_RIGHT is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_RIGHT
+                    ):
+                        if (
+                            current_page < len(stage_pages) - 1
+                            and _page_available(current_page + 1)
+                        ):
+                            current_page += 1
+                            options, stage_options = _build_options(current_page)
+                            selected = 0
+            if event.type == pygame.JOYHATMOTION:
+                hat_x, hat_y = event.value
+                if hat_y == 1:
+                    selected = (selected - 1) % len(options)
+                elif hat_y == -1:
+                    selected = (selected + 1) % len(options)
+                if hat_x == -1:
+                    if current_page > 0:
+                        current_page -= 1
+                        options, stage_options = _build_options(current_page)
+                        selected = 0
+                elif hat_x == 1:
+                    if (
+                        current_page < len(stage_pages) - 1
+                        and _page_available(current_page + 1)
+                    ):
+                        current_page += 1
+                        options, stage_options = _build_options(current_page)
+                        selected = 0
 
         screen.fill(BLACK)
         title_text = tr("game.title")

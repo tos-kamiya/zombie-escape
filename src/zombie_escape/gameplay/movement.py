@@ -29,7 +29,10 @@ from .utils import rect_visible_on_screen
 
 
 def process_player_input(
-    keys: Sequence[bool], player: Player, car: Car | None
+    keys: Sequence[bool],
+    player: Player,
+    car: Car | None,
+    pad_input: tuple[float, float] = (0.0, 0.0),
 ) -> tuple[float, float, float, float]:
     """Process keyboard input and return movement deltas."""
     dx_input, dy_input = 0, 0
@@ -41,6 +44,8 @@ def process_player_input(
         dx_input -= 1
     if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
         dx_input += 1
+    dx_input += pad_input[0]
+    dy_input += pad_input[1]
 
     player_dx, player_dy, car_dx, car_dy = 0, 0, 0, 0
 
