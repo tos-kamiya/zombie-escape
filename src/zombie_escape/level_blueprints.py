@@ -6,6 +6,7 @@ EXITS_PER_SIDE = 1  # currently fixed to 1 per side (can be tuned)
 NUM_WALL_LINES = 80  # reduced density (roughly 1/5 of previous 450)
 WALL_MIN_LEN = 3
 WALL_MAX_LEN = 10
+SPARSE_WALL_DENSITY = 0.10
 SPAWN_MARGIN = 3  # keep spawns away from walls/edges
 SPAWN_ZOMBIES = 3
 
@@ -201,10 +202,37 @@ def _place_walls_grid_wire(grid: list[list[str]]) -> None:
                 grid[y][x] = "1"
 
 
+def _place_walls_sparse(grid: list[list[str]]) -> None:
+    """Place isolated wall tiles at a low density, avoiding adjacency."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    for y in range(2, rows - 2):
+        for x in range(2, cols - 2):
+            if (x, y) in forbidden:
+                continue
+            if grid[y][x] != ".":
+                continue
+            if RNG.random() >= SPARSE_WALL_DENSITY:
+                continue
+            if (
+                grid[y - 1][x] == "1"
+                or grid[y + 1][x] == "1"
+                or grid[y][x - 1] == "1"
+                or grid[y][x + 1] == "1"
+                or grid[y - 1][x - 1] == "1"
+                or grid[y - 1][x + 1] == "1"
+                or grid[y + 1][x - 1] == "1"
+                or grid[y + 1][x + 1] == "1"
+            ):
+                continue
+            grid[y][x] = "1"
+
+
 WALL_ALGORITHMS = {
     "default": _place_walls_default,
     "empty": _place_walls_empty,
     "grid_wire": _place_walls_grid_wire,
+    "sparse": _place_walls_sparse,
 }
 
 

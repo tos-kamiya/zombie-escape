@@ -126,7 +126,7 @@ STAGES: list[Stage] = [
         available=True,
         rescue_stage=True,
         tile_size=40,
-        wall_algorithm="empty",
+        wall_algorithm="sparse",
         exterior_spawn_weight=0.7,
         interior_spawn_weight=0.3,
         zombie_normal_ratio=0.4,
@@ -135,7 +135,7 @@ STAGES: list[Stage] = [
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
         initial_interior_spawn_rate=0.02,
         waiting_car_target_count=1,
-        survivor_spawn_rate=0.4,
+        survivor_spawn_rate=0.35,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"
