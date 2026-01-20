@@ -108,6 +108,13 @@ def translate_dict(key: str) -> dict[str, Any]:
     return result if isinstance(result, dict) else {}
 
 
+def translate_list(key: str) -> list[Any]:
+    if not _CONFIGURED:
+        set_language(_CURRENT_LANGUAGE)
+    result = _lookup_locale_value(key)
+    return result if isinstance(result, list) else []
+
+
 def get_font_settings(*, name: str = "primary") -> FontSettings:
     _get_language_options()  # ensure locale data is loaded
     locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(
@@ -126,6 +133,26 @@ def get_font_settings(*, name: str = "primary") -> FontSettings:
 
 def _qualify_key(key: str) -> str:
     return key if key.startswith("ui.") else f"ui.{key}"
+
+
+def _lookup_locale_value(key: str) -> Any:
+    locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(
+        DEFAULT_LANGUAGE, {}
+    )
+    if not isinstance(locale_data, dict):
+        return None
+    qualified = _qualify_key(key)
+    path = qualified.split(".")
+    if path and path[0] == "ui":
+        path = path[1:]
+    current: Any = locale_data
+    for segment in path:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(segment)
+        if current is None:
+            return None
+    return current
 
 
 def _get_language_options() -> tuple[LanguageOption, ...]:
@@ -182,5 +209,6 @@ __all__ = [
     "language_options",
     "set_language",
     "translate",
+    "translate_list",
     "translate_dict",
 ]

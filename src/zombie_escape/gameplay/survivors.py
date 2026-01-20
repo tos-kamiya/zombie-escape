@@ -16,12 +16,8 @@ from ..entities_constants import (
     SURVIVOR_RADIUS,
     ZOMBIE_RADIUS,
 )
-from .constants import (
-    SURVIVOR_CONVERSION_LINE_KEYS,
-    SURVIVOR_MESSAGE_DURATION_MS,
-    SURVIVOR_SPEED_PENALTY_PER_PASSENGER,
-)
-from ..localization import translate as tr
+from .constants import SURVIVOR_MESSAGE_DURATION_MS, SURVIVOR_SPEED_PENALTY_PER_PASSENGER
+from ..localization import translate as tr, translate_dict, translate_list
 from ..models import GameData, ProgressState
 from ..rng import get_rng
 from ..entities import Survivor, Zombie, spritecollideany_walls, WallIndex
@@ -154,11 +150,40 @@ def add_survivor_message(game_data: GameData, text: str) -> None:
     game_data.state.survivor_messages.append({"text": text, "expires_at": expires})
 
 
-def random_survivor_conversion_line() -> str:
-    if not SURVIVOR_CONVERSION_LINE_KEYS:
+def _normalize_legacy_conversion_lines(data: dict[str, Any]) -> list[str]:
+    numbered: list[tuple[int, str]] = []
+    others: list[tuple[str, str]] = []
+    for key, value in data.items():
+        if not value:
+            continue
+        text = str(value)
+        if isinstance(key, str) and key.startswith("line"):
+            suffix = key[4:]
+            if suffix.isdigit():
+                numbered.append((int(suffix), text))
+                continue
+        others.append((str(key), text))
+    numbered.sort(key=lambda item: item[0])
+    others.sort(key=lambda item: item[0])
+    return [text for _, text in numbered] + [text for _, text in others]
+
+
+def _get_survivor_conversion_messages(stage_id: str) -> list[str]:
+    key = f"stages.{stage_id}.survivor_conversion_messages"
+    raw = translate_list(key)
+    if raw:
+        return [str(item) for item in raw if item]
+    legacy = translate_dict(f"stages.{stage_id}.conversion_lines")
+    if legacy:
+        return _normalize_legacy_conversion_lines(legacy)
+    return []
+
+
+def random_survivor_conversion_line(stage_id: str) -> str:
+    lines = _get_survivor_conversion_messages(stage_id)
+    if not lines:
         return ""
-    key = RNG.choice(SURVIVOR_CONVERSION_LINE_KEYS)
-    return tr(key)
+    return RNG.choice(lines)
 
 
 def cleanup_survivor_messages(state: ProgressState) -> None:
@@ -254,7 +279,7 @@ def handle_survivor_zombie_collisions(
             survivor.teleport(spawn_pos)
             continue
         survivor.kill()
-        line = random_survivor_conversion_line()
+        line = random_survivor_conversion_line(game_data.stage.id)
         if line:
             add_survivor_message(game_data, line)
         new_zombie = _create_zombie(

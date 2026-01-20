@@ -8,11 +8,6 @@ from ..entities_constants import ZOMBIE_AGING_DURATION_FRAMES
 SURVIVOR_SPEED_PENALTY_PER_PASSENGER = 0.08
 SURVIVOR_OVERLOAD_DAMAGE_RATIO = 0.2
 SURVIVOR_MESSAGE_DURATION_MS = 2000
-SURVIVOR_CONVERSION_LINE_KEYS = [
-    "stages.stage4.conversion_lines.line1",
-    "stages.stage4.conversion_lines.line2",
-    "stages.stage4.conversion_lines.line3",
-]
 
 # --- Footprint settings (gameplay) ---
 FOOTPRINT_STEP_DISTANCE = 40
@@ -34,7 +29,6 @@ __all__ = [
     "SURVIVOR_SPEED_PENALTY_PER_PASSENGER",
     "SURVIVOR_OVERLOAD_DAMAGE_RATIO",
     "SURVIVOR_MESSAGE_DURATION_MS",
-    "SURVIVOR_CONVERSION_LINE_KEYS",
     "FOOTPRINT_STEP_DISTANCE",
     "FOOTPRINT_MAX",
     "MAX_ZOMBIES",

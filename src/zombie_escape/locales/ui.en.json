@@ -56,7 +56,12 @@
           "line1": "It hurts!",
           "line2": "I can't hold on!",
           "line3": "Stay back!"
-        }
+        },
+        "survivor_conversion_messages": [
+          "It hurts!",
+          "I can't hold on!",
+          "Stay back!"
+        ]
       },
       "stage5": {
         "name": "#5 Survive Until Dawn",
@@ -76,7 +81,32 @@
       },
       "stage9": {
         "name": "# Evacuate Survivors 2",
-        "description": "Evacuate like stage 4, but narrow corridors. Requires fuel."
+        "description": "Evacuate like stage 4, but narrow corridors. Requires fuel.",
+        "survivor_conversion_messages": [
+          "It hurts!",
+          "I can't hold on!",
+          "Stay back!",
+          "Stop!"
+        ]
+      },
+      "stage10": {
+        "name": "#10 Outbreak",
+        "description": "Zombies have infiltrated a building where survivors took shelter.",
+        "survivor_conversion_messages": [
+          "It hurts!",
+          "I can't hold on!",
+          "Stay back!",
+          "Stop!",
+          "Whoa!",
+          "Eeeeek!",
+          "Noooo!",
+          "Help me!",
+          "Get away!",
+          "Someone help!",
+          "Don't touch me!",
+          "No, no, no!",
+          "Please!"
+        ]
       }
     },
     "status": {
