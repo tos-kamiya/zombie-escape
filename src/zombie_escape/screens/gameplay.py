@@ -180,7 +180,6 @@ def gameplay_screen(
                 paused_focus = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 paused_focus = False
-                paused_manual = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_s and (
                     pygame.key.get_mods() & pygame.KMOD_CTRL
@@ -192,10 +191,21 @@ def gameplay_screen(
                     }
                     print("STATE DEBUG:", state_snapshot)
                     continue
-                if event.key == pygame.K_ESCAPE:
-                    return ScreenTransition(ScreenID.TITLE)
-                if event.key == pygame.K_p:
-                    paused_manual = not paused_manual
+                if debug_mode:
+                    if event.key == pygame.K_ESCAPE:
+                        return ScreenTransition(ScreenID.TITLE)
+                    if event.key == pygame.K_p:
+                        paused_manual = not paused_manual
+                    continue
+                if paused_manual:
+                    if event.key == pygame.K_ESCAPE:
+                        return ScreenTransition(ScreenID.TITLE)
+                    if event.key == pygame.K_p:
+                        paused_manual = False
+                    continue
+                if event.key in (pygame.K_ESCAPE, pygame.K_p):
+                    paused_manual = True
+                    continue
 
         paused = paused_manual or paused_focus
         if paused:
@@ -211,17 +221,19 @@ def gameplay_screen(
             if show_pause_overlay:
                 overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
                 overlay.fill((0, 0, 0, 150))
+                pause_radius = 53
+                cx = screen_width // 2
+                cy = screen_height // 2 - 18
                 pygame.draw.circle(
                     overlay,
                     LIGHT_GRAY,
-                    (screen_width // 2, screen_height // 2),
-                    35,
+                    (cx, cy),
+                    pause_radius,
                     width=3,
                 )
-                bar_width = 8
-                bar_height = 30
-                gap = 9
-                cx, cy = screen_width // 2, screen_height // 2
+                bar_width = 10
+                bar_height = 38
+                gap = 12
                 pygame.draw.rect(
                     overlay,
                     LIGHT_GRAY,
@@ -238,12 +250,12 @@ def gameplay_screen(
                     tr("hud.paused"),
                     18,
                     WHITE,
-                    (screen_width // 2, screen_height // 2 + 24),
+                    (screen_width // 2, 28),
                 )
                 show_message(
                     screen,
-                    tr("hud.resume_hint"),
-                    18,
+                    tr("hud.pause_hint"),
+                    16,
                     LIGHT_GRAY,
                     (screen_width // 2, screen_height // 2 + 70),
                 )

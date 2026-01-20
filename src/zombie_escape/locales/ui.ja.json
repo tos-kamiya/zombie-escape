@@ -91,7 +91,7 @@
     "hud": {
       "need_fuel": "燃料が必要です！",
       "paused": "一時停止",
-      "resume_hint": "Pキーかクリックで再開",
+      "pause_hint": "P: ゲーム再開  ESC: タイトルに戻る",
       "survival_timer_label": "夜明けまであと %{time}",
       "time_accel": ">> 4x",
       "time_accel_hint": "Shiftキー押下: 4x"

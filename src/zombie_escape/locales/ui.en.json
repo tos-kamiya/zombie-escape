@@ -91,7 +91,7 @@
     "hud": {
       "need_fuel": "Need fuel to drive!",
       "paused": "PAUSED",
-      "resume_hint": "Press P or click to resume",
+      "pause_hint": "P: Resume · ESC: Return to Title",
       "survival_timer_label": "Until dawn %{time}",
       "time_accel": ">> 4x",
       "time_accel_hint": "Hold Shift: 4x"
