@@ -74,6 +74,7 @@ def generate_level_from_blueprint(
     player_cells: list[pygame.Rect] = []
     car_cells: list[pygame.Rect] = []
     zombie_cells: list[pygame.Rect] = []
+    bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] = {}
     palette = get_environment_palette(game_data.state.ambient_palette_key)
 
     def add_beam_to_groups(beam: SteelBeam) -> None:
@@ -139,6 +140,8 @@ def generate_level_from_blueprint(
                     and not _has_wall(x - 1, y)
                     and not _has_wall(x - 1, y + 1),
                 )
+                if any(bevel_mask):
+                    bevel_corners[(x, y)] = bevel_mask
                 wall = Wall(
                     cell_rect.x,
                     cell_rect.y,
@@ -182,6 +185,7 @@ def generate_level_from_blueprint(
     game_data.layout.walkable_cells = walkable_cells
     game_data.layout.outer_wall_cells = outer_wall_cells
     game_data.layout.wall_cells = wall_cells
+    game_data.layout.bevel_corners = bevel_corners
 
     return {
         "player_cells": player_cells,

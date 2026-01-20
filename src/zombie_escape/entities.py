@@ -139,6 +139,7 @@ def apply_tile_edge_nudge(
     *,
     cell_size: int,
     wall_cells: set[tuple[int, int]] | None,
+    bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] | None = None,
     grid_cols: int,
     grid_rows: int,
     strength: float = 0.03,
@@ -178,28 +179,34 @@ def apply_tile_edge_nudge(
     if (cell_x, cell_y + 1) in wall_cells:
         dy += apply_push(bottom_dist, -1.0)
 
-    def apply_corner_push(dist_a: float, dist_b: float) -> float:
+    def apply_corner_push(dist_a: float, dist_b: float, boost: float = 1.0) -> float:
         if dist_a >= edge_margin or dist_b >= edge_margin:
             return 0.0
         ratio = (edge_margin - min(dist_a, dist_b)) / edge_margin
-        return ratio * speed * strength
+        return ratio * speed * strength * boost
 
-    if (cell_x - 1, cell_y - 1) in wall_cells:
-        push = apply_corner_push(left_dist, top_dist)
-        dx += push
-        dy += push
-    if (cell_x + 1, cell_y - 1) in wall_cells:
-        push = apply_corner_push(right_dist, top_dist)
-        dx -= push
-        dy += push
-    if (cell_x + 1, cell_y + 1) in wall_cells:
-        push = apply_corner_push(right_dist, bottom_dist)
-        dx -= push
-        dy -= push
-    if (cell_x - 1, cell_y + 1) in wall_cells:
-        push = apply_corner_push(left_dist, bottom_dist)
-        dx += push
-        dy -= push
+    if bevel_corners:
+        boosted = 1.25
+        corner_wall = bevel_corners.get((cell_x - 1, cell_y - 1))
+        if corner_wall and corner_wall[2]:
+            push = apply_corner_push(left_dist, top_dist, boosted)
+            dx += push
+            dy += push
+        corner_wall = bevel_corners.get((cell_x + 1, cell_y - 1))
+        if corner_wall and corner_wall[3]:
+            push = apply_corner_push(right_dist, top_dist, boosted)
+            dx -= push
+            dy += push
+        corner_wall = bevel_corners.get((cell_x + 1, cell_y + 1))
+        if corner_wall and corner_wall[0]:
+            push = apply_corner_push(right_dist, bottom_dist, boosted)
+            dx -= push
+            dy -= push
+        corner_wall = bevel_corners.get((cell_x - 1, cell_y + 1))
+        if corner_wall and corner_wall[1]:
+            push = apply_corner_push(left_dist, bottom_dist, boosted)
+            dx += push
+            dy -= push
 
     return dx, dy
 
@@ -747,6 +754,8 @@ class Survivor(pygame.sprite.Sprite):
         wall_index: WallIndex | None = None,
         cell_size: int | None = None,
         wall_cells: set[tuple[int, int]] | None = None,
+        bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
+        | None = None,
         grid_cols: int | None = None,
         grid_rows: int | None = None,
         level_width: int | None = None,
@@ -783,6 +792,7 @@ class Survivor(pygame.sprite.Sprite):
                     move_y,
                     cell_size=cell_size,
                     wall_cells=wall_cells,
+                    bevel_corners=bevel_corners,
                     grid_cols=grid_cols,
                     grid_rows=grid_rows,
                 )
@@ -852,6 +862,7 @@ class Survivor(pygame.sprite.Sprite):
                 move_y,
                 cell_size=cell_size,
                 wall_cells=wall_cells,
+                bevel_corners=bevel_corners,
                 grid_cols=grid_cols,
                 grid_rows=grid_rows,
             )
@@ -1182,15 +1193,17 @@ def _zombie_wander_move(
                     (1, cell_y) if cell_x == 0 else (grid_cols - 2, cell_y)
                 )
                 if inward_cell not in outer_wall_cells:
-                    inward_dx = zombie.speed if cell_x == 0 else -zombie.speed
-                    return inward_dx, 0.0
+                    target_x = (inward_cell[0] + 0.5) * cell_size
+                    target_y = (inward_cell[1] + 0.5) * cell_size
+                    return zombie_move_toward(zombie, (target_x, target_y))
             if at_y_edge:
                 inward_cell = (
                     (cell_x, 1) if cell_y == 0 else (cell_x, grid_rows - 2)
                 )
                 if inward_cell not in outer_wall_cells:
-                    inward_dy = zombie.speed if cell_y == 0 else -zombie.speed
-                    return 0.0, inward_dy
+                    target_x = (inward_cell[0] + 0.5) * cell_size
+                    target_y = (inward_cell[1] + 0.5) * cell_size
+                    return zombie_move_toward(zombie, (target_x, target_y))
         else:
 
             def path_clear(next_x: float, next_y: float) -> bool:
@@ -1440,6 +1453,7 @@ class Zombie(pygame.sprite.Sprite):
         level_height: int,
         outer_wall_cells: set[tuple[int, int]] | None = None,
         wall_cells: set[tuple[int, int]] | None = None,
+        bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] | None = None,
     ) -> None:
         if self.carbonized:
             return
@@ -1470,6 +1484,7 @@ class Zombie(pygame.sprite.Sprite):
                 move_y,
                 cell_size=cell_size,
                 wall_cells=wall_cells,
+                bevel_corners=bevel_corners,
                 grid_cols=grid_cols,
                 grid_rows=grid_rows,
             )

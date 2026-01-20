@@ -85,6 +85,7 @@ def update_entities(
     stage = game_data.stage
     active_car = car if car and car.alive() else None
     wall_cells = game_data.layout.wall_cells
+    bevel_corners = game_data.layout.bevel_corners
 
     all_walls = list(wall_group) if wall_index is None else None
 
@@ -109,6 +110,7 @@ def update_entities(
             car_dy,
             cell_size=game_data.cell_size,
             wall_cells=wall_cells,
+            bevel_corners=bevel_corners,
             grid_cols=stage.grid_cols,
             grid_rows=stage.grid_rows,
         )
@@ -127,6 +129,7 @@ def update_entities(
             player_dy,
             cell_size=game_data.cell_size,
             wall_cells=wall_cells,
+            bevel_corners=bevel_corners,
             grid_cols=stage.grid_cols,
             grid_rows=stage.grid_rows,
         )
@@ -248,4 +251,5 @@ def update_entities(
             level_height=game_data.level_height,
             outer_wall_cells=game_data.layout.outer_wall_cells,
             wall_cells=game_data.layout.wall_cells,
+            bevel_corners=game_data.layout.bevel_corners,
         )
