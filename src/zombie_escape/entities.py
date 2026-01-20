@@ -1505,9 +1505,8 @@ class Zombie(pygame.sprite.Sprite):
         )
 
         if not (0 <= final_x < level_width and 0 <= final_y < level_height):
-            final_x, final_y = random_position_outside_building(
-                level_width, level_height
-            )
+            self.kill()
+            return
 
         self.x = final_x
         self.y = final_y
