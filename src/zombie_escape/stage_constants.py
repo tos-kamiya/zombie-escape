@@ -67,6 +67,7 @@ STAGES: list[Stage] = [
         zombie_normal_ratio=0.4,
         zombie_tracker_ratio=0.6,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        initial_interior_spawn_rate=0.01,
     ),
     Stage(
         id="stage7",
@@ -82,6 +83,7 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.3,
         zombie_wall_follower_ratio=0.3,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        initial_interior_spawn_rate=0.01,
     ),
     Stage(
         id="stage8",
@@ -97,20 +99,25 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.3,
         zombie_wall_follower_ratio=0.7,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        initial_interior_spawn_rate=0.01,
     ),
     Stage(
         id="stage9",
         name_key="stages.stage9.name",
         description_key="stages.stage9.description",
-        available=False,
+        available=True,
         rescue_stage=True,
         tile_size=35,
         requires_fuel=True,
         exterior_spawn_weight=0.4,
         interior_spawn_weight=0.6,
         waiting_car_target_count=1,
+        zombie_normal_ratio=0,
+        zombie_tracker_ratio=0.3,
+        zombie_wall_follower_ratio=0.7,
         survivor_spawn_rate=SURVIVOR_SPAWN_RATE,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        initial_interior_spawn_rate=0.01,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"
