@@ -83,6 +83,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             outside_rects=[],
             walkable_cells=[],
             outer_wall_cells=set(),
+            wall_cells=set(),
         ),
         fog={
             "hatch_patterns": {},

@@ -181,6 +181,7 @@ def generate_level_from_blueprint(
     game_data.layout.outside_rects = outside_rects
     game_data.layout.walkable_cells = walkable_cells
     game_data.layout.outer_wall_cells = outer_wall_cells
+    game_data.layout.wall_cells = wall_cells
 
     return {
         "player_cells": player_cells,

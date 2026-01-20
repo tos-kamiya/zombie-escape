@@ -5,7 +5,16 @@ from typing import Any, Sequence
 
 import pygame
 
-from ..entities import Car, Player, Survivor, Wall, WallIndex, Zombie, walls_for_radius
+from ..entities import (
+    Car,
+    Player,
+    Survivor,
+    Wall,
+    WallIndex,
+    Zombie,
+    apply_tile_edge_nudge,
+    walls_for_radius,
+)
 from ..entities_constants import (
     CAR_SPEED,
     PLAYER_SPEED,
@@ -75,6 +84,7 @@ def update_entities(
     camera = game_data.camera
     stage = game_data.stage
     active_car = car if car and car.alive() else None
+    wall_cells = game_data.layout.wall_cells
 
     all_walls = list(wall_group) if wall_index is None else None
 
@@ -92,14 +102,34 @@ def update_entities(
 
     # Update player/car movement
     if player.in_car and active_car:
+        car_dx, car_dy = apply_tile_edge_nudge(
+            active_car.x,
+            active_car.y,
+            car_dx,
+            car_dy,
+            cell_size=game_data.cell_size,
+            wall_cells=wall_cells,
+            grid_cols=stage.grid_cols,
+            grid_rows=stage.grid_rows,
+        )
         car_walls = _walls_near((active_car.x, active_car.y), 150.0)
-        active_car.move(car_dx, car_dy, car_walls)
+        active_car.move(car_dx, car_dy, car_walls, walls_nearby=wall_index is not None)
         player.rect.center = active_car.rect.center
         player.x, player.y = active_car.x, active_car.y
     elif not player.in_car:
         # Ensure player is in all_sprites if not in car
         if player not in all_sprites:
             all_sprites.add(player, layer=2)
+        player_dx, player_dy = apply_tile_edge_nudge(
+            player.x,
+            player.y,
+            player_dx,
+            player_dy,
+            cell_size=game_data.cell_size,
+            wall_cells=wall_cells,
+            grid_cols=stage.grid_cols,
+            grid_rows=stage.grid_rows,
+        )
         player.move(
             player_dx,
             player_dy,
@@ -217,4 +247,5 @@ def update_entities(
             level_width=game_data.level_width,
             level_height=game_data.level_height,
             outer_wall_cells=game_data.layout.outer_wall_cells,
+            wall_cells=game_data.layout.wall_cells,
         )

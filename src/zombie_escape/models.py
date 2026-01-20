@@ -26,6 +26,7 @@ class LevelLayout:
     outside_rects: list[pygame.Rect]
     walkable_cells: list[pygame.Rect]
     outer_wall_cells: set[tuple[int, int]]
+    wall_cells: set[tuple[int, int]]
 
 
 @dataclass

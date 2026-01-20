@@ -131,6 +131,79 @@ def walls_for_radius(
     return candidates
 
 
+def apply_tile_edge_nudge(
+    x: float,
+    y: float,
+    dx: float,
+    dy: float,
+    *,
+    cell_size: int,
+    wall_cells: set[tuple[int, int]] | None,
+    grid_cols: int,
+    grid_rows: int,
+    strength: float = 0.03,
+    edge_margin_ratio: float = 0.15,
+    min_margin: float = 2.0,
+) -> tuple[float, float]:
+    if dx == 0 and dy == 0:
+        return dx, dy
+    if cell_size <= 0 or not wall_cells:
+        return dx, dy
+    cell_x = int(x // cell_size)
+    cell_y = int(y // cell_size)
+    if cell_x < 0 or cell_y < 0 or cell_x >= grid_cols or cell_y >= grid_rows:
+        return dx, dy
+    speed = math.hypot(dx, dy)
+    if speed <= 0:
+        return dx, dy
+
+    edge_margin = max(min_margin, cell_size * edge_margin_ratio)
+    left_dist = x - (cell_x * cell_size)
+    right_dist = ((cell_x + 1) * cell_size) - x
+    top_dist = y - (cell_y * cell_size)
+    bottom_dist = ((cell_y + 1) * cell_size) - y
+
+    def apply_push(dist: float, direction: float) -> float:
+        if dist >= edge_margin:
+            return 0.0
+        ratio = (edge_margin - dist) / edge_margin
+        return ratio * speed * strength * direction
+
+    if (cell_x - 1, cell_y) in wall_cells:
+        dx += apply_push(left_dist, 1.0)
+    if (cell_x + 1, cell_y) in wall_cells:
+        dx += apply_push(right_dist, -1.0)
+    if (cell_x, cell_y - 1) in wall_cells:
+        dy += apply_push(top_dist, 1.0)
+    if (cell_x, cell_y + 1) in wall_cells:
+        dy += apply_push(bottom_dist, -1.0)
+
+    def apply_corner_push(dist_a: float, dist_b: float) -> float:
+        if dist_a >= edge_margin or dist_b >= edge_margin:
+            return 0.0
+        ratio = (edge_margin - min(dist_a, dist_b)) / edge_margin
+        return ratio * speed * strength
+
+    if (cell_x - 1, cell_y - 1) in wall_cells:
+        push = apply_corner_push(left_dist, top_dist)
+        dx += push
+        dy += push
+    if (cell_x + 1, cell_y - 1) in wall_cells:
+        push = apply_corner_push(right_dist, top_dist)
+        dx -= push
+        dy += push
+    if (cell_x + 1, cell_y + 1) in wall_cells:
+        push = apply_corner_push(right_dist, bottom_dist)
+        dx -= push
+        dy -= push
+    if (cell_x - 1, cell_y + 1) in wall_cells:
+        push = apply_corner_push(left_dist, bottom_dist)
+        dx += push
+        dy -= push
+
+    return dx, dy
+
+
 def _walls_for_sprite(
     sprite: pygame.sprite.Sprite,
     wall_index: WallIndex,
@@ -673,6 +746,9 @@ class Survivor(pygame.sprite.Sprite):
         *,
         wall_index: WallIndex | None = None,
         cell_size: int | None = None,
+        wall_cells: set[tuple[int, int]] | None = None,
+        grid_cols: int | None = None,
+        grid_rows: int | None = None,
         level_width: int | None = None,
         level_height: int | None = None,
     ) -> None:
@@ -693,6 +769,23 @@ class Survivor(pygame.sprite.Sprite):
             dist = math.sqrt(dist_sq)
             move_x = (dx / dist) * BUDDY_FOLLOW_SPEED
             move_y = (dy / dist) * BUDDY_FOLLOW_SPEED
+
+            if (
+                cell_size is not None
+                and wall_cells is not None
+                and grid_cols is not None
+                and grid_rows is not None
+            ):
+                move_x, move_y = apply_tile_edge_nudge(
+                    self.x,
+                    self.y,
+                    move_x,
+                    move_y,
+                    cell_size=cell_size,
+                    wall_cells=wall_cells,
+                    grid_cols=grid_cols,
+                    grid_rows=grid_rows,
+                )
 
             if move_x:
                 self.x += move_x
@@ -745,6 +838,23 @@ class Survivor(pygame.sprite.Sprite):
         dist = math.sqrt(dist_sq)
         move_x = (dx / dist) * SURVIVOR_APPROACH_SPEED
         move_y = (dy / dist) * SURVIVOR_APPROACH_SPEED
+
+        if (
+            cell_size is not None
+            and wall_cells is not None
+            and grid_cols is not None
+            and grid_rows is not None
+        ):
+            move_x, move_y = apply_tile_edge_nudge(
+                self.x,
+                self.y,
+                move_x,
+                move_y,
+                cell_size=cell_size,
+                wall_cells=wall_cells,
+                grid_cols=grid_cols,
+                grid_rows=grid_rows,
+            )
 
         if move_x:
             self.x += move_x
@@ -1230,46 +1340,7 @@ class Zombie(pygame.sprite.Sprite):
                     final_y = self.y
                     break
 
-        for wall in possible_walls:
-            final_x, final_y = self._apply_bevel_corner_repulsion(
-                final_x, final_y, wall
-            )
-
         return final_x, final_y
-
-    def _apply_bevel_corner_repulsion(
-        self: Self, x: float, y: float, wall: Wall
-    ) -> tuple[float, float]:
-        bevel_depth = int(getattr(wall, "bevel_depth", 0) or 0)
-        bevel_mask = getattr(wall, "bevel_mask", None)
-        if bevel_depth <= 0 or not bevel_mask or not any(bevel_mask):
-            return x, y
-
-        influence = self.radius + bevel_depth
-        repel_ratio = 0.03
-        corners = (
-            (bevel_mask[0], wall.rect.left, wall.rect.top, -1.0, -1.0),  # tl
-            (bevel_mask[1], wall.rect.right, wall.rect.top, 1.0, -1.0),  # tr
-            (bevel_mask[2], wall.rect.right, wall.rect.bottom, 1.0, 1.0),  # br
-            (bevel_mask[3], wall.rect.left, wall.rect.bottom, -1.0, 1.0),  # bl
-        )
-        for enabled, corner_x, corner_y, dir_x, dir_y in corners:
-            if not enabled:
-                continue
-            dx = x - corner_x
-            dy = y - corner_y
-            if abs(dx) > influence or abs(dy) > influence:
-                continue
-            dist = math.hypot(dx, dy)
-            if dist >= influence:
-                continue
-            push = (influence - dist) * repel_ratio
-            if push <= 0:
-                continue
-            x += dir_x * push
-            y += dir_y * push
-
-        return x, y
 
     def _avoid_other_zombies(
         self: Self,
@@ -1368,6 +1439,7 @@ class Zombie(pygame.sprite.Sprite):
         level_width: int,
         level_height: int,
         outer_wall_cells: set[tuple[int, int]] | None = None,
+        wall_cells: set[tuple[int, int]] | None = None,
     ) -> None:
         if self.carbonized:
             return
@@ -1390,6 +1462,17 @@ class Zombie(pygame.sprite.Sprite):
         )
         if dist_to_player_sq <= avoid_radius_sq or self.wall_follower:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
+        if wall_cells is not None:
+            move_x, move_y = apply_tile_edge_nudge(
+                self.x,
+                self.y,
+                move_x,
+                move_y,
+                cell_size=cell_size,
+                wall_cells=wall_cells,
+                grid_cols=grid_cols,
+                grid_rows=grid_rows,
+            )
         if self.wall_follower and self.wall_follow_side != 0:
             if move_x != 0 or move_y != 0:
                 heading = math.atan2(move_y, move_x)
@@ -1462,7 +1545,14 @@ class Car(pygame.sprite.Sprite):
         old_center = self.rect.center
         self.rect = self.image.get_rect(center=old_center)
 
-    def move(self: Self, dx: float, dy: float, walls: Iterable[Wall]) -> None:
+    def move(
+        self: Self,
+        dx: float,
+        dy: float,
+        walls: Iterable[Wall],
+        *,
+        walls_nearby: bool = False,
+    ) -> None:
         if self.health <= 0:
             return
         if dx == 0 and dy == 0:
@@ -1477,11 +1567,15 @@ class Car(pygame.sprite.Sprite):
         new_y = self.y + dy
 
         hit_walls = []
-        possible_walls = [
-            w
-            for w in walls
-            if abs(w.rect.centery - self.y) < 100 and abs(w.rect.centerx - new_x) < 100
-        ]
+        if walls_nearby:
+            possible_walls = list(walls)
+        else:
+            possible_walls = [
+                w
+                for w in walls
+                if abs(w.rect.centery - self.y) < 100
+                and abs(w.rect.centerx - new_x) < 100
+            ]
         car_center = (new_x, new_y)
         for wall in possible_walls:
             if _circle_wall_collision(car_center, self.collision_radius, wall):

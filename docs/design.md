@@ -157,6 +157,7 @@
   - プレイヤー/車両の入力速度を決定。
 - `update_entities(game_data, player_dx, player_dy, car_dx, car_dy, config)` (`gameplay/movement.py`)
   - 移動、カメラ更新、ゾンビAI、サバイバー移動など。
+  - 壁セルに隣接するタイル端に近い場合、移動ベクトルをタイル中心へ3%だけ補正する（全キャラ共通）。
 - `check_interactions(game_data, config)` (`gameplay/interactions.py`)
   - アイテム収集、車両/救助/敗北判定などの相互作用。
 - `update_footprints(game_data, config)` (`gameplay/footprints.py`)

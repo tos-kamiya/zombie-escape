@@ -51,6 +51,9 @@ def update_survivors(
             wall_group,
             wall_index=wall_index,
             cell_size=game_data.cell_size,
+            wall_cells=game_data.layout.wall_cells,
+            grid_cols=game_data.stage.grid_cols,
+            grid_rows=game_data.stage.grid_rows,
             level_width=game_data.level_width,
             level_height=game_data.level_height,
         )
