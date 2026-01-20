@@ -24,7 +24,7 @@ from .constants import (
 from ..localization import translate as tr
 from ..models import GameData, ProgressState
 from ..rng import get_rng
-from ..entities import Survivor, spritecollideany_walls, WallIndex
+from ..entities import Survivor, Zombie, spritecollideany_walls, WallIndex
 from .spawn import _create_zombie
 from .utils import find_nearby_offscreen_spawn_position, rect_visible_on_screen
 
@@ -228,7 +228,7 @@ def handle_survivor_zombie_collisions(
         min_x = survivor.rect.centerx - search_radius
         max_x = survivor.rect.centerx + search_radius
         start_idx = bisect_left(zombie_xs, min_x)
-        collided = False
+        collided_zombie: Zombie | None = None
         for idx in range(start_idx, len(zombies)):
             zombie_x = zombie_xs[idx]
             if zombie_x > max_x:
@@ -241,10 +241,10 @@ def handle_survivor_zombie_collisions(
                 continue
             dx = zombie_x - survivor.rect.centerx
             if dx * dx + dy * dy <= search_radius_sq:
-                collided = True
+                collided_zombie = zombie
                 break
 
-        if not collided:
+        if collided_zombie is None:
             continue
         if not rect_visible_on_screen(camera, survivor.rect):
             spawn_pos = find_nearby_offscreen_spawn_position(
@@ -261,6 +261,8 @@ def handle_survivor_zombie_collisions(
             config,
             start_pos=survivor.rect.center,
             stage=game_data.stage,
+            tracker=bool(getattr(collided_zombie, "tracker", False)),
+            wall_follower=bool(getattr(collided_zombie, "wall_follower", False)),
         )
         zombie_group.add(new_zombie)
         game_data.groups.all_sprites.add(new_zombie, layer=1)

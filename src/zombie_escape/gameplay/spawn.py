@@ -58,23 +58,7 @@ def _car_appearance_for_stage(stage: Stage | None) -> str:
     return "disabled" if stage and stage.survival_stage else "default"
 
 
-def _create_zombie(
-    config: dict[str, Any],
-    *,
-    start_pos: tuple[int, int] | None = None,
-    hint_pos: tuple[float, float] | None = None,
-    stage: Stage | None = None,
-    tracker: bool | None = None,
-    wall_follower: bool | None = None,
-) -> Zombie:
-    """Factory to create zombies with optional fast variants."""
-    fast_conf = config.get("fast_zombies", {})
-    fast_enabled = fast_conf.get("enabled", True)
-    if fast_enabled:
-        base_speed = RNG.uniform(ZOMBIE_SPEED, FAST_ZOMBIE_BASE_SPEED)
-    else:
-        base_speed = ZOMBIE_SPEED
-    base_speed = min(base_speed, PLAYER_SPEED - 0.05)
+def _pick_zombie_variant(stage: Stage | None) -> tuple[bool, bool]:
     normal_ratio = 1.0
     tracker_ratio = 0.0
     wall_follower_ratio = 0.0
@@ -92,27 +76,47 @@ def _create_zombie(
             and tracker_ratio + wall_follower_ratio <= 1.0
         ):
             normal_ratio = max(0.0, 1.0 - tracker_ratio - wall_follower_ratio)
+    total_ratio = normal_ratio + tracker_ratio + wall_follower_ratio
+    if total_ratio <= 0:
+        return False, False
+    pick = RNG.random() * total_ratio
+    if pick < normal_ratio:
+        return False, False
+    if pick < normal_ratio + tracker_ratio:
+        return True, False
+    return False, True
+
+
+def _create_zombie(
+    config: dict[str, Any],
+    *,
+    start_pos: tuple[int, int] | None = None,
+    hint_pos: tuple[float, float] | None = None,
+    stage: Stage | None = None,
+    tracker: bool | None = None,
+    wall_follower: bool | None = None,
+) -> Zombie:
+    """Factory to create zombies with optional fast variants."""
+    fast_conf = config.get("fast_zombies", {})
+    fast_enabled = fast_conf.get("enabled", True)
+    if fast_enabled:
+        base_speed = RNG.uniform(ZOMBIE_SPEED, FAST_ZOMBIE_BASE_SPEED)
+    else:
+        base_speed = ZOMBIE_SPEED
+    base_speed = min(base_speed, PLAYER_SPEED - 0.05)
+    if stage is not None:
         aging_duration_frames = max(
             1.0,
             float(stage.zombie_aging_duration_frames),
         )
     else:
         aging_duration_frames = ZOMBIE_AGING_DURATION_FRAMES
-    picked_tracker = False
-    picked_wall_follower = False
-    total_ratio = normal_ratio + tracker_ratio + wall_follower_ratio
-    if total_ratio > 0:
-        pick = RNG.random() * total_ratio
-        if pick < normal_ratio:
-            pass
-        elif pick < normal_ratio + tracker_ratio:
-            picked_tracker = True
-        else:
-            picked_wall_follower = True
-    if tracker is None:
-        tracker = picked_tracker
-    if wall_follower is None:
-        wall_follower = picked_wall_follower
+    if tracker is None or wall_follower is None:
+        picked_tracker, picked_wall_follower = _pick_zombie_variant(stage)
+        if tracker is None:
+            tracker = picked_tracker
+        if wall_follower is None:
+            wall_follower = picked_wall_follower
     if tracker:
         wall_follower = False
     if tracker:
@@ -440,10 +444,13 @@ def spawn_initial_zombies(
     )
 
     for pos in positions:
+        tracker, wall_follower = _pick_zombie_variant(game_data.stage)
         tentative = _create_zombie(
             config,
             start_pos=pos,
             stage=game_data.stage,
+            tracker=tracker,
+            wall_follower=wall_follower,
         )
         if spritecollideany_walls(tentative, wall_group):
             continue
