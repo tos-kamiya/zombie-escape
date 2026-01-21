@@ -23,6 +23,7 @@ STAGES: list[Stage] = [
         requires_fuel=True,
         exterior_spawn_weight=0.97,
         interior_spawn_weight=0.03,
+        initial_interior_spawn_rate=0.007,
     ),
     Stage(
         id="stage3",
@@ -33,6 +34,7 @@ STAGES: list[Stage] = [
         requires_fuel=True,
         exterior_spawn_weight=0.97,
         interior_spawn_weight=0.03,
+        initial_interior_spawn_rate=0.007,
     ),
     Stage(
         id="stage4",
@@ -42,6 +44,7 @@ STAGES: list[Stage] = [
         rescue_stage=True,
         waiting_car_target_count=2,
         survivor_spawn_rate=SURVIVOR_SPAWN_RATE,
+        initial_interior_spawn_rate=0.007,
     ),
     Stage(
         id="stage5",
