@@ -118,7 +118,12 @@
   - 視界外は `zombie_wander_move` で徘徊移動。
 - 追跡移動 (`zombie_tracker_movement`)
   - 視界範囲 `ZOMBIE_TRACKER_SIGHT_RANGE` でプレイヤーを検知したら直進追尾。
-  - 視界外は足跡 (`footprints`) から `ZOMBIE_TRACKER_SCENT_RADIUS` 内の最新位置を追跡し、見つからない場合は徘徊。
+  - 視界外は足跡 (`footprints`) を追跡する。
+    - 足跡探索は約30フレームに1回だけ実施。
+    - 探索半径は `ZOMBIE_TRACKER_SCENT_RADIUS * 5`。
+    - 半径内の足跡から最新3件を候補とし、ゾンビから近すぎる足跡（`FOOTPRINT_STEP_DISTANCE * 0.5` 以内）は除外。
+    - 候補の中で「壁がない直線経路」が成立する最新足跡をターゲットにする。
+    - ターゲットが見つからない場合は、(a) 現在ターゲット上にいなければ維持、(b) 現在ターゲット上なら次に新しい足跡へ更新。
 - 壁沿い移動 (`zombie_wall_follow_movement`)
   - 視界範囲 `ZOMBIE_TRACKER_SIGHT_RANGE` でプレイヤーを検知したら直進追尾。
   - 視界外は前方と±45度のプローブで壁までの距離を測り、目標ギャップ(約4px)を維持するよう旋回する。

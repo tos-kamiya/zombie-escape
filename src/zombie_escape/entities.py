@@ -37,6 +37,9 @@ from .entities_constants import (
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_SPEED,
     ZOMBIE_TRACKER_SCENT_RADIUS,
+    ZOMBIE_TRACKER_SCAN_RADIUS_MULTIPLIER,
+    ZOMBIE_TRACKER_SCENT_TOP_K,
+    ZOMBIE_TRACKER_SCAN_INTERVAL_MS,
     ZOMBIE_TRACKER_SIGHT_RANGE,
     ZOMBIE_TRACKER_WANDER_INTERVAL_MS,
     ZOMBIE_WALL_DAMAGE,
@@ -47,6 +50,7 @@ from .entities_constants import (
     ZOMBIE_WALL_FOLLOW_TARGET_GAP,
     ZOMBIE_WANDER_INTERVAL_MS,
 )
+from .gameplay.constants import FOOTPRINT_STEP_DISTANCE
 from .render_assets import (
     EnvironmentPalette,
     build_beveled_polygon,
@@ -331,6 +335,31 @@ def _point_segment_distance_sq(
     nearest_x = ax + t * dx
     nearest_y = ay + t * dy
     return (px - nearest_x) ** 2 + (py - nearest_y) ** 2
+
+
+def _line_of_sight_clear(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    walls: list["Wall"],
+) -> bool:
+    min_x = min(start[0], end[0])
+    min_y = min(start[1], end[1])
+    max_x = max(start[0], end[0])
+    max_y = max(start[1], end[1])
+    check_rect = pygame.Rect(
+        int(min_x),
+        int(min_y),
+        max(1, int(max_x - min_x)),
+        max(1, int(max_y - min_y)),
+    )
+    start_point = (int(start[0]), int(start[1]))
+    end_point = (int(end[0]), int(end[1]))
+    for wall in walls:
+        if not wall.rect.colliderect(check_rect):
+            continue
+        if wall.rect.clipline(start_point, end_point):
+            return False
+    return True
 
 
 def rect_polygon_collision(
@@ -923,7 +952,7 @@ def _zombie_tracker_movement(
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if not is_in_sight:
-        _zombie_update_tracker_target(zombie, footprints)
+        _zombie_update_tracker_target(zombie, footprints, walls)
         if zombie.tracker_target_pos is not None:
             return zombie_move_toward(zombie, zombie.tracker_target_pos)
         return _zombie_wander_move(
@@ -1137,34 +1166,90 @@ def zombie_normal_movement(
 
 
 def _zombie_update_tracker_target(
-    zombie: Zombie, footprints: list[dict[str, object]]
+    zombie: Zombie,
+    footprints: list[dict[str, object]],
+    walls: list[Wall],
 ) -> None:
-    zombie.tracker_target_pos = None
+    now = pygame.time.get_ticks()
+    if now - zombie.tracker_last_scan_time < zombie.tracker_scan_interval_ms:
+        return
+    zombie.tracker_last_scan_time = now
     if not footprints:
+        zombie.tracker_target_pos = None
         return
     nearby: list[dict[str, object]] = []
+    last_target_time = zombie.tracker_target_time
+    scan_radius = ZOMBIE_TRACKER_SCENT_RADIUS * ZOMBIE_TRACKER_SCAN_RADIUS_MULTIPLIER
+    scent_radius_sq = scan_radius * scan_radius
+    min_target_dist_sq = (FOOTPRINT_STEP_DISTANCE * 0.5) ** 2
     for fp in footprints:
         pos = fp.get("pos")
         if not isinstance(pos, tuple):
             continue
+        fp_time = fp.get("time")
+        if not isinstance(fp_time, int):
+            fp_time = -1
         dx = pos[0] - zombie.x
         dy = pos[1] - zombie.y
-        if (
-            dx * dx + dy * dy
-            <= ZOMBIE_TRACKER_SCENT_RADIUS * ZOMBIE_TRACKER_SCENT_RADIUS
-        ):
+        if dx * dx + dy * dy <= min_target_dist_sq:
+            continue
+        if dx * dx + dy * dy <= scent_radius_sq:
             nearby.append(fp)
 
     if not nearby:
         return
 
-    latest = max(
-        nearby,
+    nearby.sort(
         key=lambda fp: fp.get("time", -1) if isinstance(fp.get("time"), int) else -1,
+        reverse=True,
     )
-    pos = latest.get("pos")
-    if isinstance(pos, tuple):
+    if last_target_time is not None:
+        newer = [
+            fp
+            for fp in nearby
+            if isinstance(fp.get("time"), int) and fp.get("time") > last_target_time
+        ]
+    else:
+        newer = nearby
+
+    for fp in newer[:ZOMBIE_TRACKER_SCENT_TOP_K]:
+        pos = fp.get("pos")
+        if not isinstance(pos, tuple):
+            continue
+        fp_time = fp.get("time")
+        if not isinstance(fp_time, int):
+            fp_time = -1
+        if _line_of_sight_clear((zombie.x, zombie.y), pos, walls):
+            zombie.tracker_target_pos = pos
+            zombie.tracker_target_time = fp_time
+            return
+
+    if (
+        zombie.tracker_target_pos is not None
+        and (zombie.x - zombie.tracker_target_pos[0]) ** 2
+        + (zombie.y - zombie.tracker_target_pos[1]) ** 2
+        > min_target_dist_sq
+    ):
+        return
+
+    if last_target_time is None:
+        return
+
+    candidates = [
+        fp
+        for fp in nearby
+        if isinstance(fp.get("time"), int) and fp.get("time") > last_target_time
+    ]
+    if not candidates:
+        return
+    candidates.sort(key=lambda fp: fp.get("time"))
+    next_fp = candidates[0]
+    pos = next_fp.get("pos")
+    fp_time = next_fp.get("time")
+    if isinstance(pos, tuple) and isinstance(fp_time, int):
         zombie.tracker_target_pos = pos
+        zombie.tracker_target_time = fp_time
+    return
 
 
 def _zombie_wander_move(
@@ -1288,6 +1373,9 @@ class Zombie(pygame.sprite.Sprite):
                 movement_strategy = zombie_normal_movement
         self.movement_strategy = movement_strategy
         self.tracker_target_pos: tuple[float, float] | None = None
+        self.tracker_target_time: int | None = None
+        self.tracker_last_scan_time = 0
+        self.tracker_scan_interval_ms = ZOMBIE_TRACKER_SCAN_INTERVAL_MS
         self.wall_follow_side = RNG.choice([-1.0, 1.0]) if wall_follower else 0.0
         self.wall_follow_angle = RNG.uniform(0, math.tau) if wall_follower else None
         self.wall_follow_last_wall_time: int | None = None

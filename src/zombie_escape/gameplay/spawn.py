@@ -435,6 +435,35 @@ def spawn_initial_zombies(
     if not spawn_cells:
         return
 
+    if game_data.stage.id == "debug_tracker":
+        player_pos = player.rect.center
+        min_dist_sq = 100 * 100
+        max_dist_sq = 240 * 240
+        candidates = [
+            cell
+            for cell in spawn_cells
+            if min_dist_sq
+            <= (cell.centerx - player_pos[0]) ** 2
+            + (cell.centery - player_pos[1]) ** 2
+            <= max_dist_sq
+        ]
+        if not candidates:
+            candidates = spawn_cells
+        candidate = RNG.choice(candidates)
+        tentative = _create_zombie(
+            config,
+            start_pos=candidate.center,
+            stage=game_data.stage,
+            tracker=True,
+            wall_follower=False,
+        )
+        if not spritecollideany_walls(tentative, wall_group):
+            zombie_group.add(tentative)
+            all_sprites.add(tentative, layer=1)
+        interval = max(1, game_data.stage.spawn_interval_ms)
+        game_data.state.last_zombie_spawn_time = pygame.time.get_ticks() - interval
+        return
+
     spawn_rate = max(0.0, game_data.stage.initial_interior_spawn_rate)
     positions = find_interior_spawn_positions(
         spawn_cells,

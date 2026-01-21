@@ -107,6 +107,10 @@
           "No, no, no!",
           "Please!"
         ]
+      },
+      "debug_tracker": {
+        "name": "#D Debug Tracker",
+        "description": "Spawn one tracker zombie near the player for testing."
       }
     },
     "status": {
