@@ -17,7 +17,7 @@ from ..entities_constants import (
     ZOMBIE_RADIUS,
 )
 from .constants import SURVIVOR_MESSAGE_DURATION_MS, SURVIVOR_SPEED_PENALTY_PER_PASSENGER
-from ..localization import translate as tr, translate_dict, translate_list
+from ..localization import translate_dict, translate_list
 from ..models import GameData, ProgressState
 from ..rng import get_rng
 from ..entities import Survivor, Zombie, spritecollideany_walls, WallIndex

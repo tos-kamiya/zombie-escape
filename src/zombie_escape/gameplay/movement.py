@@ -16,7 +16,6 @@ from ..entities import (
     walls_for_radius,
 )
 from ..entities_constants import (
-    CAR_SPEED,
     PLAYER_SPEED,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
