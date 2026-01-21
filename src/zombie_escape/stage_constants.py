@@ -8,19 +8,6 @@ from .models import Stage
 
 STAGES: list[Stage] = [
     Stage(
-        id="debug_tracker",
-        name_key="stages.debug_tracker.name",
-        description_key="stages.debug_tracker.description",
-        available=True,
-        spawn_interval_ms=999_999_999,
-        initial_interior_spawn_rate=0.0,
-        exterior_spawn_weight=0.0,
-        interior_spawn_weight=0.0,
-        zombie_tracker_ratio=1.0,
-        zombie_normal_ratio=0.0,
-        zombie_wall_follower_ratio=0.0,
-    ),
-    Stage(
         id="stage1",
         name_key="stages.stage1.name",
         description_key="stages.stage1.description",
