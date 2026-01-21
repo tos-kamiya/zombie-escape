@@ -78,7 +78,7 @@ def generate_level_from_blueprint(
     palette = get_environment_palette(game_data.state.ambient_palette_key)
 
     def add_beam_to_groups(beam: SteelBeam) -> None:
-        if getattr(beam, "_added_to_groups", False):
+        if beam._added_to_groups:
             return
         wall_group.add(beam)
         all_sprites.add(beam, layer=0)

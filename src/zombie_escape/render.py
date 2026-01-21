@@ -71,7 +71,7 @@ def draw_level_overview(
     palette_key: str | None = None,
 ) -> None:
     palette = get_environment_palette(palette_key)
-    base_floor = getattr(palette, "floor_primary", palette.outside)
+    base_floor = palette.floor_primary
     dark_floor = tuple(max(0, int(channel * 0.55)) for channel in base_floor)
     surface.fill(dark_floor)
     for wall in wall_group:
@@ -445,10 +445,10 @@ def _draw_status_bar(
     if debug_mode:
         parts.append(tr("status.debug"))
         if zombie_group is not None:
-            zombies = [z for z in zombie_group if getattr(z, "alive", lambda: True)()]
+            zombies = [z for z in zombie_group if z.alive()]
             total = len(zombies)
-            tracker = sum(1 for z in zombies if getattr(z, "tracker", False))
-            wall = sum(1 for z in zombies if getattr(z, "wall_follower", False))
+            tracker = sum(1 for z in zombies if z.tracker)
+            wall = sum(1 for z in zombies if z.wall_follower)
             normal = max(0, total - tracker - wall)
             parts.append(f"Z:{total} N:{normal} T:{tracker} W:{wall}")
 

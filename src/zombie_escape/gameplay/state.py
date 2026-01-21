@@ -108,14 +108,11 @@ def carbonize_outdoor_zombies(game_data: GameData) -> None:
     if not group:
         return
     for zombie in list(group):
-        alive = getattr(zombie, "alive", lambda: False)
-        if not alive():
+        if not zombie.alive():
             continue
         center = zombie.rect.center
         if any(rect_obj.collidepoint(center) for rect_obj in outside_rects):
-            carbonize = getattr(zombie, "carbonize", None)
-            if carbonize:
-                carbonize()
+            zombie.carbonize()
 
 
 def update_survival_timer(game_data: GameData, dt_ms: int) -> None:

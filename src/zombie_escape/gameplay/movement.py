@@ -50,7 +50,7 @@ def process_player_input(
     player_dx, player_dy, car_dx, car_dy = 0, 0, 0, 0
 
     if player.in_car and car and car.alive():
-        target_speed = getattr(car, "speed", CAR_SPEED)
+        target_speed = car.speed
         move_len = math.hypot(dx_input, dy_input)
         if move_len > 0:
             car_dx, car_dy = (

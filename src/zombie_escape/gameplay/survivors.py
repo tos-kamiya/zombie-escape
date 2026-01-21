@@ -286,8 +286,8 @@ def handle_survivor_zombie_collisions(
             config,
             start_pos=survivor.rect.center,
             stage=game_data.stage,
-            tracker=bool(getattr(collided_zombie, "tracker", False)),
-            wall_follower=bool(getattr(collided_zombie, "wall_follower", False)),
+            tracker=collided_zombie.tracker,
+            wall_follower=collided_zombie.wall_follower,
         )
         zombie_group.add(new_zombie)
         game_data.groups.all_sprites.add(new_zombie, layer=1)

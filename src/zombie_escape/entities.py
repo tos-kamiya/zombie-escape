@@ -104,9 +104,10 @@ def _sprite_center_and_radius(
     sprite: pygame.sprite.Sprite,
 ) -> tuple[tuple[int, int], float]:
     center = sprite.rect.center
-    radius = float(
-        getattr(sprite, "radius", max(sprite.rect.width, sprite.rect.height) / 2)
-    )
+    if hasattr(sprite, "radius"):
+        radius = float(sprite.radius)
+    else:
+        radius = float(max(sprite.rect.width, sprite.rect.height) / 2)
     return center, radius
 
 
@@ -422,7 +423,7 @@ def collide_sprite_wall(
 ) -> bool:
     if hasattr(sprite, "radius"):
         center = sprite.rect.center
-        radius = float(getattr(sprite, "radius"))
+        radius = float(sprite.radius)
         if hasattr(wall, "_collides_circle"):
             return wall._collides_circle(center, radius)
         return _circle_rect_collision(center, radius, wall.rect)
@@ -617,6 +618,7 @@ class SteelBeam(pygame.sprite.Sprite):
         margin = max(3, size // 14)
         inset_size = max(4, size - margin * 2)
         self.image = pygame.Surface((inset_size, inset_size), pygame.SRCALPHA)
+        self._added_to_groups = False
         self.health = health
         self.max_health = max(1, health)
         self.palette = palette
@@ -1472,7 +1474,7 @@ class Zombie(pygame.sprite.Sprite):
             return move_x, move_y
 
         if self.wall_follower:
-            other_radius = float(getattr(closest, "radius", self.radius))
+            other_radius = float(closest.radius)
             bump_dist_sq = (self.radius + other_radius) ** 2
             if closest_dist_sq < bump_dist_sq and RNG.random() < 0.1:
                 if self.wall_follow_angle is None:
