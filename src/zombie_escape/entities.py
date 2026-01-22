@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 import math
-from typing import Callable, Iterable, Self, Sequence
+from typing import Callable, Iterable, Sequence
+
+try:
+    from typing import Self
+except ImportError:  # pragma: no cover - Python 3.10 fallback
+    from typing_extensions import Self
 
 import pygame
 from pygame import rect

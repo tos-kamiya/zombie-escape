@@ -10,6 +10,7 @@
 - Create an environment with uv (Python 3.10+): `uv venv --python 3.12` then `source .venv/bin/activate` (or `Scripts\\activate`).
 - Install for development: `uv pip install -e .` (pulls `pygame` and `platformdirs`).
 - Run the game: `uv run zombie-escape` (preferred) or `uv run python -m zombie_escape.zombie_escape` from the repo root after install.
+- For Python version compatibility checks with uv + pytest, see `docs/python-compat-uv.md`.
 - Package check: `uv pip install .` to verify a clean install flow before tagging a release.
 - Before committing, run `uv run ruff check` and ensure it passes cleanly.
 

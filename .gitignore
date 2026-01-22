@@ -7,6 +7,7 @@ dev-refactoring/
 mplus_bitmap_fonts/
 shot*.png
 *.log
+.python-version
 
 package-lock.json
 package.json
