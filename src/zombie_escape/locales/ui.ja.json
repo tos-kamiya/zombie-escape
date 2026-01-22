@@ -108,9 +108,9 @@
           "誰かー！"
         ]
       },
-      "debug_tracker": {
-        "name": "#D 追跡デバッグ",
-        "description": "プレイヤー近くに追跡ゾンビを1体だけ配置する。"
+      "stage11": {
+        "name": "#11 振り返るな！",
+        "description": "右か左か。直感を信じて。"
       }
     },
     "status": {

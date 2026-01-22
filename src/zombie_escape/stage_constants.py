@@ -140,6 +140,22 @@ STAGES: list[Stage] = [
         waiting_car_target_count=1,
         survivor_spawn_rate=0.35,
     ),
+    Stage(
+        id="stage11",
+        name_key="stages.stage11.name",
+        description_key="stages.stage11.description",
+        grid_cols=120,
+        grid_rows=7,
+        available=True,
+        wall_algorithm="sparse",
+        exterior_spawn_weight=0.3,
+        interior_spawn_weight=0.7,
+        zombie_normal_ratio=0.5,
+        zombie_tracker_ratio=0.5,
+        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        initial_interior_spawn_rate=0.1,
+        waiting_car_target_count=1,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 

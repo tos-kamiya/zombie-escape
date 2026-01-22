@@ -108,9 +108,9 @@
           "Please!"
         ]
       },
-      "debug_tracker": {
-        "name": "#D Debug Tracker",
-        "description": "Spawn one tracker zombie near the player for testing."
+      "stage11": {
+        "name": "#11 Don't Look Back!",
+        "description": "Left or right. Trust your instinct."
       }
     },
     "status": {
