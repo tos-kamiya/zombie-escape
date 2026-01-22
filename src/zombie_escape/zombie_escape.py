@@ -95,6 +95,7 @@ def main() -> None:
     from .screens.gameplay import gameplay_screen
 
     apply_window_scale(DEFAULT_WINDOW_SCALE)
+    pygame.mouse.set_visible(True)
     screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)).convert_alpha()
     clock = pygame.time.Clock()
 
