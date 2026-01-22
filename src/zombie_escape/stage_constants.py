@@ -156,6 +156,19 @@ STAGES: list[Stage] = [
         initial_interior_spawn_rate=0.1,
         waiting_car_target_count=1,
     ),
+    Stage(
+        id="stage12",
+        name_key="stages.stage12name",
+        description_key="stages.stage12.description",
+        grid_cols=32,
+        grid_rows=32,
+        available=True,
+        requires_fuel=True,
+        exterior_spawn_weight=0.5,
+        interior_spawn_weight=0.2,
+        interior_fall_spawn_weight=0.3,
+        initial_flashlight_count=4,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 

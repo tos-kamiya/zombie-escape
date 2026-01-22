@@ -55,6 +55,7 @@
 - ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
 - サバイバル用: `survival_elapsed_ms`, `survival_goal_ms`, `dawn_ready`, `dawn_prompt_at`, `dawn_carbonized`
 - 乱数/デバッグ: `seed`, `debug_mode`, `time_accel_active`
+- 落下スポーン: `falling_zombies`
 
 ### 3.2 ゲーム状態 (models.GameData)
 
@@ -73,8 +74,9 @@
 
 - プレイ特性: `requires_fuel`, `buddy_required_count`, `rescue_stage`, `survival_stage`
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`
-- 内外スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`
+- 内外/落下スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`, `interior_fall_spawn_weight`（重みを分け合う）
 - サバイバル設定: `survival_goal_ms`, `fuel_spawn_count`
+- 初期懐中電灯数: `initial_flashlight_count`
 - 待機車両: `waiting_car_target_count`（ステージ別の待機車両数の目安）
 - 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）
 - 変種移動ルーチン: `zombie_tracker_ratio`（足跡追跡型の出現率）
@@ -153,6 +155,9 @@
 
 - `spawn_nearby_zombie`, `spawn_exterior_zombie`, `spawn_weighted_zombie` (`gameplay/spawn.py`)
   - 画面外スポーン/外周スポーン/重み付けスポーン。
+- `update_falling_zombies` (`gameplay/spawn.py`)
+  - 落下中オブジェクトを管理し、着地時にゾンビを生成。
+  - 着地時にホコリリングを生成（懐中電灯の有無に関係なく発生）。
 - `spawn_survivors` / `place_buddies` / `place_fuel_can` / `place_flashlights` (`gameplay/spawn.py`)
   - ステージ別のアイテムやNPCを配置。
 

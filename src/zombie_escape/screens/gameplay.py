@@ -8,7 +8,6 @@ from pygame import surface, time
 from ..colors import LIGHT_GRAY, RED, WHITE, YELLOW
 from ..gameplay_constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
-    DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     SURVIVAL_TIME_ACCEL_SUBSTEPS,
     SURVIVAL_TIME_ACCEL_MAX_SUBSTEP,
 )
@@ -131,11 +130,12 @@ def gameplay_screen(
         if fuel_can:
             game_data.fuel = fuel_can
             game_data.groups.all_sprites.add(fuel_can, layer=1)
+    flashlight_count = stage.initial_flashlight_count
     flashlights = place_flashlights(
         layout_data["walkable_cells"],
         player,
         cars=game_data.waiting_cars,
-        count=max(1, DEFAULT_FLASHLIGHT_SPAWN_COUNT),
+        count=max(0, flashlight_count),
     )
     game_data.flashlights = flashlights
     game_data.groups.all_sprites.add(flashlights, layer=1)

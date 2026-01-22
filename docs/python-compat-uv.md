@@ -16,7 +16,7 @@
 # 例: 3.12 の場合
 uv venv --python 3.12
 uv pip install -p .venv/bin/python -e .
-uv pip install -p .venv/bin/python pytest
+uv pip install -p .venv/bin/python pytest ruff
 uv run -p .venv/bin/python -m pytest
 uv run -p .venv/bin/python -m ruff check
 ```
@@ -28,7 +28,7 @@ uv run -p .venv/bin/python -m ruff check
 ```bash
 uv venv --clear --python 3.10
 uv pip install -p .venv/bin/python -e .
-uv pip install -p .venv/bin/python pytest
+uv pip install -p .venv/bin/python pytest ruff
 uv run -p .venv/bin/python -m pytest
 uv run -p .venv/bin/python -m ruff check
 ```
@@ -38,7 +38,7 @@ uv run -p .venv/bin/python -m ruff check
 ```bash
 uv venv --clear --python 3.11
 uv pip install -p .venv/bin/python -e .
-uv pip install -p .venv/bin/python pytest
+uv pip install -p .venv/bin/python pytest ruff
 uv run -p .venv/bin/python -m pytest
 uv run -p .venv/bin/python -m ruff check
 ```
@@ -48,7 +48,7 @@ uv run -p .venv/bin/python -m ruff check
 ```bash
 uv venv --clear --python 3.12
 uv pip install -p .venv/bin/python -e .
-uv pip install -p .venv/bin/python pytest
+uv pip install -p .venv/bin/python pytest ruff
 uv run -p .venv/bin/python -m pytest
 uv run -p .venv/bin/python -m ruff check
 ```
@@ -58,7 +58,7 @@ uv run -p .venv/bin/python -m ruff check
 ```bash
 uv venv --clear --python 3.13
 uv pip install -p .venv/bin/python -e .
-uv pip install -p .venv/bin/python pytest
+uv pip install -p .venv/bin/python pytest ruff
 uv run -p .venv/bin/python -m pytest
 uv run -p .venv/bin/python -m ruff check
 ```

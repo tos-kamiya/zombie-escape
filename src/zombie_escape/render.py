@@ -18,6 +18,7 @@ from .colors import (
     get_environment_palette,
 )
 from .entities import Camera, Car, Flashlight, FuelCan, Player, Survivor, Wall
+from .entities_constants import ZOMBIE_RADIUS
 from .font_utils import load_font
 from .gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
@@ -27,6 +28,11 @@ from .localization import get_font_settings
 from .localization import translate as tr
 from .models import GameData, Stage
 from .render_assets import RenderAssets, resolve_wall_colors
+from .render_constants import (
+    FALLING_DUST_COLOR,
+    FALLING_WHIRLWIND_COLOR,
+    FALLING_ZOMBIE_COLOR,
+)
 
 
 def show_message(
@@ -362,6 +368,109 @@ def _build_flashlight_fade_surface(
     return fade_surface
 
 
+def _draw_fall_whirlwind(
+    screen: surface.Surface,
+    camera: Camera,
+    center: tuple[int, int],
+    progress: float,
+) -> None:
+    base_alpha = FALLING_WHIRLWIND_COLOR[3]
+    alpha = int(max(0, min(255, base_alpha * (1.0 - progress))))
+    if alpha <= 0:
+        return
+    color = (
+        FALLING_WHIRLWIND_COLOR[0],
+        FALLING_WHIRLWIND_COLOR[1],
+        FALLING_WHIRLWIND_COLOR[2],
+        alpha,
+    )
+    swirl_radius = max(2, int(ZOMBIE_RADIUS * 1.1))
+    offset = max(1, int(ZOMBIE_RADIUS * 0.6))
+    size = swirl_radius * 4
+    swirl = pygame.Surface((size, size), pygame.SRCALPHA)
+    cx = cy = size // 2
+    for idx in range(2):
+        angle = progress * math.tau * 0.3 + idx * (math.tau / 2)
+        ox = int(math.cos(angle) * offset)
+        oy = int(math.sin(angle) * offset)
+        pygame.draw.circle(
+            swirl, color, (cx + ox, cy + oy), swirl_radius, width=2
+        )
+    world_rect = pygame.Rect(0, 0, 1, 1)
+    world_rect.center = center
+    screen_center = camera.apply_rect(world_rect).center
+    screen.blit(swirl, swirl.get_rect(center=screen_center))
+
+
+def _draw_falling_zombies(
+    screen: surface.Surface,
+    camera: Camera,
+    game_data: GameData,
+) -> None:
+    state = game_data.state
+    if not state.falling_zombies:
+        return
+    now = pygame.time.get_ticks()
+    for fall in state.falling_zombies:
+        pre_fx_ms = max(0, fall.pre_fx_ms)
+        fall_duration_ms = max(1, fall.fall_duration_ms)
+        fall_start = fall.started_at_ms + pre_fx_ms
+        impact_at = fall_start + fall_duration_ms
+        if now < fall_start:
+            if state.flashlight_count > 0 and pre_fx_ms > 0:
+                fx_progress = max(
+                    0.0, min(1.0, (now - fall.started_at_ms) / pre_fx_ms)
+                )
+                _draw_fall_whirlwind(screen, camera, fall.target_pos, fx_progress)
+            continue
+        if now >= impact_at:
+            continue
+        fall_progress = max(0.0, min(1.0, (now - fall_start) / fall_duration_ms))
+        eased = 1.0 - (1.0 - fall_progress) * (1.0 - fall_progress)
+        x = fall.target_pos[0]
+        y = int(fall.start_pos[1] + (fall.target_pos[1] - fall.start_pos[1]) * eased)
+        world_rect = pygame.Rect(0, 0, ZOMBIE_RADIUS * 2, ZOMBIE_RADIUS * 2)
+        world_rect.center = (x, y)
+        screen_rect = camera.apply_rect(world_rect)
+        pygame.draw.circle(
+            screen,
+            FALLING_ZOMBIE_COLOR,
+            screen_rect.center,
+            ZOMBIE_RADIUS,
+        )
+
+
+def _draw_falling_dust(
+    screen: surface.Surface,
+    camera: Camera,
+    game_data: GameData,
+) -> None:
+    state = game_data.state
+    if not state.dust_rings:
+        return
+    now = pygame.time.get_ticks()
+    for ring in list(state.dust_rings):
+        elapsed = now - ring.started_at_ms
+        if elapsed >= ring.duration_ms:
+            state.dust_rings.remove(ring)
+            continue
+        progress = max(0.0, min(1.0, elapsed / ring.duration_ms))
+        alpha = int(max(0, min(255, FALLING_DUST_COLOR[3] * (1.0 - progress))))
+        if alpha <= 0:
+            continue
+        radius = int(ZOMBIE_RADIUS * (0.7 + progress * 1.9))
+        color = (
+            FALLING_DUST_COLOR[0],
+            FALLING_DUST_COLOR[1],
+            FALLING_DUST_COLOR[2],
+            alpha,
+        )
+        world_rect = pygame.Rect(0, 0, 1, 1)
+        world_rect.center = ring.pos
+        screen_center = camera.apply_rect(world_rect).center
+        pygame.draw.circle(screen, color, screen_center, radius, width=2)
+
+
 def _draw_hint_arrow(
     screen: surface.Surface,
     camera: Camera,
@@ -602,6 +711,9 @@ def draw(
 
     if player_screen_rect is None:
         player_screen_rect = camera.apply_rect(player.rect)
+
+    _draw_falling_zombies(screen, camera, game_data)
+    _draw_falling_dust(screen, camera, game_data)
 
     if has_fuel and player_screen_rect and not player.in_car:
         indicator_size = 4

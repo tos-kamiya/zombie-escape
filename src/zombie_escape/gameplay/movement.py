@@ -22,7 +22,7 @@ from ..entities_constants import (
 )
 from ..models import GameData
 from .constants import MAX_ZOMBIES
-from .spawn import spawn_weighted_zombie
+from .spawn import spawn_weighted_zombie, update_falling_zombies
 from .survivors import update_survivors
 from .utils import rect_visible_on_screen
 
@@ -155,6 +155,7 @@ def update_entities(
     camera.update(target_for_camera)
 
     update_survivors(game_data, wall_index=wall_index)
+    update_falling_zombies(game_data, config)
 
     # Spawn new zombies if needed
     current_time = pygame.time.get_ticks()

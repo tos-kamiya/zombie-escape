@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 import pygame
 
@@ -16,13 +16,15 @@ from ..entities import (
 )
 from ..entities_constants import (
     FAST_ZOMBIE_BASE_SPEED,
+    FOV_RADIUS,
     PLAYER_SPEED,
     ZOMBIE_AGING_DURATION_FRAMES,
     ZOMBIE_SPEED,
 )
 from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
 from ..level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS, DEFAULT_TILE_SIZE
-from ..models import GameData, Stage
+from ..models import DustRing, FallingZombie, GameData, Stage
+from ..render_constants import FLASHLIGHT_FOG_SCALE_STEP, FOG_RADIUS_SCALE
 from ..rng import get_rng
 from .constants import (
     MAX_ZOMBIES,
@@ -49,6 +51,7 @@ __all__ = [
     "spawn_waiting_car",
     "maintain_waiting_car_supply",
     "nearest_waiting_car",
+    "update_falling_zombies",
     "spawn_exterior_zombie",
     "spawn_weighted_zombie",
 ]
@@ -85,6 +88,119 @@ def _pick_zombie_variant(stage: Stage | None) -> tuple[bool, bool]:
     if pick < normal_ratio + tracker_ratio:
         return True, False
     return False, True
+
+
+def _fov_radius_for_flashlights(flashlight_count: int) -> float:
+    count = max(0, int(flashlight_count))
+    scale = FOG_RADIUS_SCALE + max(0.0, FLASHLIGHT_FOG_SCALE_STEP) * count
+    return FOV_RADIUS * scale
+
+
+def _is_spawn_position_clear(
+    game_data: GameData,
+    candidate: Zombie,
+    *,
+    allow_player_overlap: bool = False,
+) -> bool:
+    wall_group = game_data.groups.wall_group
+    if spritecollideany_walls(candidate, wall_group):
+        return False
+
+    spawn_rect = candidate.rect
+    player = game_data.player
+    if not allow_player_overlap and player and spawn_rect.colliderect(player.rect):
+        return False
+    car = game_data.car
+    if car and car.alive() and spawn_rect.colliderect(car.rect):
+        return False
+    for parked in game_data.waiting_cars:
+        if parked.alive() and spawn_rect.colliderect(parked.rect):
+            return False
+    for survivor in game_data.groups.survivor_group:
+        if survivor.alive() and spawn_rect.colliderect(survivor.rect):
+            return False
+    for zombie in game_data.groups.zombie_group:
+        if zombie.alive() and spawn_rect.colliderect(zombie.rect):
+            return False
+    return True
+
+
+def _pick_fall_spawn_position(
+    game_data: GameData,
+    *,
+    min_distance: float,
+    attempts: int = 60,
+    is_clear: Callable[[tuple[int, int]], bool] | None = None,
+) -> tuple[int, int] | None:
+    player = game_data.player
+    if not player:
+        return None
+    walkable_cells = game_data.layout.walkable_cells
+    if not walkable_cells:
+        return None
+    car = game_data.car
+    target_sprite = car if player.in_car and car and car.alive() else player
+    target_center = target_sprite.rect.center
+    fov_radius = _fov_radius_for_flashlights(game_data.state.flashlight_count)
+    min_dist_sq = min_distance * min_distance
+    max_dist_sq = fov_radius * fov_radius
+
+    for _ in range(attempts):
+        cell = RNG.choice(walkable_cells)
+        pos = (cell.centerx, cell.centery)
+        dx = pos[0] - target_center[0]
+        dy = pos[1] - target_center[1]
+        dist_sq = dx * dx + dy * dy
+        if dist_sq < min_dist_sq or dist_sq > max_dist_sq:
+            continue
+        if is_clear is not None and not is_clear(pos):
+            continue
+        return pos
+    return None
+
+
+def _schedule_falling_zombie(game_data: GameData, config: dict[str, Any]) -> bool:
+    player = game_data.player
+    if not player:
+        return False
+    state = game_data.state
+    zombie_group = game_data.groups.zombie_group
+    if len(zombie_group) + len(state.falling_zombies) >= MAX_ZOMBIES:
+        return False
+    min_distance = game_data.stage.tile_size * 0.5
+    tracker, wall_follower = _pick_zombie_variant(game_data.stage)
+
+    def _candidate_clear(pos: tuple[int, int]) -> bool:
+        candidate = _create_zombie(
+            config,
+            start_pos=pos,
+            stage=game_data.stage,
+            tracker=tracker,
+            wall_follower=wall_follower,
+        )
+        return _is_spawn_position_clear(game_data, candidate)
+
+    spawn_pos = _pick_fall_spawn_position(
+        game_data,
+        min_distance=min_distance,
+        is_clear=_candidate_clear,
+    )
+    if spawn_pos is None:
+        return False
+    start_offset = game_data.stage.tile_size * 0.7
+    start_pos = (int(spawn_pos[0]), int(spawn_pos[1] - start_offset))
+    fall = FallingZombie(
+        start_pos=start_pos,
+        target_pos=(int(spawn_pos[0]), int(spawn_pos[1])),
+        started_at_ms=pygame.time.get_ticks(),
+        pre_fx_ms=300,
+        fall_duration_ms=450,
+        dust_duration_ms=220,
+        tracker=tracker,
+        wall_follower=wall_follower,
+    )
+    state.falling_zombies.append(fall)
+    return True
 
 
 def _create_zombie(
@@ -586,6 +702,7 @@ def _spawn_nearby_zombie(
         game_data.layout.walkable_cells,
         player=player,
         camera=camera,
+        min_player_dist=ZOMBIE_SPAWN_PLAYER_BUFFER,
         attempts=50,
     )
     new_zombie = _create_zombie(
@@ -625,21 +742,60 @@ def spawn_exterior_zombie(
     return new_zombie
 
 
+def update_falling_zombies(game_data: GameData, config: dict[str, Any]) -> None:
+    state = game_data.state
+    if not state.falling_zombies:
+        return
+    now = pygame.time.get_ticks()
+    zombie_group = game_data.groups.zombie_group
+    all_sprites = game_data.groups.all_sprites
+    for fall in list(state.falling_zombies):
+        fall_start = fall.started_at_ms + fall.pre_fx_ms
+        impact_at = fall_start + fall.fall_duration_ms
+        spawn_at = impact_at + fall.dust_duration_ms
+        if now >= impact_at and not fall.dust_started:
+            state.dust_rings.append(
+                DustRing(
+                    pos=fall.target_pos,
+                    started_at_ms=impact_at,
+                    duration_ms=fall.dust_duration_ms,
+                )
+            )
+            fall.dust_started = True
+        if now < spawn_at:
+            continue
+        if len(zombie_group) >= MAX_ZOMBIES:
+            state.falling_zombies.remove(fall)
+            continue
+        candidate = _create_zombie(
+            config,
+            start_pos=fall.target_pos,
+            stage=game_data.stage,
+            tracker=fall.tracker,
+            wall_follower=fall.wall_follower,
+        )
+        zombie_group.add(candidate)
+        all_sprites.add(candidate, layer=1)
+        state.falling_zombies.remove(fall)
+
+
 def spawn_weighted_zombie(
     game_data: GameData,
     config: dict[str, Any],
 ) -> bool:
     """Spawn a zombie according to the stage's interior/exterior mix."""
     stage = game_data.stage
-
     def _spawn(choice: str) -> bool:
         if choice == "interior":
             return _spawn_nearby_zombie(game_data, config) is not None
+        if choice == "fall":
+            return _schedule_falling_zombie(game_data, config)
         return spawn_exterior_zombie(game_data, config) is not None
 
     interior_weight = max(0.0, stage.interior_spawn_weight)
     exterior_weight = max(0.0, stage.exterior_spawn_weight)
-    total_weight = interior_weight + exterior_weight
+    fall_weight = max(0.0, getattr(stage, "interior_fall_spawn_weight", 0.0))
+    total_weight = interior_weight + exterior_weight + fall_weight
     if total_weight <= 0:
         # Fall back to exterior spawns if weights are unset or invalid.
         return _spawn("exterior")
@@ -648,7 +804,17 @@ def spawn_weighted_zombie(
     if pick <= interior_weight:
         if _spawn("interior"):
             return True
+        if _spawn("fall"):
+            return True
+        return _spawn("exterior")
+    if pick <= interior_weight + fall_weight:
+        if _spawn("fall"):
+            return True
+        if _spawn("interior"):
+            return True
         return _spawn("exterior")
     if _spawn("exterior"):
+        return True
+    if _spawn("fall"):
         return True
     return _spawn("interior")

@@ -9,7 +9,11 @@ import pygame
 from pygame import sprite, surface
 
 from .entities_constants import ZOMBIE_AGING_DURATION_FRAMES
-from .gameplay_constants import SURVIVOR_SPAWN_RATE, ZOMBIE_SPAWN_DELAY_MS
+from .gameplay_constants import (
+    DEFAULT_FLASHLIGHT_SPAWN_COUNT,
+    SURVIVOR_SPAWN_RATE,
+    ZOMBIE_SPAWN_DELAY_MS,
+)
 from .level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from .localization import translate as tr
 
@@ -28,6 +32,30 @@ class LevelLayout:
     outer_wall_cells: set[tuple[int, int]]
     wall_cells: set[tuple[int, int]]
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
+
+
+@dataclass
+class FallingZombie:
+    """Represents a zombie falling toward a target position."""
+
+    start_pos: tuple[int, int]
+    target_pos: tuple[int, int]
+    started_at_ms: int
+    pre_fx_ms: int
+    fall_duration_ms: int
+    dust_duration_ms: int
+    tracker: bool
+    wall_follower: bool
+    dust_started: bool = False
+
+
+@dataclass
+class DustRing:
+    """Short-lived dust ring spawned on impact."""
+
+    pos: tuple[int, int]
+    started_at_ms: int
+    duration_ms: int
 
 
 @dataclass
@@ -64,6 +92,8 @@ class ProgressState:
     last_zombie_spawn_time: int
     dawn_carbonized: bool
     debug_mode: bool
+    falling_zombies: list[FallingZombie]
+    dust_rings: list[DustRing]
 
 
 @dataclass
@@ -112,11 +142,13 @@ class Stage:
     survival_stage: bool = False
     survival_goal_ms: int = 0
     fuel_spawn_count: int = 1
+    initial_flashlight_count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT
     survivor_spawn_rate: float = SURVIVOR_SPAWN_RATE
     spawn_interval_ms: int = ZOMBIE_SPAWN_DELAY_MS
     initial_interior_spawn_rate: float = 0.015
     exterior_spawn_weight: float = 1.0
     interior_spawn_weight: float = 0.0
+    interior_fall_spawn_weight: float = 0.0
     zombie_tracker_ratio: float = 0.0
     zombie_wall_follower_ratio: float = 0.0
     zombie_normal_ratio: float = 1.0
@@ -135,6 +167,8 @@ class Stage:
 
 __all__ = [
     "LevelLayout",
+    "FallingZombie",
+    "DustRing",
     "ProgressState",
     "Groups",
     "GameData",

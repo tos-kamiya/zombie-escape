@@ -108,7 +108,9 @@ def find_nearby_offscreen_spawn_position(
         jitter_x = RNG.uniform(-cell.width * 0.35, cell.width * 0.35)
         jitter_y = RNG.uniform(-cell.height * 0.35, cell.height * 0.35)
         candidate = (int(cell.centerx + jitter_x), int(cell.centery + jitter_y))
-        if player is not None and (min_distance_sq is not None or max_distance_sq is not None):
+        if player is not None and (
+            min_distance_sq is not None or max_distance_sq is not None
+        ):
             dx = candidate[0] - player.x
             dy = candidate[1] - player.y
             dist_sq = dx * dx + dy * dy
@@ -119,6 +121,22 @@ def find_nearby_offscreen_spawn_position(
         if view_rect is not None and view_rect.collidepoint(candidate):
             continue
         return candidate
+    if player is not None and (min_distance_sq is not None or max_distance_sq is not None):
+        for _ in range(20):
+            cell = RNG.choice(walkable_cells)
+            center = (cell.centerx, cell.centery)
+            if view_rect is not None and view_rect.collidepoint(center):
+                continue
+            dx = center[0] - player.x
+            dy = center[1] - player.y
+            dist_sq = dx * dx + dy * dy
+            if min_distance_sq is not None and dist_sq < min_distance_sq:
+                continue
+            if max_distance_sq is not None and dist_sq > max_distance_sq:
+                continue
+            fallback_x = RNG.uniform(-cell.width * 0.2, cell.width * 0.2)
+            fallback_y = RNG.uniform(-cell.height * 0.2, cell.height * 0.2)
+            return (int(cell.centerx + fallback_x), int(cell.centery + fallback_y))
     fallback_cell = RNG.choice(walkable_cells)
     fallback_x = RNG.uniform(-fallback_cell.width * 0.35, fallback_cell.width * 0.35)
     fallback_y = RNG.uniform(-fallback_cell.height * 0.35, fallback_cell.height * 0.35)

@@ -50,6 +50,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         last_zombie_spawn_time=0,
         dawn_carbonized=False,
         debug_mode=False,
+        falling_zombies=[],
+        dust_rings=[],
     )
 
     # Create sprite groups
