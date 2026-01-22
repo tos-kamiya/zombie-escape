@@ -158,15 +158,15 @@ STAGES: list[Stage] = [
     ),
     Stage(
         id="stage12",
-        name_key="stages.stage12name",
+        name_key="stages.stage12.name",
         description_key="stages.stage12.description",
         grid_cols=32,
         grid_rows=32,
         available=True,
         requires_fuel=True,
         exterior_spawn_weight=0.5,
-        interior_spawn_weight=0.2,
-        interior_fall_spawn_weight=0.3,
+        interior_spawn_weight=0.25,
+        interior_fall_spawn_weight=0.25,
         initial_flashlight_count=4,
     ),
 ]

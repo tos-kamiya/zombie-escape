@@ -111,6 +111,10 @@
       "stage11": {
         "name": "#11 Don't Look Back!",
         "description": "Left or right. Trust your instinct."
+      },
+      "stage12": {
+        "name": "#12 OVERHEAD HAZARD",
+        "description": "An open factory floor. Zombies may fall from above."
       }
     },
     "status": {

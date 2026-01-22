@@ -11,9 +11,9 @@ HUMANOID_OUTLINE_COLOR = (0, 80, 200)
 HUMANOID_OUTLINE_WIDTH = 1
 BUDDY_COLOR = (0, 180, 63)
 SURVIVOR_COLOR = (198, 198, 198)
-FALLING_ZOMBIE_COLOR = (35, 35, 35)
-FALLING_WHIRLWIND_COLOR = (200, 200, 200, 180)
-FALLING_DUST_COLOR = (70, 70, 70, 170)
+FALLING_ZOMBIE_COLOR = (45, 45, 45)
+FALLING_WHIRLWIND_COLOR = (200, 200, 200, 120)
+FALLING_DUST_COLOR = (70, 70, 70, 130)
 
 
 @dataclass(frozen=True)
@@ -40,6 +40,7 @@ class RenderAssets:
     flashlight_bonus_step: float
     flashlight_hatch_extra_scale: float
 
+
 FOG_RADIUS_SCALE = 1.2
 FOG_HATCH_PIXEL_SCALE = 2
 
@@ -59,6 +60,7 @@ FOG_RINGS = [
     FogRing(radius_factor=0.858, thickness=8),
     FogRing(radius_factor=0.968, thickness=12),
 ]
+
 
 def build_render_assets(cell_size: int) -> RenderAssets:
     return RenderAssets(
