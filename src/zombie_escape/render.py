@@ -258,6 +258,9 @@ def _get_fog_overlay_surfaces(
         return overlays[key]
 
     scale = profile._scale(assets, stage)
+    ring_scale = scale
+    if profile.flashlight_count >= 2:
+        ring_scale += max(0.0, assets.flashlight_hatch_extra_scale)
     max_radius = int(assets.fov_radius * scale)
     padding = 32
     coverage_width = max(assets.screen_width * 2, max_radius * 2)
@@ -284,7 +287,7 @@ def _get_fog_overlay_surfaces(
         for y in range(0, height, p_h):
             for x in range(0, width, p_w):
                 ring_surface.blit(pattern, (x, y))
-        radius = int(assets.fov_radius * ring.radius_factor * scale)
+        radius = int(assets.fov_radius * ring.radius_factor * ring_scale)
         pygame.draw.circle(ring_surface, (0, 0, 0, 0), center, radius)
         ring_surfaces.append(ring_surface)
 

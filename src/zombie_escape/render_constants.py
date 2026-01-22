@@ -35,11 +35,13 @@ class RenderAssets:
     footprint_min_fade: float
     internal_wall_grid_snap: int
     flashlight_bonus_step: float
+    flashlight_hatch_extra_scale: float
 
 FOG_RADIUS_SCALE = 1.2
 FOG_HATCH_PIXEL_SCALE = 2
 
 FLASHLIGHT_FOG_SCALE_STEP = 0.3
+FLASHLIGHT_HATCH_EXTRA_SCALE = 0.12
 
 FOOTPRINT_RADIUS = 2
 FOOTPRINT_OVERVIEW_RADIUS = 3
@@ -71,6 +73,7 @@ def build_render_assets(cell_size: int) -> RenderAssets:
         footprint_min_fade=FOOTPRINT_MIN_FADE,
         internal_wall_grid_snap=cell_size,
         flashlight_bonus_step=FLASHLIGHT_FOG_SCALE_STEP,
+        flashlight_hatch_extra_scale=FLASHLIGHT_HATCH_EXTRA_SCALE,
     )
 
 
@@ -83,5 +86,6 @@ __all__ = [
     "RenderAssets",
     "FOG_RADIUS_SCALE",
     "FLASHLIGHT_FOG_SCALE_STEP",
+    "FLASHLIGHT_HATCH_EXTRA_SCALE",
     "build_render_assets",
 ]
