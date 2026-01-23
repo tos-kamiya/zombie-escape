@@ -84,6 +84,10 @@ def generate_level_from_blueprint(
         all_sprites.add(beam, layer=0)
         beam._added_to_groups = True
 
+    def remove_wall_cell(cell: tuple[int, int]) -> None:
+        wall_cells.discard(cell)
+        outer_wall_cells.discard(cell)
+
     for y, row in enumerate(blueprint):
         if len(row) != stage.grid_cols:
             raise ValueError(
@@ -98,6 +102,7 @@ def generate_level_from_blueprint(
                 continue
             if ch == "B":
                 draw_bottom_side = not _has_wall(x, y + 1)
+                wall_cell = (x, y)
                 wall = Wall(
                     cell_rect.x,
                     cell_rect.y,
@@ -108,6 +113,7 @@ def generate_level_from_blueprint(
                     palette_category="outer_wall",
                     bevel_depth=0,
                     draw_bottom_side=draw_bottom_side,
+                    on_destroy=(lambda _w, cell=wall_cell: remove_wall_cell(cell)),
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
@@ -142,6 +148,7 @@ def generate_level_from_blueprint(
                 )
                 if any(bevel_mask):
                     bevel_corners[(x, y)] = bevel_mask
+                wall_cell = (x, y)
                 wall = Wall(
                     cell_rect.x,
                     cell_rect.y,
@@ -152,9 +159,11 @@ def generate_level_from_blueprint(
                     palette_category="inner_wall",
                     bevel_mask=bevel_mask,
                     draw_bottom_side=draw_bottom_side,
-                    on_destroy=(lambda _w, b=beam: add_beam_to_groups(b))
-                    if beam
-                    else None,
+                    on_destroy=(
+                        (lambda _w, b=beam, cell=wall_cell: (remove_wall_cell(cell), add_beam_to_groups(b)))
+                        if beam
+                        else (lambda _w, cell=wall_cell: remove_wall_cell(cell))
+                    ),
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)

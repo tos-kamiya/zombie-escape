@@ -17,7 +17,7 @@ from .colors import (
     YELLOW,
     get_environment_palette,
 )
-from .entities import Camera, Car, Flashlight, FuelCan, Player, Survivor, Wall
+from .entities import Camera, Car, Flashlight, FuelCan, Player, SteelBeam, Survivor, Wall
 from .entities_constants import ZOMBIE_RADIUS
 from .font_utils import load_font
 from .gameplay_constants import (
@@ -33,6 +33,60 @@ from .render_constants import (
     FALLING_WHIRLWIND_COLOR,
     FALLING_ZOMBIE_COLOR,
 )
+
+_SHADOW_TILE_CACHE: dict[tuple[int, int, float], surface.Surface] = {}
+_SHADOW_LAYER_CACHE: dict[tuple[int, int], surface.Surface] = {}
+
+
+def _get_shadow_tile_surface(
+    cell_size: int,
+    alpha: int,
+    *,
+    edge_softness: float = 0.35,
+) -> surface.Surface:
+    key = (max(1, cell_size), max(0, min(255, alpha)), edge_softness)
+    if key in _SHADOW_TILE_CACHE:
+        return _SHADOW_TILE_CACHE[key]
+    size = key[0]
+    surf = pygame.Surface((size, size), pygame.SRCALPHA)
+    base_alpha = key[1]
+    if edge_softness <= 0:
+        surf.fill((0, 0, 0, base_alpha))
+        _SHADOW_TILE_CACHE[key] = surf
+        return surf
+
+    softness = max(0.0, min(1.0, edge_softness))
+    fade_band = max(1, int(size * softness))
+    base_radius = max(1, int(size * 0.18))
+
+    def draw_layer(inset: int, layer_alpha: int) -> None:
+        rect_size = size - inset * 2
+        if rect_size <= 0:
+            return
+        radius = max(0, base_radius - inset)
+        pygame.draw.rect(
+            surf,
+            (0, 0, 0, layer_alpha),
+            pygame.Rect(inset, inset, rect_size, rect_size),
+            border_radius=radius,
+        )
+
+    outer_alpha = int(base_alpha * 0.45)
+    mid_alpha = int(base_alpha * 0.7)
+    draw_layer(0, outer_alpha)
+    draw_layer(max(1, fade_band // 2), mid_alpha)
+    draw_layer(fade_band, base_alpha)
+    _SHADOW_TILE_CACHE[key] = surf
+    return surf
+
+
+def _get_shadow_layer(size: tuple[int, int]) -> surface.Surface:
+    key = (max(1, size[0]), max(1, size[1]))
+    if key in _SHADOW_LAYER_CACHE:
+        return _SHADOW_LAYER_CACHE[key]
+    layer = pygame.Surface(key, pygame.SRCALPHA)
+    _SHADOW_LAYER_CACHE[key] = layer
+    return layer
 
 
 def show_message(
@@ -393,9 +447,7 @@ def _draw_fall_whirlwind(
         angle = progress * math.tau * 0.3 + idx * (math.tau / 2)
         ox = int(math.cos(angle) * offset)
         oy = int(math.sin(angle) * offset)
-        pygame.draw.circle(
-            swirl, color, (cx + ox, cy + oy), swirl_radius, width=2
-        )
+        pygame.draw.circle(swirl, color, (cx + ox, cy + oy), swirl_radius, width=2)
     world_rect = pygame.Rect(0, 0, 1, 1)
     world_rect.center = center
     screen_center = camera.apply_rect(world_rect).center
@@ -419,9 +471,7 @@ def _draw_falling_fx(
         impact_at = fall_start + fall_duration_ms
         if now < fall_start:
             if flashlight_count > 0 and pre_fx_ms > 0:
-                fx_progress = max(
-                    0.0, min(1.0, (now - fall.started_at_ms) / pre_fx_ms)
-                )
+                fx_progress = max(0.0, min(1.0, (now - fall.started_at_ms) / pre_fx_ms))
                 _draw_fall_whirlwind(screen, camera, fall.target_pos, fx_progress)
             continue
         if now >= impact_at:
@@ -644,6 +694,66 @@ def _draw_play_area(
                     pygame.draw.rect(screen, palette.floor_secondary, sr)
 
     return xs, ys, xe, ye, outside_cells
+
+
+def _draw_wall_shadows(
+    screen: surface.Surface,
+    camera: Camera,
+    *,
+    wall_cells: set[tuple[int, int]],
+    wall_group: sprite.Group | None,
+    outer_wall_cells: set[tuple[int, int]] | None,
+    cell_size: int,
+    light_source_pos: tuple[int, int] | None,
+    alpha: int = 54,
+) -> None:
+    if not wall_cells or cell_size <= 0 or light_source_pos is None:
+        return
+    inner_wall_cells = set(wall_cells)
+    if outer_wall_cells:
+        inner_wall_cells.difference_update(outer_wall_cells)
+    if wall_group and cell_size > 0:
+        for wall in wall_group:
+            if isinstance(wall, SteelBeam):
+                cell_x = int(wall.rect.centerx // cell_size)
+                cell_y = int(wall.rect.centery // cell_size)
+                inner_wall_cells.add((cell_x, cell_y))
+    if not inner_wall_cells:
+        return
+    base_shadow_size = max(cell_size + 2, int(cell_size * 1.12))
+    shadow_size = max(1, int(base_shadow_size * 1.5))
+    shadow_surface = _get_shadow_tile_surface(shadow_size, 255, edge_softness=0.12)
+    shadow_layer = _get_shadow_layer(screen.get_size())
+    shadow_layer.fill((0, 0, 0, 0))
+    screen_rect = screen.get_rect()
+    px, py = light_source_pos
+    offset = max(2, int(cell_size * 0.3 * (shadow_size / cell_size) * 1.1))
+    drew = False
+    for cell_x, cell_y in inner_wall_cells:
+        world_x = cell_x * cell_size
+        world_y = cell_y * cell_size
+        center_x = world_x + cell_size / 2
+        center_y = world_y + cell_size / 2
+        dx = center_x - px
+        dy = center_y - py
+        dist = math.hypot(dx, dy)
+        if dist <= 1e-3:
+            continue
+        nx = dx / dist
+        ny = dy / dist
+        shadow_rect = pygame.Rect(0, 0, shadow_size, shadow_size)
+        shadow_rect.center = (
+            int(center_x + nx * offset),
+            int(center_y + ny * offset),
+        )
+        shadow_screen_rect = camera.apply_rect(shadow_rect)
+        if not shadow_screen_rect.colliderect(screen_rect):
+            continue
+        shadow_layer.blit(shadow_surface, shadow_screen_rect.topleft)
+        drew = True
+    if drew:
+        shadow_layer.set_alpha(alpha)
+        screen.blit(shadow_layer, (0, 0))
 
 
 def _draw_footprints(
@@ -1033,6 +1143,10 @@ def draw(
     survivor_messages = list(state.survivor_messages)
     zombie_group = game_data.groups.zombie_group
     active_car = game_data.car if game_data.car and game_data.car.alive() else None
+    if player.in_car and game_data.car and game_data.car.alive():
+        fov_target = game_data.car
+    else:
+        fov_target = player
 
     palette = get_environment_palette(state.ambient_palette_key)
     screen.fill(palette.outside)
@@ -1044,6 +1158,15 @@ def draw(
         palette,
         outer_rect,
         outside_rects,
+    )
+    _draw_wall_shadows(
+        screen,
+        camera,
+        wall_cells=game_data.layout.wall_cells,
+        wall_group=game_data.groups.wall_group,
+        outer_wall_cells=game_data.layout.outer_wall_cells,
+        cell_size=game_data.cell_size,
+        light_source_pos=fov_target.rect.center if fov_target else None,
     )
     _draw_footprints(
         screen,
@@ -1078,10 +1201,6 @@ def draw(
         stage=stage,
         flashlight_count=flashlight_count,
     )
-    if player.in_car and game_data.car and game_data.car.alive():
-        fov_target = game_data.car
-    else:
-        fov_target = player
     _draw_fog_of_war(
         screen,
         camera,
