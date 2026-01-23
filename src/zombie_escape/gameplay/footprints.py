@@ -5,7 +5,7 @@ from typing import Any
 import pygame
 
 from .constants import FOOTPRINT_MAX, FOOTPRINT_STEP_DISTANCE
-from ..models import GameData
+from ..models import Footprint, GameData
 
 
 def get_shrunk_sprite(
@@ -51,7 +51,7 @@ def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
             dist_sq is not None
             and dist_sq >= FOOTPRINT_STEP_DISTANCE * FOOTPRINT_STEP_DISTANCE
         ):
-            footprints.append({"pos": (player.x, player.y), "time": now})
+            footprints.append(Footprint(pos=(player.x, player.y), time=now))
             state.last_footprint_pos = (player.x, player.y)
 
     if len(footprints) > FOOTPRINT_MAX:

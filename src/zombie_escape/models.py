@@ -58,6 +58,14 @@ class DustRing:
     duration_ms: int
 
 
+@dataclass(frozen=True)
+class Footprint:
+    """Tracked player footprint."""
+
+    pos: tuple[float, float]
+    time: int
+
+
 @dataclass
 class ProgressState:
     """Game progress/state flags."""
@@ -68,8 +76,8 @@ class ProgressState:
     game_over_at: int | None
     scaled_overview: surface.Surface | None
     overview_created: bool
-    footprints: list
-    last_footprint_pos: tuple | None
+    footprints: list[Footprint]
+    last_footprint_pos: tuple[float, float] | None
     elapsed_play_ms: int
     has_fuel: bool
     flashlight_count: int

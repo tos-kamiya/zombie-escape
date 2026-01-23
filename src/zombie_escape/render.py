@@ -26,7 +26,7 @@ from .gameplay_constants import (
 )
 from .localization import get_font_settings
 from .localization import translate as tr
-from .models import GameData, Stage
+from .models import Footprint, GameData, Stage
 from .render_assets import RenderAssets, resolve_wall_colors
 from .render_constants import (
     FALLING_DUST_COLOR,
@@ -67,7 +67,7 @@ def draw_level_overview(
     player: Player | None,
     car: Car | None,
     waiting_cars: list[Car] | None,
-    footprints: list[dict[str, Any]],
+    footprints: list[Footprint],
     *,
     fuel: FuelCan | None = None,
     flashlights: list[Flashlight] | None = None,
@@ -95,14 +95,14 @@ def draw_level_overview(
         pygame.draw.rect(surface, fill_color, wall.rect)
     now = pygame.time.get_ticks()
     for fp in footprints:
-        age = now - fp["time"]
+        age = now - fp.time
         fade = 1 - (age / assets.footprint_lifetime_ms)
         fade = max(assets.footprint_min_fade, fade)
         color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
         pygame.draw.circle(
             surface,
             color,
-            (int(fp["pos"][0]), int(fp["pos"][1])),
+            (int(fp.pos[0]), int(fp.pos[1])),
             assets.footprint_overview_radius,
         )
     if fuel and fuel.alive():
@@ -686,13 +686,13 @@ def draw(
     if config.get("footprints", {}).get("enabled", True):
         now = pygame.time.get_ticks()
         for fp in footprints:
-            age = now - fp["time"]
+            age = now - fp.time
             fade = 1 - (age / assets.footprint_lifetime_ms)
             fade = max(assets.footprint_min_fade, fade)
             color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
             fp_rect = pygame.Rect(
-                fp["pos"][0] - assets.footprint_radius,
-                fp["pos"][1] - assets.footprint_radius,
+                fp.pos[0] - assets.footprint_radius,
+                fp.pos[1] - assets.footprint_radius,
                 assets.footprint_radius * 2,
                 assets.footprint_radius * 2,
             )

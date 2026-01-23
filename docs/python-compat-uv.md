@@ -15,10 +15,10 @@
 ```bash
 # 例: 3.12 の場合
 uv venv --python 3.12
-uv pip install -p .venv/bin/python -e .
-uv pip install -p .venv/bin/python pytest ruff
+uv pip install -p .venv/bin/python -e ".[dev]"
 uv run -p .venv/bin/python -m pytest
 uv run -p .venv/bin/python -m ruff check
+uv run -p .venv/bin/python -m pyright
 ```
 
 ## バージョン別コマンド一覧
@@ -27,40 +27,40 @@ uv run -p .venv/bin/python -m ruff check
 
 ```bash
 uv venv --clear --python 3.10
-uv pip install -p .venv/bin/python -e .
-uv pip install -p .venv/bin/python pytest ruff
+uv pip install -p .venv/bin/python -e ".[dev]"
 uv run -p .venv/bin/python -m pytest
 uv run -p .venv/bin/python -m ruff check
+uv run -p .venv/bin/python -m pyright
 ```
 
 ### CPython 3.11
 
 ```bash
 uv venv --clear --python 3.11
-uv pip install -p .venv/bin/python -e .
-uv pip install -p .venv/bin/python pytest ruff
+uv pip install -p .venv/bin/python -e ".[dev]"
 uv run -p .venv/bin/python -m pytest
 uv run -p .venv/bin/python -m ruff check
+uv run -p .venv/bin/python -m pyright
 ```
 
 ### CPython 3.12
 
 ```bash
 uv venv --clear --python 3.12
-uv pip install -p .venv/bin/python -e .
-uv pip install -p .venv/bin/python pytest ruff
+uv pip install -p .venv/bin/python -e ".[dev]"
 uv run -p .venv/bin/python -m pytest
 uv run -p .venv/bin/python -m ruff check
+uv run -p .venv/bin/python -m pyright
 ```
 
 ### CPython 3.13
 
 ```bash
 uv venv --clear --python 3.13
-uv pip install -p .venv/bin/python -e .
-uv pip install -p .venv/bin/python pytest ruff
+uv pip install -p .venv/bin/python -e ".[dev]"
 uv run -p .venv/bin/python -m pytest
 uv run -p .venv/bin/python -m ruff check
+uv run -p .venv/bin/python -m pyright
 ```
 
 ## 補足

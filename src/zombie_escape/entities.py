@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Callable, Iterable, Sequence
 
 try:
     from typing import Self
@@ -76,6 +76,9 @@ from .render_assets import (
 from .rng import get_rng
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
+if TYPE_CHECKING:  # pragma: no cover - typing-only imports
+    from .models import Footprint
+
 RNG = get_rng()
 
 MovementStrategy = Callable[
@@ -83,7 +86,7 @@ MovementStrategy = Callable[
         "Zombie",
         tuple[int, int],
         list["Wall"],
-        list[dict[str, object]],
+        list["Footprint"],
         int,
         int,
         int,
@@ -951,7 +954,7 @@ def _zombie_tracker_movement(
     zombie: Zombie,
     player_center: tuple[int, int],
     walls: list[Wall],
-    footprints: list[dict[str, object]],
+    footprints: list[Footprint],
     cell_size: int,
     grid_cols: int,
     grid_rows: int,
@@ -977,7 +980,7 @@ def zombie_wander_movement(
     zombie: Zombie,
     _player_center: tuple[int, int],
     walls: list[Wall],
-    _footprints: list[dict[str, object]],
+    _footprints: list[Footprint],
     cell_size: int,
     grid_cols: int,
     grid_rows: int,
@@ -1049,7 +1052,7 @@ def _zombie_wall_follow_movement(
     zombie: Zombie,
     player_center: tuple[int, int],
     walls: list[Wall],
-    _footprints: list[dict[str, object]],
+    _footprints: list[Footprint],
     cell_size: int,
     grid_cols: int,
     grid_rows: int,
@@ -1153,7 +1156,7 @@ def zombie_normal_movement(
     zombie: Zombie,
     player_center: tuple[int, int],
     walls: list[Wall],
-    _footprints: list[dict[str, object]],
+    _footprints: list[Footprint],
     cell_size: int,
     grid_cols: int,
     grid_rows: int,
@@ -1174,7 +1177,7 @@ def zombie_normal_movement(
 
 def _zombie_update_tracker_target(
     zombie: Zombie,
-    footprints: list[dict[str, object]],
+    footprints: list[Footprint],
     walls: list[Wall],
 ) -> None:
     now = pygame.time.get_ticks()
@@ -1184,18 +1187,14 @@ def _zombie_update_tracker_target(
     if not footprints:
         zombie.tracker_target_pos = None
         return
-    nearby: list[dict[str, object]] = []
+    nearby: list[Footprint] = []
     last_target_time = zombie.tracker_target_time
     scan_radius = ZOMBIE_TRACKER_SCENT_RADIUS * ZOMBIE_TRACKER_SCAN_RADIUS_MULTIPLIER
     scent_radius_sq = scan_radius * scan_radius
     min_target_dist_sq = (FOOTPRINT_STEP_DISTANCE * 0.5) ** 2
     for fp in footprints:
-        pos = fp.get("pos")
-        if not isinstance(pos, tuple):
-            continue
-        fp_time = fp.get("time")
-        if not isinstance(fp_time, int):
-            fp_time = -1
+        pos = fp.pos
+        fp_time = fp.time
         dx = pos[0] - zombie.x
         dy = pos[1] - zombie.y
         if dx * dx + dy * dy <= min_target_dist_sq:
@@ -1206,26 +1205,15 @@ def _zombie_update_tracker_target(
     if not nearby:
         return
 
-    nearby.sort(
-        key=lambda fp: fp.get("time", -1) if isinstance(fp.get("time"), int) else -1,
-        reverse=True,
-    )
+    nearby.sort(key=lambda fp: fp.time, reverse=True)
     if last_target_time is not None:
-        newer = [
-            fp
-            for fp in nearby
-            if isinstance(fp.get("time"), int) and fp.get("time") > last_target_time
-        ]
+        newer = [fp for fp in nearby if fp.time > last_target_time]
     else:
         newer = nearby
 
     for fp in newer[:ZOMBIE_TRACKER_SCENT_TOP_K]:
-        pos = fp.get("pos")
-        if not isinstance(pos, tuple):
-            continue
-        fp_time = fp.get("time")
-        if not isinstance(fp_time, int):
-            fp_time = -1
+        pos = fp.pos
+        fp_time = fp.time
         if _line_of_sight_clear((zombie.x, zombie.y), pos, walls):
             zombie.tracker_target_pos = pos
             zombie.tracker_target_time = fp_time
@@ -1242,20 +1230,13 @@ def _zombie_update_tracker_target(
     if last_target_time is None:
         return
 
-    candidates = [
-        fp
-        for fp in nearby
-        if isinstance(fp.get("time"), int) and fp.get("time") > last_target_time
-    ]
+    candidates = [fp for fp in nearby if fp.time > last_target_time]
     if not candidates:
         return
-    candidates.sort(key=lambda fp: fp.get("time"))
+    candidates.sort(key=lambda fp: fp.time)
     next_fp = candidates[0]
-    pos = next_fp.get("pos")
-    fp_time = next_fp.get("time")
-    if isinstance(pos, tuple) and isinstance(fp_time, int):
-        zombie.tracker_target_pos = pos
-        zombie.tracker_target_time = fp_time
+    zombie.tracker_target_pos = next_fp.pos
+    zombie.tracker_target_time = next_fp.time
     return
 
 
@@ -1537,7 +1518,7 @@ class Zombie(pygame.sprite.Sprite):
         player_center: tuple[int, int],
         walls: list[Wall],
         nearby_zombies: Iterable[Zombie],
-        footprints: list[dict[str, object]] | None = None,
+        footprints: list[Footprint] | None = None,
         *,
         cell_size: int,
         grid_cols: int,
