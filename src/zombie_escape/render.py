@@ -17,7 +17,16 @@ from .colors import (
     YELLOW,
     get_environment_palette,
 )
-from .entities import Camera, Car, Flashlight, FuelCan, Player, SteelBeam, Survivor, Wall
+from .entities import (
+    Camera,
+    Car,
+    Flashlight,
+    FuelCan,
+    Player,
+    SteelBeam,
+    Survivor,
+    Wall,
+)
 from .entities_constants import ZOMBIE_RADIUS
 from .font_utils import load_font
 from .gameplay_constants import (
@@ -27,7 +36,7 @@ from .gameplay_constants import (
 from .localization import get_font_settings
 from .localization import translate as tr
 from .models import DustRing, FallingZombie, Footprint, GameData, Stage
-from .render_assets import RenderAssets, resolve_wall_colors
+from .render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
 from .render_constants import (
     FALLING_DUST_COLOR,
     FALLING_WHIRLWIND_COLOR,
@@ -135,18 +144,23 @@ def draw_level_overview(
     dark_floor = tuple(max(0, int(channel * 0.55)) for channel in base_floor)
     surface.fill(dark_floor)
     for wall in wall_group:
-        if not isinstance(wall, Wall):
-            raise TypeError("wall_group must contain Wall instances")
         if wall.max_health > 0:
             health_ratio = max(0.0, min(1.0, wall.health / wall.max_health))
         else:
             health_ratio = 0.0
-        fill_color, _ = resolve_wall_colors(
-            health_ratio=health_ratio,
-            palette_category=wall.palette_category,
-            palette=palette,
-        )
-        pygame.draw.rect(surface, fill_color, wall.rect)
+        if isinstance(wall, Wall):
+            fill_color, _ = resolve_wall_colors(
+                health_ratio=health_ratio,
+                palette_category=wall.palette_category,
+                palette=palette,
+            )
+            pygame.draw.rect(surface, fill_color, wall.rect)
+        elif isinstance(wall, SteelBeam):
+            fill_color, _ = resolve_steel_beam_colors(
+                health_ratio=health_ratio,
+                palette=palette,
+            )
+            pygame.draw.rect(surface, fill_color, wall.rect)
     now = pygame.time.get_ticks()
     for fp in footprints:
         age = now - fp.time
@@ -720,14 +734,14 @@ def _draw_wall_shadows(
                 inner_wall_cells.add((cell_x, cell_y))
     if not inner_wall_cells:
         return
-    base_shadow_size = max(cell_size + 2, int(cell_size * 1.12))
+    base_shadow_size = max(cell_size + 2, int(cell_size * 1.35))
     shadow_size = max(1, int(base_shadow_size * 1.5))
     shadow_surface = _get_shadow_tile_surface(shadow_size, 255, edge_softness=0.12)
     shadow_layer = _get_shadow_layer(screen.get_size())
     shadow_layer.fill((0, 0, 0, 0))
     screen_rect = screen.get_rect()
     px, py = light_source_pos
-    offset = max(2, int(cell_size * 0.3 * (shadow_size / cell_size) * 1.1))
+    offset = max(2, int(cell_size * 0.3 * (shadow_size / cell_size) * 1.2))
     drew = False
     for cell_x, cell_y in inner_wall_cells:
         world_x = cell_x * cell_size
