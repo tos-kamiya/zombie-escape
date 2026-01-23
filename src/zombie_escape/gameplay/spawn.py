@@ -193,7 +193,7 @@ def _schedule_falling_zombie(game_data: GameData, config: dict[str, Any]) -> boo
         start_pos=start_pos,
         target_pos=(int(spawn_pos[0]), int(spawn_pos[1])),
         started_at_ms=pygame.time.get_ticks(),
-        pre_fx_ms=300,
+        pre_fx_ms=350,
         fall_duration_ms=450,
         dust_duration_ms=220,
         tracker=tracker,
@@ -559,8 +559,7 @@ def spawn_initial_zombies(
             cell
             for cell in spawn_cells
             if min_dist_sq
-            <= (cell.centerx - player_pos[0]) ** 2
-            + (cell.centery - player_pos[1]) ** 2
+            <= (cell.centerx - player_pos[0]) ** 2 + (cell.centery - player_pos[1]) ** 2
             <= max_dist_sq
         ]
         if not candidates:
@@ -785,6 +784,7 @@ def spawn_weighted_zombie(
 ) -> bool:
     """Spawn a zombie according to the stage's interior/exterior mix."""
     stage = game_data.stage
+
     def _spawn(choice: str) -> bool:
         if choice == "interior":
             return _spawn_nearby_zombie(game_data, config) is not None

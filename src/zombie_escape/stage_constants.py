@@ -165,9 +165,9 @@ STAGES: list[Stage] = [
         available=True,
         requires_fuel=True,
         exterior_spawn_weight=0.5,
-        interior_spawn_weight=0.25,
-        interior_fall_spawn_weight=0.25,
-        initial_flashlight_count=4,
+        interior_spawn_weight=0.2,
+        interior_fall_spawn_weight=0.3,
+        initial_flashlight_count=5,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"
