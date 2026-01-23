@@ -98,7 +98,6 @@ def gameplay_screen(
     paused_manual = False
     paused_focus = False
     ignore_focus_loss_until = 0
-    last_fov_target = None
     controller = init_first_controller()
     joystick = init_first_joystick() if controller is None else None
 
@@ -142,8 +141,6 @@ def gameplay_screen(
 
     spawn_initial_zombies(game_data, player, layout_data, config)
     update_footprints(game_data, config)
-    last_fov_target = player
-
     while True:
         dt = clock.tick(fps) / 1000.0
         if game_data.state.game_over or game_data.state.game_won:
@@ -157,7 +154,6 @@ def gameplay_screen(
                         render_assets,
                         screen,
                         game_data,
-                        last_fov_target,
                         config=config,
                         hint_color=None,
                         present_fn=present,
@@ -261,7 +257,6 @@ def gameplay_screen(
                 render_assets,
                 screen,
                 game_data,
-                last_fov_target,
                 config=config,
                 do_flip=not show_pause_overlay,
                 present_fn=present,
@@ -325,7 +320,6 @@ def gameplay_screen(
         wall_index = build_wall_index(
             game_data.groups.wall_group, cell_size=game_data.cell_size
         )
-        frame_fov_target = None
         for _ in range(substeps):
             player_ref = game_data.player
             if player_ref is None:
@@ -351,16 +345,9 @@ def gameplay_screen(
             game_data.state.elapsed_play_ms += step_ms
             update_survival_timer(game_data, step_ms)
             cleanup_survivor_messages(game_data.state)
-            sub_fov_target = check_interactions(game_data, config)
-            if sub_fov_target:
-                frame_fov_target = sub_fov_target
+            check_interactions(game_data, config)
             if game_data.state.game_over or game_data.state.game_won:
                 break
-
-        if frame_fov_target:
-            last_fov_target = frame_fov_target
-        else:
-            frame_fov_target = last_fov_target
 
         player = game_data.player
         if player is None:
@@ -417,7 +404,6 @@ def gameplay_screen(
             render_assets,
             screen,
             game_data,
-            frame_fov_target,
             config=config,
             hint_target=hint_target,
             hint_color=hint_color,

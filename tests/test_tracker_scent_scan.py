@@ -1,8 +1,9 @@
 from zombie_escape.entities import Wall, Zombie, _zombie_update_tracker_target
+from zombie_escape.models import Footprint
 
 
-def _make_footprint(pos: tuple[float, float], time_ms: int) -> dict[str, object]:
-    return {"pos": pos, "time": time_ms}
+def _make_footprint(pos: tuple[float, float], time_ms: int) -> Footprint:
+    return Footprint(pos=pos, time=time_ms)
 
 
 def _force_scan(zombie: Zombie) -> None:

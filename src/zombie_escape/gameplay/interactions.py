@@ -45,9 +45,7 @@ def _interaction_radius(width: float, height: float) -> float:
 RNG = get_rng()
 
 
-def check_interactions(
-    game_data: GameData, config: dict[str, Any]
-) -> pygame.sprite.Sprite | None:
+def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     """Check and handle interactions between entities."""
     player = game_data.player
     assert player is not None
@@ -344,11 +342,7 @@ def check_interactions(
             if stage.rescue_stage and state.survivors_onboard:
                 state.survivors_rescued += state.survivors_onboard
                 state.survivors_onboard = 0
-                state.next_overload_check_ms = 0
                 apply_passenger_speed_penalty(game_data)
             state.game_won = True
 
-    # Return fog of view target
-    if not state.game_over and not state.game_won:
-        return car if player.in_car and car and car.alive() else player
     return None

@@ -26,7 +26,7 @@ from .gameplay_constants import (
 )
 from .localization import get_font_settings
 from .localization import translate as tr
-from .models import Footprint, GameData, Stage
+from .models import DustRing, FallingZombie, Footprint, GameData, Stage
 from .render_assets import RenderAssets, resolve_wall_colors
 from .render_constants import (
     FALLING_DUST_COLOR,
@@ -402,22 +402,23 @@ def _draw_fall_whirlwind(
     screen.blit(swirl, swirl.get_rect(center=screen_center))
 
 
-def _draw_falling_zombies(
+def _draw_falling_fx(
     screen: surface.Surface,
     camera: Camera,
-    game_data: GameData,
+    falling_zombies: list[FallingZombie],
+    flashlight_count: int,
+    dust_rings: list[DustRing],
 ) -> None:
-    state = game_data.state
-    if not state.falling_zombies:
+    if not falling_zombies and not dust_rings:
         return
     now = pygame.time.get_ticks()
-    for fall in state.falling_zombies:
+    for fall in falling_zombies:
         pre_fx_ms = max(0, fall.pre_fx_ms)
         fall_duration_ms = max(1, fall.fall_duration_ms)
         fall_start = fall.started_at_ms + pre_fx_ms
         impact_at = fall_start + fall_duration_ms
         if now < fall_start:
-            if state.flashlight_count > 0 and pre_fx_ms > 0:
+            if flashlight_count > 0 and pre_fx_ms > 0:
                 fx_progress = max(
                     0.0, min(1.0, (now - fall.started_at_ms) / pre_fx_ms)
                 )
@@ -439,20 +440,10 @@ def _draw_falling_zombies(
             ZOMBIE_RADIUS,
         )
 
-
-def _draw_falling_dust(
-    screen: surface.Surface,
-    camera: Camera,
-    game_data: GameData,
-) -> None:
-    state = game_data.state
-    if not state.dust_rings:
-        return
-    now = pygame.time.get_ticks()
-    for ring in list(state.dust_rings):
+    for ring in list(dust_rings):
         elapsed = now - ring.started_at_ms
         if elapsed >= ring.duration_ms:
-            state.dust_rings.remove(ring)
+            dust_rings.remove(ring)
             continue
         progress = max(0.0, min(1.0, elapsed / ring.duration_ms))
         alpha = int(max(0, min(255, FALLING_DUST_COLOR[3] * (1.0 - progress))))
@@ -584,45 +575,14 @@ def _draw_status_bar(
         print(f"Error rendering status bar: {e}")
 
 
-def draw(
-    assets: RenderAssets,
+def _draw_play_area(
     screen: surface.Surface,
-    game_data: GameData,
-    fov_target: pygame.sprite.Sprite | None,
-    *,
-    config: dict[str, Any],
-    hint_target: tuple[int, int] | None = None,
-    hint_color: tuple[int, int, int] | None = None,
-    do_flip: bool = True,
-    present_fn: Callable[[surface.Surface], None] | None = None,
-) -> None:
-    hint_color = hint_color or YELLOW
-    state = game_data.state
-    player = game_data.player
-    if player is None:
-        raise ValueError("draw requires an active player on game_data")
-
-    camera = game_data.camera
-    stage = game_data.stage
-    outer_rect = game_data.layout.outer_rect
-    outside_rects = game_data.layout.outside_rects or []
-    all_sprites = game_data.groups.all_sprites
-    fog_surfaces = game_data.fog
-    footprints = state.footprints
-    has_fuel = state.has_fuel
-    flashlight_count = state.flashlight_count
-    elapsed_play_ms = state.elapsed_play_ms
-    fuel_message_until = state.fuel_message_until
-    buddy_onboard = state.buddy_onboard
-    buddy_required = stage.buddy_required_count if stage else 0
-    survivors_onboard = state.survivors_onboard
-    survivor_messages = list(state.survivor_messages)
-    zombie_group = game_data.groups.zombie_group
-    active_car = game_data.car if game_data.car and game_data.car.alive() else None
-
-    palette = get_environment_palette(state.ambient_palette_key)
-    screen.fill(palette.outside)
-
+    camera: Camera,
+    assets: RenderAssets,
+    palette: Any,
+    outer_rect: tuple[int, int, int, int],
+    outside_rects: list[pygame.Rect],
+) -> tuple[int, int, int, int, set[tuple[int, int]]]:
     xs, ys, xe, ye = outer_rect
     xs //= assets.internal_wall_grid_snap
     ys //= assets.internal_wall_grid_snap
@@ -683,23 +643,44 @@ def draw(
                 if sr.colliderect(screen.get_rect()):
                     pygame.draw.rect(screen, palette.floor_secondary, sr)
 
-    if config.get("footprints", {}).get("enabled", True):
-        now = pygame.time.get_ticks()
-        for fp in footprints:
-            age = now - fp.time
-            fade = 1 - (age / assets.footprint_lifetime_ms)
-            fade = max(assets.footprint_min_fade, fade)
-            color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
-            fp_rect = pygame.Rect(
-                fp.pos[0] - assets.footprint_radius,
-                fp.pos[1] - assets.footprint_radius,
-                assets.footprint_radius * 2,
-                assets.footprint_radius * 2,
-            )
-            sr = camera.apply_rect(fp_rect)
-            if sr.colliderect(screen.get_rect().inflate(30, 30)):
-                pygame.draw.circle(screen, color, sr.center, assets.footprint_radius)
+    return xs, ys, xe, ye, outside_cells
 
+
+def _draw_footprints(
+    screen: surface.Surface,
+    camera: Camera,
+    assets: RenderAssets,
+    footprints: list[Footprint],
+    *,
+    config: dict[str, Any],
+) -> None:
+    if not config.get("footprints", {}).get("enabled", True):
+        return
+    now = pygame.time.get_ticks()
+    for fp in footprints:
+        age = now - fp.time
+        fade = 1 - (age / assets.footprint_lifetime_ms)
+        fade = max(assets.footprint_min_fade, fade)
+        color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
+        fp_rect = pygame.Rect(
+            fp.pos[0] - assets.footprint_radius,
+            fp.pos[1] - assets.footprint_radius,
+            assets.footprint_radius * 2,
+            assets.footprint_radius * 2,
+        )
+        sr = camera.apply_rect(fp_rect)
+        if sr.colliderect(screen.get_rect().inflate(30, 30)):
+            pygame.draw.circle(screen, color, sr.center, assets.footprint_radius)
+
+
+def _draw_entities(
+    screen: surface.Surface,
+    camera: Camera,
+    all_sprites: sprite.LayeredUpdates,
+    player: Player,
+    *,
+    has_fuel: bool,
+) -> pygame.Rect:
     screen_rect_inflated = screen.get_rect().inflate(100, 100)
     player_screen_rect: pygame.Rect | None = None
     for entity in all_sprites:
@@ -708,178 +689,271 @@ def draw(
             screen.blit(entity.image, sprite_screen_rect)
         if entity is player:
             player_screen_rect = sprite_screen_rect
+            _draw_fuel_indicator(
+                screen,
+                player_screen_rect,
+                has_fuel=has_fuel,
+                in_car=player.in_car,
+            )
+    return player_screen_rect or camera.apply_rect(player.rect)
 
-    if player_screen_rect is None:
-        player_screen_rect = camera.apply_rect(player.rect)
 
-    _draw_falling_zombies(screen, camera, game_data)
-    _draw_falling_dust(screen, camera, game_data)
+def _draw_fuel_indicator(
+    screen: surface.Surface,
+    player_screen_rect: pygame.Rect,
+    *,
+    has_fuel: bool,
+    in_car: bool,
+) -> None:
+    if not has_fuel or in_car:
+        return
+    indicator_size = 4
+    padding = 1
+    indicator_rect = pygame.Rect(
+        player_screen_rect.right - indicator_size - padding,
+        player_screen_rect.bottom - indicator_size - padding,
+        indicator_size,
+        indicator_size,
+    )
+    pygame.draw.rect(screen, YELLOW, indicator_rect)
+    pygame.draw.rect(screen, (180, 160, 40), indicator_rect, width=1)
 
-    if has_fuel and player_screen_rect and not player.in_car:
-        indicator_size = 4
-        padding = 1
-        indicator_rect = pygame.Rect(
-            player_screen_rect.right - indicator_size - padding,
-            player_screen_rect.bottom - indicator_size - padding,
-            indicator_size,
-            indicator_size,
-        )
-        pygame.draw.rect(screen, YELLOW, indicator_rect)
-        pygame.draw.rect(screen, (180, 160, 40), indicator_rect, width=1)
 
-    if hint_target and player:
-        current_fov_scale = _get_fog_scale(
-            assets,
-            stage,
-            flashlight_count,
-        )
-        hint_ring_radius = assets.fov_radius * 0.5 * current_fov_scale
-        _draw_hint_arrow(
-            screen,
-            camera,
-            assets,
-            player,
-            hint_target,
-            color=hint_color,
-            ring_radius=hint_ring_radius,
-        )
+def _draw_hint_indicator(
+    screen: surface.Surface,
+    camera: Camera,
+    assets: RenderAssets,
+    player: Player,
+    hint_target: tuple[int, int] | None,
+    *,
+    hint_color: tuple[int, int, int],
+    stage: Stage | None,
+    flashlight_count: int,
+) -> None:
+    if not hint_target:
+        return
+    current_fov_scale = _get_fog_scale(
+        assets,
+        stage,
+        flashlight_count,
+    )
+    hint_ring_radius = assets.fov_radius * 0.5 * current_fov_scale
+    _draw_hint_arrow(
+        screen,
+        camera,
+        assets,
+        player,
+        hint_target,
+        color=hint_color,
+        ring_radius=hint_ring_radius,
+    )
 
-    if fov_target is not None:
-        fov_center_on_screen = list(camera.apply(fov_target).center)
-        cam_rect = camera.camera
-        horizontal_span = camera.width - assets.screen_width
-        vertical_span = camera.height - assets.screen_height
-        if horizontal_span <= 0 or (cam_rect.x != 0 and cam_rect.x != -horizontal_span):
-            fov_center_on_screen[0] = assets.screen_width // 2
-        if vertical_span <= 0 or (cam_rect.y != 0 and cam_rect.y != -vertical_span):
-            fov_center_on_screen[1] = assets.screen_height // 2
-        fov_center_tuple = (int(fov_center_on_screen[0]), int(fov_center_on_screen[1]))
+
+def _draw_fog_of_war(
+    screen: surface.Surface,
+    camera: Camera,
+    assets: RenderAssets,
+    fog_surfaces: dict[str, Any],
+    fov_target: pygame.sprite.Sprite | None,
+    *,
+    stage: Stage | None,
+    flashlight_count: int,
+    dawn_ready: bool,
+) -> None:
+    if fov_target is None:
+        return
+    fov_center_on_screen = list(camera.apply(fov_target).center)
+    cam_rect = camera.camera
+    horizontal_span = camera.width - assets.screen_width
+    vertical_span = camera.height - assets.screen_height
+    if horizontal_span <= 0 or (cam_rect.x != 0 and cam_rect.x != -horizontal_span):
+        fov_center_on_screen[0] = assets.screen_width // 2
+    if vertical_span <= 0 or (cam_rect.y != 0 and cam_rect.y != -vertical_span):
+        fov_center_on_screen[1] = assets.screen_height // 2
+    fov_center_tuple = (int(fov_center_on_screen[0]), int(fov_center_on_screen[1]))
+    if dawn_ready:
+        profile = FogProfile.DAWN
+    else:
+        profile = FogProfile._from_flashlight_count(flashlight_count)
+    overlay = _get_fog_overlay_surfaces(
+        fog_surfaces,
+        assets,
+        profile,
+        stage=stage,
+    )
+    combined_surface: surface.Surface = overlay["combined"]
+    screen.blit(
+        combined_surface,
+        combined_surface.get_rect(center=fov_center_tuple),
+    )
+
+
+def _draw_need_fuel_message(
+    screen: surface.Surface,
+    assets: RenderAssets,
+    *,
+    has_fuel: bool,
+    fuel_message_until: int,
+    elapsed_play_ms: int,
+) -> None:
+    if has_fuel or fuel_message_until <= elapsed_play_ms:
+        return
+    show_message(
+        screen,
+        tr("hud.need_fuel"),
+        18,
+        ORANGE,
+        (assets.screen_width // 2, assets.screen_height // 2),
+    )
+
+
+def _draw_objective(lines: list[str], *, screen: surface.Surface) -> None:
+    try:
+        font_settings = get_font_settings()
+        font = load_font(font_settings.resource, font_settings.scaled_size(11))
+        y = 8
+        for line in lines:
+            text_surface = font.render(line, False, YELLOW)
+            text_rect = text_surface.get_rect(topleft=(12, y))
+            screen.blit(text_surface, text_rect)
+            y += text_rect.height + 4
+    except pygame.error as e:
+        print(f"Error rendering objective: {e}")
+
+
+def _draw_survival_timer(
+    screen: surface.Surface,
+    assets: RenderAssets,
+    *,
+    stage: Stage | None,
+    state: Any,
+) -> None:
+    if not (stage and stage.survival_stage):
+        return
+    goal_ms = state.survival_goal_ms
+    if goal_ms <= 0:
+        return
+    elapsed_ms = max(0, min(goal_ms, state.survival_elapsed_ms))
+    remaining_ms = max(0, goal_ms - elapsed_ms)
+    padding = 12
+    bar_height = 8
+    y_pos = assets.screen_height - assets.status_bar_height - bar_height - 10
+    bar_rect = pygame.Rect(
+        padding,
+        y_pos,
+        assets.screen_width - padding * 2,
+        bar_height,
+    )
+    track_surface = pygame.Surface((bar_rect.width, bar_rect.height), pygame.SRCALPHA)
+    track_surface.fill((0, 0, 0, 140))
+    screen.blit(track_surface, bar_rect.topleft)
+    progress_ratio = elapsed_ms / goal_ms if goal_ms else 0.0
+    progress_width = int(bar_rect.width * max(0.0, min(1.0, progress_ratio)))
+    if progress_width > 0:
+        fill_color = (120, 20, 20)
         if state.dawn_ready:
-            profile = FogProfile.DAWN
+            fill_color = (25, 40, 120)
+        fill_rect = pygame.Rect(
+            bar_rect.left,
+            bar_rect.top,
+            progress_width,
+            bar_rect.height,
+        )
+        pygame.draw.rect(screen, fill_color, fill_rect)
+    display_ms = int(remaining_ms * SURVIVAL_FAKE_CLOCK_RATIO)
+    display_ms = max(0, display_ms)
+    display_hours = display_ms // 3_600_000
+    display_minutes = (display_ms % 3_600_000) // 60_000
+    display_label = f"{int(display_hours):02d}:{int(display_minutes):02d}"
+    timer_text = tr("hud.survival_timer_label", time=display_label)
+    try:
+        font_settings = get_font_settings()
+        font = load_font(font_settings.resource, font_settings.scaled_size(12))
+        text_surface = font.render(timer_text, False, LIGHT_GRAY)
+        text_rect = text_surface.get_rect(left=bar_rect.left, bottom=bar_rect.top - 2)
+        screen.blit(text_surface, text_rect)
+        if state.time_accel_active:
+            accel_text = tr("hud.time_accel")
+            accel_surface = font.render(accel_text, False, YELLOW)
+            accel_rect = accel_surface.get_rect(
+                right=bar_rect.right, bottom=bar_rect.top - 2
+            )
+            screen.blit(accel_surface, accel_rect)
         else:
-            profile = FogProfile._from_flashlight_count(flashlight_count)
-        overlay = _get_fog_overlay_surfaces(
-            fog_surfaces,
-            assets,
-            profile,
-            stage=stage,
-        )
-        combined_surface: surface.Surface = overlay["combined"]
-        screen.blit(
-            combined_surface,
-            combined_surface.get_rect(center=fov_center_tuple),
-        )
-
-    if not has_fuel and fuel_message_until > elapsed_play_ms:
-        show_message(
-            screen,
-            tr("hud.need_fuel"),
-            18,
-            ORANGE,
-            (assets.screen_width // 2, assets.screen_height // 2),
-        )
-
-    def _render_objective(lines: list[str]) -> None:
-        try:
-            font_settings = get_font_settings()
-            font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            y = 8
-            for line in lines:
-                text_surface = font.render(line, False, YELLOW)
-                text_rect = text_surface.get_rect(topleft=(12, y))
-                screen.blit(text_surface, text_rect)
-                y += text_rect.height + 4
-        except pygame.error as e:
-            print(f"Error rendering objective: {e}")
-
-    def _render_survival_timer() -> None:
-        if not (stage and stage.survival_stage):
-            return
-        goal_ms = state.survival_goal_ms
-        if goal_ms <= 0:
-            return
-        elapsed_ms = max(0, min(goal_ms, state.survival_elapsed_ms))
-        remaining_ms = max(0, goal_ms - elapsed_ms)
-        padding = 12
-        bar_height = 8
-        y_pos = assets.screen_height - assets.status_bar_height - bar_height - 10
-        bar_rect = pygame.Rect(
-            padding,
-            y_pos,
-            assets.screen_width - padding * 2,
-            bar_height,
-        )
-        track_surface = pygame.Surface(
-            (bar_rect.width, bar_rect.height), pygame.SRCALPHA
-        )
-        track_surface.fill((0, 0, 0, 140))
-        screen.blit(track_surface, bar_rect.topleft)
-        progress_ratio = elapsed_ms / goal_ms if goal_ms else 0.0
-        progress_width = int(bar_rect.width * max(0.0, min(1.0, progress_ratio)))
-        if progress_width > 0:
-            fill_color = (120, 20, 20)
-            if state.dawn_ready:
-                fill_color = (25, 40, 120)
-            fill_rect = pygame.Rect(
-                bar_rect.left,
-                bar_rect.top,
-                progress_width,
-                bar_rect.height,
+            hint_text = tr("hud.time_accel_hint")
+            hint_surface = font.render(hint_text, False, LIGHT_GRAY)
+            hint_rect = hint_surface.get_rect(
+                right=bar_rect.right, bottom=bar_rect.top - 2
             )
-            pygame.draw.rect(screen, fill_color, fill_rect)
-        display_ms = int(remaining_ms * SURVIVAL_FAKE_CLOCK_RATIO)
-        display_ms = max(0, display_ms)
-        display_hours = display_ms // 3_600_000
-        display_minutes = (display_ms % 3_600_000) // 60_000
-        display_label = f"{int(display_hours):02d}:{int(display_minutes):02d}"
-        timer_text = tr("hud.survival_timer_label", time=display_label)
-        try:
-            font_settings = get_font_settings()
-            font = load_font(font_settings.resource, font_settings.scaled_size(12))
-            text_surface = font.render(timer_text, False, LIGHT_GRAY)
-            text_rect = text_surface.get_rect(
-                left=bar_rect.left, bottom=bar_rect.top - 2
-            )
-            screen.blit(text_surface, text_rect)
-            if state.time_accel_active:
-                accel_text = tr("hud.time_accel")
-                accel_surface = font.render(accel_text, False, YELLOW)
-                accel_rect = accel_surface.get_rect(
-                    right=bar_rect.right, bottom=bar_rect.top - 2
-                )
-                screen.blit(accel_surface, accel_rect)
-            else:
-                hint_text = tr("hud.time_accel_hint")
-                hint_surface = font.render(hint_text, False, LIGHT_GRAY)
-                hint_rect = hint_surface.get_rect(
-                    right=bar_rect.right, bottom=bar_rect.top - 2
-                )
-                screen.blit(hint_surface, hint_rect)
-        except pygame.error as e:
-            print(f"Error rendering survival timer: {e}")
+            screen.blit(hint_surface, hint_rect)
+    except pygame.error as e:
+        print(f"Error rendering survival timer: {e}")
 
-    def _render_time_accel_indicator() -> None:
-        if stage and stage.survival_stage:
-            return
-        try:
-            font_settings = get_font_settings()
-            font = load_font(font_settings.resource, font_settings.scaled_size(12))
-            if state.time_accel_active:
-                text = tr("hud.time_accel")
-                color = YELLOW
-            else:
-                text = tr("hud.time_accel_hint")
-                color = LIGHT_GRAY
-            text_surface = font.render(text, False, color)
-            bottom_margin = assets.status_bar_height + 6
-            text_rect = text_surface.get_rect(
-                right=assets.screen_width - 12,
-                bottom=assets.screen_height - bottom_margin,
-            )
-            screen.blit(text_surface, text_rect)
-        except pygame.error as e:
-            print(f"Error rendering acceleration indicator: {e}")
 
+def _draw_time_accel_indicator(
+    screen: surface.Surface,
+    assets: RenderAssets,
+    *,
+    stage: Stage | None,
+    state: Any,
+) -> None:
+    if stage and stage.survival_stage:
+        return
+    try:
+        font_settings = get_font_settings()
+        font = load_font(font_settings.resource, font_settings.scaled_size(12))
+        if state.time_accel_active:
+            text = tr("hud.time_accel")
+            color = YELLOW
+        else:
+            text = tr("hud.time_accel_hint")
+            color = LIGHT_GRAY
+        text_surface = font.render(text, False, color)
+        bottom_margin = assets.status_bar_height + 6
+        text_rect = text_surface.get_rect(
+            right=assets.screen_width - 12,
+            bottom=assets.screen_height - bottom_margin,
+        )
+        screen.blit(text_surface, text_rect)
+    except pygame.error as e:
+        print(f"Error rendering acceleration indicator: {e}")
+
+
+def _draw_survivor_messages(
+    screen: surface.Surface,
+    assets: RenderAssets,
+    survivor_messages: list[dict[str, Any]],
+) -> None:
+    if not survivor_messages:
+        return
+    try:
+        font_settings = get_font_settings()
+        font = load_font(font_settings.resource, font_settings.scaled_size(14))
+        base_y = assets.screen_height // 2 - 70
+        for idx, message in enumerate(survivor_messages[:3]):
+            text = message.get("text", "")
+            if not text:
+                continue
+            msg_surface = font.render(text, False, ORANGE)
+            msg_rect = msg_surface.get_rect(
+                center=(assets.screen_width // 2, base_y + idx * 18)
+            )
+            screen.blit(msg_surface, msg_rect)
+    except pygame.error as e:
+        print(f"Error rendering survivor message: {e}")
+
+
+def _build_objective_lines(
+    *,
+    stage: Stage | None,
+    state: Any,
+    player: Player,
+    active_car: Car | None,
+    has_fuel: bool,
+    buddy_onboard: int,
+    buddy_required: int,
+    survivors_onboard: int,
+) -> list[str]:
     objective_lines: list[str] = []
     if stage and stage.survival_stage:
         if state.dawn_ready:
@@ -922,29 +996,125 @@ def draw(
         objective_lines.append(
             tr("objectives.survivors_onboard", count=survivors_onboard, limit=limit)
         )
+    return objective_lines
 
-    if objective_lines:
-        _render_objective(objective_lines)
-    if survivor_messages:
-        try:
-            font_settings = get_font_settings()
-            font = load_font(font_settings.resource, font_settings.scaled_size(14))
-            base_y = assets.screen_height // 2 - 70
-            for idx, message in enumerate(survivor_messages[:3]):
-                text = message.get("text", "")
-                if not text:
-                    continue
-                msg_surface = font.render(text, False, ORANGE)
-                msg_rect = msg_surface.get_rect(
-                    center=(assets.screen_width // 2, base_y + idx * 18)
-                )
-                screen.blit(msg_surface, msg_rect)
-        except pygame.error as e:
-            print(f"Error rendering survivor message: {e}")
-    if stage and stage.survival_stage:
-        _render_survival_timer()
+
+def draw(
+    assets: RenderAssets,
+    screen: surface.Surface,
+    game_data: GameData,
+    *,
+    config: dict[str, Any],
+    hint_target: tuple[int, int] | None = None,
+    hint_color: tuple[int, int, int] | None = None,
+    do_flip: bool = True,
+    present_fn: Callable[[surface.Surface], None] | None = None,
+) -> None:
+    hint_color = hint_color or YELLOW
+    state = game_data.state
+    player = game_data.player
+    if player is None:
+        raise ValueError("draw requires an active player on game_data")
+
+    camera = game_data.camera
+    stage = game_data.stage
+    outer_rect = game_data.layout.outer_rect
+    outside_rects = game_data.layout.outside_rects or []
+    all_sprites = game_data.groups.all_sprites
+    fog_surfaces = game_data.fog
+    footprints = state.footprints
+    has_fuel = state.has_fuel
+    flashlight_count = state.flashlight_count
+    elapsed_play_ms = state.elapsed_play_ms
+    fuel_message_until = state.fuel_message_until
+    buddy_onboard = state.buddy_onboard
+    buddy_required = stage.buddy_required_count if stage else 0
+    survivors_onboard = state.survivors_onboard
+    survivor_messages = list(state.survivor_messages)
+    zombie_group = game_data.groups.zombie_group
+    active_car = game_data.car if game_data.car and game_data.car.alive() else None
+
+    palette = get_environment_palette(state.ambient_palette_key)
+    screen.fill(palette.outside)
+
+    _draw_play_area(
+        screen,
+        camera,
+        assets,
+        palette,
+        outer_rect,
+        outside_rects,
+    )
+    _draw_footprints(
+        screen,
+        camera,
+        assets,
+        footprints,
+        config=config,
+    )
+    _draw_entities(
+        screen,
+        camera,
+        all_sprites,
+        player,
+        has_fuel=has_fuel,
+    )
+
+    _draw_falling_fx(
+        screen,
+        camera,
+        state.falling_zombies,
+        state.flashlight_count,
+        state.dust_rings,
+    )
+
+    _draw_hint_indicator(
+        screen,
+        camera,
+        assets,
+        player,
+        hint_target,
+        hint_color=hint_color,
+        stage=stage,
+        flashlight_count=flashlight_count,
+    )
+    if player.in_car and game_data.car and game_data.car.alive():
+        fov_target = game_data.car
     else:
-        _render_time_accel_indicator()
+        fov_target = player
+    _draw_fog_of_war(
+        screen,
+        camera,
+        assets,
+        fog_surfaces,
+        fov_target,
+        stage=stage,
+        flashlight_count=flashlight_count,
+        dawn_ready=state.dawn_ready,
+    )
+    _draw_need_fuel_message(
+        screen,
+        assets,
+        has_fuel=has_fuel,
+        fuel_message_until=fuel_message_until,
+        elapsed_play_ms=elapsed_play_ms,
+    )
+
+    objective_lines = _build_objective_lines(
+        stage=stage,
+        state=state,
+        player=player,
+        active_car=active_car,
+        has_fuel=has_fuel,
+        buddy_onboard=buddy_onboard,
+        buddy_required=buddy_required,
+        survivors_onboard=survivors_onboard,
+    )
+    if objective_lines:
+        _draw_objective(objective_lines, screen=screen)
+    _draw_survivor_messages(screen, assets, survivor_messages)
+    _draw_survival_timer(screen, assets, stage=stage, state=state)
+    _draw_time_accel_indicator(screen, assets, stage=stage, state=state)
     _draw_status_bar(
         screen,
         assets,
