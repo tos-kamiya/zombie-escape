@@ -1180,7 +1180,11 @@ def draw(
         wall_group=game_data.groups.wall_group,
         outer_wall_cells=game_data.layout.outer_wall_cells,
         cell_size=game_data.cell_size,
-        light_source_pos=fov_target.rect.center if fov_target else None,
+        light_source_pos=(
+            None if (stage and stage.survival_stage and state.dawn_ready) else fov_target.rect.center
+        )
+        if fov_target
+        else None,
     )
     _draw_footprints(
         screen,
