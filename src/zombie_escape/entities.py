@@ -1249,16 +1249,30 @@ def _zombie_wander_move(
     outer_wall_cells: set[tuple[int, int]] | None,
 ) -> tuple[float, float]:
     now = pygame.time.get_ticks()
+    changed_angle = False
     if now - zombie.last_wander_change_time > zombie.wander_change_interval:
         zombie.wander_angle = RNG.uniform(0, math.tau)
         zombie.last_wander_change_time = now
         jitter = RNG.randint(-500, 500)
         zombie.wander_change_interval = max(0, zombie.wander_interval_ms + jitter)
+        changed_angle = True
 
     cell_x = int(zombie.x // cell_size)
     cell_y = int(zombie.y // cell_size)
     at_x_edge = cell_x in (0, grid_cols - 1)
     at_y_edge = cell_y in (0, grid_rows - 1)
+    if changed_angle and (at_x_edge or at_y_edge):
+        cos_angle = math.cos(zombie.wander_angle)
+        sin_angle = math.sin(zombie.wander_angle)
+        outward = (
+            (cell_x == 0 and cos_angle < 0)
+            or (cell_x == grid_cols - 1 and cos_angle > 0)
+            or (cell_y == 0 and sin_angle < 0)
+            or (cell_y == grid_rows - 1 and sin_angle > 0)
+        )
+        if outward:
+            if RNG.random() < 0.5:
+                zombie.wander_angle = (zombie.wander_angle + math.pi) % math.tau
 
     if at_x_edge or at_y_edge:
         if outer_wall_cells is not None:
@@ -1296,12 +1310,6 @@ def _zombie_wander_move(
                 inward_dy = zombie.speed if cell_y == 0 else -zombie.speed
                 if path_clear(zombie.x, zombie.y + inward_dy):
                     return 0.0, inward_dy
-        # if at_x_edge:
-        #     direction = 1.0 if math.sin(zombie.wander_angle) >= 0 else -1.0
-        #     return 0.0, direction * zombie.speed
-        # if at_y_edge:
-        #     direction = 1.0 if math.cos(zombie.wander_angle) >= 0 else -1.0
-        #     return direction * zombie.speed, 0.0
 
     move_x = math.cos(zombie.wander_angle) * zombie.speed
     move_y = math.sin(zombie.wander_angle) * zombie.speed
