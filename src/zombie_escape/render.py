@@ -619,7 +619,11 @@ def _draw_status_bar(
     steel_on = config.get("steel_beams", {}).get("enabled", False)
     if stage:
         # Keep the label compact for the status bar
-        stage_label = f"#{stage.id[-1]}" if stage.id.startswith("stage") else stage.id
+        if stage.id.startswith("stage"):
+            stage_suffix = stage.id.removeprefix("stage")
+            stage_label = f"#{stage_suffix}" if stage_suffix else stage.id
+        else:
+            stage_label = stage.id
     else:
         stage_label = "#1"
 
