@@ -23,6 +23,8 @@ class EnvironmentPalette:
 
     floor_primary: tuple[int, int, int]
     floor_secondary: tuple[int, int, int]
+    fall_zone_primary: tuple[int, int, int]
+    fall_zone_secondary: tuple[int, int, int]
     outside: tuple[int, int, int]
     inner_wall: tuple[int, int, int]
     inner_wall_border: tuple[int, int, int]
@@ -58,6 +60,8 @@ DAWN_AMBIENT_PALETTE_KEY = "dawn"
 _DEFAULT_ENVIRONMENT_PALETTE = EnvironmentPalette(
     floor_primary=(43, 57, 70),
     floor_secondary=(50, 64, 79),
+    fall_zone_primary=(84, 48, 29),
+    fall_zone_secondary=(94, 54, 32),
     outside=(32, 60, 40),
     inner_wall=(125, 101, 78),
     inner_wall_border=(136, 110, 85),
@@ -72,6 +76,16 @@ _GLOOM_ENVIRONMENT_PALETTE = EnvironmentPalette(
     ),
     floor_secondary=_adjust_color(
         _DEFAULT_ENVIRONMENT_PALETTE.floor_secondary, brightness=0.74, saturation=0.65
+    ),
+    fall_zone_primary=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_primary,
+        brightness=0.725,
+        saturation=0.675,
+    ),
+    fall_zone_secondary=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_secondary,
+        brightness=0.74,
+        saturation=0.65,
     ),
     outside=_adjust_color(
         _DEFAULT_ENVIRONMENT_PALETTE.outside, brightness=0.7, saturation=0.625
@@ -95,6 +109,8 @@ _GLOOM_ENVIRONMENT_PALETTE = EnvironmentPalette(
 _DAWN_ENVIRONMENT_PALETTE = EnvironmentPalette(
     floor_primary=(58, 70, 84),
     floor_secondary=(66, 78, 92),
+    fall_zone_primary=(84, 39, 29),
+    fall_zone_secondary=(95, 44, 33),
     outside=(118, 140, 104),
     inner_wall=(125, 101, 78),
     inner_wall_border=(136, 110, 85),
@@ -136,18 +152,20 @@ OUTER_WALL_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outer_wall
 OUTER_WALL_BORDER_COLOR: tuple[int, int, int] = (
     _DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border
 )
-FLOOR_COLOR_PRIMARY: tuple[int, int, int] = (
-    _DEFAULT_ENVIRONMENT_PALETTE.floor_primary
-)  # lightness 22
+FLOOR_COLOR_PRIMARY: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.floor_primary
 FLOOR_COLOR_SECONDARY: tuple[int, int, int] = (
     _DEFAULT_ENVIRONMENT_PALETTE.floor_secondary
-)  # lightness 25
+)
 FLOOR_COLOR_OUTSIDE: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outside
 FOOTPRINT_COLOR: tuple[int, int, int] = (110, 200, 255)
 STEEL_BEAM_COLOR: tuple[int, int, int] = (110, 50, 50)
 STEEL_BEAM_LINE_COLOR: tuple[int, int, int] = (180, 90, 90)
-FALL_ZONE_FLOOR_PRIMARY: tuple[int, int, int] = (84, 48, 29)  # lightness 22
-FALL_ZONE_FLOOR_SECONDARY: tuple[int, int, int] = (94, 54, 32)  # lightness 25
+FALL_ZONE_FLOOR_PRIMARY: tuple[int, int, int] = (
+    _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_primary
+)
+FALL_ZONE_FLOOR_SECONDARY: tuple[int, int, int] = (
+    _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_secondary
+)
 
 
 __all__ = [

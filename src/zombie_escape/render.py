@@ -11,8 +11,6 @@ from pygame import sprite, surface
 from .colors import (
     BLACK,
     BLUE,
-    FALL_ZONE_FLOOR_PRIMARY,
-    FALL_ZONE_FLOOR_SECONDARY,
     FOOTPRINT_COLOR,
     LIGHT_GRAY,
     ORANGE,
@@ -698,7 +696,9 @@ def _draw_play_area(
             use_secondary = ((x // 2) + (y // 2)) % 2 == 0
             if (x, y) in fall_zone_cells:
                 color = (
-                    FALL_ZONE_FLOOR_SECONDARY if use_secondary else FALL_ZONE_FLOOR_PRIMARY
+                    palette.fall_zone_secondary
+                    if use_secondary
+                    else palette.fall_zone_primary
                 )
             elif not use_secondary:
                 continue
