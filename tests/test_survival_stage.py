@@ -6,7 +6,7 @@ from zombie_escape.gameplay import spawn as gameplay_spawn
 
 def _make_game_data(**state_overrides):
     stage = SimpleNamespace(
-        survival_stage=True,
+        endurance_stage=True,
         spawn_interval_ms=5000,
         exterior_spawn_weight=0.55,
         interior_spawn_weight=0.45,
@@ -14,8 +14,8 @@ def _make_game_data(**state_overrides):
     default_state = {
         "game_over": False,
         "game_won": False,
-        "survival_goal_ms": 1000,
-        "survival_elapsed_ms": 0,
+        "endurance_goal_ms": 1000,
+        "endurance_elapsed_ms": 0,
         "dawn_ready": False,
         "dawn_prompt_at": None,
         "dawn_carbonized": False,
@@ -46,11 +46,11 @@ def _make_game_data(**state_overrides):
 
 
 def test_update_survival_timer_marks_dawn_ready() -> None:
-    game_data = _make_game_data(survival_elapsed_ms=950)
+    game_data = _make_game_data(endurance_elapsed_ms=950)
 
-    gameplay.update_survival_timer(game_data, 100)
+    gameplay.update_endurance_timer(game_data, 100)
 
-    assert game_data.state.survival_elapsed_ms == 1000
+    assert game_data.state.endurance_elapsed_ms == 1000
     assert game_data.state.dawn_ready is True
     assert game_data.state.dawn_prompt_at is not None
     assert game_data.state.dawn_carbonized is True
