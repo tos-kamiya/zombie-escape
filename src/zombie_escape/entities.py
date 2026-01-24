@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Callable, Iterable, Sequence
+from typing import Callable, Iterable, Sequence, cast
 
 try:
     from typing import Self
@@ -375,7 +375,7 @@ def _walls_for_sprite(
     cell_size: int,
     grid_cols: int | None = None,
     grid_rows: int | None = None,
-) -> list["Wall"]:
+) -> list[Wall]:
     center, radius = _sprite_center_and_radius(sprite)
     return walls_for_radius(
         wall_index,
@@ -595,10 +595,13 @@ def _spritecollide_walls(
     cell_size: int | None = None,
     grid_cols: int | None = None,
     grid_rows: int | None = None,
-) -> list[pygame.sprite.Sprite]:
+) -> list[Wall]:
     if wall_index is None:
-        return pygame.sprite.spritecollide(
-            sprite, walls, dokill, collided=collide_sprite_wall
+        return cast(
+            list[Wall],
+            pygame.sprite.spritecollide(
+                sprite, walls, dokill, collided=collide_sprite_wall
+            ),
         )
     if cell_size is None:
         raise ValueError("cell_size is required when using wall_index")
@@ -626,10 +629,13 @@ def spritecollideany_walls(
     cell_size: int | None = None,
     grid_cols: int | None = None,
     grid_rows: int | None = None,
-) -> pygame.sprite.Sprite | None:
+) -> Wall | None:
     if wall_index is None:
-        return pygame.sprite.spritecollideany(
-            sprite, walls, collided=collide_sprite_wall
+        return cast(
+            Wall | None,
+            pygame.sprite.spritecollideany(
+                sprite, walls, collided=collide_sprite_wall
+            ),
         )
     if cell_size is None:
         raise ValueError("cell_size is required when using wall_index")
