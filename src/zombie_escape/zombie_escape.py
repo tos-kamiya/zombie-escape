@@ -22,7 +22,7 @@ from .gameplay import calculate_car_speed_for_passengers
 from .level_constants import DEFAULT_TILE_SIZE
 from .localization import set_language
 from .models import GameData, Stage
-from .render_constants import build_render_assets
+from .render_constants import RenderAssets, build_render_assets
 from .screen_constants import (
     DEFAULT_WINDOW_SCALE,
     FPS,
@@ -110,15 +110,54 @@ def main() -> None:
         save_config(config, config_path)
     set_language(config.get("language"))
 
+    def _profiled_gameplay_screen(
+        screen: pygame.Surface,
+        clock: pygame.time.Clock,
+        config: dict[str, Any],
+        fps: int,
+        stage: Stage,
+        *,
+        show_pause_overlay: bool,
+        seed: int | None,
+        render_assets: RenderAssets,
+        debug_mode: bool,
+    ) -> ScreenTransition:
+        import cProfile
+        import pstats
+
+        profiler = cProfile.Profile()
+        try:
+            return profiler.runcall(
+                gameplay_screen,
+                screen,
+                clock,
+                config,
+                fps,
+                stage,
+                show_pause_overlay=show_pause_overlay,
+                seed=seed,
+                render_assets=render_assets,
+                debug_mode=debug_mode,
+            )
+        finally:
+            output_path = Path(args.profile_output)
+            profiler.dump_stats(output_path)
+            summary_path = output_path.with_suffix(".txt")
+            with summary_path.open("w", encoding="utf-8") as handle:
+                stats = pstats.Stats(
+                    profiler,
+                    stream=handle,
+                ).sort_stats("tottime")
+                stats.print_stats(50)
+            print(f"Profile saved to {output_path} and {summary_path}")
+
     next_screen = ScreenID.TITLE
-    pending_stage: Stage | None = None
-    pending_game_data: GameData | None = None
-    pending_config: dict[str, Any] | None = None
-    pending_seed: int | None = None
+    transition: ScreenTransition | None = None
     running = True
 
     while running:
-        transition: ScreenTransition | None = None
+        incoming = transition
+        transition = None
 
         if next_screen == ScreenID.TITLE:
             seed_input = None if title_seed_is_auto else title_seed_text
@@ -148,56 +187,26 @@ def main() -> None:
             set_language(config.get("language"))
             transition = ScreenTransition(ScreenID.TITLE)
         elif next_screen == ScreenID.GAMEPLAY:
-            stage = pending_stage
-            pending_stage = None
-            seed_value = pending_seed
-            pending_seed = None
+            stage = incoming.stage
+            seed_value = incoming.seed
             if stage is None:
                 transition = ScreenTransition(ScreenID.TITLE)
             else:
                 last_stage_id = stage.id
+                render_assets = build_render_assets(stage.tile_size)
                 try:
-                    if args.profile:
-                        import cProfile
-                        import pstats
-
-                        profiler = cProfile.Profile()
-                        try:
-                            render_assets = build_render_assets(stage.tile_size)
-                            transition = profiler.runcall(
-                                gameplay_screen,
-                                screen,
-                                clock,
-                                config,
-                                FPS,
-                                stage,
-                                show_pause_overlay=not debug_mode,
-                                seed=seed_value,
-                                render_assets=render_assets,
-                                debug_mode=debug_mode,
-                            )
-                        finally:
-                            output_path = Path(args.profile_output)
-                            profiler.dump_stats(output_path)
-                            summary_path = output_path.with_suffix(".txt")
-                            stats = pstats.Stats(profiler).sort_stats("tottime")
-                            with summary_path.open("w", encoding="utf-8") as handle:
-                                stats.stream = handle
-                                stats.print_stats(50)
-                            print(f"Profile saved to {output_path} and {summary_path}")
-                    else:
-                        render_assets = build_render_assets(stage.tile_size)
-                        transition = gameplay_screen(
-                            screen,
-                            clock,
-                            config,
-                            FPS,
-                            stage,
-                            show_pause_overlay=not debug_mode,
-                            seed=seed_value,
-                            render_assets=render_assets,
-                            debug_mode=debug_mode,
-                        )
+                    gs = _profiled_gameplay_screen if args.profile else gameplay_screen
+                    transition = gs(
+                        screen,
+                        clock,
+                        config,
+                        FPS,
+                        stage,
+                        show_pause_overlay=not debug_mode,
+                        seed=seed_value,
+                        render_assets=render_assets,
+                        debug_mode=debug_mode,
+                    )
                 except SystemExit:
                     running = False
                     break
@@ -207,12 +216,10 @@ def main() -> None:
                     running = False
                     break
         elif next_screen == ScreenID.GAME_OVER:
-            game_data = pending_game_data
-            stage = pending_stage
-            config_payload = pending_config
-            pending_game_data = None
-            pending_stage = None
-            pending_config = None
+            game_data = incoming.game_data if incoming else None
+            stage = incoming.stage if incoming else None
+            config_payload = incoming.config if incoming else None
+            assert config_payload is not None
             if game_data is not None:
                 render_assets = build_render_assets(game_data.cell_size)
             elif stage is not None:
@@ -236,10 +243,6 @@ def main() -> None:
         if not transition:
             break
 
-        pending_stage = transition.stage
-        pending_game_data = transition.game_data
-        pending_config = transition.config
-        pending_seed = transition.seed
         if transition.next_screen == ScreenID.GAMEPLAY:
             title_seed_text = cli_seed_text
             title_seed_is_auto = cli_seed_is_auto
