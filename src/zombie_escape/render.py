@@ -768,7 +768,7 @@ def _draw_wall_shadows(
     outer_wall_cells: set[tuple[int, int]] | None,
     cell_size: int,
     light_source_pos: tuple[int, int] | None,
-    alpha: int = 54,
+    alpha: int = 68,
 ) -> None:
     if not wall_cells or cell_size <= 0 or light_source_pos is None:
         return

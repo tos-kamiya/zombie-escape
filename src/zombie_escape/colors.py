@@ -72,37 +72,39 @@ _DEFAULT_ENVIRONMENT_PALETTE = EnvironmentPalette(
 # Dark, desaturated palette that sells the "alone without a flashlight" vibe.
 _GLOOM_ENVIRONMENT_PALETTE = EnvironmentPalette(
     floor_primary=_adjust_color(
-        _DEFAULT_ENVIRONMENT_PALETTE.floor_primary, brightness=0.725, saturation=0.675
+        _DEFAULT_ENVIRONMENT_PALETTE.floor_primary, brightness=0.8, saturation=0.75
     ),
     floor_secondary=_adjust_color(
-        _DEFAULT_ENVIRONMENT_PALETTE.floor_secondary, brightness=0.74, saturation=0.65
+        _DEFAULT_ENVIRONMENT_PALETTE.floor_secondary, brightness=0.8, saturation=0.75
     ),
     fall_zone_primary=_adjust_color(
         _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_primary,
-        brightness=0.725,
-        saturation=0.675,
+        brightness=0.8,
+        saturation=0.75,
     ),
     fall_zone_secondary=_adjust_color(
         _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_secondary,
-        brightness=0.74,
-        saturation=0.65,
+        brightness=0.8,
+        saturation=0.75,
     ),
     outside=_adjust_color(
-        _DEFAULT_ENVIRONMENT_PALETTE.outside, brightness=0.7, saturation=0.625
+        _DEFAULT_ENVIRONMENT_PALETTE.outside, brightness=0.8, saturation=0.75
     ),
     inner_wall=_adjust_color(
-        _DEFAULT_ENVIRONMENT_PALETTE.inner_wall, brightness=0.775, saturation=0.7
+        _DEFAULT_ENVIRONMENT_PALETTE.inner_wall, brightness=0.8, saturation=0.75
     ),
     inner_wall_border=_adjust_color(
-        _DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border, brightness=0.775, saturation=0.7
+        _DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border,
+        brightness=0.8,
+        saturation=0.75,
     ),
     outer_wall=_adjust_color(
-        _DEFAULT_ENVIRONMENT_PALETTE.outer_wall, brightness=0.75, saturation=0.675
+        _DEFAULT_ENVIRONMENT_PALETTE.outer_wall, brightness=0.8, saturation=0.75
     ),
     outer_wall_border=_adjust_color(
         _DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border,
-        brightness=0.75,
-        saturation=0.675,
+        brightness=0.8,
+        saturation=0.75,
     ),
 )
 
