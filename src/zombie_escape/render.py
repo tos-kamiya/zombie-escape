@@ -295,19 +295,21 @@ def _get_hatch_pattern(
     fog_data: dict[str, Any],
     thickness: int,
     *,
-    pixel_scale: int = 1,
     color: tuple[int, int, int, int] | None = None,
 ) -> surface.Surface:
-    """Return cached ordered-dither tile surface (Bayer-style, optionally chunky)."""
+    """Return cached dot hatch tile surface (Bayer-ordered, optionally chunky)."""
     cache = fog_data.setdefault("hatch_patterns", {})
-    pixel_scale = max(1, pixel_scale)
-    key = (thickness, pixel_scale, color)
+    key = (thickness, color)
     if key in cache:
         return cache[key]
 
-    spacing = 20
+    spacing = 4
+    oversample = 3
     density = max(1, min(thickness, 16))
-    pattern = pygame.Surface((spacing, spacing), pygame.SRCALPHA)
+    pattern_size = spacing * 8
+    hi_spacing = spacing * oversample
+    hi_pattern_size = pattern_size * oversample
+    pattern = pygame.Surface((hi_pattern_size, hi_pattern_size), pygame.SRCALPHA)
 
     # 8x8 Bayer matrix values 0..63 for ordered dithering
     bayer = [
@@ -321,14 +323,20 @@ def _get_hatch_pattern(
         [63, 31, 55, 23, 61, 29, 53, 21],
     ]
     threshold = int((density / 16) * 64)
-    for y in range(spacing):
-        for x in range(spacing):
-            if bayer[y % 8][x % 8] < threshold:
-                pattern.set_at((x, y), color or (0, 0, 0, 255))
+    dot_radius = max(
+        1,
+        min(hi_spacing, int(math.ceil((density / 16) * hi_spacing))),
+    )
+    dot_color = color or (0, 0, 0, 255)
+    for grid_y in range(8):
+        for grid_x in range(8):
+            if bayer[grid_y][grid_x] < threshold:
+                cx = grid_x * hi_spacing + hi_spacing // 2
+                cy = grid_y * hi_spacing + hi_spacing // 2
+                pygame.draw.circle(pattern, dot_color, (cx, cy), dot_radius)
 
-    if pixel_scale > 1:
-        scaled_size = (spacing * pixel_scale, spacing * pixel_scale)
-        pattern = pygame.transform.scale(pattern, scaled_size)
+    if oversample > 1:
+        pattern = pygame.transform.smoothscale(pattern, (pattern_size, pattern_size))
 
     cache[key] = pattern
     return pattern
@@ -369,7 +377,6 @@ def _get_fog_overlay_surfaces(
         pattern = _get_hatch_pattern(
             fog_data,
             ring.thickness,
-            pixel_scale=assets.fog_hatch_pixel_scale,
             color=base_color,
         )
         p_w, p_h = pattern.get_size()

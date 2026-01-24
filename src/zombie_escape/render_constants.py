@@ -30,7 +30,6 @@ class RenderAssets:
     player_radius: int
     fov_radius: int
     fog_radius_scale: float
-    fog_hatch_pixel_scale: int
     fog_rings: list[FogRing]
     footprint_radius: int
     footprint_overview_radius: int
@@ -42,7 +41,6 @@ class RenderAssets:
 
 
 FOG_RADIUS_SCALE = 1.2
-FOG_HATCH_PIXEL_SCALE = 2
 
 FLASHLIGHT_FOG_SCALE_STEP = 0.3
 FLASHLIGHT_HATCH_EXTRA_SCALE = 0.12
@@ -75,7 +73,6 @@ def build_render_assets(cell_size: int) -> RenderAssets:
         player_radius=PLAYER_RADIUS,
         fov_radius=FOV_RADIUS,
         fog_radius_scale=FOG_RADIUS_SCALE,
-        fog_hatch_pixel_scale=FOG_HATCH_PIXEL_SCALE,
         fog_rings=FOG_RINGS,
         footprint_radius=FOOTPRINT_RADIUS,
         footprint_overview_radius=FOOTPRINT_OVERVIEW_RADIUS,
@@ -98,11 +95,11 @@ __all__ = [
     "FogRing",
     "RenderAssets",
     "FOG_RADIUS_SCALE",
-    "FLASHLIGHT_FOG_SCALE_STEP",
-    "FLASHLIGHT_HATCH_EXTRA_SCALE",
     "SHADOW_OVERSAMPLE",
     "SHADOW_STEPS",
     "SHADOW_MIN_RATIO",
     "SHADOW_RADIUS_RATIO",
+    "FLASHLIGHT_FOG_SCALE_STEP",
+    "FLASHLIGHT_HATCH_EXTRA_SCALE",
     "build_render_assets",
 ]
