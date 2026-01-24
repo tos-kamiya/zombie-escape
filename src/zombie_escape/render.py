@@ -41,6 +41,10 @@ from .render_constants import (
     FALLING_DUST_COLOR,
     FALLING_WHIRLWIND_COLOR,
     FALLING_ZOMBIE_COLOR,
+    SHADOW_MIN_RATIO,
+    SHADOW_OVERSAMPLE,
+    SHADOW_RADIUS_RATIO,
+    SHADOW_STEPS,
 )
 
 _SHADOW_TILE_CACHE: dict[tuple[int, int, float], surface.Surface] = {}
@@ -57,34 +61,45 @@ def _get_shadow_tile_surface(
     if key in _SHADOW_TILE_CACHE:
         return _SHADOW_TILE_CACHE[key]
     size = key[0]
-    surf = pygame.Surface((size, size), pygame.SRCALPHA)
+    oversample = SHADOW_OVERSAMPLE
+    render_size = size * oversample
+    render_surf = pygame.Surface((render_size, render_size), pygame.SRCALPHA)
     base_alpha = key[1]
     if edge_softness <= 0:
-        surf.fill((0, 0, 0, base_alpha))
+        render_surf.fill((0, 0, 0, base_alpha))
+        if oversample > 1:
+            surf = pygame.transform.smoothscale(render_surf, (size, size))
+        else:
+            surf = render_surf
         _SHADOW_TILE_CACHE[key] = surf
         return surf
 
     softness = max(0.0, min(1.0, edge_softness))
-    fade_band = max(1, int(size * softness))
-    base_radius = max(1, int(size * 0.18))
+    fade_band = max(1, int(render_size * softness))
+    base_radius = max(1, int(render_size * SHADOW_RADIUS_RATIO))
 
-    def draw_layer(inset: int, layer_alpha: int) -> None:
-        rect_size = size - inset * 2
+    render_surf.fill((0, 0, 0, 0))
+    steps = SHADOW_STEPS
+    min_ratio = SHADOW_MIN_RATIO
+    for idx in range(steps):
+        t = idx / (steps - 1) if steps > 1 else 1.0
+        inset = int(fade_band * t)
+        rect_size = render_size - inset * 2
         if rect_size <= 0:
-            return
+            continue
         radius = max(0, base_radius - inset)
+        layer_alpha = int(base_alpha * (min_ratio + (1.0 - min_ratio) * t))
         pygame.draw.rect(
-            surf,
+            render_surf,
             (0, 0, 0, layer_alpha),
             pygame.Rect(inset, inset, rect_size, rect_size),
             border_radius=radius,
         )
 
-    outer_alpha = int(base_alpha * 0.45)
-    mid_alpha = int(base_alpha * 0.7)
-    draw_layer(0, outer_alpha)
-    draw_layer(max(1, fade_band // 2), mid_alpha)
-    draw_layer(fade_band, base_alpha)
+    if oversample > 1:
+        surf = pygame.transform.smoothscale(render_surf, (size, size))
+    else:
+        surf = render_surf
     _SHADOW_TILE_CACHE[key] = surf
     return surf
 
@@ -723,6 +738,16 @@ def _draw_play_area(
     return xs, ys, xe, ye, outside_cells
 
 
+def abs_clip(value: float, min_v: float, max_v: float) -> float:
+    value_sign = 1.0 if value >= 0.0 else -1.0
+    value = abs(value)
+    if value < min_v:
+        value = min_v
+    elif value > max_v:
+        value = max_v
+    return value_sign * value
+
+
 def _draw_wall_shadows(
     screen: surface.Surface,
     camera: Camera,
@@ -754,24 +779,25 @@ def _draw_wall_shadows(
     shadow_layer.fill((0, 0, 0, 0))
     screen_rect = screen.get_rect()
     px, py = light_source_pos
-    offset = max(2, int(cell_size * 0.3 * (shadow_size / cell_size) * 1.2))
     drew = False
+    clip_max = shadow_size * 0.25
     for cell_x, cell_y in inner_wall_cells:
         world_x = cell_x * cell_size
         world_y = cell_y * cell_size
+        wall_rect = pygame.Rect(world_x, world_y, cell_size, cell_size)
+        wall_screen_rect = camera.apply_rect(wall_rect)
+        if not wall_screen_rect.colliderect(screen_rect):
+            continue
         center_x = world_x + cell_size / 2
         center_y = world_y + cell_size / 2
-        dx = center_x - px
-        dy = center_y - py
-        dist = math.hypot(dx, dy)
-        if dist <= 1e-3:
-            continue
-        nx = dx / dist
-        ny = dy / dist
+        dx = (center_x - px) * 0.5
+        dy = (center_y - py) * 0.5
+        dx = int(abs_clip(dx, 0, clip_max))
+        dy = int(abs_clip(dy, 0, clip_max))
         shadow_rect = pygame.Rect(0, 0, shadow_size, shadow_size)
         shadow_rect.center = (
-            int(center_x + nx * offset),
-            int(center_y + ny * offset),
+            int(center_x + dx),
+            int(center_y + dy),
         )
         shadow_screen_rect = camera.apply_rect(shadow_rect)
         if not shadow_screen_rect.colliderect(screen_rect):
@@ -1195,7 +1221,9 @@ def draw(
         outer_wall_cells=game_data.layout.outer_wall_cells,
         cell_size=game_data.cell_size,
         light_source_pos=(
-            None if (stage and stage.endurance_stage and state.dawn_ready) else fov_target.rect.center
+            None
+            if (stage and stage.endurance_stage and state.dawn_ready)
+            else fov_target.rect.center
         )
         if fov_target
         else None,

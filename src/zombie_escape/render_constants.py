@@ -53,6 +53,11 @@ FOOTPRINT_COLOR = (110, 200, 255)
 FOOTPRINT_LIFETIME_MS = 135000
 FOOTPRINT_MIN_FADE = 0.3
 
+SHADOW_OVERSAMPLE = 2
+SHADOW_STEPS = 10
+SHADOW_MIN_RATIO = 0.0
+SHADOW_RADIUS_RATIO = 0.3
+
 FOG_RINGS = [
     FogRing(radius_factor=0.529, thickness=2),
     FogRing(radius_factor=0.639, thickness=4),
@@ -95,5 +100,9 @@ __all__ = [
     "FOG_RADIUS_SCALE",
     "FLASHLIGHT_FOG_SCALE_STEP",
     "FLASHLIGHT_HATCH_EXTRA_SCALE",
+    "SHADOW_OVERSAMPLE",
+    "SHADOW_STEPS",
+    "SHADOW_MIN_RATIO",
+    "SHADOW_RADIUS_RATIO",
     "build_render_assets",
 ]
