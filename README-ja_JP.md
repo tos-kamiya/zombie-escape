@@ -19,6 +19,7 @@
 <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/screenshot1-ja.png" width="400">
 <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/screenshot2.png" width="400">
 <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/screenshot3.png" width="400">
+<img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/screenshot4.png" width="400">
 
 ## 操作方法
 
