@@ -646,7 +646,7 @@ def _draw_play_area(
     palette: Any,
     outer_rect: tuple[int, int, int, int],
     outside_rects: list[pygame.Rect],
-    fall_zone_cells: set[tuple[int, int]],
+    fall_spawn_cells: set[tuple[int, int]],
 ) -> tuple[int, int, int, int, set[tuple[int, int]]]:
     xs, ys, xe, ye = outer_rect
     xs //= assets.internal_wall_grid_snap
@@ -694,7 +694,7 @@ def _draw_play_area(
             if (x, y) in outside_cells:
                 continue
             use_secondary = ((x // 2) + (y // 2)) % 2 == 0
-            if (x, y) in fall_zone_cells:
+            if (x, y) in fall_spawn_cells:
                 color = (
                     palette.fall_zone_secondary
                     if use_secondary
@@ -1183,7 +1183,7 @@ def draw(
         palette,
         outer_rect,
         outside_rects,
-        game_data.layout.fall_zone_cells,
+        game_data.layout.fall_spawn_cells,
     )
     _draw_wall_shadows(
         screen,

@@ -31,7 +31,7 @@ class LevelLayout:
     walkable_cells: list[pygame.Rect]
     outer_wall_cells: set[tuple[int, int]]
     wall_cells: set[tuple[int, int]]
-    fall_zone_cells: set[tuple[int, int]]
+    fall_spawn_cells: set[tuple[int, int]]
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
 
 

@@ -214,7 +214,7 @@ def generate_level_from_blueprint(
     game_data.layout.walkable_cells = walkable_cells
     game_data.layout.outer_wall_cells = outer_wall_cells
     game_data.layout.wall_cells = wall_cells
-    game_data.layout.fall_zone_cells = _expand_zone_cells(
+    game_data.layout.fall_spawn_cells = _expand_zone_cells(
         stage.fall_spawn_zones,
         grid_cols=stage.grid_cols,
         grid_rows=stage.grid_rows,
