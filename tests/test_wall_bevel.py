@@ -2,8 +2,8 @@ import pygame
 
 from zombie_escape.entities import (
     _build_beveled_polygon,
-    circle_polygon_collision,
-    rect_polygon_collision,
+    _circle_polygon_collision,
+    _rect_polygon_collision,
 )
 
 
@@ -17,5 +17,5 @@ def test_beveled_polygon_top_left_cut() -> None:
 def test_rect_collision_respects_bevel() -> None:
     polygon = _build_beveled_polygon(10, 10, 3, (True, False, False, False))
     solid_rect = pygame.Rect(4, 4, 2, 2)
-    assert not circle_polygon_collision((0, 0), 0, polygon)
-    assert rect_polygon_collision(solid_rect, polygon)
+    assert not _circle_polygon_collision((0, 0), 0, polygon)
+    assert _rect_polygon_collision(solid_rect, polygon)
