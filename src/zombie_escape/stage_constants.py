@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .entities_constants import ZOMBIE_AGING_DURATION_FRAMES
 from .gameplay_constants import SURVIVOR_SPAWN_RATE
+from .level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from .models import Stage
 
 STAGES: list[Stage] = [
@@ -174,6 +175,55 @@ STAGES: list[Stage] = [
             (17, 17, 12, 12),
         ],
         initial_flashlight_count=5,
+        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+    ),
+    Stage(
+        id="stage13",
+        name_key="stages.stage13.name",
+        description_key="stages.stage13.description",
+        available=True,
+        wall_algorithm="grid_wire",
+        buddy_required_count=1,
+        requires_fuel=True,
+        exterior_spawn_weight=0.6,
+        interior_spawn_weight=0.1,
+        interior_fall_spawn_weight=0.3,
+        zombie_normal_ratio=0.4,
+        zombie_tracker_ratio=0.3,
+        zombie_wall_follower_ratio=0.3,
+        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        initial_flashlight_count=3,
+        fall_spawn_zones=[
+            (x, y, 2, 2)
+            for y in range(2, DEFAULT_GRID_ROWS - 2, 4)
+            for x in range(2, DEFAULT_GRID_COLS - 2, 4)
+        ],
+    ),
+    Stage(
+        id="stage14",
+        name_key="stages.stage14.name",
+        description_key="stages.stage14.description",
+        grid_cols=42,
+        grid_rows=27,
+        available=False,
+        requires_fuel=True,
+        exterior_spawn_weight=0.2,
+        interior_spawn_weight=0.1,
+        interior_fall_spawn_weight=0.7,
+        fall_spawn_zones=[
+            (4, 10, 3, 3),
+            (5, 20, 3, 3),
+            (15, 17, 3, 3),
+            (22, 16, 3, 3),
+            (17, 20, 3, 3),
+            (26, 22, 3, 3),
+            (31, 17, 3, 3),
+            (33, 10, 3, 3),
+            (34, 7, 3, 3),
+            (35, 13, 3, 3),
+        ],
+        initial_flashlight_count=5,
+        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

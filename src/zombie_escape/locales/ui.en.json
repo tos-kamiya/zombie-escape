@@ -115,6 +115,10 @@
       "stage12": {
         "name": "#12 OVERHEAD HAZARD",
         "description": "An open factory floor. Zombies may fall from above."
+      },
+      "stage13": {
+        "name": "#13 Rescue Buddy 3",
+        "description": "Rescue your buddy. Zombies may fall from above."
       }
     },
     "status": {
