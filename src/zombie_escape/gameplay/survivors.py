@@ -20,7 +20,8 @@ from .constants import SURVIVOR_MESSAGE_DURATION_MS, SURVIVOR_SPEED_PENALTY_PER_
 from ..localization import translate_dict, translate_list
 from ..models import GameData, ProgressState
 from ..rng import get_rng
-from ..entities import Survivor, Zombie, spritecollideany_walls, WallIndex
+from ..entities import Survivor, Zombie, spritecollideany_walls
+from ..world_grid import WallIndex
 from .spawn import _create_zombie
 from .utils import find_nearby_offscreen_spawn_position, rect_visible_on_screen
 

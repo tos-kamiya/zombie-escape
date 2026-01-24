@@ -76,6 +76,7 @@ from .render_assets import (
 )
 from .rng import get_rng
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
+from .world_grid import WallIndex, apply_tile_edge_nudge, walls_for_radius
 
 RNG = get_rng()
 
@@ -156,7 +157,7 @@ class Wall(pygame.sprite.Sprite):
     def collides_rect(self: Self, rect_obj: rect.Rect) -> bool:
         if self._collision_polygon is None:
             return self.rect.colliderect(rect_obj)
-        return rect_polygon_collision(rect_obj, self._collision_polygon)
+        return _rect_polygon_collision(rect_obj, self._collision_polygon)
 
     def _collides_circle(
         self: Self, center: tuple[float, float], radius: float
@@ -165,7 +166,7 @@ class Wall(pygame.sprite.Sprite):
             return False
         if self._collision_polygon is None:
             return True
-        return circle_polygon_collision(center, radius, self._collision_polygon)
+        return _circle_polygon_collision(center, radius, self._collision_polygon)
 
     def set_palette(
         self: Self, palette: EnvironmentPalette | None, *, force: bool = False
@@ -238,20 +239,6 @@ MovementStrategy = Callable[
     ],
     tuple[float, float],
 ]
-WallIndex = dict[tuple[int, int], list[Wall]]
-
-
-def build_wall_index(walls: Iterable[Wall], *, cell_size: int) -> WallIndex:
-    index: WallIndex = {}
-    for wall in walls:
-        if not wall.alive():
-            continue
-        cell_x = int(wall.rect.centerx // cell_size)
-        cell_y = int(wall.rect.centery // cell_size)
-        index.setdefault((cell_x, cell_y), []).append(wall)
-    return index
-
-
 def _sprite_center_and_radius(
     sprite: pygame.sprite.Sprite,
 ) -> tuple[tuple[int, int], float]:
@@ -261,111 +248,6 @@ def _sprite_center_and_radius(
     else:
         radius = float(max(sprite.rect.width, sprite.rect.height) / 2)
     return center, radius
-
-
-def walls_for_radius(
-    wall_index: WallIndex,
-    center: tuple[float, float],
-    radius: float,
-    *,
-    cell_size: int,
-    grid_cols: int | None = None,
-    grid_rows: int | None = None,
-) -> list["Wall"]:
-    if grid_cols is None or grid_rows is None:
-        grid_cols, grid_rows = _infer_grid_size_from_index(wall_index)
-    if grid_cols is None or grid_rows is None:
-        return []
-    search_radius = radius + cell_size
-    min_x = max(0, int((center[0] - search_radius) // cell_size))
-    max_x = min(grid_cols - 1, int((center[0] + search_radius) // cell_size))
-    min_y = max(0, int((center[1] - search_radius) // cell_size))
-    max_y = min(grid_rows - 1, int((center[1] + search_radius) // cell_size))
-    candidates: list[Wall] = []
-    for cy in range(min_y, max_y + 1):
-        for cx in range(min_x, max_x + 1):
-            candidates.extend(wall_index.get((cx, cy), []))
-    return candidates
-
-
-def apply_tile_edge_nudge(
-    x: float,
-    y: float,
-    dx: float,
-    dy: float,
-    *,
-    cell_size: int,
-    wall_cells: set[tuple[int, int]] | None,
-    bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] | None = None,
-    grid_cols: int,
-    grid_rows: int,
-    strength: float = 0.03,
-    edge_margin_ratio: float = 0.15,
-    min_margin: float = 2.0,
-) -> tuple[float, float]:
-    if dx == 0 and dy == 0:
-        return dx, dy
-    if cell_size <= 0 or not wall_cells:
-        return dx, dy
-    cell_x = int(x // cell_size)
-    cell_y = int(y // cell_size)
-    if cell_x < 0 or cell_y < 0 or cell_x >= grid_cols or cell_y >= grid_rows:
-        return dx, dy
-    speed = math.hypot(dx, dy)
-    if speed <= 0:
-        return dx, dy
-
-    edge_margin = max(min_margin, cell_size * edge_margin_ratio)
-    left_dist = x - (cell_x * cell_size)
-    right_dist = ((cell_x + 1) * cell_size) - x
-    top_dist = y - (cell_y * cell_size)
-    bottom_dist = ((cell_y + 1) * cell_size) - y
-
-    def apply_push(dist: float, direction: float) -> float:
-        if dist >= edge_margin:
-            return 0.0
-        ratio = (edge_margin - dist) / edge_margin
-        return ratio * speed * strength * direction
-
-    if (cell_x - 1, cell_y) in wall_cells:
-        dx += apply_push(left_dist, 1.0)
-    if (cell_x + 1, cell_y) in wall_cells:
-        dx += apply_push(right_dist, -1.0)
-    if (cell_x, cell_y - 1) in wall_cells:
-        dy += apply_push(top_dist, 1.0)
-    if (cell_x, cell_y + 1) in wall_cells:
-        dy += apply_push(bottom_dist, -1.0)
-
-    def apply_corner_push(dist_a: float, dist_b: float, boost: float = 1.0) -> float:
-        if dist_a >= edge_margin or dist_b >= edge_margin:
-            return 0.0
-        ratio = (edge_margin - min(dist_a, dist_b)) / edge_margin
-        return ratio * speed * strength * boost
-
-    if bevel_corners:
-        boosted = 1.25
-        corner_wall = bevel_corners.get((cell_x - 1, cell_y - 1))
-        if corner_wall and corner_wall[2]:
-            push = apply_corner_push(left_dist, top_dist, boosted)
-            dx += push
-            dy += push
-        corner_wall = bevel_corners.get((cell_x + 1, cell_y - 1))
-        if corner_wall and corner_wall[3]:
-            push = apply_corner_push(right_dist, top_dist, boosted)
-            dx -= push
-            dy += push
-        corner_wall = bevel_corners.get((cell_x + 1, cell_y + 1))
-        if corner_wall and corner_wall[0]:
-            push = apply_corner_push(right_dist, bottom_dist, boosted)
-            dx -= push
-            dy -= push
-        corner_wall = bevel_corners.get((cell_x - 1, cell_y + 1))
-        if corner_wall and corner_wall[1]:
-            push = apply_corner_push(left_dist, bottom_dist, boosted)
-            dx += push
-            dy -= push
-
-    return dx, dy
 
 
 def _walls_for_sprite(
@@ -385,14 +267,6 @@ def _walls_for_sprite(
         grid_cols=grid_cols,
         grid_rows=grid_rows,
     )
-
-
-def _infer_grid_size_from_index(wall_index: WallIndex) -> tuple[int | None, int | None]:
-    if not wall_index:
-        return None, None
-    max_col = max(cell[0] for cell in wall_index)
-    max_row = max(cell[1] for cell in wall_index)
-    return max_col + 1, max_row + 1
 
 
 def _circle_rect_collision(
@@ -515,7 +389,7 @@ def _line_of_sight_clear(
     return True
 
 
-def rect_polygon_collision(
+def _rect_polygon_collision(
     rect_obj: rect.Rect, polygon: Sequence[tuple[float, float]]
 ) -> bool:
     min_x = min(p[0] for p in polygon)
@@ -554,7 +428,7 @@ def rect_polygon_collision(
     return False
 
 
-def circle_polygon_collision(
+def _circle_polygon_collision(
     center: tuple[float, float],
     radius: float,
     polygon: Sequence[tuple[float, float]],
@@ -570,7 +444,7 @@ def circle_polygon_collision(
     return False
 
 
-def collide_sprite_wall(
+def _collide_sprite_wall(
     sprite: pygame.sprite.Sprite, wall: pygame.sprite.Sprite
 ) -> bool:
     if hasattr(sprite, "radius"):
@@ -600,7 +474,7 @@ def _spritecollide_walls(
         return cast(
             list[Wall],
             pygame.sprite.spritecollide(
-                sprite, walls, dokill, collided=collide_sprite_wall
+                sprite, walls, dokill, collided=_collide_sprite_wall
             ),
         )
     if cell_size is None:
@@ -614,7 +488,7 @@ def _spritecollide_walls(
     )
     if not candidates:
         return []
-    hit_list = [wall for wall in candidates if collide_sprite_wall(sprite, wall)]
+    hit_list = [wall for wall in candidates if _collide_sprite_wall(sprite, wall)]
     if dokill:
         for wall in hit_list:
             wall.kill()
@@ -634,7 +508,7 @@ def spritecollideany_walls(
         return cast(
             Wall | None,
             pygame.sprite.spritecollideany(
-                sprite, walls, collided=collide_sprite_wall
+                sprite, walls, collided=_collide_sprite_wall
             ),
         )
     if cell_size is None:
@@ -646,7 +520,7 @@ def spritecollideany_walls(
         grid_cols=grid_cols,
         grid_rows=grid_rows,
     ):
-        if collide_sprite_wall(sprite, wall):
+        if _collide_sprite_wall(sprite, wall):
             return wall
     return None
 
@@ -969,7 +843,7 @@ def _zombie_tracker_movement(
     if not is_in_sight:
         _zombie_update_tracker_target(zombie, footprints, walls)
         if zombie.tracker_target_pos is not None:
-            return zombie_move_toward(zombie, zombie.tracker_target_pos)
+            return _zombie_move_toward(zombie, zombie.tracker_target_pos)
         return _zombie_wander_move(
             zombie,
             walls,
@@ -978,10 +852,10 @@ def _zombie_tracker_movement(
             grid_rows=grid_rows,
             outer_wall_cells=outer_wall_cells,
         )
-    return zombie_move_toward(zombie, player_center)
+    return _zombie_move_toward(zombie, player_center)
 
 
-def zombie_wander_movement(
+def _zombie_wander_movement(
     zombie: Zombie,
     _player_center: tuple[int, int],
     walls: list[Wall],
@@ -1001,7 +875,7 @@ def zombie_wander_movement(
     )
 
 
-def zombie_wall_follow_has_wall(
+def _zombie_wall_follow_has_wall(
     zombie: Zombie,
     walls: list[Wall],
     angle: float,
@@ -1097,7 +971,7 @@ def _zombie_wall_follow_movement(
             zombie.wall_follow_last_side_has_wall = left_wall or right_wall
         else:
             if is_in_sight:
-                return zombie_move_toward(zombie, player_center)
+                return _zombie_move_toward(zombie, player_center)
             return _zombie_wander_move(
                 zombie,
                 walls,
@@ -1124,7 +998,7 @@ def _zombie_wall_follow_movement(
         and now - zombie.wall_follow_last_wall_time <= ZOMBIE_WALL_FOLLOW_LOST_WALL_MS
     )
     if is_in_sight:
-        return zombie_move_toward(zombie, player_center)
+        return _zombie_move_toward(zombie, player_center)
 
     turn_step = math.radians(5)
     if side_has_wall or forward_has_wall:
@@ -1157,7 +1031,7 @@ def _zombie_wall_follow_movement(
     return move_x, move_y
 
 
-def zombie_normal_movement(
+def _zombie_normal_movement(
     zombie: Zombie,
     player_center: tuple[int, int],
     walls: list[Wall],
@@ -1177,7 +1051,7 @@ def zombie_normal_movement(
             grid_rows=grid_rows,
             outer_wall_cells=outer_wall_cells,
         )
-    return zombie_move_toward(zombie, player_center)
+    return _zombie_move_toward(zombie, player_center)
 
 
 def _zombie_update_tracker_target(
@@ -1287,13 +1161,13 @@ def _zombie_wander_move(
                 if inward_cell not in outer_wall_cells:
                     target_x = (inward_cell[0] + 0.5) * cell_size
                     target_y = (inward_cell[1] + 0.5) * cell_size
-                    return zombie_move_toward(zombie, (target_x, target_y))
+                    return _zombie_move_toward(zombie, (target_x, target_y))
             if at_y_edge:
                 inward_cell = (cell_x, 1) if cell_y == 0 else (cell_x, grid_rows - 2)
                 if inward_cell not in outer_wall_cells:
                     target_x = (inward_cell[0] + 0.5) * cell_size
                     target_y = (inward_cell[1] + 0.5) * cell_size
-                    return zombie_move_toward(zombie, (target_x, target_y))
+                    return _zombie_move_toward(zombie, (target_x, target_y))
         else:
 
             def path_clear(next_x: float, next_y: float) -> bool:
@@ -1322,7 +1196,7 @@ def _zombie_wander_move(
     return move_x, move_y
 
 
-def zombie_move_toward(
+def _zombie_move_toward(
     zombie: Zombie, target: tuple[float, float]
 ) -> tuple[float, float]:
     dx = target[0] - zombie.x
@@ -1371,7 +1245,7 @@ class Zombie(pygame.sprite.Sprite):
             elif wall_follower:
                 movement_strategy = _zombie_wall_follow_movement
             else:
-                movement_strategy = zombie_normal_movement
+                movement_strategy = _zombie_normal_movement
         self.movement_strategy = movement_strategy
         self.tracker_target_pos: tuple[float, float] | None = None
         self.tracker_target_time: int | None = None

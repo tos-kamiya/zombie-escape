@@ -10,10 +10,7 @@ from ..entities import (
     Player,
     Survivor,
     Wall,
-    WallIndex,
     Zombie,
-    apply_tile_edge_nudge,
-    walls_for_radius,
 )
 from ..entities_constants import (
     PLAYER_SPEED,
@@ -21,6 +18,7 @@ from ..entities_constants import (
     ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
 )
 from ..models import GameData
+from ..world_grid import WallIndex, apply_tile_edge_nudge, walls_for_radius
 from .constants import MAX_ZOMBIES
 from .spawn import spawn_weighted_zombie, update_falling_zombies
 from .survivors import update_survivors

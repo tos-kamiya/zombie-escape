@@ -42,7 +42,7 @@ from ..input_utils import (
     read_gamepad_move,
 )
 from ..gameplay.spawn import _alive_waiting_cars
-from ..entities import build_wall_index
+from ..world_grid import build_wall_index
 from ..localization import translate as tr
 from ..models import Stage
 from ..render import draw, prewarm_fog_overlays, show_message
