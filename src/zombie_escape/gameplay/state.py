@@ -51,6 +51,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         dawn_carbonized=False,
         debug_mode=False,
         falling_zombies=[],
+        falling_spawn_carry=0,
         dust_rings=[],
     )
 

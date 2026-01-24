@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, Callable, Literal, Mapping, Sequence
 
 import pygame
 
@@ -39,6 +39,8 @@ from .utils import (
 )
 
 RNG = get_rng()
+
+FallScheduleResult = Literal["scheduled", "no_position", "blocked", "no_player"]
 
 __all__ = [
     "place_new_car",
@@ -129,7 +131,7 @@ def _pick_fall_spawn_position(
     game_data: GameData,
     *,
     min_distance: float,
-    attempts: int = 60,
+    attempts: int = 10,
     is_clear: Callable[[tuple[int, int]], bool] | None = None,
 ) -> tuple[int, int] | None:
     player = game_data.player
@@ -145,11 +147,10 @@ def _pick_fall_spawn_position(
     fov_radius = _fov_radius_for_flashlights(game_data.state.flashlight_count)
     min_dist_sq = min_distance * min_distance
     max_dist_sq = fov_radius * fov_radius
-    fall_spawn_list = list(fall_spawn_cells)
     wall_cells = game_data.layout.wall_cells
 
-    for _ in range(attempts):
-        cell_x, cell_y = RNG.choice(fall_spawn_list)
+    candidates: list[tuple[int, int]] = []
+    for cell_x, cell_y in fall_spawn_cells:
         if (cell_x, cell_y) in wall_cells:
             continue
         pos = (
@@ -161,20 +162,32 @@ def _pick_fall_spawn_position(
         dist_sq = dx * dx + dy * dy
         if dist_sq < min_dist_sq or dist_sq > max_dist_sq:
             continue
+        candidates.append(pos)
+
+    if not candidates:
+        return None
+
+    RNG.shuffle(candidates)
+    for pos in candidates[: max(1, min(attempts, len(candidates)))]:
         if is_clear is not None and not is_clear(pos):
             continue
         return pos
     return None
 
 
-def _schedule_falling_zombie(game_data: GameData, config: dict[str, Any]) -> bool:
+def _schedule_falling_zombie(
+    game_data: GameData,
+    config: dict[str, Any],
+    *,
+    allow_carry: bool = True,
+) -> FallScheduleResult:
     player = game_data.player
     if not player:
-        return False
+        return "no_player"
     state = game_data.state
     zombie_group = game_data.groups.zombie_group
     if len(zombie_group) + len(state.falling_zombies) >= MAX_ZOMBIES:
-        return False
+        return "blocked"
     min_distance = game_data.stage.tile_size * 0.5
     tracker, wall_follower = _pick_zombie_variant(game_data.stage)
 
@@ -194,7 +207,9 @@ def _schedule_falling_zombie(game_data: GameData, config: dict[str, Any]) -> boo
         is_clear=_candidate_clear,
     )
     if spawn_pos is None:
-        return False
+        if allow_carry:
+            state.falling_spawn_carry += 1
+        return "no_position"
     start_offset = game_data.stage.tile_size * 0.7
     start_pos = (int(spawn_pos[0]), int(spawn_pos[1] - start_offset))
     fall = FallingZombie(
@@ -208,7 +223,7 @@ def _schedule_falling_zombie(game_data: GameData, config: dict[str, Any]) -> boo
         wall_follower=wall_follower,
     )
     state.falling_zombies.append(fall)
-    return True
+    return "scheduled"
 
 
 def _create_zombie(
@@ -793,12 +808,26 @@ def spawn_weighted_zombie(
     """Spawn a zombie according to the stage's interior/exterior mix."""
     stage = game_data.stage
 
-    def _spawn(choice: str) -> bool:
-        if choice == "interior":
-            return _spawn_nearby_zombie(game_data, config) is not None
-        if choice == "fall":
-            return _schedule_falling_zombie(game_data, config)
+    def _spawn_interior() -> bool:
+        return _spawn_nearby_zombie(game_data, config) is not None
+
+    def _spawn_exterior() -> bool:
         return spawn_exterior_zombie(game_data, config) is not None
+
+    def _spawn_fall() -> FallScheduleResult:
+        result = _schedule_falling_zombie(game_data, config)
+        if result != "scheduled":
+            return result
+        state = game_data.state
+        if state.falling_spawn_carry > 0:
+            extra = _schedule_falling_zombie(
+                game_data,
+                config,
+                allow_carry=False,
+            )
+            if extra == "scheduled":
+                state.falling_spawn_carry = max(0, state.falling_spawn_carry - 1)
+        return "scheduled"
 
     interior_weight = max(0.0, stage.interior_spawn_weight)
     exterior_weight = max(0.0, stage.exterior_spawn_weight)
@@ -806,23 +835,24 @@ def spawn_weighted_zombie(
     total_weight = interior_weight + exterior_weight + fall_weight
     if total_weight <= 0:
         # Fall back to exterior spawns if weights are unset or invalid.
-        return _spawn("exterior")
+        return _spawn_exterior()
 
     pick = RNG.uniform(0, total_weight)
     if pick <= interior_weight:
-        if _spawn("interior"):
+        if _spawn_interior():
             return True
-        if _spawn("fall"):
+        fall_result = _spawn_fall()
+        if fall_result == "scheduled":
             return True
-        return _spawn("exterior")
+        return False
     if pick <= interior_weight + fall_weight:
-        if _spawn("fall"):
+        fall_result = _spawn_fall()
+        if fall_result == "scheduled":
             return True
-        if _spawn("interior"):
-            return True
-        return _spawn("exterior")
-    if _spawn("exterior"):
+        return False
+    if _spawn_exterior():
         return True
-    if _spawn("fall"):
+    fall_result = _spawn_fall()
+    if fall_result == "scheduled":
         return True
-    return _spawn("interior")
+    return False

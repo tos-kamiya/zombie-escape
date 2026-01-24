@@ -56,6 +56,7 @@
 - サバイバル用: `endurance_elapsed_ms`, `endurance_goal_ms`, `dawn_ready`, `dawn_prompt_at`, `dawn_carbonized`
 - 乱数/デバッグ: `seed`, `debug_mode`, `time_accel_active`
 - 落下スポーン: `falling_zombies`
+- 落下スポーン補助: `falling_spawn_carry`（落下スポーン位置が見つからない場合に繰り越すカウント）
 
 ### 3.2 ゲーム状態 (models.GameData)
 
@@ -158,6 +159,8 @@
 - `update_falling_zombies` (`gameplay/spawn.py`)
   - 落下中オブジェクトを管理し、着地時にゾンビを生成。
   - 着地時にホコリリングを生成（懐中電灯の有無に関係なく発生）。
+  - 位置が見つからない場合は落下スポーンを行わず、`falling_spawn_carry` を加算して次回へ繰り越す。
+  - 次の落下スポーンタイミングではキャリーを消費しつつ、最大2体分の落下をスケジュールする。
 - `spawn_survivors` / `place_buddies` / `place_fuel_can` / `place_flashlights` (`gameplay/spawn.py`)
   - ステージ別のアイテムやNPCを配置。
 
@@ -168,6 +171,7 @@
 - `update_entities(game_data, player_dx, player_dy, car_dx, car_dy, config)` (`gameplay/movement.py`)
   - 移動、カメラ更新、ゾンビAI、サバイバー移動など。
   - 壁セルに隣接するタイル端に近い場合、移動ベクトルをタイル中心へ3%だけ補正する（全キャラ共通）。
+  - （検討中）ゾンビのエイジングが極端に進んだ個体を自動で削除し、上限到達時の滞留を緩和する案。
 - `check_interactions(game_data, config)` (`gameplay/interactions.py`)
   - アイテム収集、車両/救助/敗北判定などの相互作用。
 - `update_footprints(game_data, config)` (`gameplay/footprints.py`)

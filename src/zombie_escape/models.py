@@ -102,6 +102,7 @@ class ProgressState:
     dawn_carbonized: bool
     debug_mode: bool
     falling_zombies: list[FallingZombie]
+    falling_spawn_carry: int
     dust_rings: list[DustRing]
 
 

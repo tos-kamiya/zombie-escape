@@ -578,6 +578,7 @@ def _draw_status_bar(
     seed: int | None = None,
     debug_mode: bool = False,
     zombie_group: sprite.Group | None = None,
+    falling_spawn_carry: int | None = None,
 ) -> None:
     """Render a compact status bar with current config flags and stage info."""
     bar_rect = pygame.Rect(
@@ -610,7 +611,6 @@ def _draw_status_bar(
     if steel_on:
         parts.append(tr("status.steel"))
     if debug_mode:
-        parts.append(tr("status.debug"))
         if zombie_group is not None:
             zombies = [z for z in zombie_group if z.alive()]
             total = len(zombies)
@@ -618,6 +618,8 @@ def _draw_status_bar(
             wall = sum(1 for z in zombies if z.wall_follower)
             normal = max(0, total - tracker - wall)
             parts.append(f"Z:{total} N:{normal} T:{tracker} W:{wall}")
+            if falling_spawn_carry is not None:
+                parts.append(f"C:{max(0, falling_spawn_carry)}")
 
     status_text = " | ".join(parts)
     color = LIGHT_GRAY
@@ -1272,6 +1274,7 @@ def draw(
         seed=state.seed,
         debug_mode=state.debug_mode,
         zombie_group=zombie_group,
+        falling_spawn_carry=state.falling_spawn_carry,
     )
     if do_flip:
         if present_fn:
