@@ -168,10 +168,8 @@ STAGES: list[Stage] = [
         interior_spawn_weight=0.2,
         interior_fall_spawn_weight=0.3,
         fall_spawn_zones=[
-            (4, 4, 11, 11),
-            (17, 4, 11, 11),
-            (4, 17, 11, 11),
-            (17, 17, 11, 11),
+            (2, 2, 14, 14),
+            (16, 16, 14, 14),
         ],
         initial_flashlight_count=5,
     ),
