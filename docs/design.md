@@ -12,7 +12,7 @@
   - `screens/__init__.py` に画面遷移と表示ユーティリティ。
 - `src/zombie_escape/gameplay/*.py`
   - ゲームロジックの分割モジュール。初期化、スポーン、移動、当たり判定、勝敗条件など。
-- `src/zombie_escape/entities.py`
+- `src/zombie_escape/entities.py`, `src/zombie_escape/world_grid.py`
   - `pygame.sprite.Sprite` を使ったゲーム内エンティティ定義と衝突判定補助。
 - `src/zombie_escape/models.py`
   - 進行状態やステージ情報のデータ構造（`dataclass`）。
