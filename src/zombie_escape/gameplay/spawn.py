@@ -135,19 +135,27 @@ def _pick_fall_spawn_position(
     player = game_data.player
     if not player:
         return None
-    walkable_cells = game_data.layout.walkable_cells
-    if not walkable_cells:
+    fall_zone_cells = game_data.layout.fall_zone_cells
+    if not fall_zone_cells:
         return None
     car = game_data.car
     target_sprite = car if player.in_car and car and car.alive() else player
     target_center = target_sprite.rect.center
+    cell_size = game_data.cell_size
     fov_radius = _fov_radius_for_flashlights(game_data.state.flashlight_count)
     min_dist_sq = min_distance * min_distance
     max_dist_sq = fov_radius * fov_radius
+    fall_zone_list = list(fall_zone_cells)
+    wall_cells = game_data.layout.wall_cells
 
     for _ in range(attempts):
-        cell = RNG.choice(walkable_cells)
-        pos = (cell.centerx, cell.centery)
+        cell_x, cell_y = RNG.choice(fall_zone_list)
+        if (cell_x, cell_y) in wall_cells:
+            continue
+        pos = (
+            int(cell_x * cell_size + cell_size // 2),
+            int(cell_y * cell_size + cell_size // 2),
+        )
         dx = pos[0] - target_center[0]
         dy = pos[1] - target_center[1]
         dist_sq = dx * dx + dy * dy

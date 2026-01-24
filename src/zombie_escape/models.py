@@ -31,6 +31,7 @@ class LevelLayout:
     walkable_cells: list[pygame.Rect]
     outer_wall_cells: set[tuple[int, int]]
     wall_cells: set[tuple[int, int]]
+    fall_zone_cells: set[tuple[int, int]]
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
 
 
@@ -157,6 +158,7 @@ class Stage:
     exterior_spawn_weight: float = 1.0
     interior_spawn_weight: float = 0.0
     interior_fall_spawn_weight: float = 0.0
+    fall_spawn_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
     zombie_tracker_ratio: float = 0.0
     zombie_wall_follower_ratio: float = 0.0
     zombie_normal_ratio: float = 1.0

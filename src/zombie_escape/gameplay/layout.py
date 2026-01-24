@@ -23,6 +23,26 @@ def _rect_for_cell(x_idx: int, y_idx: int, cell_size: int) -> pygame.Rect:
     )
 
 
+def _expand_zone_cells(
+    zones: list[tuple[int, int, int, int]],
+    *,
+    grid_cols: int,
+    grid_rows: int,
+) -> set[tuple[int, int]]:
+    cells: set[tuple[int, int]] = set()
+    for col, row, width, height in zones:
+        if width <= 0 or height <= 0:
+            continue
+        start_x = max(0, col)
+        start_y = max(0, row)
+        end_x = min(grid_cols, col + width)
+        end_y = min(grid_rows, row + height)
+        for y in range(start_y, end_y):
+            for x in range(start_x, end_x):
+                cells.add((x, y))
+    return cells
+
+
 def generate_level_from_blueprint(
     game_data: GameData, config: dict[str, Any]
 ) -> dict[str, list[pygame.Rect]]:
@@ -194,6 +214,11 @@ def generate_level_from_blueprint(
     game_data.layout.walkable_cells = walkable_cells
     game_data.layout.outer_wall_cells = outer_wall_cells
     game_data.layout.wall_cells = wall_cells
+    game_data.layout.fall_zone_cells = _expand_zone_cells(
+        stage.fall_spawn_zones,
+        grid_cols=stage.grid_cols,
+        grid_rows=stage.grid_rows,
+    )
     game_data.layout.bevel_corners = bevel_corners
 
     return {

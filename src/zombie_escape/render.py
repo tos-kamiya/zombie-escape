@@ -11,6 +11,8 @@ from pygame import sprite, surface
 from .colors import (
     BLACK,
     BLUE,
+    FALL_ZONE_FLOOR_PRIMARY,
+    FALL_ZONE_FLOOR_SECONDARY,
     FOOTPRINT_COLOR,
     LIGHT_GRAY,
     ORANGE,
@@ -646,6 +648,7 @@ def _draw_play_area(
     palette: Any,
     outer_rect: tuple[int, int, int, int],
     outside_rects: list[pygame.Rect],
+    fall_zone_cells: set[tuple[int, int]],
 ) -> tuple[int, int, int, int, set[tuple[int, int]]]:
     xs, ys, xe, ye = outer_rect
     xs //= assets.internal_wall_grid_snap
@@ -692,20 +695,28 @@ def _draw_play_area(
         for x in range(start_x, end_x):
             if (x, y) in outside_cells:
                 continue
-            if ((x // 2) + (y // 2)) % 2 == 0:
-                lx, ly = (
-                    x * assets.internal_wall_grid_snap,
-                    y * assets.internal_wall_grid_snap,
+            use_secondary = ((x // 2) + (y // 2)) % 2 == 0
+            if (x, y) in fall_zone_cells:
+                color = (
+                    FALL_ZONE_FLOOR_SECONDARY if use_secondary else FALL_ZONE_FLOOR_PRIMARY
                 )
-                r = pygame.Rect(
-                    lx,
-                    ly,
-                    assets.internal_wall_grid_snap,
-                    assets.internal_wall_grid_snap,
-                )
-                sr = camera.apply_rect(r)
-                if sr.colliderect(screen.get_rect()):
-                    pygame.draw.rect(screen, palette.floor_secondary, sr)
+            elif not use_secondary:
+                continue
+            else:
+                color = palette.floor_secondary
+            lx, ly = (
+                x * assets.internal_wall_grid_snap,
+                y * assets.internal_wall_grid_snap,
+            )
+            r = pygame.Rect(
+                lx,
+                ly,
+                assets.internal_wall_grid_snap,
+                assets.internal_wall_grid_snap,
+            )
+            sr = camera.apply_rect(r)
+            if sr.colliderect(screen.get_rect()):
+                pygame.draw.rect(screen, color, sr)
 
     return xs, ys, xe, ye, outside_cells
 
@@ -1172,6 +1183,7 @@ def draw(
         palette,
         outer_rect,
         outside_rects,
+        game_data.layout.fall_zone_cells,
     )
     _draw_wall_shadows(
         screen,
