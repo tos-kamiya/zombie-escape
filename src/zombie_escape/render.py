@@ -412,7 +412,7 @@ def _build_flashlight_fade_surface(
     *,
     start_ratio: float = 0.2,
     max_alpha: int = 220,
-    outer_extension: int = 50,
+    outer_extension: int = 30,
 ) -> surface.Surface:
     """Return a radial gradient so flashlight edges softly darken again."""
 

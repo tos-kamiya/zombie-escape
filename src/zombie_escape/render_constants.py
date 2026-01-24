@@ -57,11 +57,11 @@ SHADOW_MIN_RATIO = 0.0
 SHADOW_RADIUS_RATIO = 0.3
 
 FOG_RINGS = [
-    FogRing(radius_factor=0.529, thickness=2),
-    FogRing(radius_factor=0.639, thickness=4),
-    FogRing(radius_factor=0.748, thickness=6),
-    FogRing(radius_factor=0.858, thickness=8),
-    FogRing(radius_factor=0.968, thickness=12),
+    FogRing(radius_factor=0.536, thickness=2),
+    FogRing(radius_factor=0.645, thickness=3),
+    FogRing(radius_factor=0.754, thickness=5),
+    FogRing(radius_factor=0.863, thickness=8),
+    FogRing(radius_factor=0.972, thickness=12),
 ]
 
 
