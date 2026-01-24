@@ -28,7 +28,7 @@ from ..gameplay import (
     sync_ambient_palette_with_flashlights,
     update_entities,
     update_footprints,
-    update_survival_timer,
+    update_endurance_timer,
 )
 from ..input_utils import (
     CONTROLLER_BUTTON_DOWN,
@@ -82,11 +82,11 @@ def gameplay_screen(
     game_data = initialize_game_state(config, stage)
     game_data.state.seed = applied_seed
     game_data.state.debug_mode = debug_mode
-    if debug_mode and stage.survival_stage:
-        goal_ms = max(0, stage.survival_goal_ms)
+    if debug_mode and stage.endurance_stage:
+        goal_ms = max(0, stage.endurance_goal_ms)
         if goal_ms > 0:
             remaining = 3 * 60 * 1000  # 3 minutes in ms
-            game_data.state.survival_elapsed_ms = max(0, goal_ms - remaining)
+            game_data.state.endurance_elapsed_ms = max(0, goal_ms - remaining)
             game_data.state.dawn_ready = False
             game_data.state.dawn_prompt_at = None
             game_data.state.dawn_carbonized = False
@@ -343,7 +343,7 @@ def gameplay_screen(
             if accel_active:
                 step_ms = max(1, step_ms)
             game_data.state.elapsed_play_ms += step_ms
-            update_survival_timer(game_data, step_ms)
+            update_endurance_timer(game_data, step_ms)
             cleanup_survivor_messages(game_data.state)
             check_interactions(game_data, config)
             if game_data.state.game_over or game_data.state.game_won:
@@ -357,7 +357,7 @@ def gameplay_screen(
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
         elapsed_ms = game_data.state.elapsed_play_ms
         has_fuel = game_data.state.has_fuel
-        hint_enabled = car_hint_conf.get("enabled", True) and not stage.survival_stage
+        hint_enabled = car_hint_conf.get("enabled", True) and not stage.endurance_stage
         hint_target = None
         hint_color = YELLOW
         hint_expires_at = game_data.state.hint_expires_at

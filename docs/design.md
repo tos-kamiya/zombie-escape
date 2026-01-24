@@ -53,7 +53,7 @@
 - アイテム状態: `has_fuel`, `flashlight_count`
 - ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`
 - ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
-- サバイバル用: `survival_elapsed_ms`, `survival_goal_ms`, `dawn_ready`, `dawn_prompt_at`, `dawn_carbonized`
+- サバイバル用: `endurance_elapsed_ms`, `endurance_goal_ms`, `dawn_ready`, `dawn_prompt_at`, `dawn_carbonized`
 - 乱数/デバッグ: `seed`, `debug_mode`, `time_accel_active`
 - 落下スポーン: `falling_zombies`
 
@@ -72,10 +72,10 @@
 
 `Stage` はステージ属性を保持する `dataclass`。
 
-- プレイ特性: `requires_fuel`, `buddy_required_count`, `rescue_stage`, `survival_stage`
+- プレイ特性: `requires_fuel`, `buddy_required_count`, `rescue_stage`, `endurance_stage`
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`
 - 内外/落下スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`, `interior_fall_spawn_weight`（重みを分け合う）
-- サバイバル設定: `survival_goal_ms`, `fuel_spawn_count`
+- サバイバル設定: `endurance_goal_ms`, `fuel_spawn_count`
 - 初期懐中電灯数: `initial_flashlight_count`
 - 待機車両: `waiting_car_target_count`（ステージ別の待機車両数の目安）
 - 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）
@@ -172,7 +172,7 @@
   - アイテム収集、車両/救助/敗北判定などの相互作用。
 - `update_footprints(game_data, config)` (`gameplay/footprints.py`)
   - 足跡を記録し寿命で削除（表示は設定で制御し、記録は常時行う）。
-- `update_survival_timer(game_data, dt_ms)` (`gameplay/state.py`)
+- `update_endurance_timer(game_data, dt_ms)` (`gameplay/state.py`)
   - サバイバル用の時間管理と夜明け切り替え。
 
 ### 速度/容量補助

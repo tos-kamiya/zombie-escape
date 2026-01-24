@@ -191,7 +191,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             state.hint_target_type = None
             print("Player entered car!")
         else:
-            if not stage.survival_stage:
+            if not stage.endurance_stage:
                 now_ms = state.elapsed_play_ms
                 state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
                 state.hint_target_type = "fuel"
@@ -219,7 +219,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 maintain_waiting_car_supply(game_data)
                 print("Player claimed a waiting car!")
             else:
-                if not stage.survival_stage:
+                if not stage.endurance_stage:
                     now_ms = state.elapsed_play_ms
                     state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
                     state.hint_target_type = "fuel"
@@ -319,7 +319,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
 
     # Player escaping on foot after dawn (Stage 5)
     if (
-        stage.survival_stage
+        stage.endurance_stage
         and state.dawn_ready
         and not player.in_car
         and outside_rects

@@ -158,7 +158,7 @@ def update_entities(
     # Spawn new zombies if needed
     current_time = pygame.time.get_ticks()
     spawn_interval = max(1, stage.spawn_interval_ms)
-    spawn_blocked = stage.survival_stage and game_data.state.dawn_ready
+    spawn_blocked = stage.endurance_stage and game_data.state.dawn_ready
     if (
         len(zombie_group) < MAX_ZOMBIES
         and not spawn_blocked

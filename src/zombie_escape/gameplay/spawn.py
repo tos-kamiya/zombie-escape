@@ -58,7 +58,7 @@ __all__ = [
 
 
 def _car_appearance_for_stage(stage: Stage | None) -> str:
-    return "disabled" if stage and stage.survival_stage else "default"
+    return "disabled" if stage and stage.endurance_stage else "default"
 
 
 def _pick_zombie_variant(stage: Stage | None) -> tuple[bool, bool]:

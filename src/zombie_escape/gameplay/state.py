@@ -14,7 +14,7 @@ from .ambient import _set_ambient_palette
 def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     """Initialize and return the base game state objects."""
     starts_with_fuel = not stage.requires_fuel
-    if stage.survival_stage:
+    if stage.endurance_stage:
         starts_with_fuel = False
     starts_with_flashlight = False
     initial_flashlights = 1 if starts_with_flashlight else 0
@@ -42,8 +42,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         survivor_messages=[],
         survivor_capacity=SURVIVOR_MAX_SAFE_PASSENGERS,
         seed=None,
-        survival_elapsed_ms=0,
-        survival_goal_ms=max(0, stage.survival_goal_ms),
+        endurance_elapsed_ms=0,
+        endurance_goal_ms=max(0, stage.endurance_goal_ms),
         dawn_ready=False,
         dawn_prompt_at=None,
         time_accel_active=False,
@@ -118,19 +118,19 @@ def carbonize_outdoor_zombies(game_data: GameData) -> None:
             zombie.carbonize()
 
 
-def update_survival_timer(game_data: GameData, dt_ms: int) -> None:
-    """Advance the survival countdown and trigger dawn handoff."""
+def update_endurance_timer(game_data: GameData, dt_ms: int) -> None:
+    """Advance the endurance countdown and trigger dawn handoff."""
     stage = game_data.stage
     state = game_data.state
-    if not stage.survival_stage:
+    if not stage.endurance_stage:
         return
-    if state.survival_goal_ms <= 0 or dt_ms <= 0:
+    if state.endurance_goal_ms <= 0 or dt_ms <= 0:
         return
-    state.survival_elapsed_ms = min(
-        state.survival_goal_ms,
-        state.survival_elapsed_ms + dt_ms,
+    state.endurance_elapsed_ms = min(
+        state.endurance_goal_ms,
+        state.endurance_elapsed_ms + dt_ms,
     )
-    if not state.dawn_ready and state.survival_elapsed_ms >= state.survival_goal_ms:
+    if not state.dawn_ready and state.endurance_elapsed_ms >= state.endurance_goal_ms:
         state.dawn_ready = True
         state.dawn_prompt_at = pygame.time.get_ticks()
         _set_ambient_palette(game_data, DAWN_AMBIENT_PALETTE_KEY, force=True)

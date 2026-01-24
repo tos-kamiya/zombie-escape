@@ -130,16 +130,16 @@ def game_over_screen(
                     LIGHT_GRAY,
                     (screen_width // 2, summary_y),
                 )
-            elif stage and stage.survival_stage:
-                elapsed_ms = max(0, state.survival_elapsed_ms)
-                goal_ms = max(0, state.survival_goal_ms)
+            elif stage and stage.endurance_stage:
+                elapsed_ms = max(0, state.endurance_elapsed_ms)
+                goal_ms = max(0, state.endurance_goal_ms)
                 if goal_ms:
                     elapsed_ms = min(elapsed_ms, goal_ms)
                 display_ms = int(elapsed_ms * SURVIVAL_FAKE_CLOCK_RATIO)
                 hours = display_ms // 3_600_000
                 minutes = (display_ms % 3_600_000) // 60_000
                 time_label = f"{int(hours):02d}:{int(minutes):02d}"
-                msg = tr("game_over.survival_duration", time=time_label)
+                msg = tr("game_over.endurance_duration", time=time_label)
                 show_message(
                     screen,
                     msg,

@@ -956,19 +956,19 @@ def _draw_objective(lines: list[str], *, screen: surface.Surface) -> None:
         print(f"Error rendering objective: {e}")
 
 
-def _draw_survival_timer(
+def _draw_endurance_timer(
     screen: surface.Surface,
     assets: RenderAssets,
     *,
     stage: Stage | None,
     state: Any,
 ) -> None:
-    if not (stage and stage.survival_stage):
+    if not (stage and stage.endurance_stage):
         return
-    goal_ms = state.survival_goal_ms
+    goal_ms = state.endurance_goal_ms
     if goal_ms <= 0:
         return
-    elapsed_ms = max(0, min(goal_ms, state.survival_elapsed_ms))
+    elapsed_ms = max(0, min(goal_ms, state.endurance_elapsed_ms))
     remaining_ms = max(0, goal_ms - elapsed_ms)
     padding = 12
     bar_height = 8
@@ -1000,7 +1000,7 @@ def _draw_survival_timer(
     display_hours = display_ms // 3_600_000
     display_minutes = (display_ms % 3_600_000) // 60_000
     display_label = f"{int(display_hours):02d}:{int(display_minutes):02d}"
-    timer_text = tr("hud.survival_timer_label", time=display_label)
+    timer_text = tr("hud.endurance_timer_label", time=display_label)
     try:
         font_settings = get_font_settings()
         font = load_font(font_settings.resource, font_settings.scaled_size(12))
@@ -1022,7 +1022,7 @@ def _draw_survival_timer(
             )
             screen.blit(hint_surface, hint_rect)
     except pygame.error as e:
-        print(f"Error rendering survival timer: {e}")
+        print(f"Error rendering endurance timer: {e}")
 
 
 def _draw_time_accel_indicator(
@@ -1032,7 +1032,7 @@ def _draw_time_accel_indicator(
     stage: Stage | None,
     state: Any,
 ) -> None:
-    if stage and stage.survival_stage:
+    if stage and stage.endurance_stage:
         return
     try:
         font_settings = get_font_settings()
@@ -1090,7 +1090,7 @@ def _build_objective_lines(
     survivors_onboard: int,
 ) -> list[str]:
     objective_lines: list[str] = []
-    if stage and stage.survival_stage:
+    if stage and stage.endurance_stage:
         if state.dawn_ready:
             objective_lines.append(tr("objectives.get_outside"))
         else:
@@ -1193,7 +1193,7 @@ def draw(
         outer_wall_cells=game_data.layout.outer_wall_cells,
         cell_size=game_data.cell_size,
         light_source_pos=(
-            None if (stage and stage.survival_stage and state.dawn_ready) else fov_target.rect.center
+            None if (stage and stage.endurance_stage and state.dawn_ready) else fov_target.rect.center
         )
         if fov_target
         else None,
@@ -1262,7 +1262,7 @@ def draw(
     if objective_lines:
         _draw_objective(objective_lines, screen=screen)
     _draw_survivor_messages(screen, assets, survivor_messages)
-    _draw_survival_timer(screen, assets, stage=stage, state=state)
+    _draw_endurance_timer(screen, assets, stage=stage, state=state)
     _draw_time_accel_indicator(screen, assets, stage=stage, state=state)
     _draw_status_bar(
         screen,

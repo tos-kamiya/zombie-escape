@@ -93,8 +93,8 @@ class ProgressState:
     survivor_messages: list
     survivor_capacity: int
     seed: int | None
-    survival_elapsed_ms: int
-    survival_goal_ms: int
+    endurance_elapsed_ms: int
+    endurance_goal_ms: int
     dawn_ready: bool
     dawn_prompt_at: int | None
     time_accel_active: bool
@@ -148,8 +148,8 @@ class Stage:
     requires_fuel: bool = False
     buddy_required_count: int = 0
     rescue_stage: bool = False
-    survival_stage: bool = False
-    survival_goal_ms: int = 0
+    endurance_stage: bool = False
+    endurance_goal_ms: int = 0
     fuel_spawn_count: int = 1
     initial_flashlight_count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT
     survivor_spawn_rate: float = SURVIVOR_SPAWN_RATE

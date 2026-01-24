@@ -130,7 +130,7 @@
       "need_fuel": "燃料が必要です！",
       "paused": "一時停止",
       "pause_hint": "P/Start: ゲーム再開  ESC/Select: タイトルに戻る",
-      "survival_timer_label": "夜明けまであと %{time}",
+      "endurance_timer_label": "夜明けまであと %{time}",
       "time_accel": ">> 4x",
       "time_accel_hint": "Shift/R1押下: 4x"
     },
@@ -189,7 +189,7 @@
       "prompt": "ESC/Space/Select/South: タイトルへ  R: 再挑戦",
       "scream": "ぎゃあーーー!!",
       "survivors_summary": "救出人数: %{count}",
-      "survival_duration": "逃げ延びた時間 %{time}"
+      "endurance_duration": "逃げ延びた時間 %{time}"
     }
   }
 }
