@@ -118,7 +118,11 @@
       },
       "stage13": {
         "name": "#13 Rescue Buddy 3",
-        "description": "Rescue your buddy. Zombies may fall from above."
+        "description": "Rescue your buddy. Falling zombies."
+      },
+      "stage14": {
+        "name": "#14 Falling Factory",
+        "description": "A factory with collapsed upper floors. Break through obstacles."
       }
     },
     "status": {
