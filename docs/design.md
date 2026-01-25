@@ -6,14 +6,14 @@
 ## 1. モジュール構成の概要
 
 - `src/zombie_escape/zombie_escape.py`
-  - エントリポイント。CLI引数の解析、`pygame` 初期化、画面遷移ループを担当。
+  - エントリポイント。CLI引数の解析、`pygame`（pygame-ce）初期化、画面遷移ループを担当。
 - `src/zombie_escape/screens/*.py`
   - `title`, `settings`, `gameplay`, `game_over` の各画面。
   - `screens/__init__.py` に画面遷移と表示ユーティリティ。
 - `src/zombie_escape/gameplay/*.py`
   - ゲームロジックの分割モジュール。初期化、スポーン、移動、当たり判定、勝敗条件など。
 - `src/zombie_escape/entities.py`, `src/zombie_escape/world_grid.py`
-  - `pygame.sprite.Sprite` を使ったゲーム内エンティティ定義と衝突判定補助。
+  - `pygame.sprite.Sprite` を使ったゲーム内エンティティ定義と衝突判定補助（pygame-ce を利用）。
 - `src/zombie_escape/models.py`
   - 進行状態やステージ情報のデータ構造（`dataclass`）。
 - `src/zombie_escape/stage_constants.py`
@@ -49,14 +49,17 @@
 `ProgressState` はプレイ中の状態変数を集約する `dataclass`。
 
 - 勝敗・ゲーム終了関連: `game_over`, `game_won`, `game_over_message`, `game_over_at`
+- ゲームオーバー画面用: `scaled_overview`, `overview_created`
 - 進行演出: `footprints`, `last_footprint_pos`, `elapsed_play_ms`
-- アイテム状態: `has_fuel`, `flashlight_count`
+- アイテム状態: `has_fuel`, `flashlight_count`, `shoes_count`
 - ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`
 - ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
 - サバイバル用: `endurance_elapsed_ms`, `endurance_goal_ms`, `dawn_ready`, `dawn_prompt_at`, `dawn_carbonized`
 - 乱数/デバッグ: `seed`, `debug_mode`, `time_accel_active`
 - 落下スポーン: `falling_zombies`
 - 落下スポーン補助: `falling_spawn_carry`（落下スポーン位置が見つからない場合に繰り越すカウント）
+- スポーンタイミング: `last_zombie_spawn_time`
+- 演出: `dust_rings`
 
 ### 3.2 ゲーム状態 (models.GameData)
 
@@ -67,29 +70,33 @@
 - `fog`: 霧描画用のキャッシュ辞書
 - `stage`: `Stage`（ステージ定義）
 - `cell_size`, `level_width`, `level_height`: ステージ別のタイルサイズに応じたワールド寸法
-- `fuel`, `flashlights`, `player`, `car`, `waiting_cars` など
+- `fuel`, `flashlights`, `shoes`, `player`, `car`, `waiting_cars` など
+- ログ補助: `last_logged_waiting_cars`
 
 ### 3.3 ステージ定義 (models.Stage)
 
 `Stage` はステージ属性を保持する `dataclass`。
 
 - プレイ特性: `requires_fuel`, `buddy_required_count`, `rescue_stage`, `endurance_stage`
-- スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`
+- スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`, `survivor_spawn_rate`
 - 内外/落下スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`, `interior_fall_spawn_weight`（重みを分け合う）
 - サバイバル設定: `endurance_goal_ms`, `fuel_spawn_count`
-- 初期懐中電灯数: `initial_flashlight_count`
+- 初期アイテム: `initial_flashlight_count`, `initial_shoes_count`
 - 待機車両: `waiting_car_target_count`（ステージ別の待機車両数の目安）
 - 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）
 - 変種移動ルーチン: `zombie_tracker_ratio`（足跡追跡型の出現率）
 - 変種移動ルーチン: `zombie_wall_follower_ratio`（壁沿い巡回型の出現率）
 - エイジング速度: `zombie_aging_duration_frames`（値が大きいほど老化が遅い）
 - 壁生成アルゴリズム: `wall_algorithm` ("default", "empty", "grid_wire")
+- 落下スポーン領域: `fall_spawn_zones`, `fall_spawn_floor_ratio`
+- ステージ公開: `available`
 - タイルサイズ: `tile_size`（ステージごとのワールド縮尺）
 - グリッドサイズ: `grid_cols`, `grid_rows`（タイル数。デフォルトは `level_constants.py` の値）
 
 ### 3.4 レベルレイアウト (models.LevelLayout)
 
 - `outer_rect`, `inner_rect`, `outside_rects`, `walkable_cells`, `outer_wall_cells` を保持。
+- 追加: `wall_cells`, `fall_spawn_cells`, `bevel_corners`
 
 ### 3.5 スプライト群 (models.Groups)
 
@@ -101,15 +108,10 @@
 - `SteelBeam`: 簡易な強化障害物。
 - `Camera`: 画面スクロール用の矩形管理。
 - `Player`, `Zombie`, `Car`, `Survivor`（`is_buddy` フラグで相棒を表現）
-- `FuelCan`, `Flashlight`（収集アイテム）
+- `FuelCan`, `Flashlight`, `Shoes`（収集アイテム）
 
 相棒 (`is_buddy=True`) は一定距離内で追従を開始し、車に乗った数と脱出時の救出数で管理する。
 一般 `Survivor` は画面外でゾンビに接触した場合はリスポーンする。
-
-補助関数:
-
-- `circle_rect_collision`, `circle_polygon_collision`, `rect_polygon_collision`
-- `spritecollide_walls`, `spritecollideany_walls` など
 
 ## 3.7 ゾンビ移動戦略
 
@@ -136,6 +138,9 @@
 補助要素:
 
 - `zombie_wander_move` はランダム角度・壁際の回避挙動で歩行を維持。
+  - 角度更新時、外周セルで外向きベクトルを引いた場合は 50% の確率で反転。
+  - 外周セルにいる場合、`outer_wall_cells` を参照して内側のセルが外周でなければ内側へ誘導。
+  - `outer_wall_cells` がない場合でも、壁衝突を避けられるなら内側へ 1 ステップ押し戻す。
 - `Zombie.update()` 側で壁衝突・近接回避・外周逸脱時の補正を処理。
 - `create_zombie()` で `stage.zombie_tracker_ratio` を参照し追跡型の出現率を決定。
 
@@ -154,15 +159,21 @@
 
 ### スポーン
 
-- `spawn_nearby_zombie`, `spawn_exterior_zombie`, `spawn_weighted_zombie` (`gameplay/spawn.py`)
-  - 画面外スポーン/外周スポーン/重み付けスポーン。
+- `spawn_exterior_zombie`, `spawn_weighted_zombie` (`gameplay/spawn.py`)
+  - 外周スポーン/重み付けスポーン。
+- `find_exterior_spawn_position`, `find_interior_spawn_positions`, `find_nearby_offscreen_spawn_position` (`gameplay/spawn.py`)
+  - スポーン候補位置の探索。
 - `update_falling_zombies` (`gameplay/spawn.py`)
   - 落下中オブジェクトを管理し、着地時にゾンビを生成。
   - 着地時にホコリリングを生成（懐中電灯の有無に関係なく発生）。
   - 位置が見つからない場合は落下スポーンを行わず、`falling_spawn_carry` を加算して次回へ繰り越す。
   - 次の落下スポーンタイミングではキャリーを消費しつつ、最大2体分の落下をスケジュールする。
-- `spawn_survivors` / `place_buddies` / `place_fuel_can` / `place_flashlights` (`gameplay/spawn.py`)
+- `spawn_survivors` / `place_buddies` / `place_fuel_can` / `place_flashlights` / `place_shoes` (`gameplay/spawn.py`)
   - ステージ別のアイテムやNPCを配置。
+- `spawn_waiting_car` / `place_new_car` / `maintain_waiting_car_supply` (`gameplay/spawn.py`)
+  - 待機車両の補充と再配置。
+- `respawn_buddies_near_player` / `nearest_waiting_car` (`gameplay/spawn.py`)
+  - 相棒の再配置や最寄り車両の検索。
 
 ### 更新
 
@@ -174,10 +185,22 @@
   - （検討中）ゾンビのエイジングが極端に進んだ個体を自動で削除し、上限到達時の滞留を緩和する案。
 - `check_interactions(game_data, config)` (`gameplay/interactions.py`)
   - アイテム収集、車両/救助/敗北判定などの相互作用。
+- `update_survivors(game_data, config)` (`gameplay/survivors.py`)
+  - サバイバー/相棒の移動と追従。
+- `handle_survivor_zombie_collisions(game_data, config)` (`gameplay/survivors.py`)
+  - サバイバーとゾンビの接触処理。
+- `add_survivor_message`, `cleanup_survivor_messages`, `random_survivor_conversion_line` (`gameplay/survivors.py`)
+  - サバイバーのメッセージ表示と文言選択。
 - `update_footprints(game_data, config)` (`gameplay/footprints.py`)
   - 足跡を記録し寿命で削除（表示は設定で制御し、記録は常時行う）。
+- `get_shrunk_sprite(sprite, scale)` (`gameplay/footprints.py`)
+  - 足跡描画用の縮小スプライトを生成/キャッシュ。
 - `update_endurance_timer(game_data, dt_ms)` (`gameplay/state.py`)
   - サバイバル用の時間管理と夜明け切り替え。
+- `carbonize_outdoor_zombies(game_data)` (`gameplay/state.py`)
+  - 夜明け時の屋外ゾンビ炭化処理。
+- `sync_ambient_palette_with_flashlights(game_data, force=False)` (`gameplay/ambient.py`)
+  - 懐中電灯数に合わせて環境パレットを同期。
 
 ### 速度/容量補助
 
@@ -185,17 +208,25 @@
   - 乗車人数に応じた速度低下。
 - `increase_survivor_capacity`, `drop_survivors_from_car` など
 
+### 補助ユーティリティ
+
+- `rect_visible_on_screen(camera, rect)` (`gameplay/utils.py`)
+  - 画面内判定の補助。
+
 ## 5. 描画パイプライン (render.py)
 
 - `draw(...)` が描画の中心。
   1. 環境色で背景塗りつぶし
   2. プレイ領域・床パターン描画
-  3. 足跡のフェード描画
-  4. Sprite 群を `Camera` でオフセットして描画
-  4.5 追跡型/壁沿いゾンビには常時識別用の輪郭を描画
-  5. ヒント矢印 (`_draw_hint_arrow`)
-  6. 霧 (`fog_surfaces` + `FOG_RINGS`)
-  7. HUD: 目的/メッセージ/ステータスバー
+  3. 影レイヤー（壁影・エンティティ影）を生成して合成
+  4. 足跡のフェード描画
+  5. Sprite 群を `Camera` でオフセットして描画
+    5.5 追跡型/壁沿いゾンビには常時識別用の輪郭を描画
+  6. ヒント矢印 (`_draw_hint_arrow`)
+  7. 霧 (`fog_surfaces` + `FOG_RINGS`)
+  8. HUD: 目的/メッセージ/ステータスバー
+
+- 影は `shadow_layer` に壁影とエンティティ影を描き、光源（プレイヤーまたは車）基準でずらして合成する。
 
 - `draw_status_bar()`
   - 設定フラグやステージ番号、シード値を表示。
@@ -221,11 +252,17 @@
   - `Z`: ゾンビ候補
 
 - `generate_random_blueprint(wall_algo)`
-  - 外周 -> 出口 -> 壁 -> スポーン候補 の順に生成。
+  - 外周 -> 出口 -> スポーン候補（P/C/Z）予約 -> 壁 -> 鉄筋候補 の順に生成。
   - `wall_algo` により壁配置戦略を切り替え可能。
     - `"default"`: ランダムな長さの直線をランダム配置。
     - `"empty"`: 内部壁なし。
     - `"grid_wire"`: 縦横を独立グリッドで生成しマージ。平行な壁の隣接（2x2ブロック）を禁止する。
+  - ステージ内のアイテム配置（燃料/懐中電灯/靴など）は、レイアウト生成後に `walkable_cells` を使って行う。
+
+- 落下ゾンビ用タイル
+  - `fall_spawn_zones`（ステージ定義の矩形群）をセル集合に展開し、`fall_spawn_cells` として保持。
+  - `fall_spawn_floor_ratio` が有効なら、内部セルから一定割合を落下候補セルに追加。
+  - `fall_spawn_cells` は落下スポーン位置の候補として利用される（床のハイライトにも使用）。
 
 ## 7. 設定と進行データ
 

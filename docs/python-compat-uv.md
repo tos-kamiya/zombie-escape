@@ -6,7 +6,7 @@
 
 - uv がインストール済みであること
 - リポジトリルートで実行すること
-- 依存関係は `pyproject.toml` に記載済み（`pygame` など）
+- 依存関係は `pyproject.toml` に記載済み（`pygame-ce` など）
 
 ## 共通手順（各バージョンで実行 / activate不要）
 
@@ -66,4 +66,4 @@ uv run -p .venv/bin/python -m pyright
 ## 補足
 
 - 実行コマンドは互換性確認のため `uv run -p .venv/bin/python -m pytest` を推奨します。ゲーム起動が必要なら `uv run -p .venv/bin/python zombie-escape` でも構いません。
-- 依存関係の取得で失敗する場合は、該当バージョンの `pygame` が提供されているかを確認してください。
+- 依存関係の取得で失敗する場合は、該当バージョンの `pygame-ce` が提供されているかを確認してください。
