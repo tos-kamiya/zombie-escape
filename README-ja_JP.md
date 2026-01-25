@@ -126,6 +126,8 @@ zombie-escape
 
 このプロジェクトは MIT License の下で公開されています。詳細は[LICENSEファイル](LICENSE.txt)をご覧ください。
 
+本プロジェクトは pygame-ce に依存しています（リポジトリ: `https://github.com/pygame-community/pygame-ce`）。pygame-ce のライセンスは GNU LGPL version 2.1 です。
+
 同梱している Silkscreen-Regular.ttf フォントのライセンスについては配布元に従います。
 https://fonts.google.com/specimen/Silkscreen
 
