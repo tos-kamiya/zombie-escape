@@ -44,6 +44,94 @@ def _draw_outlined_circle(
         pygame.draw.circle(surface, outline_color, center, radius, width=outline_width)
 
 
+Polygon = list[tuple[int, int]]
+PolygonList = list[Polygon]
+
+FUEL_CAN_POLYGON_SIZE = (13, 17)
+FUEL_CAN_POLYGONS: PolygonList = [
+    [
+        (1, 1),
+        (7, 1),
+        (12, 6),
+        (12, 16),
+        (1, 16),
+    ],
+    [
+        (10, 1),
+        (12, 3),
+        (9, 4),
+        (7, 3),
+    ],
+]
+
+FLASHLIGHT_POLYGON_SIZE = (12, 10)
+FLASHLIGHT_POLYGONS: PolygonList = [
+    [
+        (1, 2),
+        (8, 2),
+        (8, 7),
+        (1, 7),
+    ],
+    [
+        (8, 1),
+        (11, 1),
+        (11, 8),
+        (8, 8),
+    ],
+]
+
+SHOES_POLYGON_SIZE = (14, 10)
+SHOES_POLYGONS: PolygonList = [
+    [
+        (1, 1),
+        (7, 1),
+        (7, 4),
+        (13, 6),
+        (13, 9),
+        (1, 9),
+    ],
+]
+
+
+def _scale_polygons(
+    polygons: PolygonList,
+    src_size: tuple[int, int],
+    dst_size: tuple[int, int],
+) -> PolygonList:
+    src_w, src_h = src_size
+    dst_w, dst_h = dst_size
+    scale_x = dst_w / max(1, src_w)
+    scale_y = dst_h / max(1, src_h)
+    scaled: PolygonList = []
+    for poly in polygons:
+        scaled.append(
+            [
+                (
+                    int(round(x * scale_x)),
+                    int(round(y * scale_y)),
+                )
+                for x, y in poly
+            ]
+        )
+    return scaled
+
+
+def _draw_polygon_surface(
+    width: int,
+    height: int,
+    polygons: PolygonList,
+    base_size: tuple[int, int],
+) -> pygame.Surface:
+    surface = pygame.Surface((width, height), pygame.SRCALPHA)
+    draw_polygons = polygons
+    if (width, height) != base_size:
+        draw_polygons = _scale_polygons(polygons, base_size, (width, height))
+    for poly in draw_polygons:
+        pygame.draw.polygon(surface, YELLOW, poly)
+        pygame.draw.polygon(surface, BLACK, poly, width=1)
+    return surface
+
+
 def build_beveled_polygon(
     width: int,
     height: int,
@@ -465,73 +553,30 @@ def paint_zombie_surface(
 
 
 def build_fuel_can_surface(width: int, height: int) -> pygame.Surface:
-    surface = pygame.Surface((width, height), pygame.SRCALPHA)
-
-    l, r, t, b = 1, width - 1, 1, height - 1
-    corner_size = 5
-    body = [
-        (l, t),
-        (r - corner_size, t),
-        (r, t + corner_size),
-        (r, b),
-        (l, b),
-    ]
-    cap = [
-        (r - corner_size + 3, t),
-        (r, t + corner_size - 3),
-        (r - 3, t + corner_size - 2),
-        (r - corner_size + 2, t + 2),
-    ]
-    polygons = [body, cap]
-    for poly in polygons:
-        pygame.draw.polygon(surface, YELLOW, poly)
-        pygame.draw.polygon(surface, BLACK, poly, width=1)
-    return surface
+    return _draw_polygon_surface(
+        width,
+        height,
+        FUEL_CAN_POLYGONS,
+        FUEL_CAN_POLYGON_SIZE,
+    )
 
 
 def build_flashlight_surface(width: int, height: int) -> pygame.Surface:
-    surface = pygame.Surface((width, height), pygame.SRCALPHA)
-
-    body = [
-        (1, 2),
-        (width - 4, 2),
-        (width - 4, height - 3),
-        (1, height - 3),
-    ]
-    head = [
-        (width - 4, 1),
-        (width - 1, 1),
-        (width - 1, height - 2),
-        (width - 4, height - 2),
-    ]
-    polygons = [body, head]
-    for poly in polygons:
-        pygame.draw.polygon(surface, YELLOW, poly)
-        pygame.draw.polygon(surface, BLACK, poly, width=1)
-    return surface
+    return _draw_polygon_surface(
+        width,
+        height,
+        FLASHLIGHT_POLYGONS,
+        FLASHLIGHT_POLYGON_SIZE,
+    )
 
 
 def build_shoes_surface(width: int, height: int) -> pygame.Surface:
-    surface = pygame.Surface((width, height), pygame.SRCALPHA)
-
-    l, r, t, b = 1, width - 1, 1, height - 1
-    w = int((r - l) * 0.5)
-    h1 = int((b - t) * 0.45)
-    h2 = int((b - t) * 0.65)
-    boot = [
-        (l, t),
-        (l + w, t),
-        (l + w, t + h1),
-        (r, t + h2),
-        (r, b),
-        (l, b),
-    ]
-    polygons = [boot]
-    for poly in polygons:
-        pygame.draw.polygon(surface, YELLOW, poly)
-        pygame.draw.polygon(surface, BLACK, poly, width=1)
-
-    return surface
+    return _draw_polygon_surface(
+        width,
+        height,
+        SHOES_POLYGONS,
+        SHOES_POLYGON_SIZE,
+    )
 
 
 __all__ = [
