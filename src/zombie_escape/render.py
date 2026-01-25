@@ -725,6 +725,7 @@ def _draw_status_bar(
     debug_mode: bool = False,
     zombie_group: sprite.Group | None = None,
     falling_spawn_carry: int | None = None,
+    fps: float | None = None,
 ) -> None:
     """Render a compact status bar with current config flags and stage info."""
     bar_rect = pygame.Rect(
@@ -770,6 +771,8 @@ def _draw_status_bar(
             parts.append(f"Z:{total} N:{normal} T:{tracker} W:{wall}")
             if falling_spawn_carry is not None:
                 parts.append(f"C:{max(0, falling_spawn_carry)}")
+        if fps is not None:
+            parts.append(f"FPS:{fps:.1f}")
 
     status_text = " | ".join(parts)
     color = LIGHT_GRAY
@@ -787,6 +790,14 @@ def _draw_status_bar(
                 right=bar_rect.right - 12, centery=bar_rect.centery
             )
             screen.blit(seed_surface, seed_rect)
+        if debug_mode and fps is not None:
+            fps_text = f"FPS:{fps:.1f}"
+            fps_surface = font.render(fps_text, False, LIGHT_GRAY)
+            fps_rect = fps_surface.get_rect(
+                left=12,
+                bottom=max(2, bar_rect.top - 4),
+            )
+            screen.blit(fps_surface, fps_rect)
     except pygame.error as e:
         print(f"Error rendering status bar: {e}")
 
@@ -1443,6 +1454,7 @@ def draw(
     hint_color: tuple[int, int, int] | None = None,
     do_flip: bool = True,
     present_fn: Callable[[surface.Surface], None] | None = None,
+    fps: float | None = None,
 ) -> None:
     hint_color = hint_color or YELLOW
     state = game_data.state
@@ -1613,6 +1625,7 @@ def draw(
         debug_mode=state.debug_mode,
         zombie_group=zombie_group,
         falling_spawn_carry=state.falling_spawn_carry,
+        fps=fps,
     )
     if do_flip:
         if present_fn:

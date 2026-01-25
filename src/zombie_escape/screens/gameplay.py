@@ -161,6 +161,7 @@ def gameplay_screen(
     update_footprints(game_data, config)
     while True:
         dt = clock.tick(fps) / 1000.0
+        current_fps = clock.get_fps()
         if game_data.state.game_over or game_data.state.game_won:
             if game_data.state.game_won:
                 record_stage_clear(stage.id)
@@ -174,6 +175,7 @@ def gameplay_screen(
                         game_data,
                         config=config,
                         hint_color=None,
+                        fps=current_fps,
                         present_fn=present,
                     )
                     if game_data.state.game_over_message:
@@ -277,6 +279,7 @@ def gameplay_screen(
                 game_data,
                 config=config,
                 do_flip=not show_pause_overlay,
+                fps=current_fps,
                 present_fn=present,
             )
             if show_pause_overlay:
@@ -429,6 +432,7 @@ def gameplay_screen(
             config=config,
             hint_target=hint_target,
             hint_color=hint_color,
+            fps=current_fps,
             present_fn=present,
         )
 
