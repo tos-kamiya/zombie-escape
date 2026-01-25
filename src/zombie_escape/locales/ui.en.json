@@ -123,6 +123,10 @@
       "stage14": {
         "name": "#14 Falling Factory",
         "description": "A factory with collapsed upper floors. Break through obstacles."
+      },
+      "stage15": {
+        "name": "#15 The Divide",
+        "description": "A central hazard splits the building. Cross with care."
       }
     },
     "status": {
