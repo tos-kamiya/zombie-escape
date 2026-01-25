@@ -61,6 +61,8 @@ from .render_constants import (
     FALLING_DUST_COLOR,
     FALLING_WHIRLWIND_COLOR,
     FALLING_ZOMBIE_COLOR,
+    FLASHLIGHT_FOG_SCALE_ONE,
+    FLASHLIGHT_FOG_SCALE_TWO,
     PLAYER_SHADOW_ALPHA_MULT,
     PLAYER_SHADOW_RADIUS_MULT,
     SHADOW_MIN_RATIO,
@@ -362,8 +364,9 @@ def _get_fog_scale(
     flashlight_count = max(0, int(flashlight_count))
     if flashlight_count <= 0:
         return scale
-    bonus_step = max(0.0, assets.flashlight_bonus_step)
-    return scale + bonus_step * flashlight_count
+    if flashlight_count == 1:
+        return max(scale, FLASHLIGHT_FOG_SCALE_ONE)
+    return max(scale, FLASHLIGHT_FOG_SCALE_TWO)
 
 
 def _max_flashlight_pickups() -> int:

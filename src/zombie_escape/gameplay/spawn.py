@@ -28,7 +28,11 @@ from ..gameplay_constants import (
 )
 from ..level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS, DEFAULT_TILE_SIZE
 from ..models import DustRing, FallingZombie, GameData, Stage
-from ..render_constants import FLASHLIGHT_FOG_SCALE_STEP, FOG_RADIUS_SCALE
+from ..render_constants import (
+    FLASHLIGHT_FOG_SCALE_ONE,
+    FLASHLIGHT_FOG_SCALE_TWO,
+    FOG_RADIUS_SCALE,
+)
 from ..rng import get_rng
 from .constants import (
     MAX_ZOMBIES,
@@ -99,7 +103,12 @@ def _pick_zombie_variant(stage: Stage | None) -> tuple[bool, bool]:
 
 def _fov_radius_for_flashlights(flashlight_count: int) -> float:
     count = max(0, int(flashlight_count))
-    scale = FOG_RADIUS_SCALE + max(0.0, FLASHLIGHT_FOG_SCALE_STEP) * count
+    if count <= 0:
+        scale = FOG_RADIUS_SCALE
+    elif count == 1:
+        scale = FLASHLIGHT_FOG_SCALE_ONE
+    else:
+        scale = FLASHLIGHT_FOG_SCALE_TWO
     return FOV_RADIUS * scale
 
 

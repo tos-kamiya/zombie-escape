@@ -36,13 +36,13 @@ class RenderAssets:
     footprint_lifetime_ms: int
     footprint_min_fade: float
     internal_wall_grid_snap: int
-    flashlight_bonus_step: float
     flashlight_hatch_extra_scale: float
 
 
 FOG_RADIUS_SCALE = 1.2
 
-FLASHLIGHT_FOG_SCALE_STEP = 0.3
+FLASHLIGHT_FOG_SCALE_ONE = FOG_RADIUS_SCALE + 0.3
+FLASHLIGHT_FOG_SCALE_TWO = FOG_RADIUS_SCALE + 0.6
 FLASHLIGHT_HATCH_EXTRA_SCALE = 0.12
 
 FOOTPRINT_RADIUS = 2
@@ -84,7 +84,6 @@ def build_render_assets(cell_size: int) -> RenderAssets:
         footprint_lifetime_ms=FOOTPRINT_LIFETIME_MS,
         footprint_min_fade=FOOTPRINT_MIN_FADE,
         internal_wall_grid_snap=cell_size,
-        flashlight_bonus_step=FLASHLIGHT_FOG_SCALE_STEP,
         flashlight_hatch_extra_scale=FLASHLIGHT_HATCH_EXTRA_SCALE,
     )
 
@@ -100,6 +99,8 @@ __all__ = [
     "FogRing",
     "RenderAssets",
     "FOG_RADIUS_SCALE",
+    "FLASHLIGHT_FOG_SCALE_ONE",
+    "FLASHLIGHT_FOG_SCALE_TWO",
     "SHADOW_OVERSAMPLE",
     "SHADOW_STEPS",
     "SHADOW_MIN_RATIO",
@@ -109,7 +110,6 @@ __all__ = [
     "ENTITY_SHADOW_EDGE_SOFTNESS",
     "PLAYER_SHADOW_RADIUS_MULT",
     "PLAYER_SHADOW_ALPHA_MULT",
-    "FLASHLIGHT_FOG_SCALE_STEP",
     "FLASHLIGHT_HATCH_EXTRA_SCALE",
     "build_render_assets",
 ]
