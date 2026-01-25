@@ -10,8 +10,11 @@ from ..entities_constants import INTERNAL_WALL_HEALTH, STEEL_BEAM_HEALTH
 from .constants import OUTER_WALL_HEALTH
 from ..level_blueprints import choose_blueprint
 from ..models import GameData
+from ..rng import get_rng
 
 __all__ = ["generate_level_from_blueprint"]
+
+RNG = get_rng()
 
 
 def _rect_for_cell(x_idx: int, y_idx: int, cell_size: int) -> pygame.Rect:
@@ -94,6 +97,10 @@ def generate_level_from_blueprint(
     player_cells: list[pygame.Rect] = []
     car_cells: list[pygame.Rect] = []
     zombie_cells: list[pygame.Rect] = []
+    interior_min_x = 2
+    interior_max_x = stage.grid_cols - 3
+    interior_min_y = 2
+    interior_max_y = stage.grid_rows - 3
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] = {}
     palette = get_environment_palette(game_data.state.ambient_palette_key)
 
@@ -214,11 +221,25 @@ def generate_level_from_blueprint(
     game_data.layout.walkable_cells = walkable_cells
     game_data.layout.outer_wall_cells = outer_wall_cells
     game_data.layout.wall_cells = wall_cells
-    game_data.layout.fall_spawn_cells = _expand_zone_cells(
+    fall_spawn_cells = _expand_zone_cells(
         stage.fall_spawn_zones,
         grid_cols=stage.grid_cols,
         grid_rows=stage.grid_rows,
     )
+    floor_ratio = max(0.0, min(1.0, stage.fall_spawn_floor_ratio))
+    if floor_ratio > 0.0 and interior_min_x <= interior_max_x:
+        for y in range(interior_min_y, interior_max_y + 1):
+            for x in range(interior_min_x, interior_max_x + 1):
+                if RNG.random() < floor_ratio:
+                    fall_spawn_cells.add((x, y))
+        if not fall_spawn_cells:
+            fall_spawn_cells.add(
+                (
+                    RNG.randint(interior_min_x, interior_max_x),
+                    RNG.randint(interior_min_y, interior_max_y),
+                )
+            )
+    game_data.layout.fall_spawn_cells = fall_spawn_cells
     game_data.layout.bevel_corners = bevel_corners
 
     return {

@@ -164,6 +164,7 @@ class Stage:
     interior_spawn_weight: float = 0.0
     interior_fall_spawn_weight: float = 0.0
     fall_spawn_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
+    fall_spawn_floor_ratio: float = 0.0
     zombie_tracker_ratio: float = 0.0
     zombie_wall_follower_ratio: float = 0.0
     zombie_normal_ratio: float = 1.0

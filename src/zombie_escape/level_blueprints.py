@@ -84,11 +84,17 @@ def _place_exits(grid: list[list[str]], exits_per_side: int) -> None:
             grid[y][x] = "E"
 
 
-def _place_walls_default(grid: list[list[str]]) -> None:
+def _place_walls_default(
+    grid: list[list[str]],
+    *,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
     cols, rows = len(grid[0]), len(grid)
     rng = RNG.randint
-    # Avoid placing walls adjacent to exits: collect forbidden cells (exits + neighbors)
+    # Avoid placing walls adjacent to exits and on reserved cells.
     forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
 
     for _ in range(NUM_WALL_LINES):
         length = rng(WALL_MIN_LEN, WALL_MAX_LEN)
@@ -111,12 +117,20 @@ def _place_walls_default(grid: list[list[str]]) -> None:
                     grid[y + i][x] = "1"
 
 
-def _place_walls_empty(grid: list[list[str]]) -> None:
+def _place_walls_empty(
+    grid: list[list[str]],
+    *,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
     """Place no internal walls (open floor plan)."""
-    pass
+    _ = (grid, forbidden_cells)
 
 
-def _place_walls_grid_wire(grid: list[list[str]]) -> None:
+def _place_walls_grid_wire(
+    grid: list[list[str]],
+    *,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
     """
     Place walls using a 2-pass approach with independent layers.
     Vertical and horizontal walls are generated on separate grids to ensure
@@ -127,6 +141,8 @@ def _place_walls_grid_wire(grid: list[list[str]]) -> None:
     cols, rows = len(grid[0]), len(grid)
     rng = RNG.randint
     forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
 
     # Temporary grids for independent generation
     # They only track the internal walls ("1").
@@ -202,10 +218,16 @@ def _place_walls_grid_wire(grid: list[list[str]]) -> None:
                 grid[y][x] = "1"
 
 
-def _place_walls_sparse(grid: list[list[str]]) -> None:
+def _place_walls_sparse(
+    grid: list[list[str]],
+    *,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
     """Place isolated wall tiles at a low density, avoiding adjacency."""
     cols, rows = len(grid[0]), len(grid)
     forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
     for y in range(2, rows - 2):
         for x in range(2, cols - 2):
             if (x, y) in forbidden:
@@ -237,11 +259,16 @@ WALL_ALGORITHMS = {
 
 
 def _place_steel_beams(
-    grid: list[list[str]], *, chance: float = STEEL_BEAM_CHANCE
+    grid: list[list[str]],
+    *,
+    chance: float = STEEL_BEAM_CHANCE,
+    forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> set[tuple[int, int]]:
     """Pick individual cells for steel beams, avoiding exits and their neighbors."""
     cols, rows = len(grid[0]), len(grid)
     forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
     beams: set[tuple[int, int]] = set()
     for y in range(2, rows - 2):
         for x in range(2, cols - 2):
@@ -257,7 +284,6 @@ def _place_steel_beams(
 def _pick_empty_cell(
     grid: list[list[str]],
     margin: int,
-    forbidden: set[tuple[int, int]],
 ) -> tuple[int, int]:
     cols, rows = len(grid[0]), len(grid)
     attempts = 0
@@ -265,12 +291,12 @@ def _pick_empty_cell(
         attempts += 1
         x = RNG.randint(margin, cols - margin - 1)
         y = RNG.randint(margin, rows - margin - 1)
-        if grid[y][x] == "." and (x, y) not in forbidden:
+        if grid[y][x] == ".":
             return x, y
     # Fallback: scan for any acceptable cell
     for y in range(margin, rows - margin):
         for x in range(margin, cols - margin):
-            if grid[y][x] == "." and (x, y) not in forbidden:
+            if grid[y][x] == ".":
                 return x, y
     return cols // 2, rows // 2
 
@@ -281,7 +307,20 @@ def _generate_random_blueprint(
     grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE)
 
-    # Select and run the wall placement algorithm
+    # Spawns: player, car, zombies
+    reserved_cells: set[tuple[int, int]] = set()
+    px, py = _pick_empty_cell(grid, SPAWN_MARGIN)
+    grid[py][px] = "P"
+    reserved_cells.add((px, py))
+    cx, cy = _pick_empty_cell(grid, SPAWN_MARGIN)
+    grid[cy][cx] = "C"
+    reserved_cells.add((cx, cy))
+    for _ in range(SPAWN_ZOMBIES):
+        zx, zy = _pick_empty_cell(grid, SPAWN_MARGIN)
+        grid[zy][zx] = "Z"
+        reserved_cells.add((zx, zy))
+
+    # Select and run the wall placement algorithm (after reserving spawns)
     if wall_algo not in WALL_ALGORITHMS:
         print(
             f"WARNING: Unknown wall algorithm '{wall_algo}'. Falling back to 'default'."
@@ -289,18 +328,11 @@ def _generate_random_blueprint(
         wall_algo = "default"
 
     algo_func = WALL_ALGORITHMS[wall_algo]
-    algo_func(grid)
+    algo_func(grid, forbidden_cells=reserved_cells)
 
-    steel_beams = _place_steel_beams(grid, chance=steel_chance)
-
-    # Spawns: player, car, zombies
-    px, py = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden=steel_beams)
-    grid[py][px] = "P"
-    cx, cy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden=steel_beams)
-    grid[cy][cx] = "C"
-    for _ in range(SPAWN_ZOMBIES):
-        zx, zy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden=steel_beams)
-        grid[zy][zx] = "Z"
+    steel_beams = _place_steel_beams(
+        grid, chance=steel_chance, forbidden_cells=reserved_cells
+    )
 
     blueprint_rows = ["".join(row) for row in grid]
     return {"grid": blueprint_rows, "steel_cells": steel_beams}
