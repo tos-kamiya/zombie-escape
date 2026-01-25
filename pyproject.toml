@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
   "numpy",
-  "pygame",
+  "pygame-ce",
   "platformdirs",
   "python-i18n",
   "typing-extensions; python_version < '3.11'",

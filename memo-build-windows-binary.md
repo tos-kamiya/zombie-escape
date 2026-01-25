@@ -36,7 +36,7 @@ cd <project-dir>
 python -m venv venv
 venv\Scripts\activate.bat
 
-pip install pygame
+pip install pygame-ce
 pip install numpy
 pip install platformdirs
 pip install python-i18n
