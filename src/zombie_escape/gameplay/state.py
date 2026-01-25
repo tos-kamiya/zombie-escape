@@ -31,6 +31,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         elapsed_play_ms=0,
         has_fuel=starts_with_fuel,
         flashlight_count=initial_flashlights,
+        shoes_count=0,
         ambient_palette_key=initial_palette_key,
         hint_expires_at=0,
         hint_target_type=None,
@@ -100,6 +101,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         level_height=level_height,
         fuel=None,
         flashlights=[],
+        shoes=[],
     )
 
 

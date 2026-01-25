@@ -17,6 +17,10 @@ from ..entities_constants import (
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
 )
+from ..gameplay_constants import (
+    SHOES_SPEED_MULTIPLIER_ONE,
+    SHOES_SPEED_MULTIPLIER_TWO,
+)
 from ..models import GameData
 from ..world_grid import WallIndex, apply_tile_edge_nudge, walls_for_radius
 from .constants import MAX_ZOMBIES
@@ -29,6 +33,7 @@ def process_player_input(
     keys: Sequence[bool],
     player: Player,
     car: Car | None,
+    shoes_count: int = 0,
     pad_input: tuple[float, float] = (0.0, 0.0),
 ) -> tuple[float, float, float, float]:
     """Process keyboard input and return movement deltas."""
@@ -55,7 +60,7 @@ def process_player_input(
                 (dy_input / move_len) * target_speed,
             )
     elif not player.in_car:
-        target_speed = PLAYER_SPEED
+        target_speed = PLAYER_SPEED * _shoes_speed_multiplier(shoes_count)
         move_len = math.hypot(dx_input, dy_input)
         if move_len > 0:
             player_dx, player_dy = (
@@ -64,6 +69,15 @@ def process_player_input(
             )
 
     return player_dx, player_dy, car_dx, car_dy
+
+
+def _shoes_speed_multiplier(shoes_count: int) -> float:
+    count = max(0, int(shoes_count))
+    if count >= 2:
+        return SHOES_SPEED_MULTIPLIER_TWO
+    if count == 1:
+        return SHOES_SPEED_MULTIPLIER_ONE
+    return 1.0
 
 
 def update_entities(

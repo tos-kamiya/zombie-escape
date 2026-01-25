@@ -26,6 +26,8 @@ from .entities_constants import (
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
+    SHOES_HEIGHT,
+    SHOES_WIDTH,
     INTERNAL_WALL_BEVEL_DEPTH,
     INTERNAL_WALL_HEALTH,
     PLAYER_RADIUS,
@@ -63,6 +65,7 @@ from .render_assets import (
     build_car_surface,
     build_flashlight_surface,
     build_fuel_can_surface,
+    build_shoes_surface,
     build_player_surface,
     build_survivor_surface,
     build_zombie_surface,
@@ -1589,6 +1592,15 @@ class Flashlight(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x, y))
 
 
+class Shoes(pygame.sprite.Sprite):
+    """Shoes pickup that boosts the player's move speed when collected."""
+
+    def __init__(self: Self, x: int, y: int) -> None:
+        super().__init__()
+        self.image = build_shoes_surface(SHOES_WIDTH, SHOES_HEIGHT)
+        self.rect = self.image.get_rect(center=(x, y))
+
+
 def _car_body_radius(width: float, height: float) -> float:
     """Approximate car collision radius using only its own dimensions."""
     return min(width, height) / 2
@@ -1604,5 +1616,6 @@ __all__ = [
     "Car",
     "FuelCan",
     "Flashlight",
+    "Shoes",
     "random_position_outside_building",
 ]

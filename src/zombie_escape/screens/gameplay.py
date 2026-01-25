@@ -21,6 +21,7 @@ from ..gameplay import (
     nearest_waiting_car,
     place_flashlights,
     place_fuel_can,
+    place_shoes,
     process_player_input,
     setup_player_and_cars,
     spawn_initial_zombies,
@@ -138,6 +139,16 @@ def gameplay_screen(
     )
     game_data.flashlights = flashlights
     game_data.groups.all_sprites.add(flashlights, layer=1)
+
+    shoes_count = stage.initial_shoes_count
+    shoes_list = place_shoes(
+        layout_data["walkable_cells"],
+        player,
+        cars=game_data.waiting_cars,
+        count=max(0, shoes_count),
+    )
+    game_data.shoes = shoes_list
+    game_data.groups.all_sprites.add(shoes_list, layer=1)
 
     spawn_initial_zombies(game_data, player, layout_data, config)
     update_footprints(game_data, config)
@@ -327,7 +338,11 @@ def gameplay_screen(
             car_ref = game_data.car
             pad_vector = read_gamepad_move(controller, joystick)
             player_dx, player_dy, car_dx, car_dy = process_player_input(
-                keys, player_ref, car_ref, pad_input=pad_vector
+                keys,
+                player_ref,
+                car_ref,
+                shoes_count=game_data.state.shoes_count,
+                pad_input=pad_vector,
             )
             update_entities(
                 game_data,

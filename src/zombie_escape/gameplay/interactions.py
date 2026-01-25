@@ -12,6 +12,8 @@ from ..entities_constants import (
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
     HUMANOID_RADIUS,
+    SHOES_HEIGHT,
+    SHOES_WIDTH,
     SURVIVOR_APPROACH_RADIUS,
     SURVIVOR_MAX_SAFE_PASSENGERS,
 )
@@ -58,6 +60,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     outside_rects = game_data.layout.outside_rects
     fuel = game_data.fuel
     flashlights = game_data.flashlights or []
+    shoes_list = game_data.shoes or []
     camera = game_data.camera
     stage = game_data.stage
     maintain_waiting_car_supply(game_data)
@@ -70,6 +73,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     flashlight_interaction_radius = _interaction_radius(
         FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT
     )
+    shoes_interaction_radius = _interaction_radius(SHOES_WIDTH, SHOES_HEIGHT)
 
     def _player_near_point(point: tuple[float, float], radius: float) -> bool:
         dx = point[0] - player.x
@@ -116,6 +120,21 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 except ValueError:
                     pass
                 print("Flashlight acquired!")
+                break
+
+        for shoes in list(shoes_list):
+            if not shoes.alive():
+                continue
+            if _player_near_point(shoes.rect.center, shoes_interaction_radius):
+                state.shoes_count += 1
+                state.hint_expires_at = 0
+                state.hint_target_type = None
+                shoes.kill()
+                try:
+                    shoes_list.remove(shoes)
+                except ValueError:
+                    pass
+                print("Shoes acquired!")
                 break
 
     sync_ambient_palette_with_flashlights(game_data)

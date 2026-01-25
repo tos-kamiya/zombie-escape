@@ -9,6 +9,7 @@ from ..entities import (
     Flashlight,
     FuelCan,
     Player,
+    Shoes,
     Survivor,
     Zombie,
     random_position_outside_building,
@@ -21,7 +22,10 @@ from ..entities_constants import (
     ZOMBIE_AGING_DURATION_FRAMES,
     ZOMBIE_SPEED,
 )
-from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
+from ..gameplay_constants import (
+    DEFAULT_FLASHLIGHT_SPAWN_COUNT,
+    DEFAULT_SHOES_SPAWN_COUNT,
+)
 from ..level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS, DEFAULT_TILE_SIZE
 from ..models import DustRing, FallingZombie, GameData, Stage
 from ..render_constants import FLASHLIGHT_FOG_SCALE_STEP, FOG_RADIUS_SCALE
@@ -46,6 +50,7 @@ __all__ = [
     "place_new_car",
     "place_fuel_can",
     "place_flashlights",
+    "place_shoes",
     "place_buddies",
     "spawn_survivors",
     "setup_player_and_cars",
@@ -394,6 +399,68 @@ def place_flashlights(
         ):
             continue
         placed.append(fl)
+    return placed
+
+
+def _place_shoes(
+    walkable_cells: list[pygame.Rect],
+    player: Player,
+    *,
+    cars: Sequence[Car] | None = None,
+) -> Shoes | None:
+    """Pick a spawn spot for the shoes away from the player (and car if given)."""
+    if not walkable_cells:
+        return None
+
+    min_player_dist = 240
+    min_car_dist = 200
+    min_player_dist_sq = min_player_dist * min_player_dist
+    min_car_dist_sq = min_car_dist * min_car_dist
+
+    for _ in range(200):
+        cell = RNG.choice(walkable_cells)
+        dx = cell.centerx - player.x
+        dy = cell.centery - player.y
+        if dx * dx + dy * dy < min_player_dist_sq:
+            continue
+        if cars:
+            if any(
+                (cell.centerx - parked.rect.centerx) ** 2
+                + (cell.centery - parked.rect.centery) ** 2
+                < min_car_dist_sq
+                for parked in cars
+            ):
+                continue
+        return Shoes(cell.centerx, cell.centery)
+
+    cell = RNG.choice(walkable_cells)
+    return Shoes(cell.centerx, cell.centery)
+
+
+def place_shoes(
+    walkable_cells: list[pygame.Rect],
+    player: Player,
+    *,
+    cars: Sequence[Car] | None = None,
+    count: int = DEFAULT_SHOES_SPAWN_COUNT,
+) -> list[Shoes]:
+    """Spawn multiple shoes using the single-place helper to spread them out."""
+    placed: list[Shoes] = []
+    attempts = 0
+    max_attempts = max(200, count * 80)
+    while len(placed) < count and attempts < max_attempts:
+        attempts += 1
+        shoes = _place_shoes(walkable_cells, player, cars=cars)
+        if not shoes:
+            break
+        if any(
+            (other.rect.centerx - shoes.rect.centerx) ** 2
+            + (other.rect.centery - shoes.rect.centery) ** 2
+            < 120 * 120
+            for other in placed
+        ):
+            continue
+        placed.append(shoes)
     return placed
 
 

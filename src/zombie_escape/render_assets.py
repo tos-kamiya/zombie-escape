@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from multiprocessing import Condition
 
 import pygame
 
@@ -10,14 +11,14 @@ from .colors import (
     BLACK,
     BLUE,
     DARK_RED,
+    ORANGE,
     RED,
+    STEEL_BEAM_COLOR,
+    STEEL_BEAM_LINE_COLOR,
     TRACKER_OUTLINE_COLOR,
     WALL_FOLLOWER_OUTLINE_COLOR,
     YELLOW,
     EnvironmentPalette,
-    ORANGE,
-    STEEL_BEAM_COLOR,
-    STEEL_BEAM_LINE_COLOR,
     get_environment_palette,
 )
 from .render_constants import (
@@ -466,57 +467,70 @@ def paint_zombie_surface(
 def build_fuel_can_surface(width: int, height: int) -> pygame.Surface:
     surface = pygame.Surface((width, height), pygame.SRCALPHA)
 
-    # Jerrycan silhouette with cut corner
-    body_pts = [
-        (1, 4),
-        (width - 2, 4),
-        (width - 2, height - 2),
-        (1, height - 2),
-        (1, 8),
-        (4, 4),
+    l, r, t, b = 1, width - 1, 1, height - 1
+    corner_size = 5
+    body = [
+        (l, t),
+        (r - corner_size, t),
+        (r, t + corner_size),
+        (r, b),
+        (l, b),
     ]
-    pygame.draw.polygon(surface, YELLOW, body_pts)
-    pygame.draw.polygon(surface, BLACK, body_pts, width=2)
-
-    cap_size = max(2, width // 4)
-    cap_rect = pygame.Rect(width - cap_size - 2, 1, cap_size, 3)
-    pygame.draw.rect(surface, YELLOW, cap_rect, border_radius=1)
-    pygame.draw.rect(surface, BLACK, cap_rect, width=1, border_radius=1)
-
-    # Cross brace accent
-    brace_color = (240, 200, 40)
-    pygame.draw.line(
-        surface, brace_color, (3, height // 2), (width - 4, height // 2), width=2
-    )
-    pygame.draw.line(
-        surface, BLACK, (3, height // 2), (width - 4, height // 2), width=1
-    )
+    cap = [
+        (r - corner_size + 3, t),
+        (r, t + corner_size - 3),
+        (r - 3, t + corner_size - 2),
+        (r - corner_size + 2, t + 2),
+    ]
+    polygons = [body, cap]
+    for poly in polygons:
+        pygame.draw.polygon(surface, YELLOW, poly)
+        pygame.draw.polygon(surface, BLACK, poly, width=1)
     return surface
 
 
 def build_flashlight_surface(width: int, height: int) -> pygame.Surface:
     surface = pygame.Surface((width, height), pygame.SRCALPHA)
 
-    body_color = (230, 200, 70)
-    trim_color = (80, 70, 40)
-    head_color = (200, 180, 90)
-    beam_color = (255, 240, 180, 150)
-
-    body_rect = pygame.Rect(1, 2, width - 4, height - 4)
-    head_rect = pygame.Rect(
-        body_rect.right - 3, body_rect.top - 1, 4, body_rect.height + 2
-    )
-    beam_points = [
-        (head_rect.right + 4, head_rect.centery),
-        (head_rect.right + 2, head_rect.top),
-        (head_rect.right + 2, head_rect.bottom),
+    body = [
+        (1, 2),
+        (width - 4, 2),
+        (width - 4, height - 3),
+        (1, height - 3),
     ]
+    head = [
+        (width - 4, 1),
+        (width - 1, 1),
+        (width - 1, height - 2),
+        (width - 4, height - 2),
+    ]
+    polygons = [body, head]
+    for poly in polygons:
+        pygame.draw.polygon(surface, YELLOW, poly)
+        pygame.draw.polygon(surface, BLACK, poly, width=1)
+    return surface
 
-    pygame.draw.rect(surface, body_color, body_rect, border_radius=2)
-    pygame.draw.rect(surface, trim_color, body_rect, width=1, border_radius=2)
-    pygame.draw.rect(surface, head_color, head_rect, border_radius=2)
-    pygame.draw.rect(surface, trim_color, head_rect, width=1, border_radius=2)
-    pygame.draw.polygon(surface, beam_color, beam_points)
+
+def build_shoes_surface(width: int, height: int) -> pygame.Surface:
+    surface = pygame.Surface((width, height), pygame.SRCALPHA)
+
+    l, r, t, b = 1, width - 1, 1, height - 1
+    w = int((r - l) * 0.5)
+    h1 = int((b - t) * 0.45)
+    h2 = int((b - t) * 0.65)
+    boot = [
+        (l, t),
+        (l + w, t),
+        (l + w, t + h1),
+        (r, t + h2),
+        (r, b),
+        (l, b),
+    ]
+    polygons = [boot]
+    for poly in polygons:
+        pygame.draw.polygon(surface, YELLOW, poly)
+        pygame.draw.polygon(surface, BLACK, poly, width=1)
+
     return surface
 
 
@@ -539,4 +553,5 @@ __all__ = [
     "paint_zombie_surface",
     "build_fuel_can_surface",
     "build_flashlight_surface",
+    "build_shoes_surface",
 ]

@@ -62,6 +62,7 @@ def game_over_screen(
                 footprints_to_draw,
                 fuel=game_data.fuel,
                 flashlights=game_data.flashlights or [],
+                shoes=game_data.shoes or [],
                 stage=stage,
                 buddies=[
                     survivor

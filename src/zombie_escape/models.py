@@ -11,6 +11,7 @@ from pygame import sprite, surface
 from .entities_constants import ZOMBIE_AGING_DURATION_FRAMES
 from .gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
+    DEFAULT_SHOES_SPAWN_COUNT,
     SURVIVOR_SPAWN_RATE,
     ZOMBIE_SPAWN_DELAY_MS,
 )
@@ -18,7 +19,7 @@ from .level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
-    from .entities import Camera, Car, Flashlight, FuelCan, Player
+    from .entities import Camera, Car, Flashlight, FuelCan, Player, Shoes
 
 
 @dataclass
@@ -82,6 +83,7 @@ class ProgressState:
     elapsed_play_ms: int
     has_fuel: bool
     flashlight_count: int
+    shoes_count: int
     ambient_palette_key: str
     hint_expires_at: int
     hint_target_type: str | None
@@ -131,6 +133,7 @@ class GameData:
     level_height: int
     fuel: FuelCan | None = None
     flashlights: list[Flashlight] | None = None
+    shoes: list[Shoes] | None = None
     player: Player | None = None
     car: Car | None = None
     waiting_cars: list[Car] = field(default_factory=list)
@@ -153,6 +156,7 @@ class Stage:
     endurance_goal_ms: int = 0
     fuel_spawn_count: int = 1
     initial_flashlight_count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT
+    initial_shoes_count: int = DEFAULT_SHOES_SPAWN_COUNT
     survivor_spawn_rate: float = SURVIVOR_SPAWN_RATE
     spawn_interval_ms: int = ZOMBIE_SPAWN_DELAY_MS
     initial_interior_spawn_rate: float = 0.015

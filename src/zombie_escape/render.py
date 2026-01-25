@@ -23,12 +23,21 @@ from .entities import (
     Flashlight,
     FuelCan,
     Player,
+    Shoes,
     SteelBeam,
     Survivor,
     Wall,
     Zombie,
 )
-from .entities_constants import ZOMBIE_RADIUS
+from .entities_constants import (
+    FLASHLIGHT_HEIGHT,
+    FLASHLIGHT_WIDTH,
+    FUEL_CAN_HEIGHT,
+    FUEL_CAN_WIDTH,
+    SHOES_HEIGHT,
+    SHOES_WIDTH,
+    ZOMBIE_RADIUS,
+)
 from .font_utils import load_font
 from .gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
@@ -37,7 +46,14 @@ from .gameplay_constants import (
 from .localization import get_font_settings
 from .localization import translate as tr
 from .models import DustRing, FallingZombie, Footprint, GameData, Stage
-from .render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
+from .render_assets import (
+    RenderAssets,
+    build_flashlight_surface,
+    build_fuel_can_surface,
+    build_shoes_surface,
+    resolve_steel_beam_colors,
+    resolve_wall_colors,
+)
 from .render_constants import (
     ENTITY_SHADOW_ALPHA,
     ENTITY_SHADOW_EDGE_SOFTNESS,
@@ -56,6 +72,9 @@ from .render_constants import (
 _SHADOW_TILE_CACHE: dict[tuple[int, int, float], surface.Surface] = {}
 _SHADOW_LAYER_CACHE: dict[tuple[int, int], surface.Surface] = {}
 _SHADOW_CIRCLE_CACHE: dict[tuple[int, int, float], surface.Surface] = {}
+_HUD_ICON_CACHE: dict[str, surface.Surface] = {}
+
+HUD_ICON_SIZE = 12
 
 
 def _get_shadow_tile_surface(
@@ -118,6 +137,42 @@ def _get_shadow_layer(size: tuple[int, int]) -> surface.Surface:
     layer = pygame.Surface(key, pygame.SRCALPHA)
     _SHADOW_LAYER_CACHE[key] = layer
     return layer
+
+
+def _scale_icon_to_box(icon: surface.Surface, size: int) -> surface.Surface:
+    target_size = max(1, size)
+    width = max(1, icon.get_width())
+    height = max(1, icon.get_height())
+    scale = min(target_size / width, target_size / height)
+    target_width = max(1, int(width * scale))
+    target_height = max(1, int(height * scale))
+    scaled = pygame.transform.smoothscale(icon, (target_width, target_height))
+    boxed = pygame.Surface((target_size, target_size), pygame.SRCALPHA)
+    boxed.blit(
+        scaled,
+        (
+            (target_size - target_width) // 2,
+            (target_size - target_height) // 2,
+        ),
+    )
+    return boxed
+
+
+def _get_hud_icon(kind: str) -> surface.Surface:
+    cached = _HUD_ICON_CACHE.get(kind)
+    if cached is not None:
+        return cached
+    if kind == "fuel":
+        icon = build_fuel_can_surface(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
+    elif kind == "flashlight":
+        icon = build_flashlight_surface(FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT)
+    elif kind == "shoes":
+        icon = build_shoes_surface(SHOES_WIDTH, SHOES_HEIGHT)
+    else:
+        icon = pygame.Surface((1, 1), pygame.SRCALPHA)
+    icon = _scale_icon_to_box(icon, HUD_ICON_SIZE)
+    _HUD_ICON_CACHE[kind] = icon
+    return icon
 
 
 def _get_shadow_circle_surface(
@@ -212,6 +267,7 @@ def draw_level_overview(
     *,
     fuel: FuelCan | None = None,
     flashlights: list[Flashlight] | None = None,
+    shoes: list[Shoes] | None = None,
     stage: Stage | None = None,
     buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
@@ -258,11 +314,15 @@ def draw_level_overview(
         for flashlight in flashlights:
             if flashlight.alive():
                 pygame.draw.rect(
-                    surface, (240, 230, 150), flashlight.rect, border_radius=2
+                    surface, YELLOW, flashlight.rect, border_radius=2
                 )
                 pygame.draw.rect(
                     surface, BLACK, flashlight.rect, width=2, border_radius=2
                 )
+    if shoes:
+        for item in shoes:
+            if item.alive():
+                surface.blit(item.image, item.rect)
     if survivors:
         for survivor in survivors:
             if survivor.alive():
@@ -1169,6 +1229,35 @@ def _draw_objective(lines: list[str], *, screen: surface.Surface) -> None:
         print(f"Error rendering objective: {e}")
 
 
+def _draw_inventory_icons(
+    screen: surface.Surface,
+    assets: RenderAssets,
+    *,
+    has_fuel: bool,
+    flashlight_count: int,
+    shoes_count: int,
+) -> None:
+    icons: list[surface.Surface] = []
+    if has_fuel:
+        icons.append(_get_hud_icon("fuel"))
+    for _ in range(max(0, int(flashlight_count))):
+        icons.append(_get_hud_icon("flashlight"))
+    for _ in range(max(0, int(shoes_count))):
+        icons.append(_get_hud_icon("shoes"))
+    if not icons:
+        return
+    spacing = 3
+    padding = 8
+    total_width = sum(icon.get_width() for icon in icons)
+    total_width += spacing * max(0, len(icons) - 1)
+    start_x = assets.screen_width - padding - total_width
+    y = 8
+    x = max(padding, start_x)
+    for icon in icons:
+        screen.blit(icon, (x, y))
+        x += icon.get_width() + spacing
+
+
 def _draw_endurance_timer(
     screen: surface.Surface,
     assets: RenderAssets,
@@ -1373,6 +1462,7 @@ def draw(
     footprints = state.footprints
     has_fuel = state.has_fuel
     flashlight_count = state.flashlight_count
+    shoes_count = state.shoes_count
     elapsed_play_ms = state.elapsed_play_ms
     fuel_message_until = state.fuel_message_until
     buddy_onboard = state.buddy_onboard
@@ -1507,6 +1597,13 @@ def draw(
     )
     if objective_lines:
         _draw_objective(objective_lines, screen=screen)
+    _draw_inventory_icons(
+        screen,
+        assets,
+        has_fuel=has_fuel,
+        flashlight_count=flashlight_count,
+        shoes_count=shoes_count,
+    )
     _draw_survivor_messages(screen, assets, survivor_messages)
     _draw_endurance_timer(screen, assets, stage=stage, state=state)
     _draw_time_accel_indicator(screen, assets, stage=stage, state=state)
