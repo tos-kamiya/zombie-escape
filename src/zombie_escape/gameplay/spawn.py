@@ -306,6 +306,7 @@ def place_fuel_can(
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
+    reserved_centers: set[tuple[int, int]] | None = None,
     count: int = 1,
 ) -> FuelCan | None:
     """Pick a spawn spot for the fuel can away from the player (and car if given)."""
@@ -319,6 +320,8 @@ def place_fuel_can(
 
     for _ in range(200):
         cell = RNG.choice(walkable_cells)
+        if reserved_centers and cell.center in reserved_centers:
+            continue
         dx = cell.centerx - player.x
         dy = cell.centery - player.y
         if dx * dx + dy * dy < min_player_dist_sq:
@@ -344,6 +347,7 @@ def _place_flashlight(
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
+    reserved_centers: set[tuple[int, int]] | None = None,
 ) -> Flashlight | None:
     """Pick a spawn spot for the flashlight away from the player (and car if given)."""
     if not walkable_cells:
@@ -356,6 +360,8 @@ def _place_flashlight(
 
     for _ in range(200):
         cell = RNG.choice(walkable_cells)
+        if reserved_centers and cell.center in reserved_centers:
+            continue
         dx = cell.centerx - player.x
         dy = cell.centery - player.y
         if dx * dx + dy * dy < min_player_dist_sq:
@@ -379,6 +385,7 @@ def place_flashlights(
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
+    reserved_centers: set[tuple[int, int]] | None = None,
     count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT,
 ) -> list[Flashlight]:
     """Spawn multiple flashlights using the single-place helper to spread them out."""
@@ -387,7 +394,9 @@ def place_flashlights(
     max_attempts = max(200, count * 80)
     while len(placed) < count and attempts < max_attempts:
         attempts += 1
-        fl = _place_flashlight(walkable_cells, player, cars=cars)
+        fl = _place_flashlight(
+            walkable_cells, player, cars=cars, reserved_centers=reserved_centers
+        )
         if not fl:
             break
         # Avoid clustering too tightly
@@ -407,6 +416,7 @@ def _place_shoes(
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
+    reserved_centers: set[tuple[int, int]] | None = None,
 ) -> Shoes | None:
     """Pick a spawn spot for the shoes away from the player (and car if given)."""
     if not walkable_cells:
@@ -419,6 +429,8 @@ def _place_shoes(
 
     for _ in range(200):
         cell = RNG.choice(walkable_cells)
+        if reserved_centers and cell.center in reserved_centers:
+            continue
         dx = cell.centerx - player.x
         dy = cell.centery - player.y
         if dx * dx + dy * dy < min_player_dist_sq:
@@ -442,6 +454,7 @@ def place_shoes(
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
+    reserved_centers: set[tuple[int, int]] | None = None,
     count: int = DEFAULT_SHOES_SPAWN_COUNT,
 ) -> list[Shoes]:
     """Spawn multiple shoes using the single-place helper to spread them out."""
@@ -450,7 +463,9 @@ def place_shoes(
     max_attempts = max(200, count * 80)
     while len(placed) < count and attempts < max_attempts:
         attempts += 1
-        shoes = _place_shoes(walkable_cells, player, cars=cars)
+        shoes = _place_shoes(
+            walkable_cells, player, cars=cars, reserved_centers=reserved_centers
+        )
         if not shoes:
             break
         if any(

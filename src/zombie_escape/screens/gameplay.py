@@ -119,32 +119,39 @@ def gameplay_screen(
 
     spawn_survivors(game_data, layout_data)
 
+    occupied_centers: set[tuple[int, int]] = set()
     if stage.requires_fuel:
         fuel_spawn_count = stage.fuel_spawn_count
         fuel_can = place_fuel_can(
             layout_data["walkable_cells"],
             player,
             cars=game_data.waiting_cars,
+            reserved_centers=occupied_centers,
             count=fuel_spawn_count,
         )
         if fuel_can:
             game_data.fuel = fuel_can
             game_data.groups.all_sprites.add(fuel_can, layer=1)
+            occupied_centers.add(fuel_can.rect.center)
     flashlight_count = stage.initial_flashlight_count
     flashlights = place_flashlights(
         layout_data["walkable_cells"],
         player,
         cars=game_data.waiting_cars,
+        reserved_centers=occupied_centers,
         count=max(0, flashlight_count),
     )
     game_data.flashlights = flashlights
     game_data.groups.all_sprites.add(flashlights, layer=1)
+    for flashlight in flashlights:
+        occupied_centers.add(flashlight.rect.center)
 
     shoes_count = stage.initial_shoes_count
     shoes_list = place_shoes(
         layout_data["walkable_cells"],
         player,
         cars=game_data.waiting_cars,
+        reserved_centers=occupied_centers,
         count=max(0, shoes_count),
     )
     game_data.shoes = shoes_list
