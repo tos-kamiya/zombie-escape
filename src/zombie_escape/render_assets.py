@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from multiprocessing import Condition
+from dataclasses import dataclass
 
 import pygame
 
@@ -44,66 +44,74 @@ def _draw_outlined_circle(
         pygame.draw.circle(surface, outline_color, center, radius, width=outline_width)
 
 
-Polygon = list[tuple[int, int]]
-PolygonList = list[Polygon]
+@dataclass(frozen=True)
+class PolygonSpec:
+    size: tuple[int, int]
+    polygons: list[list[tuple[int, int]]]
 
-FUEL_CAN_POLYGON_SIZE = (13, 17)
-FUEL_CAN_POLYGONS: PolygonList = [
-    [
-        (1, 1),
-        (7, 1),
-        (12, 6),
-        (12, 16),
-        (1, 16),
-    ],
-    [
-        (10, 1),
-        (12, 3),
-        (9, 4),
-        (7, 3),
-    ],
-]
 
-FLASHLIGHT_POLYGON_SIZE = (12, 10)
-FLASHLIGHT_POLYGONS: PolygonList = [
-    [
-        (1, 2),
-        (8, 2),
-        (8, 7),
-        (1, 7),
+FUEL_CAN_SPEC = PolygonSpec(
+    size=(13, 17),
+    polygons=[
+        [
+            (1, 1),
+            (7, 1),
+            (12, 6),
+            (12, 16),
+            (1, 16),
+        ],
+        [
+            (10, 1),
+            (12, 3),
+            (9, 4),
+            (7, 3),
+        ],
     ],
-    [
-        (8, 1),
-        (11, 1),
-        (11, 8),
-        (8, 8),
-    ],
-]
+)
 
-SHOES_POLYGON_SIZE = (14, 10)
-SHOES_POLYGONS: PolygonList = [
-    [
-        (1, 1),
-        (7, 1),
-        (7, 4),
-        (13, 6),
-        (13, 9),
-        (1, 9),
+FLASHLIGHT_SPEC = PolygonSpec(
+    size=(12, 10),
+    polygons=[
+        [
+            (1, 2),
+            (8, 2),
+            (8, 7),
+            (1, 7),
+        ],
+        [
+            (8, 1),
+            (11, 1),
+            (11, 8),
+            (8, 8),
+        ],
     ],
-]
+)
+
+SHOES_SPEC = PolygonSpec(
+    size=(14, 10),
+    polygons=[
+        [
+            (1, 1),
+            (7, 1),
+            (7, 4),
+            (13, 6),
+            (13, 9),
+            (1, 9),
+        ],
+    ],
+)
 
 
 def _scale_polygons(
-    polygons: PolygonList,
-    src_size: tuple[int, int],
+    spec: PolygonSpec,
     dst_size: tuple[int, int],
-) -> PolygonList:
-    src_w, src_h = src_size
+) -> list[list[tuple[int, int]]]:
+    src_w, src_h = spec.size
     dst_w, dst_h = dst_size
     scale_x = dst_w / max(1, src_w)
     scale_y = dst_h / max(1, src_h)
-    scaled: PolygonList = []
-    for poly in polygons:
+    scaled = []
+    for poly in spec.polygons:
         scaled.append(
             [
                 (
@@ -119,13 +127,12 @@ def _scale_polygons(
 def _draw_polygon_surface(
     width: int,
     height: int,
-    polygons: PolygonList,
-    base_size: tuple[int, int],
+    spec: PolygonSpec,
 ) -> pygame.Surface:
     surface = pygame.Surface((width, height), pygame.SRCALPHA)
-    draw_polygons = polygons
-    if (width, height) != base_size:
-        draw_polygons = _scale_polygons(polygons, base_size, (width, height))
+    draw_polygons = spec.polygons
+    if (width, height) != spec.size:
+        draw_polygons = _scale_polygons(spec, (width, height))
     for poly in draw_polygons:
         pygame.draw.polygon(surface, YELLOW, poly)
         pygame.draw.polygon(surface, BLACK, poly, width=1)
@@ -553,30 +560,15 @@ def paint_zombie_surface(
 
 
 def build_fuel_can_surface(width: int, height: int) -> pygame.Surface:
-    return _draw_polygon_surface(
-        width,
-        height,
-        FUEL_CAN_POLYGONS,
-        FUEL_CAN_POLYGON_SIZE,
-    )
+    return _draw_polygon_surface(width, height, FUEL_CAN_SPEC)
 
 
 def build_flashlight_surface(width: int, height: int) -> pygame.Surface:
-    return _draw_polygon_surface(
-        width,
-        height,
-        FLASHLIGHT_POLYGONS,
-        FLASHLIGHT_POLYGON_SIZE,
-    )
+    return _draw_polygon_surface(width, height, FLASHLIGHT_SPEC)
 
 
 def build_shoes_surface(width: int, height: int) -> pygame.Surface:
-    return _draw_polygon_surface(
-        width,
-        height,
-        SHOES_POLYGONS,
-        SHOES_POLYGON_SIZE,
-    )
+    return _draw_polygon_surface(width, height, SHOES_SPEC)
 
 
 __all__ = [
