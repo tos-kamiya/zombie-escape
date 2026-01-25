@@ -63,7 +63,6 @@ def game_over_screen(
                 fuel=game_data.fuel,
                 flashlights=game_data.flashlights or [],
                 shoes=game_data.shoes or [],
-                stage=stage,
                 buddies=[
                     survivor
                     for survivor in game_data.groups.survivor_group

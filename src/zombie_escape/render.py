@@ -268,7 +268,6 @@ def draw_level_overview(
     fuel: FuelCan | None = None,
     flashlights: list[Flashlight] | None = None,
     shoes: list[Shoes] | None = None,
-    stage: Stage | None = None,
     buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
     palette_key: str | None = None,
@@ -356,7 +355,6 @@ def draw_level_overview(
 
 def _get_fog_scale(
     assets: RenderAssets,
-    stage: Stage | None,
     flashlight_count: int,
 ) -> float:
     """Return current fog scale factoring in flashlight bonus."""
@@ -385,7 +383,7 @@ class FogProfile(Enum):
 
     def _scale(self, assets: RenderAssets, stage: Stage | None) -> float:
         count = max(0, min(self.flashlight_count, _max_flashlight_pickups()))
-        return _get_fog_scale(assets, stage, count)
+        return _get_fog_scale(assets, count)
 
     @staticmethod
     def _from_flashlight_count(count: int) -> "FogProfile":
@@ -1140,11 +1138,7 @@ def _draw_hint_indicator(
 ) -> None:
     if not hint_target:
         return
-    current_fov_scale = _get_fog_scale(
-        assets,
-        stage,
-        flashlight_count,
-    )
+    current_fov_scale = _get_fog_scale(assets, flashlight_count)
     hint_ring_radius = assets.fov_radius * 0.5 * current_fov_scale
     _draw_hint_arrow(
         screen,
