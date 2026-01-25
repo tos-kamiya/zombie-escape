@@ -39,9 +39,14 @@ from .localization import translate as tr
 from .models import DustRing, FallingZombie, Footprint, GameData, Stage
 from .render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
 from .render_constants import (
+    ENTITY_SHADOW_ALPHA,
+    ENTITY_SHADOW_EDGE_SOFTNESS,
+    ENTITY_SHADOW_RADIUS_MULT,
     FALLING_DUST_COLOR,
     FALLING_WHIRLWIND_COLOR,
     FALLING_ZOMBIE_COLOR,
+    PLAYER_SHADOW_ALPHA_MULT,
+    PLAYER_SHADOW_RADIUS_MULT,
     SHADOW_MIN_RATIO,
     SHADOW_OVERSAMPLE,
     SHADOW_RADIUS_RATIO,
@@ -889,15 +894,15 @@ def _draw_entity_shadows(
     *,
     light_source_pos: tuple[int, int] | None,
     exclude_car: Car | None,
-    shadow_radius: int = int(ZOMBIE_RADIUS * 1.8),
-    alpha: int = 54,
+    shadow_radius: int = int(ZOMBIE_RADIUS * ENTITY_SHADOW_RADIUS_MULT),
+    alpha: int = ENTITY_SHADOW_ALPHA,
 ) -> bool:
     if light_source_pos is None or shadow_radius <= 0:
         return False
     shadow_surface = _get_shadow_circle_surface(
         shadow_radius,
         alpha,
-        edge_softness=0.32,
+        edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
     )
     screen_rect = shadow_layer.get_rect()
     px, py = light_source_pos
@@ -947,7 +952,7 @@ def _draw_single_entity_shadow(
     light_source_pos: tuple[int, int] | None,
     shadow_radius: int,
     alpha: int,
-    edge_softness: float = 0.32,
+    edge_softness: float = ENTITY_SHADOW_EDGE_SOFTNESS,
 ) -> bool:
     if (
         entity is None
@@ -1417,8 +1422,8 @@ def draw(
         light_source_pos=fov_target.rect.center if fov_target else None,
         exclude_car=active_car if player.in_car else None,
     )
-    player_shadow_alpha = max(1, int(54 * 0.8))
-    player_shadow_radius = int(ZOMBIE_RADIUS * 1.6)
+    player_shadow_alpha = max(1, int(ENTITY_SHADOW_ALPHA * PLAYER_SHADOW_ALPHA_MULT))
+    player_shadow_radius = int(ZOMBIE_RADIUS * PLAYER_SHADOW_RADIUS_MULT)
     if player.in_car:
         drew_shadow |= _draw_single_entity_shadow(
             shadow_layer,
