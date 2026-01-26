@@ -328,13 +328,13 @@ def build_player_surface(radius: int) -> pygame.Surface:
 
 
 def build_survivor_surface(radius: int, *, is_buddy: bool) -> pygame.Surface:
-    padding = radius // 2
-    surface = pygame.Surface(
-        (radius * 2 + padding * 2, radius * 2 + padding * 2), pygame.SRCALPHA
-    )
-    center = (radius + padding, radius + padding)
     fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
     if is_buddy:
+        padding = radius // 2
+        surface = pygame.Surface(
+            (radius * 2 + padding * 2, radius * 2 + padding * 2), pygame.SRCALPHA
+        )
+        center = (radius + padding, radius + padding)
         _draw_capped_circle(
             surface,
             center,
@@ -345,12 +345,12 @@ def build_survivor_surface(radius: int, *, is_buddy: bool) -> pygame.Surface:
             HUMANOID_OUTLINE_WIDTH,
         )
     else:
-        _draw_capped_circle(
+        surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        _draw_outlined_circle(
             surface,
-            center,
+            (radius, radius),
             radius,
             fill_color,
-            _brighten_color(fill_color),
             HUMANOID_OUTLINE_COLOR,
             HUMANOID_OUTLINE_WIDTH,
         )
