@@ -28,7 +28,7 @@ class LevelLayout:
 
     field_rect: pygame.Rect
     outside_cells: set[tuple[int, int]]
-    walkable_rects: list[pygame.Rect]
+    walkable_cells: list[tuple[int, int]]
     outer_wall_cells: set[tuple[int, int]]
     wall_cells: set[tuple[int, int]]
     fall_spawn_cells: set[tuple[int, int]]

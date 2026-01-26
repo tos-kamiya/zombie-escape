@@ -93,10 +93,10 @@ def generate_level_from_blueprint(
         return (nx, ny) in wall_cells
 
     outside_cells: set[tuple[int, int]] = set()
-    walkable_rects: list[pygame.Rect] = []
-    player_cells: list[pygame.Rect] = []
-    car_cells: list[pygame.Rect] = []
-    zombie_cells: list[pygame.Rect] = []
+    walkable_cells: list[tuple[int, int]] = []
+    player_cells: list[tuple[int, int]] = []
+    car_cells: list[tuple[int, int]] = []
+    zombie_cells: list[tuple[int, int]] = []
     interior_min_x = 2
     interior_max_x = stage.grid_cols - 3
     interior_min_y = 2
@@ -147,7 +147,7 @@ def generate_level_from_blueprint(
                 continue
             if ch == "E":
                 if not cell_has_beam:
-                    walkable_rects.append(cell_rect)
+                    walkable_cells.append((x, y))
             elif ch == "1":
                 beam = None
                 if cell_has_beam:
@@ -196,14 +196,14 @@ def generate_level_from_blueprint(
                 all_sprites.add(wall, layer=0)
             else:
                 if not cell_has_beam:
-                    walkable_rects.append(cell_rect)
+                    walkable_cells.append((x, y))
 
             if ch == "P":
-                player_cells.append(cell_rect)
+                player_cells.append((x, y))
             if ch == "C":
-                car_cells.append(cell_rect)
+                car_cells.append((x, y))
             if ch == "Z":
-                zombie_cells.append(cell_rect)
+                zombie_cells.append((x, y))
 
             if cell_has_beam and ch != "1":
                 beam = SteelBeam(
@@ -222,7 +222,7 @@ def generate_level_from_blueprint(
         game_data.level_height,
     )
     game_data.layout.outside_cells = outside_cells
-    game_data.layout.walkable_rects = walkable_rects
+    game_data.layout.walkable_cells = walkable_cells
     game_data.layout.outer_wall_cells = outer_wall_cells
     game_data.layout.wall_cells = wall_cells
     fall_spawn_cells = _expand_zone_cells(
@@ -250,5 +250,5 @@ def generate_level_from_blueprint(
         "player_cells": player_cells,
         "car_cells": car_cells,
         "zombie_cells": zombie_cells,
-        "walkable_rects": walkable_rects,
+        "walkable_cells": walkable_cells,
     }

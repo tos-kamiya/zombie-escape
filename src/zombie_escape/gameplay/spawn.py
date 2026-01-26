@@ -68,6 +68,13 @@ __all__ = [
 ]
 
 
+def _cell_center(cell: tuple[int, int], cell_size: int) -> tuple[int, int]:
+    return (
+        int((cell[0] * cell_size) + (cell_size / 2)),
+        int((cell[1] * cell_size) + (cell_size / 2)),
+    )
+
+
 def _car_appearance_for_stage(stage: Stage | None) -> str:
     return "disabled" if stage and stage.endurance_stage else "default"
 
@@ -311,7 +318,8 @@ def _create_zombie(
 
 
 def place_fuel_can(
-    walkable_rects: list[pygame.Rect],
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
@@ -319,7 +327,7 @@ def place_fuel_can(
     count: int = 1,
 ) -> FuelCan | None:
     """Pick a spawn spot for the fuel can away from the player (and car if given)."""
-    if count <= 0 or not walkable_rects:
+    if count <= 0 or not walkable_cells:
         return None
 
     min_player_dist = 250
@@ -328,38 +336,41 @@ def place_fuel_can(
     min_car_dist_sq = min_car_dist * min_car_dist
 
     for _ in range(200):
-        cell = RNG.choice(walkable_rects)
-        if reserved_centers and cell.center in reserved_centers:
+        cell = RNG.choice(walkable_cells)
+        center = _cell_center(cell, cell_size)
+        if reserved_centers and center in reserved_centers:
             continue
-        dx = cell.centerx - player.x
-        dy = cell.centery - player.y
+        dx = center[0] - player.x
+        dy = center[1] - player.y
         if dx * dx + dy * dy < min_player_dist_sq:
             continue
         if cars:
             too_close = False
             for parked_car in cars:
-                dx = cell.centerx - parked_car.rect.centerx
-                dy = cell.centery - parked_car.rect.centery
+                dx = center[0] - parked_car.rect.centerx
+                dy = center[1] - parked_car.rect.centery
                 if dx * dx + dy * dy < min_car_dist_sq:
                     too_close = True
                     break
             if too_close:
                 continue
-        return FuelCan(cell.centerx, cell.centery)
+        return FuelCan(center[0], center[1])
 
-    cell = RNG.choice(walkable_rects)
-    return FuelCan(cell.centerx, cell.centery)
+    cell = RNG.choice(walkable_cells)
+    center = _cell_center(cell, cell_size)
+    return FuelCan(center[0], center[1])
 
 
 def _place_flashlight(
-    walkable_rects: list[pygame.Rect],
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
     reserved_centers: set[tuple[int, int]] | None = None,
 ) -> Flashlight | None:
     """Pick a spawn spot for the flashlight away from the player (and car if given)."""
-    if not walkable_rects:
+    if not walkable_cells:
         return None
 
     min_player_dist = 260
@@ -368,29 +379,32 @@ def _place_flashlight(
     min_car_dist_sq = min_car_dist * min_car_dist
 
     for _ in range(200):
-        cell = RNG.choice(walkable_rects)
-        if reserved_centers and cell.center in reserved_centers:
+        cell = RNG.choice(walkable_cells)
+        center = _cell_center(cell, cell_size)
+        if reserved_centers and center in reserved_centers:
             continue
-        dx = cell.centerx - player.x
-        dy = cell.centery - player.y
+        dx = center[0] - player.x
+        dy = center[1] - player.y
         if dx * dx + dy * dy < min_player_dist_sq:
             continue
         if cars:
             if any(
-                (cell.centerx - parked.rect.centerx) ** 2
-                + (cell.centery - parked.rect.centery) ** 2
+                (center[0] - parked.rect.centerx) ** 2
+                + (center[1] - parked.rect.centery) ** 2
                 < min_car_dist_sq
                 for parked in cars
             ):
                 continue
-        return Flashlight(cell.centerx, cell.centery)
+        return Flashlight(center[0], center[1])
 
-    cell = RNG.choice(walkable_rects)
-    return Flashlight(cell.centerx, cell.centery)
+    cell = RNG.choice(walkable_cells)
+    center = _cell_center(cell, cell_size)
+    return Flashlight(center[0], center[1])
 
 
 def place_flashlights(
-    walkable_rects: list[pygame.Rect],
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
@@ -404,7 +418,11 @@ def place_flashlights(
     while len(placed) < count and attempts < max_attempts:
         attempts += 1
         fl = _place_flashlight(
-            walkable_rects, player, cars=cars, reserved_centers=reserved_centers
+            walkable_cells,
+            cell_size,
+            player,
+            cars=cars,
+            reserved_centers=reserved_centers,
         )
         if not fl:
             break
@@ -421,14 +439,15 @@ def place_flashlights(
 
 
 def _place_shoes(
-    walkable_rects: list[pygame.Rect],
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
     reserved_centers: set[tuple[int, int]] | None = None,
 ) -> Shoes | None:
     """Pick a spawn spot for the shoes away from the player (and car if given)."""
-    if not walkable_rects:
+    if not walkable_cells:
         return None
 
     min_player_dist = 240
@@ -437,29 +456,32 @@ def _place_shoes(
     min_car_dist_sq = min_car_dist * min_car_dist
 
     for _ in range(200):
-        cell = RNG.choice(walkable_rects)
-        if reserved_centers and cell.center in reserved_centers:
+        cell = RNG.choice(walkable_cells)
+        center = _cell_center(cell, cell_size)
+        if reserved_centers and center in reserved_centers:
             continue
-        dx = cell.centerx - player.x
-        dy = cell.centery - player.y
+        dx = center[0] - player.x
+        dy = center[1] - player.y
         if dx * dx + dy * dy < min_player_dist_sq:
             continue
         if cars:
             if any(
-                (cell.centerx - parked.rect.centerx) ** 2
-                + (cell.centery - parked.rect.centery) ** 2
+                (center[0] - parked.rect.centerx) ** 2
+                + (center[1] - parked.rect.centery) ** 2
                 < min_car_dist_sq
                 for parked in cars
             ):
                 continue
-        return Shoes(cell.centerx, cell.centery)
+        return Shoes(center[0], center[1])
 
-    cell = RNG.choice(walkable_rects)
-    return Shoes(cell.centerx, cell.centery)
+    cell = RNG.choice(walkable_cells)
+    center = _cell_center(cell, cell_size)
+    return Shoes(center[0], center[1])
 
 
 def place_shoes(
-    walkable_rects: list[pygame.Rect],
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
@@ -473,7 +495,11 @@ def place_shoes(
     while len(placed) < count and attempts < max_attempts:
         attempts += 1
         shoes = _place_shoes(
-            walkable_rects, player, cars=cars, reserved_centers=reserved_centers
+            walkable_cells,
+            cell_size,
+            player,
+            cars=cars,
+            reserved_centers=reserved_centers,
         )
         if not shoes:
             break
@@ -489,18 +515,20 @@ def place_shoes(
 
 
 def place_buddies(
-    walkable_rects: list[pygame.Rect],
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
     player: Player,
     *,
     cars: Sequence[Car] | None = None,
     count: int = 1,
 ) -> list[Survivor]:
     placed: list[Survivor] = []
-    if count <= 0 or not walkable_rects:
+    if count <= 0 or not walkable_cells:
         return placed
     min_player_dist = 240
     positions = find_interior_spawn_positions(
-        walkable_rects,
+        walkable_cells,
+        cell_size,
         1.0,
         player=player,
         min_player_dist=min_player_dist,
@@ -510,7 +538,10 @@ def place_buddies(
         placed.append(Survivor(pos[0], pos[1], is_buddy=True))
     remaining = count - len(placed)
     for _ in range(max(0, remaining)):
-        spawn_pos = find_nearby_offscreen_spawn_position(walkable_rects)
+        spawn_pos = find_nearby_offscreen_spawn_position(
+            walkable_cells,
+            cell_size,
+        )
         placed.append(Survivor(spawn_pos[0], spawn_pos[1], is_buddy=True))
     return placed
 
@@ -518,18 +549,19 @@ def place_buddies(
 def place_new_car(
     wall_group: pygame.sprite.Group,
     player: Player,
-    walkable_rects: list[pygame.Rect],
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
     *,
     existing_cars: Sequence[Car] | None = None,
     appearance: str = "default",
 ) -> Car | None:
-    if not walkable_rects:
+    if not walkable_cells:
         return None
 
     max_attempts = 150
     for _ in range(max_attempts):
-        cell = RNG.choice(walkable_rects)
-        c_x, c_y = cell.center
+        cell = RNG.choice(walkable_cells)
+        c_x, c_y = _cell_center(cell, cell_size)
         temp_car = Car(c_x, c_y, appearance=appearance)
         temp_rect = temp_car.rect.inflate(30, 30)
         nearby_walls = pygame.sprite.Group()
@@ -555,21 +587,23 @@ def place_new_car(
 
 
 def spawn_survivors(
-    game_data: GameData, layout_data: Mapping[str, list[pygame.Rect]]
+    game_data: GameData, layout_data: Mapping[str, list[tuple[int, int]]]
 ) -> list[Survivor]:
     """Populate rescue-stage survivors and buddy-stage buddies."""
     survivors: list[Survivor] = []
     if not (game_data.stage.rescue_stage or game_data.stage.buddy_required_count > 0):
         return survivors
 
-    walkable = layout_data.get("walkable_rects", [])
+    walkable = layout_data.get("walkable_cells", [])
     wall_group = game_data.groups.wall_group
     survivor_group = game_data.groups.survivor_group
     all_sprites = game_data.groups.all_sprites
+    cell_size = game_data.cell_size
 
     if game_data.stage.rescue_stage:
         positions = find_interior_spawn_positions(
             walkable,
+            cell_size,
             game_data.stage.survivor_spawn_rate,
         )
         for pos in positions:
@@ -586,6 +620,7 @@ def spawn_survivors(
         if game_data.player:
             buddies = place_buddies(
                 walkable,
+                cell_size,
                 game_data.player,
                 cars=game_data.waiting_cars,
                 count=buddy_count,
@@ -602,25 +637,26 @@ def spawn_survivors(
 
 def setup_player_and_cars(
     game_data: GameData,
-    layout_data: Mapping[str, list[pygame.Rect]],
+    layout_data: Mapping[str, list[tuple[int, int]]],
     *,
     car_count: int = 1,
 ) -> tuple[Player, list[Car]]:
     """Create the player plus one or more parked cars using blueprint candidates."""
     all_sprites = game_data.groups.all_sprites
-    walkable_rects: list[pygame.Rect] = layout_data["walkable_rects"]
+    walkable_cells: list[tuple[int, int]] = layout_data["walkable_cells"]
+    cell_size = game_data.cell_size
 
-    def _pick_center(cells: list[pygame.Rect]) -> tuple[int, int]:
+    def _pick_center(cells: list[tuple[int, int]]) -> tuple[int, int]:
         return (
-            RNG.choice(cells).center
+            _cell_center(RNG.choice(cells), cell_size)
             if cells
             else (game_data.level_width // 2, game_data.level_height // 2)
         )
 
-    player_pos = _pick_center(layout_data["player_cells"] or walkable_rects)
+    player_pos = _pick_center(layout_data["player_cells"] or walkable_cells)
     player = Player(*player_pos)
 
-    car_candidates = list(layout_data["car_cells"] or walkable_rects)
+    car_candidates = list(layout_data["car_cells"] or walkable_cells)
     waiting_cars: list[Car] = []
     car_appearance = _car_appearance_for_stage(game_data.stage)
 
@@ -630,13 +666,14 @@ def setup_player_and_cars(
             return (player_pos[0] + 200, player_pos[1])
         RNG.shuffle(car_candidates)
         for candidate in car_candidates:
-            if (candidate.centerx - player_pos[0]) ** 2 + (
-                candidate.centery - player_pos[1]
+            center = _cell_center(candidate, cell_size)
+            if (center[0] - player_pos[0]) ** 2 + (
+                center[1] - player_pos[1]
             ) ** 2 >= 400 * 400:
                 car_candidates.remove(candidate)
-                return candidate.center
+                return center
         choice = car_candidates.pop()
-        return choice.center
+        return _cell_center(choice, cell_size)
 
     for _ in range(max(1, car_count)):
         car_pos = _pick_car_position()
@@ -653,7 +690,7 @@ def setup_player_and_cars(
 def spawn_initial_zombies(
     game_data: GameData,
     player: Player,
-    layout_data: Mapping[str, list[pygame.Rect]],
+    layout_data: Mapping[str, list[tuple[int, int]]],
     config: dict[str, Any],
 ) -> None:
     """Spawn initial zombies using blueprint candidate cells."""
@@ -661,27 +698,28 @@ def spawn_initial_zombies(
     zombie_group = game_data.groups.zombie_group
     all_sprites = game_data.groups.all_sprites
 
-    spawn_cells = layout_data["walkable_rects"]
+    spawn_cells = layout_data["walkable_cells"]
     if not spawn_cells:
         return
+    cell_size = game_data.cell_size
 
     if game_data.stage.id == "debug_tracker":
         player_pos = player.rect.center
         min_dist_sq = 100 * 100
         max_dist_sq = 240 * 240
-        candidates = [
-            cell
-            for cell in spawn_cells
-            if min_dist_sq
-            <= (cell.centerx - player_pos[0]) ** 2 + (cell.centery - player_pos[1]) ** 2
-            <= max_dist_sq
-        ]
+        candidates = []
+        for cell in spawn_cells:
+            center = _cell_center(cell, cell_size)
+            dist_sq = (center[0] - player_pos[0]) ** 2 + (center[1] - player_pos[1]) ** 2
+            if min_dist_sq <= dist_sq <= max_dist_sq:
+                candidates.append(cell)
         if not candidates:
             candidates = spawn_cells
         candidate = RNG.choice(candidates)
+        candidate_center = _cell_center(candidate, cell_size)
         tentative = _create_zombie(
             config,
-            start_pos=candidate.center,
+            start_pos=candidate_center,
             stage=game_data.stage,
             tracker=True,
             wall_follower=False,
@@ -696,6 +734,7 @@ def spawn_initial_zombies(
     spawn_rate = max(0.0, game_data.stage.initial_interior_spawn_rate)
     positions = find_interior_spawn_positions(
         spawn_cells,
+        cell_size,
         spawn_rate,
         player=player,
         min_player_dist=ZOMBIE_SPAWN_PLAYER_BUFFER,
@@ -724,11 +763,12 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
     player = game_data.player
     if not player:
         return None
-    walkable_rects = game_data.layout.walkable_rects
-    if not walkable_rects:
+    walkable_cells = game_data.layout.walkable_cells
+    if not walkable_cells:
         return None
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
+    cell_size = game_data.cell_size
     active_car = game_data.car if game_data.car and game_data.car.alive() else None
     waiting = _alive_waiting_cars(game_data)
     obstacles: list[Car] = list(waiting)
@@ -741,7 +781,8 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
         new_car = place_new_car(
             wall_group,
             player,
-            walkable_rects,
+            walkable_cells,
+            cell_size,
             existing_cars=obstacles,
             appearance=appearance,
         )
@@ -812,7 +853,8 @@ def _spawn_nearby_zombie(
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
     spawn_pos = find_nearby_offscreen_spawn_position(
-        game_data.layout.walkable_rects,
+        game_data.layout.walkable_cells,
+        game_data.cell_size,
         player=player,
         camera=camera,
         min_player_dist=ZOMBIE_SPAWN_PLAYER_BUFFER,

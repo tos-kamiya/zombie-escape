@@ -83,7 +83,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         layout=LevelLayout(
             field_rect=field_rect,
             outside_cells=set(),
-            walkable_rects=[],
+            walkable_cells=[],
             outer_wall_cells=set(),
             wall_cells=set(),
             fall_spawn_cells=set(),

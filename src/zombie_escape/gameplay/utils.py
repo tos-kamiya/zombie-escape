@@ -25,40 +25,47 @@ def rect_visible_on_screen(camera: Camera | None, rect: pygame.Rect) -> bool:
 
 
 def _scatter_positions_on_walkable(
-    walkable_rects: list[pygame.Rect],
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
     spawn_rate: float,
     *,
     jitter_ratio: float = 0.35,
 ) -> list[tuple[int, int]]:
     positions: list[tuple[int, int]] = []
-    if not walkable_rects or spawn_rate <= 0:
+    if not walkable_cells or spawn_rate <= 0:
         return positions
 
     clamped_rate = max(0.0, min(1.0, spawn_rate))
-    for cell in walkable_rects:
+    for cell_x, cell_y in walkable_cells:
         if RNG.random() >= clamped_rate:
             continue
-        jitter_x = RNG.uniform(-cell.width * jitter_ratio, cell.width * jitter_ratio)
-        jitter_y = RNG.uniform(-cell.height * jitter_ratio, cell.height * jitter_ratio)
-        positions.append((int(cell.centerx + jitter_x), int(cell.centery + jitter_y)))
+        jitter_extent = cell_size * jitter_ratio
+        jitter_x = RNG.uniform(-jitter_extent, jitter_extent)
+        jitter_y = RNG.uniform(-jitter_extent, jitter_extent)
+        base_x = (cell_x * cell_size) + (cell_size / 2)
+        base_y = (cell_y * cell_size) + (cell_size / 2)
+        positions.append((int(base_x + jitter_x), int(base_y + jitter_y)))
     return positions
 
 
 def find_interior_spawn_positions(
-    walkable_rects: list[pygame.Rect],
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
     spawn_rate: float,
     *,
     player: Player | None = None,
     min_player_dist: float | None = None,
 ) -> list[tuple[int, int]]:
     positions = _scatter_positions_on_walkable(
-        walkable_rects,
+        walkable_cells,
+        cell_size,
         spawn_rate,
         jitter_ratio=0.35,
     )
     if not positions and spawn_rate > 0:
         positions = _scatter_positions_on_walkable(
-            walkable_rects,
+            walkable_cells,
+            cell_size,
             spawn_rate * 1.5,
             jitter_ratio=0.35,
         )
@@ -78,7 +85,8 @@ def find_interior_spawn_positions(
 
 
 def find_nearby_offscreen_spawn_position(
-    walkable_rects: list[pygame.Rect],
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
     *,
     player: Player | None = None,
     camera: Camera | None = None,
@@ -86,8 +94,8 @@ def find_nearby_offscreen_spawn_position(
     max_player_dist: float | None = None,
     attempts: int = 18,
 ) -> tuple[int, int]:
-    if not walkable_rects:
-        raise ValueError("walkable_rects must not be empty")
+    if not walkable_cells:
+        raise ValueError("walkable_cells must not be empty")
     view_rect = None
     if camera is not None:
         view_rect = pygame.Rect(
@@ -104,10 +112,14 @@ def find_nearby_offscreen_spawn_position(
         None if max_player_dist is None else max_player_dist * max_player_dist
     )
     for _ in range(max(1, attempts)):
-        cell = RNG.choice(walkable_rects)
-        jitter_x = RNG.uniform(-cell.width * 0.35, cell.width * 0.35)
-        jitter_y = RNG.uniform(-cell.height * 0.35, cell.height * 0.35)
-        candidate = (int(cell.centerx + jitter_x), int(cell.centery + jitter_y))
+        cell_x, cell_y = RNG.choice(walkable_cells)
+        jitter_extent = cell_size * 0.35
+        jitter_x = RNG.uniform(-jitter_extent, jitter_extent)
+        jitter_y = RNG.uniform(-jitter_extent, jitter_extent)
+        candidate = (
+            int((cell_x * cell_size) + (cell_size / 2) + jitter_x),
+            int((cell_y * cell_size) + (cell_size / 2) + jitter_y),
+        )
         if player is not None and (
             min_distance_sq is not None or max_distance_sq is not None
         ):
@@ -123,8 +135,11 @@ def find_nearby_offscreen_spawn_position(
         return candidate
     if player is not None and (min_distance_sq is not None or max_distance_sq is not None):
         for _ in range(20):
-            cell = RNG.choice(walkable_rects)
-            center = (cell.centerx, cell.centery)
+            cell_x, cell_y = RNG.choice(walkable_cells)
+            center = (
+                (cell_x * cell_size) + (cell_size / 2),
+                (cell_y * cell_size) + (cell_size / 2),
+            )
             if view_rect is not None and view_rect.collidepoint(center):
                 continue
             dx = center[0] - player.x
@@ -134,15 +149,19 @@ def find_nearby_offscreen_spawn_position(
                 continue
             if max_distance_sq is not None and dist_sq > max_distance_sq:
                 continue
-            fallback_x = RNG.uniform(-cell.width * 0.2, cell.width * 0.2)
-            fallback_y = RNG.uniform(-cell.height * 0.2, cell.height * 0.2)
-            return (int(cell.centerx + fallback_x), int(cell.centery + fallback_y))
-    fallback_cell = RNG.choice(walkable_rects)
-    fallback_x = RNG.uniform(-fallback_cell.width * 0.35, fallback_cell.width * 0.35)
-    fallback_y = RNG.uniform(-fallback_cell.height * 0.35, fallback_cell.height * 0.35)
+            fallback_extent = cell_size * 0.2
+            fallback_x = RNG.uniform(-fallback_extent, fallback_extent)
+            fallback_y = RNG.uniform(-fallback_extent, fallback_extent)
+            return (int(center[0] + fallback_x), int(center[1] + fallback_y))
+    fallback_cell_x, fallback_cell_y = RNG.choice(walkable_cells)
+    fallback_center_x = (fallback_cell_x * cell_size) + (cell_size / 2)
+    fallback_center_y = (fallback_cell_y * cell_size) + (cell_size / 2)
+    fallback_extent = cell_size * 0.35
+    fallback_x = RNG.uniform(-fallback_extent, fallback_extent)
+    fallback_y = RNG.uniform(-fallback_extent, fallback_extent)
     return (
-        int(fallback_cell.centerx + fallback_x),
-        int(fallback_cell.centery + fallback_y),
+        int(fallback_center_x + fallback_x),
+        int(fallback_center_y + fallback_y),
     )
 
 

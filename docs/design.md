@@ -95,7 +95,7 @@
 
 ### 3.4 レベルレイアウト (models.LevelLayout)
 
-- `field_rect`, `outside_cells`, `walkable_rects`, `outer_wall_cells` を保持。
+- `field_rect`, `outside_cells`, `walkable_cells`, `outer_wall_cells` を保持。
 - 追加: `wall_cells`, `fall_spawn_cells`, `bevel_corners`
 - 命名規則: `*_cells` はセル座標の集合（`tuple[int, int]`）、`*_rects` は `Rect` の集合。
 
@@ -258,7 +258,7 @@
     - `"default"`: ランダムな長さの直線をランダム配置。
     - `"empty"`: 内部壁なし。
     - `"grid_wire"`: 縦横を独立グリッドで生成しマージ。平行な壁の隣接（2x2ブロック）を禁止する。
-  - ステージ内のアイテム配置（燃料/懐中電灯/靴など）は、レイアウト生成後に `walkable_rects` を使って行う。
+  - ステージ内のアイテム配置（燃料/懐中電灯/靴など）は、レイアウト生成後に `walkable_cells` を使って行う。
 
 - 落下ゾンビ用タイル
   - `fall_spawn_zones`（ステージ定義の矩形群）をセル集合に展開し、`fall_spawn_cells` として保持。

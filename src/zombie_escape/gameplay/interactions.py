@@ -56,7 +56,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     all_sprites = game_data.groups.all_sprites
     survivor_group = game_data.groups.survivor_group
     state = game_data.state
-    walkable_rects = game_data.layout.walkable_rects
+    walkable_cells = game_data.layout.walkable_cells
     outside_cells = game_data.layout.outside_cells
     fuel = game_data.fuel
     flashlights = game_data.flashlights or []
@@ -80,6 +80,12 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         if cell_size <= 0:
             return None
         return (int(rect.centerx // cell_size), int(rect.centery // cell_size))
+
+    def _cell_center(cell: tuple[int, int]) -> tuple[int, int]:
+        return (
+            int((cell[0] * cell_size) + (cell_size / 2)),
+            int((cell[1] * cell_size) + (cell_size / 2)),
+        )
 
     def _player_near_point(point: tuple[float, float], radius: float) -> bool:
         dx = point[0] - player.x
@@ -193,9 +199,9 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     state.game_over = True
                     state.game_over_at = state.game_over_at or pygame.time.get_ticks()
                 else:
-                    if walkable_rects:
-                        new_cell = RNG.choice(walkable_rects)
-                        buddy.teleport(new_cell.center)
+                    if walkable_cells:
+                        new_cell = RNG.choice(walkable_cells)
+                        buddy.teleport(_cell_center(new_cell))
                     else:
                         buddy.teleport(
                             (game_data.level_width // 2, game_data.level_height // 2)
