@@ -118,6 +118,9 @@
 
 相棒 (`is_buddy=True`) は一定距離内で追従を開始し、車に乗った数と脱出時の救出数で管理する。
 一般 `Survivor` は画面外でゾンビに接触した場合はリスポーンする。
+プレイヤー/相棒は「本体＋手（小円2つ）」の簡易シルエットを使い、移動方向に合わせて手の角度が回転する。
+方向は16分割（22.5度刻み）で更新し、停止時は直前の方向を維持する。
+一般 `Survivor` は従来の円形スプライトのまま。
 
 ## 3.7 ゾンビ移動戦略
 
@@ -193,6 +196,7 @@
   - アイテム収集、車両/救助/敗北判定などの相互作用。
 - `update_survivors(game_data, config)` (`gameplay/survivors.py`)
   - サバイバー/相棒の移動と追従。
+  - 相棒は移動方向に合わせて描画用の向き（16方向）を更新する。
 - `handle_survivor_zombie_collisions(game_data, config)` (`gameplay/survivors.py`)
   - サバイバーとゾンビの接触処理。
 - `add_survivor_message`, `cleanup_survivor_messages`, `random_survivor_conversion_line` (`gameplay/survivors.py`)
