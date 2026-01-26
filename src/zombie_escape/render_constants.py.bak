@@ -4,17 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .colors import apply_colorblind
 from .entities_constants import FOV_RADIUS, PLAYER_RADIUS
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH, STATUS_BAR_HEIGHT
 
-HUMANOID_OUTLINE_COLOR = apply_colorblind((0, 80, 200))
+HUMANOID_OUTLINE_COLOR = (0, 80, 200)
 HUMANOID_OUTLINE_WIDTH = 1
-BUDDY_COLOR = apply_colorblind((0, 180, 63))
-SURVIVOR_COLOR = apply_colorblind((198, 198, 198))
-FALLING_ZOMBIE_COLOR = apply_colorblind((45, 45, 45))
-FALLING_WHIRLWIND_COLOR = (*apply_colorblind((200, 200, 200)), 120)
-FALLING_DUST_COLOR = (*apply_colorblind((70, 70, 70)), 130)
+BUDDY_COLOR = (0, 180, 63)
+SURVIVOR_COLOR = (198, 198, 198)
+FALLING_ZOMBIE_COLOR = (45, 45, 45)
+FALLING_WHIRLWIND_COLOR = (200, 200, 200, 120)
+FALLING_DUST_COLOR = (70, 70, 70, 130)
 
 
 @dataclass(frozen=True)
@@ -48,7 +47,7 @@ FLASHLIGHT_HATCH_EXTRA_SCALE = 0.12
 
 FOOTPRINT_RADIUS = 2
 FOOTPRINT_OVERVIEW_RADIUS = 3
-FOOTPRINT_COLOR = apply_colorblind((110, 200, 255))
+FOOTPRINT_COLOR = (110, 200, 255)
 FOOTPRINT_LIFETIME_MS = 135000
 FOOTPRINT_MIN_FADE = 0.3
 

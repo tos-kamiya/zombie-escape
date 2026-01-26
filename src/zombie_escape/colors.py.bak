@@ -2,56 +2,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-COLORBLIND_MODE: str | None = None  # "protanopia", "deuteranopia", or None
-
-
-def _clamp(value: float) -> int:
-    return max(0, min(255, int(value)))
-
-
-def _apply_color_matrix(
-    color: tuple[int, int, int], matrix: tuple[tuple[float, float, float], ...]
-) -> tuple[int, int, int]:
-    r, g, b = color
-    r_out = _clamp(r * matrix[0][0] + g * matrix[0][1] + b * matrix[0][2])
-    g_out = _clamp(r * matrix[1][0] + g * matrix[1][1] + b * matrix[1][2])
-    b_out = _clamp(r * matrix[2][0] + g * matrix[2][1] + b * matrix[2][2])
-    return r_out, g_out, b_out
-
-
-def apply_colorblind(color: tuple[int, int, int]) -> tuple[int, int, int]:
-    """Approximate debug-only palette shift for color vision deficiencies."""
-
-    if COLORBLIND_MODE == "protanopia":
-        matrix = (
-            (0.567, 0.433, 0.0),
-            (0.558, 0.442, 0.0),
-            (0.0, 0.242, 0.758),
-        )
-        return _apply_color_matrix(color, matrix)
-    if COLORBLIND_MODE == "deuteranopia":
-        matrix = (
-            (0.625, 0.375, 0.0),
-            (0.7, 0.3, 0.0),
-            (0.0, 0.3, 0.7),
-        )
-        return _apply_color_matrix(color, matrix)
-    return color
-
-
-# Basic palette (debug-adjusted via apply_colorblind).
-WHITE: tuple[int, int, int] = apply_colorblind((255, 255, 255))
-BLACK: tuple[int, int, int] = apply_colorblind((0, 0, 0))
-RED: tuple[int, int, int] = apply_colorblind((255, 0, 0))
-GREEN: tuple[int, int, int] = apply_colorblind((0, 255, 0))
-BLUE: tuple[int, int, int] = apply_colorblind((0, 0, 255))
-GRAY: tuple[int, int, int] = apply_colorblind((100, 100, 100))
-LIGHT_GRAY: tuple[int, int, int] = apply_colorblind((200, 200, 200))
-YELLOW: tuple[int, int, int] = apply_colorblind((255, 255, 0))
-ORANGE: tuple[int, int, int] = apply_colorblind((255, 165, 0))
-DARK_RED: tuple[int, int, int] = apply_colorblind((139, 0, 0))
-TRACKER_OUTLINE_COLOR: tuple[int, int, int] = apply_colorblind((170, 70, 220))
-WALL_FOLLOWER_OUTLINE_COLOR: tuple[int, int, int] = apply_colorblind((140, 140, 140))
+# Basic palette
+WHITE: tuple[int, int, int] = (255, 255, 255)
+BLACK: tuple[int, int, int] = (0, 0, 0)
+RED: tuple[int, int, int] = (255, 0, 0)
+GREEN: tuple[int, int, int] = (0, 255, 0)
+BLUE: tuple[int, int, int] = (0, 0, 255)
+GRAY: tuple[int, int, int] = (100, 100, 100)
+LIGHT_GRAY: tuple[int, int, int] = (200, 200, 200)
+YELLOW: tuple[int, int, int] = (255, 255, 0)
+ORANGE: tuple[int, int, int] = (255, 165, 0)
+DARK_RED: tuple[int, int, int] = (139, 0, 0)
+TRACKER_OUTLINE_COLOR: tuple[int, int, int] = (170, 70, 220)
+WALL_FOLLOWER_OUTLINE_COLOR: tuple[int, int, int] = (140, 140, 140)
 
 
 @dataclass(frozen=True)
@@ -67,6 +30,10 @@ class EnvironmentPalette:
     inner_wall_border: tuple[int, int, int]
     outer_wall: tuple[int, int, int]
     outer_wall_border: tuple[int, int, int]
+
+
+def _clamp(value: float) -> int:
+    return max(0, min(255, int(value)))
 
 
 def _adjust_color(
@@ -89,23 +56,8 @@ DEFAULT_AMBIENT_PALETTE_KEY = "default"
 NO_FLASHLIGHT_PALETTE_KEY = "no_flashlight"
 DAWN_AMBIENT_PALETTE_KEY = "dawn"
 
-
-def _apply_palette(palette: EnvironmentPalette) -> EnvironmentPalette:
-    return EnvironmentPalette(
-        floor_primary=apply_colorblind(palette.floor_primary),
-        floor_secondary=apply_colorblind(palette.floor_secondary),
-        fall_zone_primary=apply_colorblind(palette.fall_zone_primary),
-        fall_zone_secondary=apply_colorblind(palette.fall_zone_secondary),
-        outside=apply_colorblind(palette.outside),
-        inner_wall=apply_colorblind(palette.inner_wall),
-        inner_wall_border=apply_colorblind(palette.inner_wall_border),
-        outer_wall=apply_colorblind(palette.outer_wall),
-        outer_wall_border=apply_colorblind(palette.outer_wall_border),
-    )
-
-
 # Base palette used throughout gameplay (matches the previous constants).
-_BASE_DEFAULT_ENVIRONMENT_PALETTE = EnvironmentPalette(
+_DEFAULT_ENVIRONMENT_PALETTE = EnvironmentPalette(
     floor_primary=(43, 57, 70),
     floor_secondary=(50, 64, 79),
     fall_zone_primary=(84, 48, 29),
@@ -118,55 +70,45 @@ _BASE_DEFAULT_ENVIRONMENT_PALETTE = EnvironmentPalette(
 )
 
 # Dark, desaturated palette that sells the "alone without a flashlight" vibe.
-_BASE_GLOOM_ENVIRONMENT_PALETTE = EnvironmentPalette(
+_GLOOM_ENVIRONMENT_PALETTE = EnvironmentPalette(
     floor_primary=_adjust_color(
-        _BASE_DEFAULT_ENVIRONMENT_PALETTE.floor_primary,
-        brightness=0.8,
-        saturation=0.75,
+        _DEFAULT_ENVIRONMENT_PALETTE.floor_primary, brightness=0.8, saturation=0.75
     ),
     floor_secondary=_adjust_color(
-        _BASE_DEFAULT_ENVIRONMENT_PALETTE.floor_secondary,
-        brightness=0.8,
-        saturation=0.75,
+        _DEFAULT_ENVIRONMENT_PALETTE.floor_secondary, brightness=0.8, saturation=0.75
     ),
     fall_zone_primary=_adjust_color(
-        _BASE_DEFAULT_ENVIRONMENT_PALETTE.fall_zone_primary,
+        _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_primary,
         brightness=0.8,
         saturation=0.75,
     ),
     fall_zone_secondary=_adjust_color(
-        _BASE_DEFAULT_ENVIRONMENT_PALETTE.fall_zone_secondary,
+        _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_secondary,
         brightness=0.8,
         saturation=0.75,
     ),
     outside=_adjust_color(
-        _BASE_DEFAULT_ENVIRONMENT_PALETTE.outside,
-        brightness=0.8,
-        saturation=0.75,
+        _DEFAULT_ENVIRONMENT_PALETTE.outside, brightness=0.8, saturation=0.75
     ),
     inner_wall=_adjust_color(
-        _BASE_DEFAULT_ENVIRONMENT_PALETTE.inner_wall,
-        brightness=0.8,
-        saturation=0.75,
+        _DEFAULT_ENVIRONMENT_PALETTE.inner_wall, brightness=0.8, saturation=0.75
     ),
     inner_wall_border=_adjust_color(
-        _BASE_DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border,
+        _DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border,
         brightness=0.8,
         saturation=0.75,
     ),
     outer_wall=_adjust_color(
-        _BASE_DEFAULT_ENVIRONMENT_PALETTE.outer_wall,
-        brightness=0.8,
-        saturation=0.75,
+        _DEFAULT_ENVIRONMENT_PALETTE.outer_wall, brightness=0.8, saturation=0.75
     ),
     outer_wall_border=_adjust_color(
-        _BASE_DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border,
+        _DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border,
         brightness=0.8,
         saturation=0.75,
     ),
 )
 
-_BASE_DAWN_ENVIRONMENT_PALETTE = EnvironmentPalette(
+_DAWN_ENVIRONMENT_PALETTE = EnvironmentPalette(
     floor_primary=(58, 70, 84),
     floor_secondary=(66, 78, 92),
     fall_zone_primary=(84, 39, 29),
@@ -177,10 +119,6 @@ _BASE_DAWN_ENVIRONMENT_PALETTE = EnvironmentPalette(
     outer_wall=(136, 135, 128),
     outer_wall_border=(147, 146, 138),
 )
-
-_DEFAULT_ENVIRONMENT_PALETTE = _apply_palette(_BASE_DEFAULT_ENVIRONMENT_PALETTE)
-_GLOOM_ENVIRONMENT_PALETTE = _apply_palette(_BASE_GLOOM_ENVIRONMENT_PALETTE)
-_DAWN_ENVIRONMENT_PALETTE = _apply_palette(_BASE_DAWN_ENVIRONMENT_PALETTE)
 
 ENVIRONMENT_PALETTES: dict[str, EnvironmentPalette] = {
     DEFAULT_AMBIENT_PALETTE_KEY: _DEFAULT_ENVIRONMENT_PALETTE,
@@ -221,9 +159,9 @@ FLOOR_COLOR_SECONDARY: tuple[int, int, int] = (
     _DEFAULT_ENVIRONMENT_PALETTE.floor_secondary
 )
 FLOOR_COLOR_OUTSIDE: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outside
-FOOTPRINT_COLOR: tuple[int, int, int] = apply_colorblind((110, 200, 255))
-STEEL_BEAM_COLOR: tuple[int, int, int] = apply_colorblind((110, 50, 50))
-STEEL_BEAM_LINE_COLOR: tuple[int, int, int] = apply_colorblind((180, 90, 90))
+FOOTPRINT_COLOR: tuple[int, int, int] = (110, 200, 255)
+STEEL_BEAM_COLOR: tuple[int, int, int] = (110, 50, 50)
+STEEL_BEAM_LINE_COLOR: tuple[int, int, int] = (180, 90, 90)
 FALL_ZONE_FLOOR_PRIMARY: tuple[int, int, int] = (
     _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_primary
 )
@@ -245,7 +183,6 @@ __all__ = [
     "DARK_RED",
     "TRACKER_OUTLINE_COLOR",
     "WALL_FOLLOWER_OUTLINE_COLOR",
-    "apply_colorblind",
     "DAWN_AMBIENT_PALETTE_KEY",
     "INTERNAL_WALL_COLOR",
     "INTERNAL_WALL_BORDER_COLOR",

@@ -44,6 +44,41 @@ def _draw_outlined_circle(
         pygame.draw.circle(surface, outline_color, center, radius, width=outline_width)
 
 
+def _brighten_color(
+    color: tuple[int, int, int], *, factor: float = 1.25
+) -> tuple[int, int, int]:
+    return tuple(min(255, int(c * factor + 0.5)) for c in color)
+
+
+def _draw_capped_circle(
+    surface: pygame.Surface,
+    center: tuple[int, int],
+    radius: int,
+    base_color: tuple[int, int, int],
+    cap_color: tuple[int, int, int],
+    outline_color: tuple[int, int, int],
+    outline_width: int,
+) -> None:
+    leg_radius = int(radius * 0.4)
+    leg_offset_x = int(radius * 0.8)
+    leg_offset_y = int(radius * 0.6)
+    pygame.draw.circle(
+        surface,
+        base_color,
+        (center[0] - leg_offset_x, center[1] + leg_offset_y),
+        leg_radius,
+    )
+    pygame.draw.circle(
+        surface,
+        base_color,
+        (center[0] + leg_offset_x, center[1] + leg_offset_y),
+        leg_radius,
+    )
+    pygame.draw.circle(surface, cap_color, center, radius)
+    if outline_width > 0:
+        pygame.draw.circle(surface, outline_color, center, radius, width=outline_width)
+
+
 @dataclass(frozen=True)
 class PolygonSpec:
     size: tuple[int, int]
@@ -275,12 +310,17 @@ def resolve_steel_beam_colors(
 
 
 def build_player_surface(radius: int) -> pygame.Surface:
-    surface = pygame.Surface((radius * 2 + 2, radius * 2 + 2), pygame.SRCALPHA)
-    _draw_outlined_circle(
+    padding = radius // 2
+    surface = pygame.Surface(
+        (radius * 2 + padding * 2, radius * 2 + padding * 2), pygame.SRCALPHA
+    )
+    center = (radius + padding, radius + padding)
+    _draw_capped_circle(
         surface,
-        (radius + 1, radius + 1),
+        center,
         radius,
         BLUE,
+        _brighten_color(BLUE),
         HUMANOID_OUTLINE_COLOR,
         HUMANOID_OUTLINE_WIDTH,
     )
@@ -288,16 +328,32 @@ def build_player_surface(radius: int) -> pygame.Surface:
 
 
 def build_survivor_surface(radius: int, *, is_buddy: bool) -> pygame.Surface:
-    surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-    fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
-    _draw_outlined_circle(
-        surface,
-        (radius, radius),
-        radius,
-        fill_color,
-        HUMANOID_OUTLINE_COLOR,
-        HUMANOID_OUTLINE_WIDTH,
+    padding = radius // 2
+    surface = pygame.Surface(
+        (radius * 2 + padding * 2, radius * 2 + padding * 2), pygame.SRCALPHA
     )
+    center = (radius + padding, radius + padding)
+    fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
+    if is_buddy:
+        _draw_capped_circle(
+            surface,
+            center,
+            radius,
+            fill_color,
+            _brighten_color(fill_color),
+            HUMANOID_OUTLINE_COLOR,
+            HUMANOID_OUTLINE_WIDTH,
+        )
+    else:
+        _draw_capped_circle(
+            surface,
+            center,
+            radius,
+            fill_color,
+            _brighten_color(fill_color),
+            HUMANOID_OUTLINE_COLOR,
+            HUMANOID_OUTLINE_WIDTH,
+        )
     return surface
 
 
