@@ -69,8 +69,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     camera = Camera(level_width, level_height)
 
     # Define level layout (will be filled by blueprint generation)
-    outer_rect = 0, 0, level_width, level_height
-    inner_rect = outer_rect
+    field_rect = pygame.Rect(0, 0, level_width, level_height)
 
     return GameData(
         state=game_state,
@@ -82,10 +81,9 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         ),
         camera=camera,
         layout=LevelLayout(
-            outer_rect=outer_rect,
-            inner_rect=inner_rect,
-            outside_rects=[],
-            walkable_cells=[],
+            field_rect=field_rect,
+            outside_cells=set(),
+            walkable_rects=[],
             outer_wall_cells=set(),
             wall_cells=set(),
             fall_spawn_cells=set(),
@@ -107,8 +105,11 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
 
 def carbonize_outdoor_zombies(game_data: GameData) -> None:
     """Petrify zombies that have already broken through to the exterior."""
-    outside_rects = game_data.layout.outside_rects or []
-    if not outside_rects:
+    outside_cells = game_data.layout.outside_cells
+    if not outside_cells:
+        return
+    cell_size = game_data.cell_size
+    if cell_size <= 0:
         return
     group = game_data.groups.zombie_group
     if not group:
@@ -116,8 +117,11 @@ def carbonize_outdoor_zombies(game_data: GameData) -> None:
     for zombie in list(group):
         if not zombie.alive():
             continue
-        center = zombie.rect.center
-        if any(rect_obj.collidepoint(center) for rect_obj in outside_rects):
+        cell = (
+            int(zombie.rect.centerx // cell_size),
+            int(zombie.rect.centery // cell_size),
+        )
+        if cell in outside_cells:
             zombie.carbonize()
 
 

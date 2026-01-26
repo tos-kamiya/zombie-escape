@@ -56,13 +56,14 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     all_sprites = game_data.groups.all_sprites
     survivor_group = game_data.groups.survivor_group
     state = game_data.state
-    walkable_cells = game_data.layout.walkable_cells
-    outside_rects = game_data.layout.outside_rects
+    walkable_rects = game_data.layout.walkable_rects
+    outside_cells = game_data.layout.outside_cells
     fuel = game_data.fuel
     flashlights = game_data.flashlights or []
     shoes_list = game_data.shoes or []
     camera = game_data.camera
     stage = game_data.stage
+    cell_size = game_data.cell_size
     maintain_waiting_car_supply(game_data)
     active_car = car if car and car.alive() else None
     waiting_cars = game_data.waiting_cars
@@ -74,6 +75,11 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT
     )
     shoes_interaction_radius = _interaction_radius(SHOES_WIDTH, SHOES_HEIGHT)
+
+    def _rect_center_cell(rect: pygame.Rect) -> tuple[int, int] | None:
+        if cell_size <= 0:
+            return None
+        return (int(rect.centerx // cell_size), int(rect.centery // cell_size))
 
     def _player_near_point(point: tuple[float, float], radius: float) -> bool:
         dx = point[0] - player.x
@@ -187,8 +193,8 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     state.game_over = True
                     state.game_over_at = state.game_over_at or pygame.time.get_ticks()
                 else:
-                    if walkable_cells:
-                        new_cell = RNG.choice(walkable_cells)
+                    if walkable_rects:
+                        new_cell = RNG.choice(walkable_rects)
                         buddy.teleport(new_cell.center)
                     else:
                         buddy.teleport(
@@ -341,8 +347,9 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         stage.endurance_stage
         and state.dawn_ready
         and not player.in_car
-        and outside_rects
-        and any(outside.collidepoint(player.rect.center) for outside in outside_rects)
+        and outside_cells
+        and (player_cell := _rect_center_cell(player.rect)) is not None
+        and player_cell in outside_cells
     ):
         state.game_won = True
 
@@ -351,9 +358,8 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         buddy_ready = True
         if stage.buddy_required_count > 0:
             buddy_ready = state.buddy_onboard >= stage.buddy_required_count
-        if buddy_ready and any(
-            outside.collidepoint(car.rect.center) for outside in outside_rects
-        ):
+        car_cell = _rect_center_cell(car.rect)
+        if buddy_ready and car_cell is not None and car_cell in outside_cells:
             if stage.buddy_required_count > 0:
                 state.buddy_rescued = min(
                     stage.buddy_required_count, state.buddy_onboard

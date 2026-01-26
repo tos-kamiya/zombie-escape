@@ -92,8 +92,8 @@ def generate_level_from_blueprint(
             return True
         return (nx, ny) in wall_cells
 
-    outside_rects: list[pygame.Rect] = []
-    walkable_cells: list[pygame.Rect] = []
+    outside_cells: set[tuple[int, int]] = set()
+    walkable_rects: list[pygame.Rect] = []
     player_cells: list[pygame.Rect] = []
     car_cells: list[pygame.Rect] = []
     zombie_cells: list[pygame.Rect] = []
@@ -125,7 +125,7 @@ def generate_level_from_blueprint(
             cell_rect = _rect_for_cell(x, y, cell_size)
             cell_has_beam = steel_enabled and (x, y) in steel_cells
             if ch == "O":
-                outside_rects.append(cell_rect)
+                outside_cells.add((x, y))
                 continue
             if ch == "B":
                 draw_bottom_side = not _has_wall(x, y + 1)
@@ -147,7 +147,7 @@ def generate_level_from_blueprint(
                 continue
             if ch == "E":
                 if not cell_has_beam:
-                    walkable_cells.append(cell_rect)
+                    walkable_rects.append(cell_rect)
             elif ch == "1":
                 beam = None
                 if cell_has_beam:
@@ -196,7 +196,7 @@ def generate_level_from_blueprint(
                 all_sprites.add(wall, layer=0)
             else:
                 if not cell_has_beam:
-                    walkable_cells.append(cell_rect)
+                    walkable_rects.append(cell_rect)
 
             if ch == "P":
                 player_cells.append(cell_rect)
@@ -215,10 +215,14 @@ def generate_level_from_blueprint(
                 )
                 add_beam_to_groups(beam)
 
-    game_data.layout.outer_rect = (0, 0, game_data.level_width, game_data.level_height)
-    game_data.layout.inner_rect = (0, 0, game_data.level_width, game_data.level_height)
-    game_data.layout.outside_rects = outside_rects
-    game_data.layout.walkable_cells = walkable_cells
+    game_data.layout.field_rect = pygame.Rect(
+        0,
+        0,
+        game_data.level_width,
+        game_data.level_height,
+    )
+    game_data.layout.outside_cells = outside_cells
+    game_data.layout.walkable_rects = walkable_rects
     game_data.layout.outer_wall_cells = outer_wall_cells
     game_data.layout.wall_cells = wall_cells
     fall_spawn_cells = _expand_zone_cells(
@@ -246,5 +250,5 @@ def generate_level_from_blueprint(
         "player_cells": player_cells,
         "car_cells": car_cells,
         "zombie_cells": zombie_cells,
-        "walkable_cells": walkable_cells,
+        "walkable_rects": walkable_rects,
     }

@@ -26,10 +26,9 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
 class LevelLayout:
     """Container for level layout rectangles and cell sets."""
 
-    outer_rect: tuple[int, int, int, int]
-    inner_rect: tuple[int, int, int, int]
-    outside_rects: list[pygame.Rect]
-    walkable_cells: list[pygame.Rect]
+    field_rect: pygame.Rect
+    outside_cells: set[tuple[int, int]]
+    walkable_rects: list[pygame.Rect]
     outer_wall_cells: set[tuple[int, int]]
     wall_cells: set[tuple[int, int]]
     fall_spawn_cells: set[tuple[int, int]]

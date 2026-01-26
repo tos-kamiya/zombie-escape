@@ -123,7 +123,7 @@ def gameplay_screen(
     if stage.requires_fuel:
         fuel_spawn_count = stage.fuel_spawn_count
         fuel_can = place_fuel_can(
-            layout_data["walkable_cells"],
+            layout_data["walkable_rects"],
             player,
             cars=game_data.waiting_cars,
             reserved_centers=occupied_centers,
@@ -135,7 +135,7 @@ def gameplay_screen(
             occupied_centers.add(fuel_can.rect.center)
     flashlight_count = stage.initial_flashlight_count
     flashlights = place_flashlights(
-        layout_data["walkable_cells"],
+        layout_data["walkable_rects"],
         player,
         cars=game_data.waiting_cars,
         reserved_centers=occupied_centers,
@@ -148,7 +148,7 @@ def gameplay_screen(
 
     shoes_count = stage.initial_shoes_count
     shoes_list = place_shoes(
-        layout_data["walkable_cells"],
+        layout_data["walkable_rects"],
         player,
         cars=game_data.waiting_cars,
         reserved_centers=occupied_centers,

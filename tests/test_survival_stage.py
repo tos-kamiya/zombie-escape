@@ -27,8 +27,8 @@ def _make_game_data(**state_overrides):
     dummy_group = SimpleNamespace(add=lambda *args, **kwargs: None)
     groups = SimpleNamespace(zombie_group=[], all_sprites=dummy_group)
     layout = SimpleNamespace(
-        outside_rects=[],
-        walkable_cells=[],
+        outside_cells=set(),
+        walkable_rects=[],
         outer_wall_cells=set(),
     )
     player = SimpleNamespace(x=0, y=0)

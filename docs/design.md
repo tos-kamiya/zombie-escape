@@ -95,8 +95,9 @@
 
 ### 3.4 レベルレイアウト (models.LevelLayout)
 
-- `outer_rect`, `inner_rect`, `outside_rects`, `walkable_cells`, `outer_wall_cells` を保持。
+- `field_rect`, `outside_cells`, `walkable_rects`, `outer_wall_cells` を保持。
 - 追加: `wall_cells`, `fall_spawn_cells`, `bevel_corners`
+- 命名規則: `*_cells` はセル座標の集合（`tuple[int, int]`）、`*_rects` は `Rect` の集合。
 
 ### 3.5 スプライト群 (models.Groups)
 
@@ -242,14 +243,14 @@
 ## 6. レベル生成 (level_blueprints.py)
 
 - グリッド凡例
-  - `O`: 外周（勝利判定エリア）
-  - `B`: 外周壁
-  - `E`: 出口
-  - `1`: 内部壁
-  - `.`: 空床
-  - `P`: プレイヤー候補
-  - `C`: 車候補
-  - `Z`: ゾンビ候補
+  - `O`: 外周（勝利判定エリア / outside area, victory zone）
+  - `B`: 外周壁（outer wall band）
+  - `E`: 出口（exit）
+  - `1`: 内部壁（interior wall）
+  - `.`: 空床（walkable floor）
+  - `P`: プレイヤー候補（player spawn candidate）
+  - `C`: 車候補（car spawn candidate）
+  - `Z`: ゾンビ候補（zombie spawn candidate）
 
 - `generate_random_blueprint(wall_algo)`
   - 外周 -> 出口 -> スポーン候補（P/C/Z）予約 -> 壁 -> 鉄筋候補 の順に生成。
@@ -257,7 +258,7 @@
     - `"default"`: ランダムな長さの直線をランダム配置。
     - `"empty"`: 内部壁なし。
     - `"grid_wire"`: 縦横を独立グリッドで生成しマージ。平行な壁の隣接（2x2ブロック）を禁止する。
-  - ステージ内のアイテム配置（燃料/懐中電灯/靴など）は、レイアウト生成後に `walkable_cells` を使って行う。
+  - ステージ内のアイテム配置（燃料/懐中電灯/靴など）は、レイアウト生成後に `walkable_rects` を使って行う。
 
 - 落下ゾンビ用タイル
   - `fall_spawn_zones`（ステージ定義の矩形群）をセル集合に展開し、`fall_spawn_cells` として保持。

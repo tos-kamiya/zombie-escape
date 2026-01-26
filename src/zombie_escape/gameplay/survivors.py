@@ -242,7 +242,7 @@ def handle_survivor_zombie_collisions(
     zombies.sort(key=lambda s: s.rect.centerx)
     zombie_xs = [z.rect.centerx for z in zombies]
     camera = game_data.camera
-    walkable_cells = game_data.layout.walkable_cells
+    walkable_rects = game_data.layout.walkable_rects
 
     for survivor in list(survivor_group):
         if not survivor.alive():
@@ -274,7 +274,7 @@ def handle_survivor_zombie_collisions(
             continue
         if not rect_visible_on_screen(camera, survivor.rect):
             spawn_pos = find_nearby_offscreen_spawn_position(
-                walkable_cells,
+                walkable_rects,
                 camera=camera,
             )
             survivor.teleport(spawn_pos)
@@ -309,7 +309,7 @@ def respawn_buddies_near_player(game_data: GameData) -> None:
     assert player is not None
     wall_group = game_data.groups.wall_group
     camera = game_data.camera
-    walkable_cells = game_data.layout.walkable_cells
+    walkable_rects = game_data.layout.walkable_rects
     offsets = [
         (BUDDY_RADIUS * 3, 0),
         (-BUDDY_RADIUS * 3, 0),
@@ -318,9 +318,9 @@ def respawn_buddies_near_player(game_data: GameData) -> None:
         (0, 0),
     ]
     for _ in range(count):
-        if walkable_cells:
+        if walkable_rects:
             spawn_pos = find_nearby_offscreen_spawn_position(
-                walkable_cells,
+                walkable_rects,
                 camera=camera,
             )
         else:

@@ -807,11 +807,16 @@ def _draw_play_area(
     camera: Camera,
     assets: RenderAssets,
     palette: Any,
-    outer_rect: tuple[int, int, int, int],
-    outside_rects: list[pygame.Rect],
+    field_rect: pygame.Rect,
+    outside_cells: set[tuple[int, int]],
     fall_spawn_cells: set[tuple[int, int]],
 ) -> tuple[int, int, int, int, set[tuple[int, int]]]:
-    xs, ys, xe, ye = outer_rect
+    xs, ys, xe, ye = (
+        field_rect.left,
+        field_rect.top,
+        field_rect.right,
+        field_rect.bottom,
+    )
     xs //= assets.internal_wall_grid_snap
     ys //= assets.internal_wall_grid_snap
     xe //= assets.internal_wall_grid_snap
@@ -825,15 +830,6 @@ def _draw_play_area(
     )
     play_area_screen_rect = camera.apply_rect(play_area_rect)
     pygame.draw.rect(screen, palette.floor_primary, play_area_screen_rect)
-
-    outside_cells = {
-        (r.x // assets.internal_wall_grid_snap, r.y // assets.internal_wall_grid_snap)
-        for r in outside_rects
-    }
-    for rect_obj in outside_rects:
-        sr = camera.apply_rect(rect_obj)
-        if sr.colliderect(screen.get_rect()):
-            pygame.draw.rect(screen, palette.outside, sr)
 
     view_world = pygame.Rect(
         -camera.camera.x,
@@ -855,6 +851,19 @@ def _draw_play_area(
     for y in range(start_y, end_y):
         for x in range(start_x, end_x):
             if (x, y) in outside_cells:
+                lx, ly = (
+                    x * assets.internal_wall_grid_snap,
+                    y * assets.internal_wall_grid_snap,
+                )
+                r = pygame.Rect(
+                    lx,
+                    ly,
+                    assets.internal_wall_grid_snap,
+                    assets.internal_wall_grid_snap,
+                )
+                sr = camera.apply_rect(r)
+                if sr.colliderect(screen.get_rect()):
+                    pygame.draw.rect(screen, palette.outside, sr)
                 continue
             use_secondary = ((x // 2) + (y // 2)) % 2 == 0
             if (x, y) in fall_spawn_cells:
@@ -1464,8 +1473,8 @@ def draw(
 
     camera = game_data.camera
     stage = game_data.stage
-    outer_rect = game_data.layout.outer_rect
-    outside_rects = game_data.layout.outside_rects or []
+    field_rect = game_data.layout.field_rect
+    outside_cells = game_data.layout.outside_cells
     all_sprites = game_data.groups.all_sprites
     fog_surfaces = game_data.fog
     footprints = state.footprints
@@ -1493,8 +1502,8 @@ def draw(
         camera,
         assets,
         palette,
-        outer_rect,
-        outside_rects,
+        field_rect,
+        outside_cells,
         game_data.layout.fall_spawn_cells,
     )
     shadow_layer = _get_shadow_layer(screen.get_size())

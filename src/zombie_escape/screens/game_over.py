@@ -47,9 +47,9 @@ def game_over_screen(
 
     while True:
         if not state.overview_created:
-            level_rect = game_data.layout.outer_rect
-            level_width = level_rect[2]
-            level_height = level_rect[3]
+            level_rect = game_data.layout.field_rect
+            level_width = level_rect.width
+            level_height = level_rect.height
             overview_surface = pygame.Surface((level_width, level_height))
             footprints_to_draw = state.footprints if footprints_enabled else []
             draw_level_overview(
