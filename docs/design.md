@@ -95,9 +95,14 @@
 
 ### 3.4 レベルレイアウト (models.LevelLayout)
 
-- `field_rect`, `outside_cells`, `walkable_cells`, `outer_wall_cells` を保持。
-- 追加: `wall_cells`, `fall_spawn_cells`, `bevel_corners`
-- 命名規則: `*_cells` はセル座標の集合（`tuple[int, int]`）、`*_rects` は `Rect` の集合。
+- `field_rect`: プレイフィールド全体の `Rect`。
+- `outside_cells`: 外周（`O`）領域のセル座標。
+- `walkable_cells`: 歩行可能床セルの座標。
+- `outer_wall_cells`: 外周壁（`B`）セルの座標。
+- `wall_cells`: 壁セル（外周壁＋内部壁）の座標。
+- `fall_spawn_cells`: 落下ゾンビの候補セル。
+- `bevel_corners`: 壁描画の角丸／面取り情報。
+- 命名規則: `*_cells` はセル座標の集合（`list`/`set`）。
 
 ### 3.5 スプライト群 (models.Groups)
 
