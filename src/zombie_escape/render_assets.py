@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from functools import lru_cache
 
 import pygame
 
@@ -126,19 +125,6 @@ def _build_capped_surface(
     )
     return surface
 
-
-@lru_cache(maxsize=256)
-def _cached_player_surface(radius: int, angle_bin: int) -> pygame.Surface:
-    return _build_capped_surface(radius, BLUE, _brighten_color(BLUE), angle_bin)
-
-
-@lru_cache(maxsize=256)
-def _cached_buddy_surface(
-    radius: int, angle_bin: int, fill_color: tuple[int, int, int]
-) -> pygame.Surface:
-    return _build_capped_surface(
-        radius, fill_color, _brighten_color(fill_color), angle_bin
-    )
 
 
 @dataclass(frozen=True)
@@ -372,7 +358,7 @@ def resolve_steel_beam_colors(
 
 
 def build_player_surface(radius: int, *, angle_bin: int = 0) -> pygame.Surface:
-    return _cached_player_surface(radius, angle_bin)
+    return _build_capped_surface(radius, BLUE, _brighten_color(BLUE), angle_bin)
 
 
 def build_survivor_surface(
@@ -380,7 +366,9 @@ def build_survivor_surface(
 ) -> pygame.Surface:
     fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
     if is_buddy:
-        return _cached_buddy_surface(radius, angle_bin, fill_color)
+        return _build_capped_surface(
+            radius, fill_color, _brighten_color(fill_color), angle_bin
+        )
     surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
     _draw_outlined_circle(
         surface,
