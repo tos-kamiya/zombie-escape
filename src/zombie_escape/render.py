@@ -975,11 +975,15 @@ def _draw_entity_shadows(
     *,
     light_source_pos: tuple[int, int] | None,
     exclude_car: Car | None,
+    outside_cells: set[tuple[int, int]] | None,
+    cell_size: int,
     shadow_radius: int = int(ZOMBIE_RADIUS * ENTITY_SHADOW_RADIUS_MULT),
     alpha: int = ENTITY_SHADOW_ALPHA,
 ) -> bool:
     if light_source_pos is None or shadow_radius <= 0:
         return False
+    if cell_size <= 0:
+        outside_cells = None
     shadow_surface = _get_shadow_circle_surface(
         shadow_radius,
         alpha,
@@ -999,6 +1003,13 @@ def _draw_entity_shadows(
                 continue
         if not isinstance(entity, (Zombie, Survivor, Car)):
             continue
+        if outside_cells:
+            cell = (
+                int(entity.rect.centerx // cell_size),
+                int(entity.rect.centery // cell_size),
+            )
+            if cell in outside_cells:
+                continue
         cx, cy = entity.rect.center
         dx = cx - px
         dy = cy - py
@@ -1031,6 +1042,8 @@ def _draw_single_entity_shadow(
     *,
     entity: pygame.sprite.Sprite | None,
     light_source_pos: tuple[int, int] | None,
+    outside_cells: set[tuple[int, int]] | None,
+    cell_size: int,
     shadow_radius: int,
     alpha: int,
     edge_softness: float = ENTITY_SHADOW_EDGE_SOFTNESS,
@@ -1042,6 +1055,13 @@ def _draw_single_entity_shadow(
         or shadow_radius <= 0
     ):
         return False
+    if outside_cells and cell_size > 0:
+        cell = (
+            int(entity.rect.centerx // cell_size),
+            int(entity.rect.centery // cell_size),
+        )
+        if cell in outside_cells:
+            return False
     shadow_surface = _get_shadow_circle_surface(
         shadow_radius,
         alpha,
@@ -1529,6 +1549,8 @@ def draw(
         all_sprites,
         light_source_pos=fov_target.rect.center if fov_target else None,
         exclude_car=active_car if player.in_car else None,
+        outside_cells=outside_cells,
+        cell_size=game_data.cell_size,
     )
     player_shadow_alpha = max(1, int(ENTITY_SHADOW_ALPHA * PLAYER_SHADOW_ALPHA_MULT))
     player_shadow_radius = int(ZOMBIE_RADIUS * PLAYER_SHADOW_RADIUS_MULT)
@@ -1538,6 +1560,8 @@ def draw(
             camera,
             entity=active_car,
             light_source_pos=fov_target.rect.center if fov_target else None,
+            outside_cells=outside_cells,
+            cell_size=game_data.cell_size,
             shadow_radius=player_shadow_radius,
             alpha=player_shadow_alpha,
         )
@@ -1547,6 +1571,8 @@ def draw(
             camera,
             entity=player,
             light_source_pos=fov_target.rect.center if fov_target else None,
+            outside_cells=outside_cells,
+            cell_size=game_data.cell_size,
             shadow_radius=player_shadow_radius,
             alpha=player_shadow_alpha,
         )
