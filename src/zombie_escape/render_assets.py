@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from functools import lru_cache
 
 import pygame
 
@@ -50,6 +51,29 @@ def _brighten_color(
     return tuple(min(255, int(c * factor + 0.5)) for c in color)
 
 
+ANGLE_BINS = 16
+ANGLE_STEP = math.tau / ANGLE_BINS
+HAND_SPREAD_RAD = math.radians(80)
+
+
+def angle_bin_from_vector(
+    dx: float, dy: float, *, bins: int = ANGLE_BINS
+) -> int | None:
+    if dx == 0 and dy == 0:
+        return None
+    angle = math.atan2(dy, dx)
+    if angle < 0:
+        angle += math.tau
+    step = math.tau / bins
+    return int(round(angle / step)) % bins
+
+
+def _hand_defaults(radius: int) -> tuple[int, int]:
+    hand_radius = max(1, int(radius * 0.4))
+    hand_distance = max(hand_radius + 1, int(radius * 1.0))
+    return hand_radius, hand_distance
+
+
 def _draw_capped_circle(
     surface: pygame.Surface,
     center: tuple[int, int],
@@ -58,25 +82,63 @@ def _draw_capped_circle(
     cap_color: tuple[int, int, int],
     outline_color: tuple[int, int, int],
     outline_width: int,
+    *,
+    angle_rad: float = 0.0,
+    hand_spread_rad: float = HAND_SPREAD_RAD,
+    hand_radius: int | None = None,
+    hand_distance: int | None = None,
 ) -> None:
-    leg_radius = int(radius * 0.4)
-    leg_offset_x = int(radius * 0.8)
-    leg_offset_y = int(radius * 0.6)
-    pygame.draw.circle(
-        surface,
-        base_color,
-        (center[0] - leg_offset_x, center[1] + leg_offset_y),
-        leg_radius,
-    )
-    pygame.draw.circle(
-        surface,
-        base_color,
-        (center[0] + leg_offset_x, center[1] + leg_offset_y),
-        leg_radius,
-    )
+    if hand_radius is None or hand_distance is None:
+        hand_radius, hand_distance = _hand_defaults(radius)
+    for direction in (-1, 1):
+        hand_angle = angle_rad + (hand_spread_rad * direction)
+        hand_x = int(round(center[0] + math.cos(hand_angle) * hand_distance))
+        hand_y = int(round(center[1] + math.sin(hand_angle) * hand_distance))
+        pygame.draw.circle(surface, base_color, (hand_x, hand_y), hand_radius)
     pygame.draw.circle(surface, cap_color, center, radius)
     if outline_width > 0:
         pygame.draw.circle(surface, outline_color, center, radius, width=outline_width)
+
+
+def _build_capped_surface(
+    radius: int,
+    base_color: tuple[int, int, int],
+    cap_color: tuple[int, int, int],
+    angle_bin: int,
+) -> pygame.Surface:
+    hand_radius, hand_distance = _hand_defaults(radius)
+    max_extent = max(radius, hand_distance + hand_radius)
+    size = max_extent * 2 + 2
+    surface = pygame.Surface((size, size), pygame.SRCALPHA)
+    center = (max_extent + 1, max_extent + 1)
+    angle_rad = (angle_bin % ANGLE_BINS) * ANGLE_STEP
+    _draw_capped_circle(
+        surface,
+        center,
+        radius,
+        base_color,
+        cap_color,
+        HUMANOID_OUTLINE_COLOR,
+        HUMANOID_OUTLINE_WIDTH,
+        angle_rad=angle_rad,
+        hand_radius=hand_radius,
+        hand_distance=hand_distance,
+    )
+    return surface
+
+
+@lru_cache(maxsize=256)
+def _cached_player_surface(radius: int, angle_bin: int) -> pygame.Surface:
+    return _build_capped_surface(radius, BLUE, _brighten_color(BLUE), angle_bin)
+
+
+@lru_cache(maxsize=256)
+def _cached_buddy_surface(
+    radius: int, angle_bin: int, fill_color: tuple[int, int, int]
+) -> pygame.Surface:
+    return _build_capped_surface(
+        radius, fill_color, _brighten_color(fill_color), angle_bin
+    )
 
 
 @dataclass(frozen=True)
@@ -309,51 +371,25 @@ def resolve_steel_beam_colors(
     return STEEL_BEAM_COLOR, STEEL_BEAM_LINE_COLOR
 
 
-def build_player_surface(radius: int) -> pygame.Surface:
-    padding = radius // 2
-    surface = pygame.Surface(
-        (radius * 2 + padding * 2, radius * 2 + padding * 2), pygame.SRCALPHA
-    )
-    center = (radius + padding, radius + padding)
-    _draw_capped_circle(
+def build_player_surface(radius: int, *, angle_bin: int = 0) -> pygame.Surface:
+    return _cached_player_surface(radius, angle_bin)
+
+
+def build_survivor_surface(
+    radius: int, *, is_buddy: bool, angle_bin: int = 0
+) -> pygame.Surface:
+    fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
+    if is_buddy:
+        return _cached_buddy_surface(radius, angle_bin, fill_color)
+    surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+    _draw_outlined_circle(
         surface,
-        center,
+        (radius, radius),
         radius,
-        BLUE,
-        _brighten_color(BLUE),
+        fill_color,
         HUMANOID_OUTLINE_COLOR,
         HUMANOID_OUTLINE_WIDTH,
     )
-    return surface
-
-
-def build_survivor_surface(radius: int, *, is_buddy: bool) -> pygame.Surface:
-    fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
-    if is_buddy:
-        padding = radius // 2
-        surface = pygame.Surface(
-            (radius * 2 + padding * 2, radius * 2 + padding * 2), pygame.SRCALPHA
-        )
-        center = (radius + padding, radius + padding)
-        _draw_capped_circle(
-            surface,
-            center,
-            radius,
-            fill_color,
-            _brighten_color(fill_color),
-            HUMANOID_OUTLINE_COLOR,
-            HUMANOID_OUTLINE_WIDTH,
-        )
-    else:
-        surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-        _draw_outlined_circle(
-            surface,
-            (radius, radius),
-            radius,
-            fill_color,
-            HUMANOID_OUTLINE_COLOR,
-            HUMANOID_OUTLINE_WIDTH,
-        )
     return surface
 
 
@@ -628,6 +664,8 @@ def build_shoes_surface(width: int, height: int) -> pygame.Surface:
 
 
 __all__ = [
+    "ANGLE_BINS",
+    "angle_bin_from_vector",
     "EnvironmentPalette",
     "FogRing",
     "RenderAssets",

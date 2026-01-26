@@ -21,6 +21,7 @@ from ..localization import translate_dict, translate_list
 from ..models import GameData, ProgressState
 from ..rng import get_rng
 from ..entities import Survivor, Zombie, spritecollideany_walls
+from ..render_assets import angle_bin_from_vector, build_survivor_surface
 from ..world_grid import WallIndex
 from .spawn import _create_zombie
 from .utils import find_nearby_offscreen_spawn_position, rect_visible_on_screen
@@ -42,6 +43,7 @@ def update_survivors(
     target_rect = car.rect if player.in_car and car and car.alive() else player.rect
     target_pos = target_rect.center
     survivors = [s for s in survivor_group if s.alive()]
+    previous_positions = {survivor: (survivor.x, survivor.y) for survivor in survivors}
     for survivor in survivors:
         survivor.update_behavior(
             target_pos,
@@ -104,6 +106,22 @@ def update_survivors(
                 other.y += offset_y
                 survivor.rect.center = (int(survivor.x), int(survivor.y))
                 other.rect.center = (int(other.x), int(other.y))
+
+    for survivor in survivors:
+        if not survivor.is_buddy:
+            continue
+        prev_x, prev_y = previous_positions.get(survivor, (survivor.x, survivor.y))
+        dx = survivor.x - prev_x
+        dy = survivor.y - prev_y
+        if dx or dy:
+            new_bin = angle_bin_from_vector(dx, dy)
+            if new_bin is not None and new_bin != survivor.facing_bin:
+                survivor.facing_bin = new_bin
+                center = survivor.rect.center
+                survivor.image = build_survivor_surface(
+                    survivor.radius, is_buddy=True, angle_bin=survivor.facing_bin
+                )
+                survivor.rect = survivor.image.get_rect(center=center)
 
 
 def calculate_car_speed_for_passengers(

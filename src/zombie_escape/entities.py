@@ -61,6 +61,7 @@ from .gameplay.constants import FOOTPRINT_STEP_DISTANCE
 from .models import Footprint
 from .render_assets import (
     EnvironmentPalette,
+    angle_bin_from_vector,
     build_beveled_polygon,
     build_car_surface,
     build_flashlight_surface,
@@ -567,7 +568,8 @@ class Player(pygame.sprite.Sprite):
     ) -> None:
         super().__init__()
         self.radius = PLAYER_RADIUS
-        self.image = build_player_surface(self.radius)
+        self.facing_bin = 0
+        self.image = build_player_surface(self.radius, angle_bin=self.facing_bin)
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = PLAYER_SPEED
         self.in_car = False
@@ -585,6 +587,7 @@ class Player(pygame.sprite.Sprite):
         level_width: int | None = None,
         level_height: int | None = None,
     ) -> None:
+        prev_x, prev_y = self.x, self.y
         if self.in_car:
             return
 
@@ -628,6 +631,15 @@ class Player(pygame.sprite.Sprite):
                 self.rect.centery = int(self.y)
 
         self.rect.center = (int(self.x), int(self.y))
+        dx = self.x - prev_x
+        dy = self.y - prev_y
+        if dx or dy:
+            new_bin = angle_bin_from_vector(dx, dy)
+            if new_bin is not None and new_bin != self.facing_bin:
+                self.facing_bin = new_bin
+                center = self.rect.center
+                self.image = build_player_surface(self.radius, angle_bin=self.facing_bin)
+                self.rect = self.image.get_rect(center=center)
 
 
 class Survivor(pygame.sprite.Sprite):
@@ -643,9 +655,11 @@ class Survivor(pygame.sprite.Sprite):
         super().__init__()
         self.is_buddy = is_buddy
         self.radius = BUDDY_RADIUS if is_buddy else SURVIVOR_RADIUS
+        self.facing_bin = 0
         self.image = build_survivor_surface(
             self.radius,
             is_buddy=is_buddy,
+            angle_bin=self.facing_bin,
         )
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.x = float(self.rect.centerx)
