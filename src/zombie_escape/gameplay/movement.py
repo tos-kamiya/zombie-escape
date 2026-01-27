@@ -49,6 +49,8 @@ def process_player_input(
     dx_input += pad_input[0]
     dy_input += pad_input[1]
 
+    player.update_facing_from_input(dx_input, dy_input)
+
     player_dx, player_dy, car_dx, car_dy = 0, 0, 0, 0
 
     if player.in_car and car and car.alive():

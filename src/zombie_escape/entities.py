@@ -587,7 +587,6 @@ class Player(pygame.sprite.Sprite):
         level_width: int | None = None,
         level_height: int | None = None,
     ) -> None:
-        prev_x, prev_y = self.x, self.y
         if self.in_car:
             return
 
@@ -631,15 +630,17 @@ class Player(pygame.sprite.Sprite):
                 self.rect.centery = int(self.y)
 
         self.rect.center = (int(self.x), int(self.y))
-        dx = self.x - prev_x
-        dy = self.y - prev_y
-        if dx or dy:
-            new_bin = angle_bin_from_vector(dx, dy)
-            if new_bin is not None and new_bin != self.facing_bin:
-                self.facing_bin = new_bin
-                center = self.rect.center
-                self.image = build_player_surface(self.radius, angle_bin=self.facing_bin)
-                self.rect = self.image.get_rect(center=center)
+
+    def update_facing_from_input(self: Self, dx: float, dy: float) -> None:
+        if self.in_car:
+            return
+        new_bin = angle_bin_from_vector(dx, dy)
+        if new_bin is None or new_bin == self.facing_bin:
+            return
+        center = self.rect.center
+        self.facing_bin = new_bin
+        self.image = build_player_surface(self.radius, angle_bin=self.facing_bin)
+        self.rect = self.image.get_rect(center=center)
 
 
 class Survivor(pygame.sprite.Sprite):
