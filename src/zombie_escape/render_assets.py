@@ -52,7 +52,7 @@ def _brighten_color(
 
 ANGLE_BINS = 16
 ANGLE_STEP = math.tau / ANGLE_BINS
-HAND_SPREAD_RAD = math.radians(80)
+HAND_SPREAD_RAD = math.radians(75)
 
 
 def angle_bin_from_vector(
@@ -68,7 +68,7 @@ def angle_bin_from_vector(
 
 
 def _hand_defaults(radius: int) -> tuple[int, int]:
-    hand_radius = max(1, int(radius * 0.4))
+    hand_radius = max(1, int(radius * 0.5))
     hand_distance = max(hand_radius + 1, int(radius * 1.0))
     return hand_radius, hand_distance
 
@@ -124,7 +124,6 @@ def _build_capped_surface(
         hand_distance=hand_distance,
     )
     return surface
-
 
 
 @dataclass(frozen=True)
