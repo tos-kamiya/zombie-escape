@@ -83,6 +83,7 @@ Open **Settings** from the title to toggle gameplay assists:
     -   Zombies only choose to pursue the buddy if they are on-screen; otherwise they ignore them.
     -   If a zombie tags the buddy off-screen, the buddy quietly respawns somewhere else instead of ending the run.
     -   Touch the buddy on foot to make them follow you (at 70% of player speed). Touch them while driving to pick them up.
+    -   If you bash an inner wall or steel beam, the buddy will drift toward that spot and help chip away at it.
 -   **Survivors (Stage 4):** Pale gray civilians with a blue outline, scattered indoors.
     - They stand still until you get close, then shuffle toward you at about one-third of player speed.
     - Zombies can convert them if both are on-screen; the survivor shouts a line and turns instantly.
