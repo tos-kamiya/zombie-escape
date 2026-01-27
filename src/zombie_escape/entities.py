@@ -16,6 +16,7 @@ from pygame import rect
 from .entities_constants import (
     BUDDY_FOLLOW_SPEED,
     BUDDY_RADIUS,
+    BUDDY_WALL_DAMAGE,
     CAR_HEALTH,
     CAR_HEIGHT,
     CAR_SPEED,
@@ -26,13 +27,14 @@ from .entities_constants import (
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
-    SHOES_HEIGHT,
-    SHOES_WIDTH,
+    HUMANOID_WALL_BUMP_FRAMES,
     INTERNAL_WALL_BEVEL_DEPTH,
     INTERNAL_WALL_HEALTH,
     PLAYER_RADIUS,
     PLAYER_SPEED,
     PLAYER_WALL_DAMAGE,
+    SHOES_HEIGHT,
+    SHOES_WIDTH,
     STEEL_BEAM_HEALTH,
     SURVIVOR_APPROACH_RADIUS,
     SURVIVOR_APPROACH_SPEED,
@@ -60,14 +62,15 @@ from .entities_constants import (
 from .gameplay.constants import FOOTPRINT_STEP_DISTANCE
 from .models import Footprint
 from .render_assets import (
+    ANGLE_BINS,
     EnvironmentPalette,
     angle_bin_from_vector,
     build_beveled_polygon,
     build_car_surface,
     build_flashlight_surface,
     build_fuel_can_surface,
-    build_shoes_surface,
     build_player_surface,
+    build_shoes_surface,
     build_survivor_surface,
     build_zombie_surface,
     paint_car_surface,
@@ -230,6 +233,14 @@ class SteelBeam(pygame.sprite.Sprite):
         )
 
 
+def _is_inner_wall(wall: pygame.sprite.Sprite) -> bool:
+    if isinstance(wall, SteelBeam):
+        return True
+    if isinstance(wall, Wall):
+        return wall.palette_category == "inner_wall"
+    return False
+
+
 MovementStrategy = Callable[
     [
         "Zombie",
@@ -243,6 +254,8 @@ MovementStrategy = Callable[
     ],
     tuple[float, float],
 ]
+
+
 def _sprite_center_and_radius(
     sprite: pygame.sprite.Sprite,
 ) -> tuple[tuple[int, int], float]:
@@ -569,6 +582,11 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         self.radius = PLAYER_RADIUS
         self.facing_bin = 0
+        self.input_facing_bin = 0
+        self.wall_bump_counter = 0
+        self.wall_bump_flip = 1
+        self.inner_wall_hit = False
+        self.inner_wall_cell = None
         self.image = build_player_surface(self.radius, angle_bin=self.facing_bin)
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = PLAYER_SPEED
@@ -593,6 +611,9 @@ class Player(pygame.sprite.Sprite):
         if level_width is None or level_height is None:
             raise ValueError("level_width/level_height are required for movement")
 
+        inner_wall_hit = False
+        inner_wall_cell: tuple[int, int] | None = None
+
         if dx != 0:
             self.x += dx
             self.x = min(level_width, max(0, self.x))
@@ -608,6 +629,13 @@ class Player(pygame.sprite.Sprite):
                 for wall in hit_list_x:
                     if wall.alive():
                         wall._take_damage(amount=damage)
+                        if _is_inner_wall(wall):
+                            inner_wall_hit = True
+                            if inner_wall_cell is None and cell_size:
+                                inner_wall_cell = (
+                                    int(wall.rect.centerx // cell_size),
+                                    int(wall.rect.centery // cell_size),
+                                )
                 self.x -= dx * 1.5
                 self.rect.centerx = int(self.x)
 
@@ -626,16 +654,46 @@ class Player(pygame.sprite.Sprite):
                 for wall in hit_list_y:
                     if wall.alive():
                         wall._take_damage(amount=damage)
+                        if _is_inner_wall(wall):
+                            inner_wall_hit = True
+                            if inner_wall_cell is None and cell_size:
+                                inner_wall_cell = (
+                                    int(wall.rect.centerx // cell_size),
+                                    int(wall.rect.centery // cell_size),
+                                )
                 self.y -= dy * 1.5
                 self.rect.centery = int(self.y)
 
         self.rect.center = (int(self.x), int(self.y))
+        self.inner_wall_hit = inner_wall_hit
+        self.inner_wall_cell = inner_wall_cell
+        self._update_facing_for_bump(inner_wall_hit)
 
     def update_facing_from_input(self: Self, dx: float, dy: float) -> None:
         if self.in_car:
             return
         new_bin = angle_bin_from_vector(dx, dy)
-        if new_bin is None or new_bin == self.facing_bin:
+        if new_bin is None:
+            return
+        self.input_facing_bin = new_bin
+
+    def _update_facing_for_bump(self: Self, inner_wall_hit: bool) -> None:
+        if self.in_car:
+            return
+        if inner_wall_hit:
+            self.wall_bump_counter += 1
+            if self.wall_bump_counter % HUMANOID_WALL_BUMP_FRAMES == 0:
+                self.wall_bump_flip *= -1
+            bumped_bin = (self.input_facing_bin + self.wall_bump_flip) % ANGLE_BINS
+            self._set_facing_bin(bumped_bin)
+            return
+        if self.wall_bump_counter:
+            self.wall_bump_counter = 0
+            self.wall_bump_flip = 1
+        self._set_facing_bin(self.input_facing_bin)
+
+    def _set_facing_bin(self: Self, new_bin: int) -> None:
+        if new_bin == self.facing_bin:
             return
         center = self.rect.center
         self.facing_bin = new_bin
@@ -657,6 +715,9 @@ class Survivor(pygame.sprite.Sprite):
         self.is_buddy = is_buddy
         self.radius = BUDDY_RADIUS if is_buddy else SURVIVOR_RADIUS
         self.facing_bin = 0
+        self.input_facing_bin = 0
+        self.wall_bump_counter = 0
+        self.wall_bump_flip = 1
         self.image = build_survivor_surface(
             self.radius,
             is_buddy=is_buddy,
@@ -698,6 +759,7 @@ class Survivor(pygame.sprite.Sprite):
         grid_rows: int | None = None,
         level_width: int | None = None,
         level_height: int | None = None,
+        wall_target_cell: tuple[int, int] | None = None,
     ) -> None:
         if level_width is None or level_height is None:
             raise ValueError("level_width/level_height are required for movement")
@@ -706,11 +768,19 @@ class Survivor(pygame.sprite.Sprite):
                 self.rect.center = (int(self.x), int(self.y))
                 return
 
-            dx = player_pos[0] - self.x
-            dy = player_pos[1] - self.y
+            target_pos = player_pos
+            if wall_target_cell is not None and cell_size is not None:
+                target_pos = (
+                    wall_target_cell[0] * cell_size + cell_size // 2,
+                    wall_target_cell[1] * cell_size + cell_size // 2,
+                )
+
+            dx = target_pos[0] - self.x
+            dy = target_pos[1] - self.y
             dist_sq = dx * dx + dy * dy
             if dist_sq <= 0:
                 self.rect.center = (int(self.x), int(self.y))
+                self._update_facing_for_bump(False)
                 return
 
             dist = math.sqrt(dist_sq)
@@ -735,32 +805,45 @@ class Survivor(pygame.sprite.Sprite):
                     grid_rows=grid_rows,
                 )
 
+            self._update_input_facing(move_x, move_y)
+            inner_wall_hit = False
+
             if move_x:
                 self.x += move_x
                 self.rect.centerx = int(self.x)
-                if spritecollideany_walls(
+                wall = spritecollideany_walls(
                     self,
                     walls,
                     wall_index=wall_index,
                     cell_size=cell_size,
-                ):
+                )
+                if wall:
+                    if wall.alive():
+                        wall._take_damage(amount=max(1, BUDDY_WALL_DAMAGE))
+                    if _is_inner_wall(wall):
+                        inner_wall_hit = True
                     self.x -= move_x
                     self.rect.centerx = int(self.x)
             if move_y:
                 self.y += move_y
                 self.rect.centery = int(self.y)
-                if spritecollideany_walls(
+                wall = spritecollideany_walls(
                     self,
                     walls,
                     wall_index=wall_index,
                     cell_size=cell_size,
-                ):
+                )
+                if wall:
+                    if wall.alive():
+                        wall._take_damage(amount=max(1, BUDDY_WALL_DAMAGE))
+                    if _is_inner_wall(wall):
+                        inner_wall_hit = True
                     self.y -= move_y
                     self.rect.centery = int(self.y)
 
             overlap_radius = (self.radius + PLAYER_RADIUS) * 1.05
-            dx_after = player_pos[0] - self.x
-            dy_after = player_pos[1] - self.y
+            dx_after = target_pos[0] - self.x
+            dy_after = target_pos[1] - self.y
             dist_after_sq = dx_after * dx_after + dy_after * dy_after
             if 0 < dist_after_sq < overlap_radius * overlap_radius:
                 dist_after = math.sqrt(dist_after_sq)
@@ -772,6 +855,7 @@ class Survivor(pygame.sprite.Sprite):
             self.x = min(level_width, max(0, self.x))
             self.y = min(level_height, max(0, self.y))
             self.rect.center = (int(self.x), int(self.y))
+            self._update_facing_for_bump(inner_wall_hit)
             return
 
         dx = player_pos[0] - self.x
@@ -829,6 +913,41 @@ class Survivor(pygame.sprite.Sprite):
                 self.rect.centery = int(self.y)
 
         self.rect.center = (int(self.x), int(self.y))
+
+    def _update_input_facing(self: Self, dx: float, dy: float) -> None:
+        if not self.is_buddy:
+            return
+        new_bin = angle_bin_from_vector(dx, dy)
+        if new_bin is None:
+            return
+        self.input_facing_bin = new_bin
+
+    def _update_facing_for_bump(self: Self, inner_wall_hit: bool) -> None:
+        if not self.is_buddy:
+            return
+        if inner_wall_hit:
+            self.wall_bump_counter += 1
+            if self.wall_bump_counter % HUMANOID_WALL_BUMP_FRAMES == 0:
+                self.wall_bump_flip *= -1
+            bumped_bin = (self.input_facing_bin + self.wall_bump_flip) % ANGLE_BINS
+            self._set_facing_bin(bumped_bin)
+            return
+        if self.wall_bump_counter:
+            self.wall_bump_counter = 0
+            self.wall_bump_flip = 1
+        self._set_facing_bin(self.input_facing_bin)
+
+    def _set_facing_bin(self: Self, new_bin: int) -> None:
+        if new_bin == self.facing_bin:
+            return
+        center = self.rect.center
+        self.facing_bin = new_bin
+        self.image = build_survivor_surface(
+            self.radius,
+            is_buddy=self.is_buddy,
+            angle_bin=self.facing_bin,
+        )
+        self.rect = self.image.get_rect(center=center)
 
 
 def random_position_outside_building(

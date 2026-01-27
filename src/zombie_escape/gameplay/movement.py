@@ -13,6 +13,7 @@ from ..entities import (
     Zombie,
 )
 from ..entities_constants import (
+    HUMANOID_WALL_BUMP_FRAMES,
     PLAYER_SPEED,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
@@ -168,7 +169,25 @@ def update_entities(
     target_for_camera = active_car if player.in_car and active_car else player
     camera.update(target_for_camera)
 
-    update_survivors(game_data, wall_index=wall_index)
+    if player.inner_wall_hit and player.inner_wall_cell is not None:
+        game_data.state.player_wall_target_cell = player.inner_wall_cell
+        game_data.state.player_wall_target_ttl = HUMANOID_WALL_BUMP_FRAMES
+    elif game_data.state.player_wall_target_ttl > 0:
+        game_data.state.player_wall_target_ttl -= 1
+        if game_data.state.player_wall_target_ttl <= 0:
+            game_data.state.player_wall_target_cell = None
+
+    wall_target_cell = (
+        game_data.state.player_wall_target_cell
+        if game_data.state.player_wall_target_ttl > 0
+        else None
+    )
+
+    update_survivors(
+        game_data,
+        wall_index=wall_index,
+        wall_target_cell=wall_target_cell,
+    )
     update_falling_zombies(game_data, config)
 
     # Spawn new zombies if needed

@@ -105,6 +105,8 @@ class ProgressState:
     falling_zombies: list[FallingZombie]
     falling_spawn_carry: int
     dust_rings: list[DustRing]
+    player_wall_target_cell: tuple[int, int] | None
+    player_wall_target_ttl: int
 
 
 @dataclass
