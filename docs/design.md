@@ -54,6 +54,7 @@
 - アイテム状態: `has_fuel`, `flashlight_count`, `shoes_count`
 - ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`
 - ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
+- 相棒の壁ターゲット: `player_wall_target_cell`, `player_wall_target_ttl`（壁接触後7フレームで失効）
 - サバイバル用: `endurance_elapsed_ms`, `endurance_goal_ms`, `dawn_ready`, `dawn_prompt_at`, `dawn_carbonized`
 - 乱数/デバッグ: `seed`, `debug_mode`, `time_accel_active`
 - 落下スポーン: `falling_zombies`
@@ -121,6 +122,7 @@
 プレイヤー/相棒は「本体＋手（小円2つ）」の簡易シルエットを使い、移動方向に合わせて手の角度が回転する。
 方向は16分割（22.5度刻み）で更新し、停止時は直前の方向を維持する。
 一般 `Survivor` は従来の円形スプライトのまま。
+相棒は内部壁/鉄筋に衝突すると、プレイヤーの70%のダメージを与える。
 
 ## 3.7 ゾンビ移動戦略
 
@@ -196,7 +198,8 @@
   - アイテム収集、車両/救助/敗北判定などの相互作用。
 - `update_survivors(game_data, config)` (`gameplay/survivors.py`)
   - サバイバー/相棒の移動と追従。
-  - 相棒は移動方向に合わせて描画用の向き（16方向）を更新する。
+  - 相棒は追従中、プレイヤーが内部壁/鉄筋に接触している間だけ同じセル中心を追う。
+  - 相棒は移動方向に合わせて描画用の向き（16方向）を更新する（壁接触時は隣方向へ揺らす）。
 - `handle_survivor_zombie_collisions(game_data, config)` (`gameplay/survivors.py`)
   - サバイバーとゾンビの接触処理。
 - `add_survivor_message`, `cleanup_survivor_messages`, `random_survivor_conversion_line` (`gameplay/survivors.py`)
