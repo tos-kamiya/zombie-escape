@@ -66,6 +66,7 @@ from .render_assets import (
     EnvironmentPalette,
     angle_bin_from_vector,
     build_beveled_polygon,
+    build_car_directional_surfaces,
     build_car_surface,
     build_flashlight_surface,
     build_fuel_can_surface,
@@ -1627,12 +1628,14 @@ class Zombie(pygame.sprite.Sprite):
 class Car(pygame.sprite.Sprite):
     def __init__(self: Self, x: int, y: int, *, appearance: str = "default") -> None:
         super().__init__()
+        self.facing_bin = ANGLE_BINS * 3 // 4
+        self.input_facing_bin = self.facing_bin
         self.original_image = build_car_surface(CAR_WIDTH, CAR_HEIGHT)
+        self.directional_images: list[pygame.Surface] = []
         self.appearance = appearance
         self.image = self.original_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = CAR_SPEED
-        self.angle = 0
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
         self.health = CAR_HEALTH
@@ -1654,9 +1657,27 @@ class Car(pygame.sprite.Sprite):
             height=CAR_HEIGHT,
             color=color,
         )
-        self.image = pygame.transform.rotate(self.original_image, self.angle)
+        self.directional_images = build_car_directional_surfaces(self.original_image)
+        self.image = self.directional_images[self.facing_bin]
         old_center = self.rect.center
         self.rect = self.image.get_rect(center=old_center)
+
+    def update_facing_from_input(self: Self, dx: float, dy: float) -> None:
+        new_bin = angle_bin_from_vector(dx, dy)
+        if new_bin is None:
+            return
+        self.input_facing_bin = new_bin
+        self._set_facing_bin(self.input_facing_bin)
+
+    def _set_facing_bin(self: Self, new_bin: int) -> None:
+        if new_bin == self.facing_bin:
+            return
+        if not self.directional_images:
+            return
+        center = self.rect.center
+        self.facing_bin = new_bin
+        self.image = self.directional_images[self.facing_bin]
+        self.rect = self.image.get_rect(center=center)
 
     def move(
         self: Self,
@@ -1671,11 +1692,6 @@ class Car(pygame.sprite.Sprite):
         if dx == 0 and dy == 0:
             self.rect.center = (int(self.x), int(self.y))
             return
-        target_angle = math.degrees(math.atan2(-dy, dx)) - 90
-        self.angle = target_angle
-        self.image = pygame.transform.rotate(self.original_image, self.angle)
-        old_center = (self.x, self.y)
-        self.rect = self.image.get_rect(center=old_center)
         new_x = self.x + dx
         new_y = self.y + dy
 

@@ -464,6 +464,18 @@ def paint_car_surface(
         )
 
 
+def build_car_directional_surfaces(
+    base_surface: pygame.Surface, *, bins: int = ANGLE_BINS
+) -> list[pygame.Surface]:
+    """Return pre-rotated car surfaces matching angle_bin_from_vector bins."""
+    surfaces: list[pygame.Surface] = []
+    for idx in range(bins):
+        angle_rad = idx * ANGLE_STEP
+        rotation_deg = -math.degrees(angle_rad) - 90
+        surfaces.append(pygame.transform.rotate(base_surface, rotation_deg))
+    return surfaces
+
+
 def paint_wall_surface(
     surface: pygame.Surface,
     *,
@@ -665,6 +677,7 @@ __all__ = [
     "build_survivor_surface",
     "build_zombie_surface",
     "build_car_surface",
+    "build_car_directional_surfaces",
     "paint_car_surface",
     "paint_wall_surface",
     "paint_steel_beam_surface",

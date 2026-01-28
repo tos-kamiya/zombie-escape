@@ -55,6 +55,7 @@ def process_player_input(
     player_dx, player_dy, car_dx, car_dy = 0, 0, 0, 0
 
     if player.in_car and car and car.alive():
+        car.update_facing_from_input(dx_input, dy_input)
         target_speed = car.speed
         move_len = math.hypot(dx_input, dy_input)
         if move_len > 0:
