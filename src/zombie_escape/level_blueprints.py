@@ -218,7 +218,7 @@ def _place_walls_grid_wire(
                 grid[y][x] = "1"
 
 
-def _place_walls_sparse(
+def _place_walls_sparse_moore(
     grid: list[list[str]],
     *,
     density: float = SPARSE_WALL_DENSITY,
@@ -251,11 +251,40 @@ def _place_walls_sparse(
             grid[y][x] = "1"
 
 
+def _place_walls_sparse_ortho(
+    grid: list[list[str]],
+    *,
+    density: float = SPARSE_WALL_DENSITY,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Place isolated wall tiles at a low density, avoiding orthogonal adjacency."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+    for y in range(2, rows - 2):
+        for x in range(2, cols - 2):
+            if (x, y) in forbidden:
+                continue
+            if grid[y][x] != ".":
+                continue
+            if RNG.random() >= density:
+                continue
+            if (
+                grid[y - 1][x] == "1"
+                or grid[y + 1][x] == "1"
+                or grid[y][x - 1] == "1"
+                or grid[y][x + 1] == "1"
+            ):
+                continue
+            grid[y][x] = "1"
+
 WALL_ALGORITHMS = {
     "default": _place_walls_default,
     "empty": _place_walls_empty,
     "grid_wire": _place_walls_grid_wire,
-    "sparse": _place_walls_sparse,
+    "sparse_moore": _place_walls_sparse_moore,
+    "sparse_ortho": _place_walls_sparse_ortho,
 }
 
 
@@ -323,25 +352,54 @@ def _generate_random_blueprint(
 
     # Select and run the wall placement algorithm (after reserving spawns)
     sparse_density = SPARSE_WALL_DENSITY
-    if wall_algo.startswith("sparse."):
+    original_wall_algo = wall_algo
+    if wall_algo == "sparse":
+        print(
+            "WARNING: 'sparse' is deprecated. Use 'sparse_moore' instead."
+        )
+        wall_algo = "sparse_moore"
+    elif wall_algo.startswith("sparse."):
+        print(
+            "WARNING: 'sparse.<int>%' is deprecated. Use "
+            "'sparse_moore.<int>%' instead."
+        )
         suffix = wall_algo[len("sparse.") :]
+        wall_algo = "sparse_moore"
         if suffix.endswith("%") and suffix[:-1].isdigit():
             percent = int(suffix[:-1])
             if 0 <= percent <= 100:
                 sparse_density = percent / 100.0
-                wall_algo = "sparse"
             else:
                 print(
                     "WARNING: Sparse wall density must be 0-100%. "
                     f"Got '{suffix}'. Falling back to default sparse density."
                 )
-                wall_algo = "sparse"
         else:
             print(
-                "WARNING: Invalid sparse wall format. Use 'sparse.<int>%'. "
+                "WARNING: Invalid sparse wall format. Use "
+                "'sparse_moore.<int>%' or 'sparse_ortho.<int>%'. "
+                f"Got '{original_wall_algo}'. Falling back to default sparse density."
+            )
+    if wall_algo.startswith("sparse_moore.") or wall_algo.startswith("sparse_ortho."):
+        base, suffix = wall_algo.split(".", 1)
+        if suffix.endswith("%") and suffix[:-1].isdigit():
+            percent = int(suffix[:-1])
+            if 0 <= percent <= 100:
+                sparse_density = percent / 100.0
+                wall_algo = base
+            else:
+                print(
+                    "WARNING: Sparse wall density must be 0-100%. "
+                    f"Got '{suffix}'. Falling back to default sparse density."
+                )
+                wall_algo = base
+        else:
+            print(
+                "WARNING: Invalid sparse wall format. Use "
+                "'sparse_moore.<int>%' or 'sparse_ortho.<int>%'. "
                 f"Got '{wall_algo}'. Falling back to default sparse density."
             )
-            wall_algo = "sparse"
+            wall_algo = base
 
     if wall_algo not in WALL_ALGORITHMS:
         print(
@@ -350,7 +408,7 @@ def _generate_random_blueprint(
         wall_algo = "default"
 
     algo_func = WALL_ALGORITHMS[wall_algo]
-    if wall_algo == "sparse":
+    if wall_algo in {"sparse_moore", "sparse_ortho"}:
         algo_func(grid, density=sparse_density, forbidden_cells=reserved_cells)
     else:
         algo_func(grid, forbidden_cells=reserved_cells)
