@@ -1396,6 +1396,7 @@ class Zombie(pygame.sprite.Sprite):
         self.wall_follow_stuck_flag = False
         self.pos_history: list[tuple[float, float]] = []
         self.wander_angle = RNG.uniform(0, math.tau)
+        self.last_heading = self.wander_angle
         self.wander_interval_ms = (
             ZOMBIE_TRACKER_WANDER_INTERVAL_MS if tracker else ZOMBIE_WANDER_INTERVAL_MS
         )
@@ -1404,11 +1405,16 @@ class Zombie(pygame.sprite.Sprite):
             0, self.wander_interval_ms + RNG.randint(-500, 500)
         )
 
-    def _redraw_image(self: Self, palm_angle: float | None = None) -> None:
+    def _redraw_image(
+        self: Self,
+        palm_angle: float | None = None,
+        nose_angle: float | None = None,
+    ) -> None:
         paint_zombie_surface(
             self.image,
             radius=self.radius,
             palm_angle=palm_angle,
+            nose_angle=nose_angle,
             tracker=self.tracker,
             wall_follower=self.wall_follower,
         )
@@ -1588,18 +1594,24 @@ class Zombie(pygame.sprite.Sprite):
                 grid_cols=grid_cols,
                 grid_rows=grid_rows,
             )
+        heading = None
+        if move_x != 0 or move_y != 0:
+            heading = math.atan2(move_y, move_x)
+            self.last_heading = heading
+        elif self.wall_follow_angle is not None:
+            heading = self.wall_follow_angle
+        else:
+            heading = self.last_heading
+        palm_angle = None
         if self.wall_follower and self.wall_follow_side != 0:
-            if move_x != 0 or move_y != 0:
-                heading = math.atan2(move_y, move_x)
-            elif self.wall_follow_angle is not None:
-                heading = self.wall_follow_angle
-            else:
-                heading = self.wander_angle
+            base_heading = heading if heading is not None else self.wander_angle
             if self.wall_follow_side > 0:
-                palm_angle = heading + (math.pi / 2.0)
+                palm_angle = base_heading + (math.pi / 2.0)
             else:
-                palm_angle = heading - (math.pi / 2.0)
-            self._redraw_image(palm_angle)
+                palm_angle = base_heading - (math.pi / 2.0)
+        nose_angle = heading if self.tracker else None
+        if palm_angle is not None or (self.tracker and nose_angle is not None):
+            self._redraw_image(palm_angle=palm_angle, nose_angle=nose_angle)
         final_x, final_y = self._handle_wall_collision(
             self.x + move_x, self.y + move_y, walls
         )
@@ -1619,9 +1631,14 @@ class Zombie(pygame.sprite.Sprite):
         self.speed = 0
         self.image.fill((0, 0, 0, 0))
         color = (80, 80, 80)
-        pygame.draw.circle(self.image, color, (self.radius, self.radius), self.radius)
+        center = self.image.get_rect().center
+        pygame.draw.circle(self.image, color, center, self.radius)
         pygame.draw.circle(
-            self.image, (30, 30, 30), (self.radius, self.radius), self.radius, width=1
+            self.image,
+            (30, 30, 30),
+            center,
+            self.radius,
+            width=1,
         )
 
 

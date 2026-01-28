@@ -26,6 +26,10 @@ def get_shrunk_sprite(
 
     new_sprite = pygame.sprite.Sprite()
     new_sprite.rect = rect
+    if hasattr(sprite_obj, "radius"):
+        base_radius = getattr(sprite_obj, "radius", None)
+        if base_radius is not None:
+            new_sprite.radius = base_radius * min(scale_x, scale_y)
 
     return new_sprite
 

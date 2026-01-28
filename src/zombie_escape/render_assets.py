@@ -12,12 +12,12 @@ from .colors import (
     BLUE,
     DARK_RED,
     ORANGE,
-    RED,
     STEEL_BEAM_COLOR,
     STEEL_BEAM_LINE_COLOR,
-    TRACKER_OUTLINE_COLOR,
-    WALL_FOLLOWER_OUTLINE_COLOR,
     YELLOW,
+    ZOMBIE_BODY_COLOR,
+    ZOMBIE_NOSE_COLOR,
+    ZOMBIE_OUTLINE_COLOR,
     EnvironmentPalette,
     get_environment_palette,
 )
@@ -71,6 +71,10 @@ def _hand_defaults(radius: int) -> tuple[int, int]:
     hand_radius = max(1, int(radius * 0.5))
     hand_distance = max(hand_radius + 1, int(radius * 1.0))
     return hand_radius, hand_distance
+
+
+def _zombie_sprite_padding(radius: int) -> int:
+    return max(2, int(radius * 0.35))
 
 
 def _draw_capped_circle(
@@ -386,18 +390,15 @@ def build_zombie_surface(
     tracker: bool = False,
     wall_follower: bool = False,
 ) -> pygame.Surface:
-    if tracker:
-        outline_color = TRACKER_OUTLINE_COLOR
-    elif wall_follower:
-        outline_color = WALL_FOLLOWER_OUTLINE_COLOR
-    else:
-        outline_color = DARK_RED
-    surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+    outline_color = ZOMBIE_OUTLINE_COLOR
+    pad = _zombie_sprite_padding(radius)
+    size = radius * 2 + pad * 2
+    surface = pygame.Surface((size, size), pygame.SRCALPHA)
     _draw_outlined_circle(
         surface,
-        (radius, radius),
+        (radius + pad, radius + pad),
         radius,
-        RED,
+        ZOMBIE_BODY_COLOR,
         outline_color,
         1,
     )
@@ -618,33 +619,49 @@ def paint_zombie_surface(
     *,
     radius: int,
     palm_angle: float | None = None,
+    nose_angle: float | None = None,
     tracker: bool = False,
     wall_follower: bool = False,
 ) -> None:
-    if tracker:
-        outline_color = TRACKER_OUTLINE_COLOR
-    elif wall_follower:
-        outline_color = WALL_FOLLOWER_OUTLINE_COLOR
-    else:
-        outline_color = DARK_RED
+    outline_color = ZOMBIE_OUTLINE_COLOR
+    pad = max(0, (surface.get_width() - radius * 2) // 2)
+    center_x = radius + pad
+    center_y = radius + pad
     surface.fill((0, 0, 0, 0))
     _draw_outlined_circle(
         surface,
-        (radius, radius),
+        (center_x, center_y),
         radius,
-        RED,
+        ZOMBIE_BODY_COLOR,
         outline_color,
         1,
     )
+    if tracker and nose_angle is not None:
+        nose_length = max(2, int(radius * 0.45))
+        nose_offset = max(1, int(radius * 0.35))
+        start_x = center_x + math.cos(nose_angle) * nose_offset
+        start_y = center_y + math.sin(nose_angle) * nose_offset
+        end_x = center_x + math.cos(nose_angle) * (nose_offset + nose_length)
+        end_y = center_y + math.sin(nose_angle) * (nose_offset + nose_length)
+        pygame.draw.line(
+            surface,
+            ZOMBIE_NOSE_COLOR,
+            (int(start_x), int(start_y)),
+            (int(end_x), int(end_y)),
+            width=2,
+        )
     if palm_angle is None:
         return
-    palm_radius = max(1, radius // 3)
+    if wall_follower:
+        palm_radius = max(1, int(radius * 0.45))
+    else:
+        palm_radius = max(1, radius // 3)
     palm_offset = radius - palm_radius * 0.3
-    palm_x = radius + math.cos(palm_angle) * palm_offset
-    palm_y = radius + math.sin(palm_angle) * palm_offset
+    palm_x = center_x + math.cos(palm_angle) * palm_offset
+    palm_y = center_y + math.sin(palm_angle) * palm_offset
     pygame.draw.circle(
         surface,
-        outline_color,
+        ZOMBIE_NOSE_COLOR,
         (int(palm_x), int(palm_y)),
         palm_radius,
     )

@@ -18,8 +18,9 @@ LIGHT_GRAY: tuple[int, int, int] = (200, 200, 200)
 YELLOW: tuple[int, int, int] = (255, 255, 0)
 ORANGE: tuple[int, int, int] = (255, 165, 0)
 DARK_RED: tuple[int, int, int] = (139, 0, 0)
-TRACKER_OUTLINE_COLOR: tuple[int, int, int] = (170, 70, 220)
-WALL_FOLLOWER_OUTLINE_COLOR: tuple[int, int, int] = (140, 140, 140)
+ZOMBIE_BODY_COLOR: tuple[int, int, int] = (180, 0, 0)
+ZOMBIE_OUTLINE_COLOR: tuple[int, int, int] = (255, 60, 60)
+ZOMBIE_NOSE_COLOR: tuple[int, int, int] = (255, 80, 80)
 
 
 @dataclass(frozen=True)
@@ -193,8 +194,9 @@ __all__ = [
     "YELLOW",
     "ORANGE",
     "DARK_RED",
-    "TRACKER_OUTLINE_COLOR",
-    "WALL_FOLLOWER_OUTLINE_COLOR",
+    "ZOMBIE_BODY_COLOR",
+    "ZOMBIE_OUTLINE_COLOR",
+    "ZOMBIE_NOSE_COLOR",
     "DAWN_AMBIENT_PALETTE_KEY",
     "INTERNAL_WALL_COLOR",
     "INTERNAL_WALL_BORDER_COLOR",
