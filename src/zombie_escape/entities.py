@@ -61,8 +61,7 @@ from .entities_constants import (
 )
 from .gameplay.constants import FOOTPRINT_STEP_DISTANCE
 from .models import Footprint
-from .colors import ZOMBIE_NOSE_COLOR
-from .render_constants import ANGLE_BINS
+from .render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR
 from .render_assets import (
     EnvironmentPalette,
     angle_bin_from_vector,

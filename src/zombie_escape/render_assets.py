@@ -15,8 +15,6 @@ from .colors import (
     STEEL_BEAM_COLOR,
     STEEL_BEAM_LINE_COLOR,
     YELLOW,
-    ZOMBIE_BODY_COLOR,
-    ZOMBIE_OUTLINE_COLOR,
     EnvironmentPalette,
     get_environment_palette,
 )
@@ -27,6 +25,8 @@ from .render_constants import (
     HUMANOID_OUTLINE_COLOR,
     HUMANOID_OUTLINE_WIDTH,
     SURVIVOR_COLOR,
+    ZOMBIE_BODY_COLOR,
+    ZOMBIE_OUTLINE_COLOR,
     FogRing,
     RenderAssets,
 )
@@ -382,6 +382,7 @@ def build_player_directional_surfaces(
         base_color=BLUE,
         cap_color=_brighten_color(BLUE),
         bins=bins,
+        outline_color=HUMANOID_OUTLINE_COLOR,
     )
     _PLAYER_DIRECTIONAL_CACHE[cache_key] = surfaces
     return surfaces
@@ -394,7 +395,7 @@ def build_humanoid_directional_surfaces(
     cap_color: tuple[int, int, int],
     bins: int = ANGLE_BINS,
     draw_hands: bool = True,
-    outline_color: tuple[int, int, int] = HUMANOID_OUTLINE_COLOR,
+    outline_color: tuple[int, int, int],
 ) -> list[pygame.Surface]:
     base_radius = radius * _PLAYER_UPSCALE_FACTOR
     base_surface = _build_capped_surface(
@@ -484,6 +485,7 @@ def build_survivor_directional_surfaces(
         cap_color=_brighten_color(fill_color),
         bins=bins,
         draw_hands=draw_hands,
+        outline_color=HUMANOID_OUTLINE_COLOR,
     )
     _SURVIVOR_DIRECTIONAL_CACHE[cache_key] = surfaces
     return surfaces
