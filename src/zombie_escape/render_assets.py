@@ -115,6 +115,7 @@ def _build_capped_surface(
     *,
     outline_scale: int = 1,
     draw_hands: bool = True,
+    outline_color: tuple[int, int, int] = HUMANOID_OUTLINE_COLOR,
 ) -> pygame.Surface:
     hand_radius, hand_distance = _hand_defaults(radius)
     max_extent = max(radius, hand_distance + hand_radius)
@@ -128,7 +129,7 @@ def _build_capped_surface(
         radius,
         base_color,
         cap_color,
-        HUMANOID_OUTLINE_COLOR,
+        outline_color,
         HUMANOID_OUTLINE_WIDTH * outline_scale,
         angle_rad=angle_rad,
         hand_radius=hand_radius,
@@ -384,6 +385,7 @@ def build_humanoid_surface(
     cap_color: tuple[int, int, int],
     angle_bin: int = 0,
     draw_hands: bool = True,
+    outline_color: tuple[int, int, int] = HUMANOID_OUTLINE_COLOR,
 ) -> pygame.Surface:
     return _build_capped_surface(
         radius,
@@ -391,6 +393,7 @@ def build_humanoid_surface(
         cap_color,
         angle_bin,
         draw_hands=draw_hands,
+        outline_color=outline_color,
     )
 
 
@@ -412,6 +415,7 @@ def build_humanoid_directional_surfaces(
     cap_color: tuple[int, int, int],
     bins: int = ANGLE_BINS,
     draw_hands: bool = True,
+    outline_color: tuple[int, int, int] = HUMANOID_OUTLINE_COLOR,
 ) -> list[pygame.Surface]:
     base_radius = radius * _PLAYER_UPSCALE_FACTOR
     base_surface = _build_capped_surface(
@@ -421,6 +425,7 @@ def build_humanoid_directional_surfaces(
         0,
         outline_scale=_PLAYER_UPSCALE_FACTOR,
         draw_hands=draw_hands,
+        outline_color=outline_color,
     )
     target_surface = _build_capped_surface(
         radius,
@@ -428,6 +433,7 @@ def build_humanoid_directional_surfaces(
         cap_color,
         0,
         draw_hands=draw_hands,
+        outline_color=outline_color,
     )
     target_size = target_surface.get_size()
     scale = target_size[0] / base_surface.get_width()
@@ -440,6 +446,46 @@ def build_humanoid_directional_surfaces(
         framed.blit(rotated, rotated.get_rect(center=framed.get_rect().center))
         surfaces.append(framed)
     return surfaces
+
+
+def draw_humanoid_hand(
+    surface: pygame.Surface,
+    *,
+    radius: int,
+    angle_rad: float,
+    color: tuple[int, int, int],
+    hand_radius: int | None = None,
+    hand_distance: int | None = None,
+) -> None:
+    if hand_radius is None or hand_distance is None:
+        hand_radius, hand_distance = _hand_defaults(radius)
+    center_x, center_y = surface.get_rect().center
+    hand_x = int(round(center_x + math.cos(angle_rad) * hand_distance))
+    hand_y = int(round(center_y + math.sin(angle_rad) * hand_distance))
+    pygame.draw.circle(surface, color, (hand_x, hand_y), hand_radius)
+
+
+def draw_humanoid_nose(
+    surface: pygame.Surface,
+    *,
+    radius: int,
+    angle_rad: float,
+    color: tuple[int, int, int],
+) -> None:
+    center_x, center_y = surface.get_rect().center
+    nose_length = max(2, int(radius * 0.45))
+    nose_offset = max(1, int(radius * 0.35))
+    start_x = center_x + math.cos(angle_rad) * nose_offset
+    start_y = center_y + math.sin(angle_rad) * nose_offset
+    end_x = center_x + math.cos(angle_rad) * (nose_offset + nose_length)
+    end_y = center_y + math.sin(angle_rad) * (nose_offset + nose_length)
+    pygame.draw.line(
+        surface,
+        color,
+        (int(start_x), int(start_y)),
+        (int(end_x), int(end_y)),
+        width=2,
+    )
 
 
 def build_survivor_surface(
@@ -484,6 +530,7 @@ def build_zombie_directional_surfaces(
         cap_color=_brighten_color(ZOMBIE_BODY_COLOR),
         bins=bins,
         draw_hands=draw_hands,
+        outline_color=ZOMBIE_OUTLINE_COLOR,
     )
 
 
@@ -797,6 +844,8 @@ __all__ = [
     "build_player_directional_surfaces",
     "build_humanoid_surface",
     "build_humanoid_directional_surfaces",
+    "draw_humanoid_hand",
+    "draw_humanoid_nose",
     "build_survivor_surface",
     "build_survivor_directional_surfaces",
     "build_zombie_surface",

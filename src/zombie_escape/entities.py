@@ -61,6 +61,7 @@ from .entities_constants import (
 )
 from .gameplay.constants import FOOTPRINT_STEP_DISTANCE
 from .models import Footprint
+from .colors import ZOMBIE_NOSE_COLOR
 from .render_assets import (
     ANGLE_BINS,
     EnvironmentPalette,
@@ -74,6 +75,8 @@ from .render_assets import (
     build_shoes_surface,
     build_survivor_directional_surfaces,
     build_zombie_directional_surfaces,
+    draw_humanoid_hand,
+    draw_humanoid_nose,
     paint_car_surface,
     paint_steel_beam_surface,
     paint_wall_surface,
@@ -1540,6 +1543,39 @@ class Zombie(pygame.sprite.Sprite):
             return
         self._set_facing_bin(new_bin)
 
+    def _apply_render_overlays(self: Self) -> None:
+        base_surface = self.directional_images[self.facing_bin]
+        needs_overlay = self.tracker or (
+            self.wall_follower
+            and self.wall_follow_side != 0
+            and self.wall_follow_last_side_has_wall
+        )
+        if not needs_overlay:
+            self.image = base_surface
+            return
+        self.image = base_surface.copy()
+        angle_rad = (self.facing_bin % ANGLE_BINS) * (math.tau / ANGLE_BINS)
+        if self.tracker:
+            draw_humanoid_nose(
+                self.image,
+                radius=self.radius,
+                angle_rad=angle_rad,
+                color=ZOMBIE_NOSE_COLOR,
+            )
+        if (
+            self.wall_follower
+            and self.wall_follow_side != 0
+            and self.wall_follow_last_side_has_wall
+        ):
+            side_sign = 1.0 if self.wall_follow_side > 0 else -1.0
+            hand_angle = angle_rad + side_sign * (math.pi / 2.0)
+            draw_humanoid_hand(
+                self.image,
+                radius=self.radius,
+                angle_rad=hand_angle,
+                color=ZOMBIE_NOSE_COLOR,
+            )
+
     def _update_stuck_state(self: Self) -> None:
         history = self.pos_history
         history.append((self.x, self.y))
@@ -1610,6 +1646,7 @@ class Zombie(pygame.sprite.Sprite):
                 grid_rows=grid_rows,
             )
         self._update_facing_from_movement(move_x, move_y)
+        self._apply_render_overlays()
         final_x, final_y = self._handle_wall_collision(
             self.x + move_x, self.y + move_y, walls
         )
@@ -1627,6 +1664,7 @@ class Zombie(pygame.sprite.Sprite):
             return
         self.carbonized = True
         self.speed = 0
+        self.image = self.directional_images[self.facing_bin].copy()
         self.image.fill((0, 0, 0, 0))
         color = (80, 80, 80)
         center = self.image.get_rect().center
