@@ -54,6 +54,7 @@ def _brighten_color(
 ANGLE_STEP = math.tau / ANGLE_BINS
 
 _PLAYER_UPSCALE_FACTOR = 4
+_CAR_UPSCALE_FACTOR = 4
 
 
 def angle_bin_from_vector(
@@ -553,10 +554,30 @@ def build_car_directional_surfaces(
 ) -> list[pygame.Surface]:
     """Return pre-rotated car surfaces matching angle_bin_from_vector bins."""
     surfaces: list[pygame.Surface] = []
+    upscale = _CAR_UPSCALE_FACTOR
+    if upscale > 1:
+        src_size = base_surface.get_size()
+        upscale_surface = pygame.transform.scale(
+            base_surface,
+            (src_size[0] * upscale, src_size[1] * upscale),
+        )
+    else:
+        upscale_surface = base_surface
     for idx in range(bins):
         angle_rad = idx * ANGLE_STEP
         rotation_deg = -math.degrees(angle_rad) - 90
-        surfaces.append(pygame.transform.rotate(base_surface, rotation_deg))
+        rotated = pygame.transform.rotate(upscale_surface, rotation_deg)
+        if upscale > 1:
+            scaled = pygame.transform.smoothscale(
+                rotated,
+                (
+                    max(1, rotated.get_width() // upscale),
+                    max(1, rotated.get_height() // upscale),
+                ),
+            )
+            surfaces.append(scaled)
+        else:
+            surfaces.append(rotated)
     return surfaces
 
 
