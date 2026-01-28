@@ -72,8 +72,8 @@ from .render_assets import (
     build_fuel_can_surface,
     build_player_directional_surfaces,
     build_shoes_surface,
-    build_survivor_surface,
-    build_zombie_surface,
+    build_survivor_directional_surfaces,
+    build_zombie_directional_surfaces,
     paint_car_surface,
     paint_steel_beam_surface,
     paint_wall_surface,
@@ -720,11 +720,12 @@ class Survivor(pygame.sprite.Sprite):
         self.input_facing_bin = 0
         self.wall_bump_counter = 0
         self.wall_bump_flip = 1
-        self.image = build_survivor_surface(
+        self.directional_images = build_survivor_directional_surfaces(
             self.radius,
             is_buddy=is_buddy,
-            angle_bin=self.facing_bin,
+            draw_hands=is_buddy,
         )
+        self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
@@ -873,6 +874,8 @@ class Survivor(pygame.sprite.Sprite):
         move_x = (dx / dist) * SURVIVOR_APPROACH_SPEED
         move_y = (dy / dist) * SURVIVOR_APPROACH_SPEED
 
+        self._update_input_facing(move_x, move_y)
+
         if (
             cell_size is not None
             and wall_cells is not None
@@ -915,10 +918,9 @@ class Survivor(pygame.sprite.Sprite):
                 self.rect.centery = int(self.y)
 
         self.rect.center = (int(self.x), int(self.y))
+        self._update_facing_for_bump(False)
 
     def _update_input_facing(self: Self, dx: float, dy: float) -> None:
-        if not self.is_buddy:
-            return
         new_bin = angle_bin_from_vector(dx, dy)
         if new_bin is None:
             return
@@ -926,6 +928,7 @@ class Survivor(pygame.sprite.Sprite):
 
     def _update_facing_for_bump(self: Self, inner_wall_hit: bool) -> None:
         if not self.is_buddy:
+            self._set_facing_bin(self.input_facing_bin)
             return
         if inner_wall_hit:
             self.wall_bump_counter += 1
@@ -944,11 +947,7 @@ class Survivor(pygame.sprite.Sprite):
             return
         center = self.rect.center
         self.facing_bin = new_bin
-        self.image = build_survivor_surface(
-            self.radius,
-            is_buddy=self.is_buddy,
-            angle_bin=self.facing_bin,
-        )
+        self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=center)
 
 
@@ -1360,13 +1359,15 @@ class Zombie(pygame.sprite.Sprite):
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
+        self.facing_bin = 0
         self.tracker = tracker
         self.wall_follower = wall_follower
         self.carbonized = False
-        self.image = build_zombie_surface(
-            self.radius, tracker=self.tracker, wall_follower=self.wall_follower
+        self.directional_images = build_zombie_directional_surfaces(
+            self.radius,
+            draw_hands=False,
         )
-        self._redraw_image()
+        self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(x, y))
         jitter_base = FAST_ZOMBIE_BASE_SPEED if speed > ZOMBIE_SPEED else ZOMBIE_SPEED
         jitter = jitter_base * 0.2
@@ -1397,7 +1398,6 @@ class Zombie(pygame.sprite.Sprite):
         self.wall_follow_stuck_flag = False
         self.pos_history: list[tuple[float, float]] = []
         self.wander_angle = RNG.uniform(0, math.tau)
-        self.last_heading = self.wander_angle
         self.wander_interval_ms = (
             ZOMBIE_TRACKER_WANDER_INTERVAL_MS if tracker else ZOMBIE_WANDER_INTERVAL_MS
         )
@@ -1526,6 +1526,20 @@ class Zombie(pygame.sprite.Sprite):
         slowdown_ratio = 1.0 - progress * (1.0 - ZOMBIE_AGING_MIN_SPEED_RATIO)
         self.speed = self.initial_speed * slowdown_ratio
 
+    def _set_facing_bin(self: Self, new_bin: int) -> None:
+        if new_bin == self.facing_bin:
+            return
+        center = self.rect.center
+        self.facing_bin = new_bin
+        self.image = self.directional_images[self.facing_bin]
+        self.rect = self.image.get_rect(center=center)
+
+    def _update_facing_from_movement(self: Self, dx: float, dy: float) -> None:
+        new_bin = angle_bin_from_vector(dx, dy)
+        if new_bin is None:
+            return
+        self._set_facing_bin(new_bin)
+
     def _update_stuck_state(self: Self) -> None:
         history = self.pos_history
         history.append((self.x, self.y))
@@ -1595,24 +1609,7 @@ class Zombie(pygame.sprite.Sprite):
                 grid_cols=grid_cols,
                 grid_rows=grid_rows,
             )
-        heading = None
-        if move_x != 0 or move_y != 0:
-            heading = math.atan2(move_y, move_x)
-            self.last_heading = heading
-        elif self.wall_follow_angle is not None:
-            heading = self.wall_follow_angle
-        else:
-            heading = self.last_heading
-        palm_angle = None
-        if self.wall_follower and self.wall_follow_side != 0:
-            base_heading = heading if heading is not None else self.wander_angle
-            if self.wall_follow_side > 0:
-                palm_angle = base_heading + (math.pi / 2.0)
-            else:
-                palm_angle = base_heading - (math.pi / 2.0)
-        nose_angle = heading if self.tracker else None
-        if palm_angle is not None or (self.tracker and nose_angle is not None):
-            self._redraw_image(palm_angle=palm_angle, nose_angle=nose_angle)
+        self._update_facing_from_movement(move_x, move_y)
         final_x, final_y = self._handle_wall_collision(
             self.x + move_x, self.y + move_y, walls
         )
