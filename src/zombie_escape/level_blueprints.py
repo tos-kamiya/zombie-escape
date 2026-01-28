@@ -221,6 +221,7 @@ def _place_walls_grid_wire(
 def _place_walls_sparse(
     grid: list[list[str]],
     *,
+    density: float = SPARSE_WALL_DENSITY,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
     """Place isolated wall tiles at a low density, avoiding adjacency."""
@@ -234,7 +235,7 @@ def _place_walls_sparse(
                 continue
             if grid[y][x] != ".":
                 continue
-            if RNG.random() >= SPARSE_WALL_DENSITY:
+            if RNG.random() >= density:
                 continue
             if (
                 grid[y - 1][x] == "1"
@@ -321,6 +322,27 @@ def _generate_random_blueprint(
         reserved_cells.add((zx, zy))
 
     # Select and run the wall placement algorithm (after reserving spawns)
+    sparse_density = SPARSE_WALL_DENSITY
+    if wall_algo.startswith("sparse."):
+        suffix = wall_algo[len("sparse.") :]
+        if suffix.endswith("%") and suffix[:-1].isdigit():
+            percent = int(suffix[:-1])
+            if 0 <= percent <= 100:
+                sparse_density = percent / 100.0
+                wall_algo = "sparse"
+            else:
+                print(
+                    "WARNING: Sparse wall density must be 0-100%. "
+                    f"Got '{suffix}'. Falling back to default sparse density."
+                )
+                wall_algo = "sparse"
+        else:
+            print(
+                "WARNING: Invalid sparse wall format. Use 'sparse.<int>%'. "
+                f"Got '{wall_algo}'. Falling back to default sparse density."
+            )
+            wall_algo = "sparse"
+
     if wall_algo not in WALL_ALGORITHMS:
         print(
             f"WARNING: Unknown wall algorithm '{wall_algo}'. Falling back to 'default'."
@@ -328,7 +350,10 @@ def _generate_random_blueprint(
         wall_algo = "default"
 
     algo_func = WALL_ALGORITHMS[wall_algo]
-    algo_func(grid, forbidden_cells=reserved_cells)
+    if wall_algo == "sparse":
+        algo_func(grid, density=sparse_density, forbidden_cells=reserved_cells)
+    else:
+        algo_func(grid, forbidden_cells=reserved_cells)
 
     steel_beams = _place_steel_beams(
         grid, chance=steel_chance, forbidden_cells=reserved_cells
