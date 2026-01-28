@@ -62,8 +62,8 @@ from .entities_constants import (
 from .gameplay.constants import FOOTPRINT_STEP_DISTANCE
 from .models import Footprint
 from .colors import ZOMBIE_NOSE_COLOR
+from .render_constants import ANGLE_BINS
 from .render_assets import (
-    ANGLE_BINS,
     EnvironmentPalette,
     angle_bin_from_vector,
     build_beveled_polygon,
@@ -80,7 +80,6 @@ from .render_assets import (
     paint_car_surface,
     paint_steel_beam_surface,
     paint_wall_surface,
-    paint_zombie_surface,
     resolve_car_color,
     resolve_steel_beam_colors,
     resolve_wall_colors,
@@ -1407,20 +1406,6 @@ class Zombie(pygame.sprite.Sprite):
         self.last_wander_change_time = pygame.time.get_ticks()
         self.wander_change_interval = max(
             0, self.wander_interval_ms + RNG.randint(-500, 500)
-        )
-
-    def _redraw_image(
-        self: Self,
-        palm_angle: float | None = None,
-        nose_angle: float | None = None,
-    ) -> None:
-        paint_zombie_surface(
-            self.image,
-            radius=self.radius,
-            palm_angle=palm_angle,
-            nose_angle=nose_angle,
-            tracker=self.tracker,
-            wall_follower=self.wall_follower,
         )
 
     def _update_mode(

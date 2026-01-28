@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from .entities_constants import FOV_RADIUS, PLAYER_RADIUS
@@ -14,6 +15,8 @@ SURVIVOR_COLOR = (198, 198, 198)
 FALLING_ZOMBIE_COLOR = (45, 45, 45)
 FALLING_WHIRLWIND_COLOR = (200, 200, 200, 120)
 FALLING_DUST_COLOR = (70, 70, 70, 130)
+ANGLE_BINS = 16
+HAND_SPREAD_RAD = math.radians(75)
 
 
 @dataclass(frozen=True)
@@ -93,6 +96,8 @@ __all__ = [
     "FALLING_ZOMBIE_COLOR",
     "FALLING_WHIRLWIND_COLOR",
     "FALLING_DUST_COLOR",
+    "ANGLE_BINS",
+    "HAND_SPREAD_RAD",
     "HUMANOID_OUTLINE_COLOR",
     "HUMANOID_OUTLINE_WIDTH",
     "SURVIVOR_COLOR",

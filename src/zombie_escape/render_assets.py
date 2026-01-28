@@ -16,13 +16,14 @@ from .colors import (
     STEEL_BEAM_LINE_COLOR,
     YELLOW,
     ZOMBIE_BODY_COLOR,
-    ZOMBIE_NOSE_COLOR,
     ZOMBIE_OUTLINE_COLOR,
     EnvironmentPalette,
     get_environment_palette,
 )
 from .render_constants import (
+    ANGLE_BINS,
     BUDDY_COLOR,
+    HAND_SPREAD_RAD,
     HUMANOID_OUTLINE_COLOR,
     HUMANOID_OUTLINE_WIDTH,
     SURVIVOR_COLOR,
@@ -50,9 +51,7 @@ def _brighten_color(
     return tuple(min(255, int(c * factor + 0.5)) for c in color)
 
 
-ANGLE_BINS = 16
 ANGLE_STEP = math.tau / ANGLE_BINS
-HAND_SPREAD_RAD = math.radians(75)
 
 _PLAYER_UPSCALE_FACTOR = 4
 
@@ -73,10 +72,6 @@ def _hand_defaults(radius: int) -> tuple[int, int]:
     hand_radius = max(1, int(radius * 0.5))
     hand_distance = max(hand_radius + 1, int(radius * 1.0))
     return hand_radius, hand_distance
-
-
-def _zombie_sprite_padding(radius: int) -> int:
-    return max(2, int(radius * 0.35))
 
 
 def _draw_capped_circle(
@@ -369,34 +364,6 @@ def resolve_steel_beam_colors(
     return STEEL_BEAM_COLOR, STEEL_BEAM_LINE_COLOR
 
 
-def build_player_surface(radius: int, *, angle_bin: int = 0) -> pygame.Surface:
-    return build_humanoid_surface(
-        radius,
-        base_color=BLUE,
-        cap_color=_brighten_color(BLUE),
-        angle_bin=angle_bin,
-    )
-
-
-def build_humanoid_surface(
-    radius: int,
-    *,
-    base_color: tuple[int, int, int],
-    cap_color: tuple[int, int, int],
-    angle_bin: int = 0,
-    draw_hands: bool = True,
-    outline_color: tuple[int, int, int] = HUMANOID_OUTLINE_COLOR,
-) -> pygame.Surface:
-    return _build_capped_surface(
-        radius,
-        base_color,
-        cap_color,
-        angle_bin,
-        draw_hands=draw_hands,
-        outline_color=outline_color,
-    )
-
-
 def build_player_directional_surfaces(
     radius: int, *, bins: int = ANGLE_BINS
 ) -> list[pygame.Surface]:
@@ -488,19 +455,6 @@ def draw_humanoid_nose(
     )
 
 
-def build_survivor_surface(
-    radius: int, *, is_buddy: bool, angle_bin: int = 0, draw_hands: bool = True
-) -> pygame.Surface:
-    fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
-    return build_humanoid_surface(
-        radius,
-        base_color=fill_color,
-        cap_color=_brighten_color(fill_color),
-        angle_bin=angle_bin,
-        draw_hands=draw_hands,
-    )
-
-
 def build_survivor_directional_surfaces(
     radius: int,
     *,
@@ -532,27 +486,6 @@ def build_zombie_directional_surfaces(
         draw_hands=draw_hands,
         outline_color=ZOMBIE_OUTLINE_COLOR,
     )
-
-
-def build_zombie_surface(
-    radius: int,
-    *,
-    tracker: bool = False,
-    wall_follower: bool = False,
-) -> pygame.Surface:
-    outline_color = ZOMBIE_OUTLINE_COLOR
-    pad = _zombie_sprite_padding(radius)
-    size = radius * 2 + pad * 2
-    surface = pygame.Surface((size, size), pygame.SRCALPHA)
-    _draw_outlined_circle(
-        surface,
-        (radius + pad, radius + pad),
-        radius,
-        ZOMBIE_BODY_COLOR,
-        outline_color,
-        1,
-    )
-    return surface
 
 
 def build_car_surface(width: int, height: int) -> pygame.Surface:
@@ -764,57 +697,6 @@ def paint_steel_beam_surface(
     surface.blit(top_surface, top_rect.topleft)
 
 
-def paint_zombie_surface(
-    surface: pygame.Surface,
-    *,
-    radius: int,
-    palm_angle: float | None = None,
-    nose_angle: float | None = None,
-    tracker: bool = False,
-    wall_follower: bool = False,
-) -> None:
-    outline_color = ZOMBIE_OUTLINE_COLOR
-    pad = max(0, (surface.get_width() - radius * 2) // 2)
-    center_x = radius + pad
-    center_y = radius + pad
-    surface.fill((0, 0, 0, 0))
-    _draw_outlined_circle(
-        surface,
-        (center_x, center_y),
-        radius,
-        ZOMBIE_BODY_COLOR,
-        outline_color,
-        1,
-    )
-    if tracker and nose_angle is not None:
-        nose_length = max(2, int(radius * 0.45))
-        nose_offset = max(1, int(radius * 0.35))
-        start_x = center_x + math.cos(nose_angle) * nose_offset
-        start_y = center_y + math.sin(nose_angle) * nose_offset
-        end_x = center_x + math.cos(nose_angle) * (nose_offset + nose_length)
-        end_y = center_y + math.sin(nose_angle) * (nose_offset + nose_length)
-        pygame.draw.line(
-            surface,
-            ZOMBIE_NOSE_COLOR,
-            (int(start_x), int(start_y)),
-            (int(end_x), int(end_y)),
-            width=2,
-        )
-    if palm_angle is None:
-        return
-    if wall_follower:
-        palm_radius = max(1, int(radius * 0.45))
-    else:
-        palm_radius = max(1, radius // 3)
-    palm_offset = radius - palm_radius * 0.3
-    palm_x = center_x + math.cos(palm_angle) * palm_offset
-    palm_y = center_y + math.sin(palm_angle) * palm_offset
-    pygame.draw.circle(
-        surface,
-        ZOMBIE_NOSE_COLOR,
-        (int(palm_x), int(palm_y)),
-        palm_radius,
-    )
 
 
 def build_fuel_can_surface(width: int, height: int) -> pygame.Surface:
@@ -830,7 +712,6 @@ def build_shoes_surface(width: int, height: int) -> pygame.Surface:
 
 
 __all__ = [
-    "ANGLE_BINS",
     "angle_bin_from_vector",
     "EnvironmentPalette",
     "FogRing",
@@ -840,22 +721,17 @@ __all__ = [
     "resolve_car_color",
     "resolve_steel_beam_colors",
     "CAR_COLOR_SCHEMES",
-    "build_player_surface",
     "build_player_directional_surfaces",
-    "build_humanoid_surface",
     "build_humanoid_directional_surfaces",
     "draw_humanoid_hand",
     "draw_humanoid_nose",
-    "build_survivor_surface",
     "build_survivor_directional_surfaces",
-    "build_zombie_surface",
     "build_zombie_directional_surfaces",
     "build_car_surface",
     "build_car_directional_surfaces",
     "paint_car_surface",
     "paint_wall_surface",
     "paint_steel_beam_surface",
-    "paint_zombie_surface",
     "build_fuel_can_surface",
     "build_flashlight_surface",
     "build_shoes_surface",
