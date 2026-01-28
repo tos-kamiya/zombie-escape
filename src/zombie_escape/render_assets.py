@@ -56,6 +56,12 @@ ANGLE_STEP = math.tau / ANGLE_BINS
 _PLAYER_UPSCALE_FACTOR = 4
 _CAR_UPSCALE_FACTOR = 4
 
+_PLAYER_DIRECTIONAL_CACHE: dict[tuple[int, int], list[pygame.Surface]] = {}
+_SURVIVOR_DIRECTIONAL_CACHE: dict[
+    tuple[int, bool, bool, int], list[pygame.Surface]
+] = {}
+_ZOMBIE_DIRECTIONAL_CACHE: dict[tuple[int, bool, int], list[pygame.Surface]] = {}
+
 
 def angle_bin_from_vector(
     dx: float, dy: float, *, bins: int = ANGLE_BINS
@@ -368,12 +374,17 @@ def resolve_steel_beam_colors(
 def build_player_directional_surfaces(
     radius: int, *, bins: int = ANGLE_BINS
 ) -> list[pygame.Surface]:
-    return build_humanoid_directional_surfaces(
+    cache_key = (radius, bins)
+    if cache_key in _PLAYER_DIRECTIONAL_CACHE:
+        return _PLAYER_DIRECTIONAL_CACHE[cache_key]
+    surfaces = build_humanoid_directional_surfaces(
         radius,
         base_color=BLUE,
         cap_color=_brighten_color(BLUE),
         bins=bins,
     )
+    _PLAYER_DIRECTIONAL_CACHE[cache_key] = surfaces
+    return surfaces
 
 
 def build_humanoid_directional_surfaces(
@@ -463,14 +474,19 @@ def build_survivor_directional_surfaces(
     bins: int = ANGLE_BINS,
     draw_hands: bool = True,
 ) -> list[pygame.Surface]:
+    cache_key = (radius, is_buddy, draw_hands, bins)
+    if cache_key in _SURVIVOR_DIRECTIONAL_CACHE:
+        return _SURVIVOR_DIRECTIONAL_CACHE[cache_key]
     fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
-    return build_humanoid_directional_surfaces(
+    surfaces = build_humanoid_directional_surfaces(
         radius,
         base_color=fill_color,
         cap_color=_brighten_color(fill_color),
         bins=bins,
         draw_hands=draw_hands,
     )
+    _SURVIVOR_DIRECTIONAL_CACHE[cache_key] = surfaces
+    return surfaces
 
 
 def build_zombie_directional_surfaces(
@@ -479,7 +495,10 @@ def build_zombie_directional_surfaces(
     bins: int = ANGLE_BINS,
     draw_hands: bool = True,
 ) -> list[pygame.Surface]:
-    return build_humanoid_directional_surfaces(
+    cache_key = (radius, draw_hands, bins)
+    if cache_key in _ZOMBIE_DIRECTIONAL_CACHE:
+        return _ZOMBIE_DIRECTIONAL_CACHE[cache_key]
+    surfaces = build_humanoid_directional_surfaces(
         radius,
         base_color=ZOMBIE_BODY_COLOR,
         cap_color=_brighten_color(ZOMBIE_BODY_COLOR),
@@ -487,6 +506,8 @@ def build_zombie_directional_surfaces(
         draw_hands=draw_hands,
         outline_color=ZOMBIE_OUTLINE_COLOR,
     )
+    _ZOMBIE_DIRECTIONAL_CACHE[cache_key] = surfaces
+    return surfaces
 
 
 def build_car_surface(width: int, height: int) -> pygame.Surface:
