@@ -54,6 +54,8 @@ ANGLE_BINS = 16
 ANGLE_STEP = math.tau / ANGLE_BINS
 HAND_SPREAD_RAD = math.radians(75)
 
+_PLAYER_UPSCALE_FACTOR = 4
+
 
 def angle_bin_from_vector(
     dx: float, dy: float, *, bins: int = ANGLE_BINS
@@ -108,6 +110,8 @@ def _build_capped_surface(
     base_color: tuple[int, int, int],
     cap_color: tuple[int, int, int],
     angle_bin: int,
+    *,
+    outline_scale: int = 1,
 ) -> pygame.Surface:
     hand_radius, hand_distance = _hand_defaults(radius)
     max_extent = max(radius, hand_distance + hand_radius)
@@ -122,7 +126,7 @@ def _build_capped_surface(
         base_color,
         cap_color,
         HUMANOID_OUTLINE_COLOR,
-        HUMANOID_OUTLINE_WIDTH,
+        HUMANOID_OUTLINE_WIDTH * outline_scale,
         angle_rad=angle_rad,
         hand_radius=hand_radius,
         hand_distance=hand_distance,
@@ -362,6 +366,31 @@ def resolve_steel_beam_colors(
 
 def build_player_surface(radius: int, *, angle_bin: int = 0) -> pygame.Surface:
     return _build_capped_surface(radius, BLUE, _brighten_color(BLUE), angle_bin)
+
+
+def build_player_directional_surfaces(
+    radius: int, *, bins: int = ANGLE_BINS
+) -> list[pygame.Surface]:
+    base_radius = radius * _PLAYER_UPSCALE_FACTOR
+    base_surface = _build_capped_surface(
+        base_radius,
+        BLUE,
+        _brighten_color(BLUE),
+        0,
+        outline_scale=_PLAYER_UPSCALE_FACTOR,
+    )
+    target_surface = _build_capped_surface(radius, BLUE, _brighten_color(BLUE), 0)
+    target_size = target_surface.get_size()
+    scale = target_size[0] / base_surface.get_width()
+    half_step_deg = 360.0 / (bins * 5)
+    surfaces: list[pygame.Surface] = []
+    for idx in range(bins):
+        rotation_deg = -(idx * 360.0 / bins - half_step_deg)
+        rotated = pygame.transform.rotozoom(base_surface, rotation_deg, scale)
+        framed = pygame.Surface(target_size, pygame.SRCALPHA)
+        framed.blit(rotated, rotated.get_rect(center=framed.get_rect().center))
+        surfaces.append(framed)
+    return surfaces
 
 
 def build_survivor_surface(
@@ -691,6 +720,7 @@ __all__ = [
     "resolve_steel_beam_colors",
     "CAR_COLOR_SCHEMES",
     "build_player_surface",
+    "build_player_directional_surfaces",
     "build_survivor_surface",
     "build_zombie_surface",
     "build_car_surface",

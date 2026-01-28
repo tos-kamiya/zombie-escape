@@ -70,7 +70,7 @@ from .render_assets import (
     build_car_surface,
     build_flashlight_surface,
     build_fuel_can_surface,
-    build_player_surface,
+    build_player_directional_surfaces,
     build_shoes_surface,
     build_survivor_surface,
     build_zombie_surface,
@@ -588,7 +588,8 @@ class Player(pygame.sprite.Sprite):
         self.wall_bump_flip = 1
         self.inner_wall_hit = False
         self.inner_wall_cell = None
-        self.image = build_player_surface(self.radius, angle_bin=self.facing_bin)
+        self.directional_images = build_player_directional_surfaces(self.radius)
+        self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = PLAYER_SPEED
         self.in_car = False
@@ -698,7 +699,7 @@ class Player(pygame.sprite.Sprite):
             return
         center = self.rect.center
         self.facing_bin = new_bin
-        self.image = build_player_surface(self.radius, angle_bin=self.facing_bin)
+        self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=center)
 
 
