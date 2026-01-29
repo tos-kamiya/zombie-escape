@@ -523,53 +523,68 @@ def paint_car_surface(
     height: int,
     color: tuple[int, int, int],
 ) -> None:
+    upscale = _CAR_UPSCALE_FACTOR
+    if upscale > 1:
+        up_width = width * upscale
+        up_height = height * upscale
+        up_surface = pygame.Surface((up_width, up_height), pygame.SRCALPHA)
+        _paint_car_surface_base(
+            up_surface, width=up_width, height=up_height, color=color
+        )
+        scaled = pygame.transform.smoothscale(up_surface, (width, height))
+        surface.fill((0, 0, 0, 0))
+        surface.blit(scaled, (0, 0))
+        return
+    _paint_car_surface_base(surface, width=width, height=height, color=color)
+
+
+def _paint_car_surface_base(
+    surface: pygame.Surface,
+    *,
+    width: int,
+    height: int,
+    color: tuple[int, int, int],
+) -> None:
     surface.fill((0, 0, 0, 0))
 
-    body_rect = pygame.Rect(1, 4, width - 2, height - 8)
-    front_cap_height = max(8, body_rect.height // 3)
-    front_cap = pygame.Rect(
-        body_rect.left, body_rect.top, body_rect.width, front_cap_height
-    )
-    windshield_rect = pygame.Rect(
-        body_rect.left + 4,
-        body_rect.top + 3,
-        body_rect.width - 8,
-        front_cap_height - 5,
-    )
-
-    trim_color = tuple(int(c * 0.55) for c in color)
-    front_cap_color = tuple(min(255, int(c * 1.08)) for c in color)
-    body_color = color
-    window_color = (70, 110, 150)
-    wheel_color = (35, 35, 35)
-
-    wheel_width = width // 3
-    wheel_height = 6
-    for y in (body_rect.top + 4, body_rect.bottom - wheel_height - 4):
-        left_wheel = pygame.Rect(2, y, wheel_width, wheel_height)
-        right_wheel = pygame.Rect(width - wheel_width - 2, y, wheel_width, wheel_height)
-        pygame.draw.rect(surface, wheel_color, left_wheel, border_radius=3)
-        pygame.draw.rect(surface, wheel_color, right_wheel, border_radius=3)
-
-    pygame.draw.rect(surface, body_color, body_rect, border_radius=4)
-    pygame.draw.rect(surface, trim_color, body_rect, width=2, border_radius=4)
-    pygame.draw.rect(surface, front_cap_color, front_cap, border_radius=10)
-    pygame.draw.rect(surface, trim_color, front_cap, width=2, border_radius=10)
-    pygame.draw.rect(surface, window_color, windshield_rect, border_radius=4)
-
-    headlight_color = (245, 245, 200)
-    for x in (front_cap.left + 5, front_cap.right - 5):
-        pygame.draw.circle(surface, headlight_color, (x, body_rect.top + 5), 2)
-    grille_rect = pygame.Rect(front_cap.centerx - 6, front_cap.top + 2, 12, 6)
-    pygame.draw.rect(surface, trim_color, grille_rect, border_radius=2)
+    trim_color = tuple(int(c * 0.6) for c in color)
+    body_color = tuple(min(255, int(c * 1.15)) for c in color)
     tail_light_color = (255, 80, 50)
-    for x in (body_rect.left + 5, body_rect.right - 5):
-        pygame.draw.rect(
-            surface,
-            tail_light_color,
-            (x - 2, body_rect.bottom - 5, 4, 3),
-            border_radius=1,
+    headlight_color = (200, 200, 200)
+
+    base_width = 150.0
+    base_height = 210.0
+    scale_x = width / base_width
+    scale_y = height / base_height
+
+    def _rect(x: float, y: float, w: float, h: float) -> pygame.Rect:
+        return pygame.Rect(
+            int(round(x * scale_x)),
+            int(round(y * scale_y)),
+            max(1, int(round(w * scale_x))),
+            max(1, int(round(h * scale_y))),
         )
+
+    def _radius(value: float) -> int:
+        return max(1, int(round(value * min(scale_x, scale_y))))
+
+    body_top = _rect(0, 0, 150, 140)
+    body_bottom = _rect(0, 70, 150, 140)
+    rear_bed = _rect(16, 98, 118, 88)
+
+    pygame.draw.rect(surface, trim_color, body_top, border_radius=_radius(50))
+    pygame.draw.rect(surface, trim_color, body_bottom, border_radius=_radius(37))
+    pygame.draw.rect(surface, body_color, rear_bed)
+
+    tail_left = _rect(30, 190, 30, 20)
+    tail_right = _rect(90, 190, 30, 20)
+    pygame.draw.rect(surface, tail_light_color, tail_left)
+    pygame.draw.rect(surface, tail_light_color, tail_right)
+
+    headlight_left = _rect(15, 7, 40, 20)
+    headlight_right = _rect(95, 7, 40, 20)
+    pygame.draw.ellipse(surface, headlight_color, headlight_left)
+    pygame.draw.ellipse(surface, headlight_color, headlight_right)
 
 
 def build_car_directional_surfaces(
@@ -739,8 +754,6 @@ def paint_steel_beam_surface(
         width=6,
     )
     surface.blit(top_surface, top_rect.topleft)
-
-
 
 
 def build_fuel_can_surface(width: int, height: int) -> pygame.Surface:
