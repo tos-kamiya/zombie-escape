@@ -323,9 +323,7 @@ def draw_level_overview(
     if flashlights:
         for flashlight in flashlights:
             if flashlight.alive():
-                pygame.draw.rect(
-                    surface, YELLOW, flashlight.rect, border_radius=2
-                )
+                pygame.draw.rect(surface, YELLOW, flashlight.rect, border_radius=2)
                 pygame.draw.rect(
                     surface, BLACK, flashlight.rect, width=2, border_radius=2
                 )
@@ -596,6 +594,8 @@ def _draw_fall_whirlwind(
     camera: Camera,
     center: tuple[int, int],
     progress: float,
+    *,
+    scale: float = 1.0,
 ) -> None:
     base_alpha = FALLING_WHIRLWIND_COLOR[3]
     alpha = int(max(0, min(255, base_alpha * (1.0 - progress))))
@@ -607,8 +607,9 @@ def _draw_fall_whirlwind(
         FALLING_WHIRLWIND_COLOR[2],
         alpha,
     )
-    swirl_radius = max(2, int(ZOMBIE_RADIUS * 1.1))
-    offset = max(1, int(ZOMBIE_RADIUS * 0.6))
+    safe_scale = max(0.4, scale)
+    swirl_radius = max(2, int(ZOMBIE_RADIUS * 1.1 * safe_scale))
+    offset = max(1, int(ZOMBIE_RADIUS * 0.6 * safe_scale))
     size = swirl_radius * 4
     swirl = pygame.Surface((size, size), pygame.SRCALPHA)
     cx = cy = size // 2
@@ -641,7 +642,15 @@ def _draw_falling_fx(
         if now < fall_start:
             if flashlight_count > 0 and pre_fx_ms > 0:
                 fx_progress = max(0.0, min(1.0, (now - fall.started_at_ms) / pre_fx_ms))
-                _draw_fall_whirlwind(screen, camera, fall.target_pos, fx_progress)
+                # Make the premonition grow with the impending drop scale.
+                pre_scale = 1.0 + (0.9 * fx_progress)
+                _draw_fall_whirlwind(
+                    screen,
+                    camera,
+                    fall.start_pos,
+                    fx_progress,
+                    scale=pre_scale,
+                )
             continue
         if now >= impact_at:
             continue
@@ -912,33 +921,52 @@ def _draw_play_area(
                     for i in range(PITFALL_SHADOW_WIDTH):
                         t = i / (PITFALL_SHADOW_WIDTH - 1.0)
                         c = tuple(
-                            int(PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t) + PITFALL_ABYSS_COLOR[j] * t)
+                            int(
+                                PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t)
+                                + PITFALL_ABYSS_COLOR[j] * t
+                            )
                             for j in range(3)
                         )
-                        pygame.draw.line(screen, c, (sr.x + i, sr.y), (sr.x + i, sr.bottom - 1))
+                        pygame.draw.line(
+                            screen, c, (sr.x + i, sr.y), (sr.x + i, sr.bottom - 1)
+                        )
 
                 if (x + 1, y) not in pitfall_cells:
                     for i in range(PITFALL_SHADOW_WIDTH):
                         t = i / (PITFALL_SHADOW_WIDTH - 1.0)
                         c = tuple(
-                            int(PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t) + PITFALL_ABYSS_COLOR[j] * t)
+                            int(
+                                PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t)
+                                + PITFALL_ABYSS_COLOR[j] * t
+                            )
                             for j in range(3)
                         )
-                        pygame.draw.line(screen, c, (sr.right - 1 - i, sr.y), (sr.right - 1 - i, sr.bottom - 1))
+                        pygame.draw.line(
+                            screen,
+                            c,
+                            (sr.right - 1 - i, sr.y),
+                            (sr.right - 1 - i, sr.bottom - 1),
+                        )
 
                 # 3. Top inner wall (cross-section of floor) - Draw LAST
                 if (x, y - 1) not in pitfall_cells:
-                    edge_h = max(1, INTERNAL_WALL_BEVEL_DEPTH - PITFALL_EDGE_DEPTH_OFFSET)
-                    pygame.draw.rect(screen, PITFALL_EDGE_METAL_COLOR, (sr.x, sr.y, sr.w, edge_h))
+                    edge_h = max(
+                        1, INTERNAL_WALL_BEVEL_DEPTH - PITFALL_EDGE_DEPTH_OFFSET
+                    )
+                    pygame.draw.rect(
+                        screen, PITFALL_EDGE_METAL_COLOR, (sr.x, sr.y, sr.w, edge_h)
+                    )
 
                     # Draw diagonal metal texture lines
-                    for sx in range(sr.x - edge_h, sr.right, PITFALL_EDGE_STRIPE_SPACING):
+                    for sx in range(
+                        sr.x - edge_h, sr.right, PITFALL_EDGE_STRIPE_SPACING
+                    ):
                         pygame.draw.line(
                             screen,
                             PITFALL_EDGE_STRIPE_COLOR,
                             (max(sr.x, sx), sr.y),
                             (min(sr.right - 1, sx + edge_h), sr.y + edge_h - 1),
-                            width=1,
+                            width=2,
                         )
 
                 continue
