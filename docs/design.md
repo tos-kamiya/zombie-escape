@@ -89,6 +89,7 @@
 - 変種移動ルーチン: `zombie_wall_follower_ratio`（壁沿い巡回型の出現率）
 - エイジング速度: `zombie_aging_duration_frames`（値が大きいほど老化が遅い）
 - 壁生成アルゴリズム: `wall_algorithm` ("default", "empty", "grid_wire")
+- 落とし穴の出現率: `pitfall_density` (0.0〜1.0)
 - 落下スポーン領域: `fall_spawn_zones`, `fall_spawn_floor_ratio`
 - ステージ公開: `available`
 - タイルサイズ: `tile_size`（ステージごとのワールド縮尺）
@@ -98,9 +99,10 @@
 
 - `field_rect`: プレイフィールド全体の `Rect`。
 - `outside_cells`: 外周（`O`）領域のセル座標。
-- `walkable_cells`: 歩行可能床セルの座標。
+- `walkable_cells`: 歩行可能床セルの座標（アイテム・スポーン候補。落とし穴は含まない）。
 - `outer_wall_cells`: 外周壁（`B`）セルの座標。
 - `wall_cells`: 壁セル（外周壁＋内部壁）の座標。
+- `pitfall_cells`: 落とし穴セルの座標。
 - `fall_spawn_cells`: 落下ゾンビの候補セル。
 - `bevel_corners`: 壁描画の角丸／面取り情報。
 - 命名規則: `*_cells` はセル座標の集合（`list`/`set`）。
@@ -119,10 +121,12 @@
 
 相棒 (`is_buddy=True`) は一定距離内で追従を開始し、車に乗った数と脱出時の救出数で管理する。
 一般 `Survivor` は画面外でゾンビに接触した場合はリスポーンする。
+プレイヤー/相棒/生存者は、進行方向に落とし穴があっても、その先に安全な床（`walkable_cells`）があれば自動的に**ジャンプ（跳躍）**して回避する。
+ジャンプ中はスプライトが一時的に拡大し、影が本体から切り離されて描画されることで滞空感を表現する。
 プレイヤー/相棒は「本体＋手（小円2つ）」の簡易シルエットを使い、移動方向に合わせて手の角度が回転する。
 生存者/ゾンビも同じ人型シルエットを使うが、両手は描かない。
 方向は16分割（22.5度刻み）で更新し、停止時は直前の方向を維持する。生存者/ゾンビは移動ベクトルから16方向へ丸めて向きを更新する。
-プレイヤー/相棒/生存者/ゾンビ/車は 16 方向（22.5度刻み）の画像を使う。人型（プレイヤー/相棒/生存者/ゾンビ）の 16 方向画像は条件（半径/色/手の有無）ごとに共有キャッシュされ、インスタンスごとに再生成しない。車は事前生成した 16 方向画像を描画時に選択し、毎フレーム回転はしない（x4 で回転して縮小）。
+プレイヤー/相棒/生存者/ゾンビ/車は 16 方向（22.5度刻み）の画像を使う。人型（プレイヤー/相棒/生存者/ゾンビ）の 16 方向画像は条件（半径/色/手の有無）ごとに共有キャッシュされ、インスタンスごとに再生成しない。車は事前生成した 16 方向画像を描画時に選択し、毎フレーム回転はしない（回転用に拡大した元画像を使って超解像度回転→縮小）。
 相棒は内部壁/鉄筋に衝突すると、プレイヤーの70%のダメージを与える。
 
 ## 3.7 ゾンビ移動戦略
@@ -154,7 +158,21 @@
   - 外周セルにいる場合、`outer_wall_cells` を参照して内側のセルが外周でなければ内側へ誘導。
   - `outer_wall_cells` がない場合でも、壁衝突を避けられるなら内側へ 1 ステップ押し戻す。
 - `Zombie.update()` 側で壁衝突・近接回避・外周逸脱時の補正を処理。
+- 落とし穴（`pitfall_cells`）に中心座標が入った場合、ゾンビは即座に消滅し、縮小しながら穴へ吸い込まれる落下アニメーション（`mode="pitfall"`）が再生される。
 - `create_zombie()` で `stage.zombie_tracker_ratio` を参照し追跡型の出現率を決定。
+
+## 3.8 落とし穴とジャンプの挙動
+
+落とし穴は床の一部に配置される即死（ゾンビ用）または通行不能（プレイヤー・車用）のトラップ。
+
+- **プレイヤー / 車**:
+  - 原則として「壊せない壁」として扱い、進入を阻止する。
+  - 落とし穴に接触しても車へのダメージは発生しない。
+- **人間（プレイヤー・生存者・相棒）**:
+  - 移動ベクトルに基づいた先読み判定を行い、穴の先に安全な床がある場合はジャンプを開始する。
+  - ジャンプ中は滞空演出（拡大＋影のオフセット）を行い、穴の判定を無視して通行する。
+- **ゾンビ**:
+  - 穴を回避せず、進入した瞬間に落下・消滅する。
 
 ## 4. ゲームロジックの主要関数 (gameplay/*.py)
 
@@ -163,9 +181,11 @@
 - `initialize_game_state(config, stage)` (`gameplay/state.py`)
   - `GameData` の基本セットアップ。
 - `generate_level_from_blueprint(game_data, config)` (`gameplay/layout.py`)
-  - `level_blueprints` から壁・歩行セル・外部セルを作成。
+  - `level_blueprints` から壁・歩行セル・外部セル・落とし穴を作成。
+  - 連結性検証の結果得られた「車で到達可能なタイル（`car_walkable_cells`）」を保持。
+  - 予約記号（`f`, `l`, `s` 等）を解釈し、アイテムの確定配置地点を決定。
 - `setup_player_and_cars(game_data, layout_data, car_count)` (`gameplay/spawn.py`)
-  - プレイヤーと待機車両を配置。
+  - プレイヤーと待機車両を配置。車は必ず「車で到達可能なエリア」に配置される。
 - `spawn_initial_zombies(game_data, player, layout_data, config)` (`gameplay/spawn.py`)
   - 初期ゾンビを内側エリア中心に配置。
 
@@ -176,14 +196,14 @@
 - `find_exterior_spawn_position`, `find_interior_spawn_positions`, `find_nearby_offscreen_spawn_position` (`gameplay/spawn.py`)
   - スポーン候補位置の探索。
 - `update_falling_zombies` (`gameplay/spawn.py`)
-  - 落下中オブジェクトを管理し、着地時にゾンビを生成。
-  - 着地時にホコリリングを生成（懐中電灯の有無に関係なく発生）。
+  - 落下中オブジェクト（出現または穴への落下）を管理。
+  - `mode="spawn"`: 上空から拡大しながら登場。着地時にゾンビを生成しホコリリングを発生。
+  - `mode="pitfall"`: 穴の中心へ吸い込まれながら縮小・消滅。
   - 位置が見つからない場合は落下スポーンを行わず、`falling_spawn_carry` を加算して次回へ繰り越す。
-  - 次の落下スポーンタイミングではキャリーを消費しつつ、最大2体分の落下をスケジュールする。
 - `spawn_survivors` / `place_buddies` / `place_fuel_can` / `place_flashlights` / `place_shoes` (`gameplay/spawn.py`)
-  - ステージ別のアイテムやNPCを配置。
+  - ステージ別のアイテムやNPCを配置。ブループリントの予約地点を優先使用する。
 - `spawn_waiting_car` / `place_new_car` / `maintain_waiting_car_supply` (`gameplay/spawn.py`)
-  - 待機車両の補充と再配置。
+  - 待機車両の補充と再配置。**車で到達可能なタイル（`car_walkable_cells`）からのみ選択**され、孤立を防止する。
 - `respawn_buddies_near_player` / `nearest_waiting_car` (`gameplay/spawn.py`)
   - 相棒の再配置や最寄り車両の検索。
 
@@ -193,12 +213,13 @@
   - プレイヤー/車両の入力速度を決定。
 - `update_entities(game_data, player_dx, player_dy, car_dx, car_dy, config)` (`gameplay/movement.py`)
   - 移動、カメラ更新、ゾンビAI、サバイバー移動など。
+  - 人間キャラクターのジャンプ判定と、ゾンビの穴落下判定を実施。
   - 壁セルに隣接するタイル端に近い場合、移動ベクトルをタイル中心へ3%だけ補正する（全キャラ共通）。
-  - （検討中）ゾンビのエイジングが極端に進んだ個体を自動で削除し、上限到達時の滞留を緩和する案。
 - `check_interactions(game_data, config)` (`gameplay/interactions.py`)
   - アイテム収集、車両/救助/敗北判定などの相互作用。
 - `update_survivors(game_data, config)` (`gameplay/survivors.py`)
   - サバイバー/相棒の移動と追従。
+  - 落とし穴を壁と同様の障害物として避ける。
   - 相棒は追従中、プレイヤーが内部壁/鉄筋に接触している間だけ同じセル中心を追う。
   - 相棒は移動方向に合わせて描画用の向き（16方向）を更新する（壁接触時は隣方向へ揺らす）。
 - `handle_survivor_zombie_collisions(game_data, config)` (`gameplay/survivors.py`)
@@ -224,23 +245,26 @@
 
 ### 補助ユーティリティ
 
-- `rect_visible_on_screen(camera, rect)` (`gameplay/utils.py`)
-  - 画面内判定の補助。
+- `_handle_pitfall_detection(x, y, ...)` (`gameplay/movement.py`)
+  - 座標が落とし穴にあるか判定し、中心への吸い込みターゲット座標を計算。
 
 ## 5. 描画パイプライン (render.py)
 
 - `draw(...)` が描画の中心。
   1. 環境色で背景塗りつぶし
   2. プレイ領域・床パターン描画
-  3. 影レイヤー（壁影・エンティティ影）を生成して合成
-  4. 足跡のフェード描画
-  5. Sprite 群を `Camera` でオフセットして描画
-  5.5 追跡型/壁沿いゾンビには識別用の装飾を追加（追跡は鼻ライン、壁沿いは壁側の手）
-  6. ヒント矢印 (`_draw_hint_arrow`)
-  7. 霧 (`fog_surfaces` + `FOG_RINGS`)
-  8. HUD: 目的/メッセージ/ステータスバー
+  3. 落とし穴の描画: 奈落の暗色、左右の滑らかなグラデーション影、および上端の金属的な断面（断面には斜め縞模様のテクスチャ）を描画。
+  4. 影レイヤー（壁影・エンティティ影）を生成して合成
+     - ジャンプ中のエンティティの影は、本体から下にオフセットして描画。
+  5. 足跡のフェード描画
+  6. Sprite 群を `Camera` でオフセットして描画
+  7. 追跡型/壁沿いゾンビには識別用の装飾を追加（追跡は鼻ライン、壁沿いは壁側の手）
+  8. ヒント矢印 (`_draw_hint_arrow`)
+  9. 霧 (`fog_surfaces` + `FOG_RINGS`)
+  10. HUD: 目的/メッセージ/ステータスバー
 
 - 影は `shadow_layer` に壁影とエンティティ影を描き、光源（プレイヤーまたは車）基準でずらして合成する。
+  - 屋外セル（`outside_cells`）上のエンティティは影を描かない。
 
 - `draw_status_bar()`
   - 設定フラグやステージ番号、シード値を表示。
@@ -264,9 +288,14 @@
   - `P`: プレイヤー候補（player spawn candidate）
   - `C`: 車候補（car spawn candidate）
   - `Z`: ゾンビ候補（zombie spawn candidate）
+  - `x`: 落とし穴（pitfall trap）
+  - `f`: 燃料候補（fuel candidate）
+  - `l`: 懐中電灯候補（flashlight candidate）
+  - `s`: 靴候補（shoes candidate）
 
 - `generate_random_blueprint(wall_algo)`
-  - 外周 -> 出口 -> スポーン候補（P/C/Z）予約 -> 壁 -> 鉄筋候補 の順に生成。
+  - 外周 -> 出口 -> スポーン・アイテム候補（P/C/Z/f/l/s）予約 -> 落とし穴 -> 壁 -> 鉄筋候補 の順に生成。
+  - 予約地点（`reserved_cells`）には壁や落とし穴が生成されないよう保護される。
   - `wall_algo` により壁配置戦略を切り替え可能。
     - `"default"`: ランダムな長さの直線をランダム配置。
     - `"empty"`: 内部壁なし。
@@ -281,6 +310,21 @@
   - `fall_spawn_zones`（ステージ定義の矩形群）をセル集合に展開し、`fall_spawn_cells` として保持。
   - `fall_spawn_floor_ratio` が有効なら、内部セルから一定割合を落下候補セルに追加。
   - `fall_spawn_cells` は落下スポーン位置の候補として利用される（床のハイライトにも使用）。
+
+### 6.1 連結性保証とリトライロジック
+
+生成されたブループリント（ステージの初期配置データ）は、以下の2段階の検証（BFS）を経て、不合格の場合はリトライされる。
+
+1. **車用連結性チェック (`validate_car_connectivity`)**:
+   - 車 (`C`) から開始し、**4方向移動**で少なくとも一つの出口 (`E`) に到達可能かを確認。
+   - 脱出可能なパスが繋がっているタイル集合（`car_walkable_cells`）を返し、初期配置やリスポーン位置の候補として利用される。
+2. **人間用連結性チェック (`validate_humanoid_connectivity`)**:
+   - プレイヤー (`P`) から開始し、斜め移動を含む**8方向移動**で、ブループリント上のすべての通行可能タイル（アイテム・相棒地点含む）に到達可能かを確認。
+
+**リトライロジック**:
+- 上記の検証に失敗した場合、 `base_seed + attempt_count` によってシード値を更新し、最大20回まで再生成を試みる。
+- これにより、特定のシード値に対して常に決定論的に同一の「合格したマップ」が生成される。
+- 20回失敗した場合は `MapGenerationError` を投げ、タイトル画面へ安全に復帰する。
 
 ## 7. 設定と進行データ
 
