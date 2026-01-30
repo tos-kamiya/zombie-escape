@@ -44,6 +44,7 @@ At the title screen you can pick a stage:
 - **Stage 5: Survive Until Dawn** — every car is bone-dry. Endure until the sun rises while the horde presses in from every direction. Once dawn hits, outdoor zombies carbonize and you must walk out through an existing exterior gap to win; cars remain unusable.
 
 Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/right to select later stages.
+Open the Stage 6+ description: [docs/stages-6plus.md](docs/stages-6plus.md)
 
 **Stage names are red until cleared** and turn white after at least one clear.
 
