@@ -12,6 +12,7 @@ from ..gameplay_constants import (
     SURVIVAL_TIME_ACCEL_MAX_SUBSTEP,
 )
 from ..gameplay import (
+    MapGenerationError,
     apply_passenger_speed_penalty,
     check_interactions,
     cleanup_survivor_messages,
@@ -102,7 +103,30 @@ def gameplay_screen(
     controller = init_first_controller()
     joystick = init_first_joystick() if controller is None else None
 
-    layout_data = generate_level_from_blueprint(game_data, config)
+    try:
+        layout_data = generate_level_from_blueprint(game_data, config)
+    except MapGenerationError:
+        # If generation fails after retries, show error and back to title
+        draw(
+            render_assets,
+            screen,
+            game_data,
+            config=config,
+            hint_color=None,
+            fps=fps,
+            present_fn=present,
+        )
+        show_message(
+            screen,
+            tr("errors.map_generation_failed"),
+            16,
+            RED,
+            (screen_width // 2, screen_height // 2),
+        )
+        present(screen)
+        pygame.time.delay(3000)
+        return ScreenTransition(ScreenID.TITLE)
+
     sync_ambient_palette_with_flashlights(game_data, force=True)
     initial_waiting = max(0, stage.waiting_car_target_count)
     player, waiting_cars = setup_player_and_cars(
@@ -124,7 +148,7 @@ def gameplay_screen(
     if stage.requires_fuel:
         fuel_spawn_count = stage.fuel_spawn_count
         fuel_can = place_fuel_can(
-            layout_data["walkable_cells"],
+            layout_data["fuel_cells"] or layout_data["walkable_cells"],
             cell_size,
             player,
             cars=game_data.waiting_cars,
@@ -137,7 +161,7 @@ def gameplay_screen(
             occupied_centers.add(fuel_can.rect.center)
     flashlight_count = stage.initial_flashlight_count
     flashlights = place_flashlights(
-        layout_data["walkable_cells"],
+        layout_data["flashlight_cells"] or layout_data["walkable_cells"],
         cell_size,
         player,
         cars=game_data.waiting_cars,
@@ -151,7 +175,7 @@ def gameplay_screen(
 
     shoes_count = stage.initial_shoes_count
     shoes_list = place_shoes(
-        layout_data["walkable_cells"],
+        layout_data["shoes_cells"] or layout_data["walkable_cells"],
         cell_size,
         player,
         cars=game_data.waiting_cars,

@@ -127,6 +127,10 @@
       "stage15": {
         "name": "#15 分断ライン",
         "description": "建物中央を分断する危険地帯。横断には注意。"
+      },
+      "stage16": {
+        "name": "#16 奈落",
+        "description": "崩落した床パネルを回り込んでゾンビを誘い込もう。"
       }
     },
     "status": {
@@ -198,10 +202,14 @@
     "game_over": {
       "win": "脱出成功！",
       "lose": "ゲームオーバー",
+      "fell_into_abyss": "奈落の底へ落ちてしまった...",
       "prompt": "ESC/Space/Select/South: タイトルへ  R: 再挑戦",
       "scream": "ぎゃあーーー!!",
       "survivors_summary": "救出人数: %{count}",
       "endurance_duration": "逃げ延びた時間 %{time}"
+    },
+    "errors": {
+      "map_generation_failed": "マップの生成に失敗しました。シード値を変えるか、別のステージを選んでください。"
     }
   }
 }

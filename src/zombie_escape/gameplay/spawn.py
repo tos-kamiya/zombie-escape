@@ -35,6 +35,9 @@ from ..render_constants import (
 )
 from ..rng import get_rng
 from .constants import (
+    FALLING_ZOMBIE_DUST_DURATION_MS,
+    FALLING_ZOMBIE_DURATION_MS,
+    FALLING_ZOMBIE_PRE_FX_MS,
     MAX_ZOMBIES,
     ZOMBIE_SPAWN_PLAYER_BUFFER,
     ZOMBIE_TRACKER_AGING_DURATION_FRAMES,
@@ -231,15 +234,15 @@ def _schedule_falling_zombie(
         if allow_carry:
             state.falling_spawn_carry += 1
         return "no_position"
-    start_offset = game_data.stage.tile_size * 0.7
-    start_pos = (int(spawn_pos[0]), int(spawn_pos[1] - start_offset))
+    # start_offset removed; animation handles "falling" via scaling now.
+    start_pos = (int(spawn_pos[0]), int(spawn_pos[1]))
     fall = FallingZombie(
         start_pos=start_pos,
         target_pos=(int(spawn_pos[0]), int(spawn_pos[1])),
         started_at_ms=pygame.time.get_ticks(),
-        pre_fx_ms=350,
-        fall_duration_ms=450,
-        dust_duration_ms=220,
+        pre_fx_ms=FALLING_ZOMBIE_PRE_FX_MS,
+        fall_duration_ms=FALLING_ZOMBIE_DURATION_MS,
+        dust_duration_ms=FALLING_ZOMBIE_DUST_DURATION_MS,
         tracker=tracker,
         wall_follower=wall_follower,
     )
@@ -656,7 +659,8 @@ def setup_player_and_cars(
     player_pos = _pick_center(layout_data["player_cells"] or walkable_cells)
     player = Player(*player_pos)
 
-    car_candidates = list(layout_data["car_cells"] or walkable_cells)
+    car_walkable = layout_data.get("car_walkable_cells") or walkable_cells
+    car_candidates = list(layout_data["car_cells"] or car_walkable)
     waiting_cars: list[Car] = []
     car_appearance = _car_appearance_for_stage(game_data.stage)
 
@@ -763,7 +767,9 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
     player = game_data.player
     if not player:
         return None
-    walkable_cells = game_data.layout.walkable_cells
+    # Use cells that are 4-way reachable by car
+    car_walkable = list(game_data.layout.car_walkable_cells)
+    walkable_cells = car_walkable if car_walkable else game_data.layout.walkable_cells
     if not walkable_cells:
         return None
     wall_group = game_data.groups.wall_group
@@ -919,18 +925,19 @@ def update_falling_zombies(game_data: GameData, config: dict[str, Any]) -> None:
             fall.dust_started = True
         if now < spawn_at:
             continue
-        if len(zombie_group) >= MAX_ZOMBIES:
-            state.falling_zombies.remove(fall)
-            continue
-        candidate = _create_zombie(
-            config,
-            start_pos=fall.target_pos,
-            stage=game_data.stage,
-            tracker=fall.tracker,
-            wall_follower=fall.wall_follower,
-        )
-        zombie_group.add(candidate)
-        all_sprites.add(candidate, layer=1)
+
+        if getattr(fall, "mode", "spawn") == "spawn":
+            if len(zombie_group) < MAX_ZOMBIES:
+                candidate = _create_zombie(
+                    config,
+                    start_pos=fall.target_pos,
+                    stage=game_data.stage,
+                    tracker=fall.tracker,
+                    wall_follower=fall.wall_follower,
+                )
+                zombie_group.add(candidate)
+                all_sprites.add(candidate, layer=1)
+
         state.falling_zombies.remove(fall)
 
 

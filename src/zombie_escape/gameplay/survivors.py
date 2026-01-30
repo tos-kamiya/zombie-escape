@@ -44,6 +44,7 @@ def update_survivors(
     target_rect = car.rect if player.in_car and car and car.alive() else player.rect
     target_pos = target_rect.center
     survivors = [s for s in survivor_group if s.alive()]
+
     for survivor in survivors:
         survivor.update_behavior(
             target_pos,
@@ -51,6 +52,8 @@ def update_survivors(
             wall_index=wall_index,
             cell_size=game_data.cell_size,
             wall_cells=game_data.layout.wall_cells,
+            pitfall_cells=game_data.layout.pitfall_cells,
+            walkable_cells=game_data.layout.walkable_cells,
             bevel_corners=game_data.layout.bevel_corners,
             grid_cols=game_data.stage.grid_cols,
             grid_rows=game_data.stage.grid_rows,

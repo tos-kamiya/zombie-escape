@@ -5,7 +5,7 @@
 from .ambient import sync_ambient_palette_with_flashlights
 from .footprints import get_shrunk_sprite, update_footprints
 from .interactions import check_interactions
-from .layout import generate_level_from_blueprint
+from .layout import MapGenerationError, generate_level_from_blueprint
 from .movement import process_player_input, update_entities
 from .spawn import (
     maintain_waiting_car_supply,
@@ -43,6 +43,7 @@ from .utils import (
 )
 
 __all__ = [
+    "MapGenerationError",
     "generate_level_from_blueprint",
     "place_new_car",
     "place_fuel_can",

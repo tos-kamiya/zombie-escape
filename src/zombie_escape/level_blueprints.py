@@ -1,6 +1,8 @@
 # Blueprint generator for randomized layouts.
 
-from .rng import get_rng
+from collections import deque
+
+from .rng import get_rng, seed_rng
 
 EXITS_PER_SIDE = 1  # currently fixed to 1 per side (can be tuned)
 NUM_WALL_LINES = 80  # reduced density (roughly 1/5 of previous 450)
@@ -13,15 +15,94 @@ SPAWN_ZOMBIES = 3
 RNG = get_rng()
 STEEL_BEAM_CHANCE = 0.02
 
-# Legend:
-# O: outside area (win when car reaches)
-# B: outer wall band (solid)
-# E: exit tile (opening in outer wall)
-# 1: internal wall
-# .: empty floor
-# P: player spawn candidate
-# C: car spawn candidate
-# Z: zombie spawn candidate
+
+class MapGenerationError(Exception):
+    """Raised when a valid map cannot be generated after several attempts."""
+
+
+def validate_car_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
+    """Check if the Car can reach at least one exit (4-way BFS).
+    Returns the set of reachable tiles if valid, otherwise None.
+    """
+    rows = len(grid)
+    cols = len(grid[0])
+
+    start_pos = None
+    passable_tiles = set()
+    exit_tiles = set()
+
+    for y in range(rows):
+        for x in range(cols):
+            ch = grid[y][x]
+            if ch == "C":
+                start_pos = (x, y)
+            if ch not in ("x", "B"):
+                passable_tiles.add((x, y))
+                if ch == "E":
+                    exit_tiles.add((x, y))
+
+    if start_pos is None:
+        # If no car candidate, we can't validate car pathing.
+        return passable_tiles
+
+    reachable = {start_pos}
+    queue = deque([start_pos])
+    while queue:
+        x, y = queue.popleft()
+        for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            nx, ny = x + dx, y + dy
+            if (nx, ny) in passable_tiles and (nx, ny) not in reachable:
+                reachable.add((nx, ny))
+                queue.append((nx, ny))
+
+    # Car must reach at least one exit
+    if exit_tiles and not any(e in reachable for e in exit_tiles):
+        return None
+    return reachable
+
+
+def validate_humanoid_connectivity(grid: list[str]) -> bool:
+    """Check if all floor tiles are reachable by Humans (8-way BFS with jumps)."""
+    rows = len(grid)
+    cols = len(grid[0])
+
+    start_pos = None
+    passable_tiles = set()
+
+    for y in range(rows):
+        for x in range(cols):
+            ch = grid[y][x]
+            if ch == "P":
+                start_pos = (x, y)
+            if ch not in ("x", "B"):
+                passable_tiles.add((x, y))
+
+    if start_pos is None:
+        return False
+
+    reachable = {start_pos}
+    queue = deque([start_pos])
+    while queue:
+        x, y = queue.popleft()
+        for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)):
+            nx, ny = x + dx, y + dy
+            if (nx, ny) in passable_tiles and (nx, ny) not in reachable:
+                reachable.add((nx, ny))
+                queue.append((nx, ny))
+
+    return len(passable_tiles) == len(reachable)
+
+
+def validate_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
+    """Validate both car and humanoid movement conditions.
+    Returns car reachable tiles if both pass, otherwise None.
+    """
+    car_reachable = validate_car_connectivity(grid)
+    if car_reachable is None:
+        return None
+    if not validate_humanoid_connectivity(grid):
+        return None
+    return car_reachable
 
 
 def _collect_exit_adjacent_cells(grid: list[list[str]]) -> set[tuple[int, int]]:
@@ -311,6 +392,30 @@ def _place_steel_beams(
     return beams
 
 
+def _place_pitfalls(
+    grid: list[list[str]],
+    *,
+    density: float,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Replace empty floor tiles with pitfalls based on density."""
+    if density <= 0.0:
+        return
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+
+    for y in range(1, rows - 1):
+        for x in range(1, cols - 1):
+            if (x, y) in forbidden:
+                continue
+            if grid[y][x] != ".":
+                continue
+            if RNG.random() < density:
+                grid[y][x] = "x"
+
+
 def _pick_empty_cell(
     grid: list[list[str]],
     margin: int,
@@ -332,7 +437,12 @@ def _pick_empty_cell(
 
 
 def _generate_random_blueprint(
-    steel_chance: float, *, cols: int, rows: int, wall_algo: str = "default"
+    steel_chance: float,
+    *,
+    cols: int,
+    rows: int,
+    wall_algo: str = "default",
+    pitfall_density: float = 0.0,
 ) -> dict:
     grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE)
@@ -349,6 +459,21 @@ def _generate_random_blueprint(
         zx, zy = _pick_empty_cell(grid, SPAWN_MARGIN)
         grid[zy][zx] = "Z"
         reserved_cells.add((zx, zy))
+
+    # Items
+    fx, fy = _pick_empty_cell(grid, SPAWN_MARGIN)
+    grid[fy][fx] = "f"
+    reserved_cells.add((fx, fy))
+
+    for _ in range(2):
+        lx, ly = _pick_empty_cell(grid, SPAWN_MARGIN)
+        grid[ly][lx] = "l"
+        reserved_cells.add((lx, ly))
+
+    for _ in range(2):
+        sx, sy = _pick_empty_cell(grid, SPAWN_MARGIN)
+        grid[sy][sx] = "s"
+        reserved_cells.add((sx, sy))
 
     # Select and run the wall placement algorithm (after reserving spawns)
     sparse_density = SPARSE_WALL_DENSITY
@@ -407,6 +532,13 @@ def _generate_random_blueprint(
         )
         wall_algo = "default"
 
+    # Place pitfalls BEFORE walls so walls avoid them (consistent with spawn reservation)
+    _place_pitfalls(
+        grid,
+        density=pitfall_density,
+        forbidden_cells=reserved_cells,
+    )
+
     algo_func = WALL_ALGORITHMS[wall_algo]
     if wall_algo in {"sparse_moore", "sparse_ortho"}:
         algo_func(grid, density=sparse_density, forbidden_cells=reserved_cells)
@@ -422,7 +554,13 @@ def _generate_random_blueprint(
 
 
 def choose_blueprint(
-    config: dict, *, cols: int, rows: int, wall_algo: str = "default"
+    config: dict,
+    *,
+    cols: int,
+    rows: int,
+    wall_algo: str = "default",
+    pitfall_density: float = 0.0,
+    base_seed: int | None = None,
 ) -> dict:
     # Currently only random generation; hook for future variants.
     steel_conf = config.get("steel_beams", {})
@@ -430,6 +568,22 @@ def choose_blueprint(
         steel_chance = float(steel_conf.get("chance", STEEL_BEAM_CHANCE))
     except (TypeError, ValueError):
         steel_chance = STEEL_BEAM_CHANCE
-    return _generate_random_blueprint(
-        steel_chance=steel_chance, cols=cols, rows=rows, wall_algo=wall_algo
-    )
+
+    for attempt in range(20):
+        if base_seed is not None:
+            seed_rng(base_seed + attempt)
+
+        blueprint = _generate_random_blueprint(
+            steel_chance=steel_chance,
+            cols=cols,
+            rows=rows,
+            wall_algo=wall_algo,
+            pitfall_density=pitfall_density,
+        )
+
+        car_reachable = validate_connectivity(blueprint["grid"])
+        if car_reachable is not None:
+            blueprint["car_reachable_cells"] = car_reachable
+            return blueprint
+
+    raise MapGenerationError("Connectivity validation failed after 20 attempts")

@@ -34,6 +34,8 @@ from .entities_constants import (
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
+    INTERNAL_WALL_BEVEL_DEPTH,
+    JUMP_SHADOW_OFFSET,
     SHOES_HEIGHT,
     SHOES_WIDTH,
     ZOMBIE_RADIUS,
@@ -63,6 +65,13 @@ from .render_constants import (
     FALLING_ZOMBIE_COLOR,
     FLASHLIGHT_FOG_SCALE_ONE,
     FLASHLIGHT_FOG_SCALE_TWO,
+    PITFALL_ABYSS_COLOR,
+    PITFALL_EDGE_DEPTH_OFFSET,
+    PITFALL_EDGE_METAL_COLOR,
+    PITFALL_EDGE_STRIPE_COLOR,
+    PITFALL_EDGE_STRIPE_SPACING,
+    PITFALL_SHADOW_RIM_COLOR,
+    PITFALL_SHADOW_WIDTH,
     PLAYER_SHADOW_ALPHA_MULT,
     PLAYER_SHADOW_RADIUS_MULT,
     SHADOW_MIN_RATIO,
@@ -637,17 +646,29 @@ def _draw_falling_fx(
         if now >= impact_at:
             continue
         fall_progress = max(0.0, min(1.0, (now - fall_start) / fall_duration_ms))
-        eased = 1.0 - (1.0 - fall_progress) * (1.0 - fall_progress)
-        x = fall.target_pos[0]
-        y = int(fall.start_pos[1] + (fall.target_pos[1] - fall.start_pos[1]) * eased)
-        world_rect = pygame.Rect(0, 0, ZOMBIE_RADIUS * 2, ZOMBIE_RADIUS * 2)
-        world_rect.center = (x, y)
+
+        if getattr(fall, "mode", "spawn") == "pitfall":
+            scale = 1.0 - fall_progress
+            scale = scale * scale
+            y_offset = 0.0
+        else:
+            eased = 1.0 - (1.0 - fall_progress) * (1.0 - fall_progress)
+            scale = 2.0 - (1.0 * eased)
+            # Add an extra vertical drop from above (1.5x wall depth)
+            y_offset = -INTERNAL_WALL_BEVEL_DEPTH * 1.5 * (1.0 - eased)
+
+        radius = ZOMBIE_RADIUS * scale
+        cx = fall.target_pos[0]
+        cy = fall.target_pos[1] + ZOMBIE_RADIUS - radius + y_offset
+
+        world_rect = pygame.Rect(0, 0, radius * 2, radius * 2)
+        world_rect.center = (int(cx), int(cy))
         screen_rect = camera.apply_rect(world_rect)
         pygame.draw.circle(
             screen,
             FALLING_ZOMBIE_COLOR,
             screen_rect.center,
-            ZOMBIE_RADIUS,
+            max(1, int(screen_rect.width / 2)),
         )
 
     for ring in list(dust_rings):
@@ -810,6 +831,7 @@ def _draw_play_area(
     field_rect: pygame.Rect,
     outside_cells: set[tuple[int, int]],
     fall_spawn_cells: set[tuple[int, int]],
+    pitfall_cells: set[tuple[int, int]],
 ) -> tuple[int, int, int, int, set[tuple[int, int]]]:
     xs, ys, xe, ye = (
         field_rect.left,
@@ -865,6 +887,62 @@ def _draw_play_area(
                 if sr.colliderect(screen.get_rect()):
                     pygame.draw.rect(screen, palette.outside, sr)
                 continue
+
+            if (x, y) in pitfall_cells:
+                # 1. Base abyss color
+                lx, ly = (
+                    x * assets.internal_wall_grid_snap,
+                    y * assets.internal_wall_grid_snap,
+                )
+                r = pygame.Rect(
+                    lx,
+                    ly,
+                    assets.internal_wall_grid_snap,
+                    assets.internal_wall_grid_snap,
+                )
+                sr = camera.apply_rect(r)
+                if not sr.colliderect(screen.get_rect()):
+                    continue
+
+                # Fill base
+                pygame.draw.rect(screen, PITFALL_ABYSS_COLOR, sr)
+
+                # 2. Left/Right side shadows for depth
+                if (x - 1, y) not in pitfall_cells:
+                    for i in range(PITFALL_SHADOW_WIDTH):
+                        t = i / (PITFALL_SHADOW_WIDTH - 1.0)
+                        c = tuple(
+                            int(PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t) + PITFALL_ABYSS_COLOR[j] * t)
+                            for j in range(3)
+                        )
+                        pygame.draw.line(screen, c, (sr.x + i, sr.y), (sr.x + i, sr.bottom - 1))
+
+                if (x + 1, y) not in pitfall_cells:
+                    for i in range(PITFALL_SHADOW_WIDTH):
+                        t = i / (PITFALL_SHADOW_WIDTH - 1.0)
+                        c = tuple(
+                            int(PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t) + PITFALL_ABYSS_COLOR[j] * t)
+                            for j in range(3)
+                        )
+                        pygame.draw.line(screen, c, (sr.right - 1 - i, sr.y), (sr.right - 1 - i, sr.bottom - 1))
+
+                # 3. Top inner wall (cross-section of floor) - Draw LAST
+                if (x, y - 1) not in pitfall_cells:
+                    edge_h = max(1, INTERNAL_WALL_BEVEL_DEPTH - PITFALL_EDGE_DEPTH_OFFSET)
+                    pygame.draw.rect(screen, PITFALL_EDGE_METAL_COLOR, (sr.x, sr.y, sr.w, edge_h))
+
+                    # Draw diagonal metal texture lines
+                    for sx in range(sr.x - edge_h, sr.right, PITFALL_EDGE_STRIPE_SPACING):
+                        pygame.draw.line(
+                            screen,
+                            PITFALL_EDGE_STRIPE_COLOR,
+                            (max(sr.x, sx), sr.y),
+                            (min(sr.right - 1, sx + edge_h), sr.y + edge_h - 1),
+                            width=1,
+                        )
+
+                continue
+
             use_secondary = ((x // 2) + (y // 2)) % 2 == 0
             if (x, y) in fall_spawn_cells:
                 color = (
@@ -1021,8 +1099,13 @@ def _draw_entity_shadows(
         else:
             offset_x = 0.0
             offset_y = 0.0
+
+        jump_dy = 0.0
+        if getattr(entity, "is_jumping", False):
+            jump_dy = JUMP_SHADOW_OFFSET
+
         shadow_rect = shadow_surface.get_rect(
-            center=(int(cx + offset_x), int(cy + offset_y))
+            center=(int(cx + offset_x), int(cy + offset_y + jump_dy))
         )
         shadow_screen_rect = camera.apply_rect(shadow_rect)
         if not shadow_screen_rect.colliderect(screen_rect):
@@ -1081,8 +1164,13 @@ def _draw_single_entity_shadow(
     else:
         offset_x = 0.0
         offset_y = 0.0
+
+    jump_dy = 0.0
+    if getattr(entity, "is_jumping", False):
+        jump_dy = JUMP_SHADOW_OFFSET
+
     shadow_rect = shadow_surface.get_rect(
-        center=(int(cx + offset_x), int(cy + offset_y))
+        center=(int(cx + offset_x), int(cy + offset_y + jump_dy))
     )
     shadow_screen_rect = camera.apply_rect(shadow_rect)
     if not shadow_screen_rect.colliderect(screen_rect):
@@ -1525,6 +1613,7 @@ def draw(
         field_rect,
         outside_cells,
         game_data.layout.fall_spawn_cells,
+        game_data.layout.pitfall_cells,
     )
     shadow_layer = _get_shadow_layer(screen.get_size())
     shadow_layer.fill((0, 0, 0, 0))

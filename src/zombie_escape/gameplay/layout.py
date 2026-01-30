@@ -8,11 +8,11 @@ from ..colors import get_environment_palette
 from ..entities import SteelBeam, Wall
 from ..entities_constants import INTERNAL_WALL_HEALTH, STEEL_BEAM_HEALTH
 from .constants import OUTER_WALL_HEALTH
-from ..level_blueprints import choose_blueprint
+from ..level_blueprints import MapGenerationError, choose_blueprint
 from ..models import GameData
 from ..rng import get_rng
 
-__all__ = ["generate_level_from_blueprint"]
+__all__ = ["generate_level_from_blueprint", "MapGenerationError"]
 
 RNG = get_rng()
 
@@ -62,17 +62,22 @@ def generate_level_from_blueprint(
         cols=stage.grid_cols,
         rows=stage.grid_rows,
         wall_algo=stage.wall_algorithm,
+        pitfall_density=getattr(stage, "pitfall_density", 0.0),
+        base_seed=game_data.state.seed,
     )
     if isinstance(blueprint_data, dict):
         blueprint = blueprint_data.get("grid", [])
         steel_cells_raw = blueprint_data.get("steel_cells", set())
+        car_reachable_cells = blueprint_data.get("car_reachable_cells", set())
     else:
         blueprint = blueprint_data
         steel_cells_raw = set()
+        car_reachable_cells = set()
 
     steel_cells = (
         {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
     )
+    game_data.layout.car_walkable_cells = car_reachable_cells
     cell_size = game_data.cell_size
     outer_wall_cells = {
         (x, y)
@@ -94,9 +99,13 @@ def generate_level_from_blueprint(
 
     outside_cells: set[tuple[int, int]] = set()
     walkable_cells: list[tuple[int, int]] = []
+    pitfall_cells: set[tuple[int, int]] = set()
     player_cells: list[tuple[int, int]] = []
     car_cells: list[tuple[int, int]] = []
     zombie_cells: list[tuple[int, int]] = []
+    fuel_cells: list[tuple[int, int]] = []
+    flashlight_cells: list[tuple[int, int]] = []
+    shoes_cells: list[tuple[int, int]] = []
     interior_min_x = 2
     interior_max_x = stage.grid_cols - 3
     interior_min_y = 2
@@ -144,6 +153,9 @@ def generate_level_from_blueprint(
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
+                continue
+            if ch == "x":
+                pitfall_cells.add((x, y))
                 continue
             if ch == "E":
                 if not cell_has_beam:
@@ -204,6 +216,12 @@ def generate_level_from_blueprint(
                 car_cells.append((x, y))
             if ch == "Z":
                 zombie_cells.append((x, y))
+            if ch == "f":
+                fuel_cells.append((x, y))
+            if ch == "l":
+                flashlight_cells.append((x, y))
+            if ch == "s":
+                shoes_cells.append((x, y))
 
             if cell_has_beam and ch != "1":
                 beam = SteelBeam(
@@ -225,6 +243,7 @@ def generate_level_from_blueprint(
     game_data.layout.walkable_cells = walkable_cells
     game_data.layout.outer_wall_cells = outer_wall_cells
     game_data.layout.wall_cells = wall_cells
+    game_data.layout.pitfall_cells = pitfall_cells
     fall_spawn_cells = _expand_zone_cells(
         stage.fall_spawn_zones,
         grid_cols=stage.grid_cols,
@@ -250,5 +269,9 @@ def generate_level_from_blueprint(
         "player_cells": player_cells,
         "car_cells": car_cells,
         "zombie_cells": zombie_cells,
+        "fuel_cells": fuel_cells,
+        "flashlight_cells": flashlight_cells,
+        "shoes_cells": shoes_cells,
         "walkable_cells": walkable_cells,
+        "car_walkable_cells": list(car_reachable_cells),
     }

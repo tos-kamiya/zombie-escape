@@ -242,6 +242,20 @@ STAGES: list[Stage] = [
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
         initial_shoes_count=1,
     ),
+    Stage(
+        id="stage16",
+        name_key="stages.stage16.name",
+        description_key="stages.stage16.description",
+        available=True,
+        requires_fuel=True,
+        wall_algorithm="sparse_moore.25%",
+        pitfall_density=0.04,
+        initial_flashlight_count=1,
+        initial_shoes_count=1,
+        initial_interior_spawn_rate=0.07,
+        exterior_spawn_weight=0.1,
+        interior_spawn_weight=0.9,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 

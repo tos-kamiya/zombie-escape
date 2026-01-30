@@ -22,7 +22,7 @@ from ..gameplay_constants import (
     SHOES_SPEED_MULTIPLIER_ONE,
     SHOES_SPEED_MULTIPLIER_TWO,
 )
-from ..models import GameData
+from ..models import FallingZombie, GameData
 from ..world_grid import WallIndex, apply_tile_edge_nudge, walls_for_radius
 from .constants import MAX_ZOMBIES
 from .spawn import spawn_weighted_zombie, update_falling_zombies
@@ -84,6 +84,28 @@ def _shoes_speed_multiplier(shoes_count: int) -> float:
     return 1.0
 
 
+def _handle_pitfall_detection(
+    x: float,
+    y: float,
+    cell_size: int,
+    pitfall_cells: set[tuple[int, int]],
+    pull_distance: float,
+) -> tuple[int, int] | None:
+    """Check if position is in pitfall and return pulled target coordinates if so."""
+    cx, cy = int(x // cell_size), int(y // cell_size)
+    if (cx, cy) not in pitfall_cells:
+        return None
+
+    cell_center_x = (cx * cell_size) + (cell_size // 2)
+    cell_center_y = (cy * cell_size) + (cell_size // 2)
+    dx, dy = cell_center_x - x, cell_center_y - y
+    dist = math.hypot(dx, dy)
+    if dist > 0:
+        move_factor = min(1.0, pull_distance / dist)
+        return int(x + dx * move_factor), int(y + dy * move_factor)
+    return int(x), int(y)
+
+
 def update_entities(
     game_data: GameData,
     player_dx: float,
@@ -105,6 +127,8 @@ def update_entities(
     stage = game_data.stage
     active_car = car if car and car.alive() else None
     wall_cells = game_data.layout.wall_cells
+    pitfall_cells = game_data.layout.pitfall_cells
+    walkable_cells = game_data.layout.walkable_cells
     bevel_corners = game_data.layout.bevel_corners
 
     all_walls = list(wall_group) if wall_index is None else None
@@ -135,7 +159,14 @@ def update_entities(
             grid_rows=stage.grid_rows,
         )
         car_walls = _walls_near((active_car.x, active_car.y), 150.0)
-        active_car.move(car_dx, car_dy, car_walls, walls_nearby=wall_index is not None)
+        active_car.move(
+            car_dx,
+            car_dy,
+            car_walls,
+            walls_nearby=wall_index is not None,
+            cell_size=game_data.cell_size,
+            pitfall_cells=pitfall_cells,
+        )
         player.rect.center = active_car.rect.center
         player.x, player.y = active_car.x, active_car.y
     elif not player.in_car:
@@ -161,6 +192,8 @@ def update_entities(
             cell_size=game_data.cell_size,
             level_width=game_data.level_width,
             level_height=game_data.level_height,
+            pitfall_cells=pitfall_cells,
+            walkable_cells=walkable_cells,
         )
     else:
         # Player flagged as in-car but car is gone; drop them back to foot control
@@ -292,3 +325,27 @@ def update_entities(
             wall_cells=game_data.layout.wall_cells,
             bevel_corners=game_data.layout.bevel_corners,
         )
+
+        # Check zombie pitfall
+        pull_dist = zombie.radius * 0.5
+        pitfall_target = _handle_pitfall_detection(
+            zombie.x,
+            zombie.y,
+            game_data.cell_size,
+            pitfall_cells,
+            pull_dist,
+        )
+        if pitfall_target is not None:
+            zombie.kill()
+            fall = FallingZombie(
+                start_pos=(int(zombie.x), int(zombie.y)),
+                target_pos=pitfall_target,
+                started_at_ms=pygame.time.get_ticks(),
+                pre_fx_ms=0,
+                fall_duration_ms=500,
+                dust_duration_ms=0,
+                tracker=zombie.tracker,
+                wall_follower=zombie.wall_follower,
+                mode="pitfall",
+            )
+            game_data.state.falling_zombies.append(fall)

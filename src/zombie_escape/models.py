@@ -31,13 +31,15 @@ class LevelLayout:
     walkable_cells: list[tuple[int, int]]
     outer_wall_cells: set[tuple[int, int]]
     wall_cells: set[tuple[int, int]]
+    pitfall_cells: set[tuple[int, int]]
+    car_walkable_cells: set[tuple[int, int]]
     fall_spawn_cells: set[tuple[int, int]]
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
 
 
 @dataclass
 class FallingZombie:
-    """Represents a zombie falling toward a target position."""
+    """Represents a zombie falling toward a target position or into a pit."""
 
     start_pos: tuple[int, int]
     target_pos: tuple[int, int]
@@ -48,6 +50,7 @@ class FallingZombie:
     tracker: bool
     wall_follower: bool
     dust_started: bool = False
+    mode: str = "spawn"  # "spawn" (falling in) or "pitfall" (falling out)
 
 
 @dataclass
@@ -166,6 +169,7 @@ class Stage:
     interior_fall_spawn_weight: float = 0.0
     fall_spawn_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
     fall_spawn_floor_ratio: float = 0.0
+    pitfall_density: float = 0.0
     zombie_tracker_ratio: float = 0.0
     zombie_wall_follower_ratio: float = 0.0
     zombie_normal_ratio: float = 1.0
