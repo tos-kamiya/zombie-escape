@@ -7,7 +7,7 @@
 | 名前 | 画像 | 初登場 | メモ |
 | --- | --- | --- | --- |
 | 追跡ゾンビ | <img src="../imgs/exports/zombie-tracker.png" width="80"> | ステージ6 | 足跡を追いかける個体。 |
-| 壁沿いゾンビ | <img src="../imgs/exports/zombie-wall.png" width="80"> | ステージ7 | 壁沿いに巡回する個体。 |
+| 壁沿いゾンビ | <img src="../imgs/exports/zombie-wall.png" width="80"> | ステージ7 | 壁沿いをウロウロする個体。 |
 | 靴 | <img src="../imgs/exports/shoes.png" width="80"> | ステージ11 | 移動速度が上がるアイテム。 |
 | 落下ゾンビ | <img src="../imgs/exports/falling-zombie.png" width="80"> | ステージ12 | 上空から落下して出現。 |
 | 落下スポーン床 | <img src="../imgs/exports/fall-zone.png" width="80"> | ステージ12 | 落下ゾンビが出現しうる床。 |

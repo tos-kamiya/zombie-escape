@@ -86,7 +86,7 @@
 - 待機車両: `waiting_car_target_count`（ステージ別の待機車両数の目安）
 - 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）
 - 変種移動ルーチン: `zombie_tracker_ratio`（足跡追跡型の出現率）
-- 変種移動ルーチン: `zombie_wall_follower_ratio`（壁沿い巡回型の出現率）
+- 変種移動ルーチン: `zombie_wall_hugging_ratio`（壁沿い巡回型の出現率）
 - エイジング速度: `zombie_aging_duration_frames`（値が大きいほど老化が遅い）
 - 壁生成アルゴリズム: `wall_algorithm` ("default", "empty", "grid_wire")
 - 落とし穴の出現率: `pitfall_density` (0.0〜1.0)
@@ -145,7 +145,7 @@
     - 半径内の足跡から最新3件を候補とし、ゾンビから近すぎる足跡（`FOOTPRINT_STEP_DISTANCE * 0.5` 以内）は除外。
     - 候補の中で「壁がない直線経路」が成立する最新足跡をターゲットにする。
     - ターゲットが見つからない場合は、(a) 現在ターゲット上にいなければ維持、(b) 現在ターゲット上なら次に新しい足跡へ更新。
-- 壁沿い移動 (`zombie_wall_follow_movement`)
+- 壁沿い移動 (`zombie_wall_hug_movement`)
   - 視界範囲 `ZOMBIE_TRACKER_SIGHT_RANGE` でプレイヤーを検知したら直進追尾。
   - 視界外は前方と±45度のプローブで壁までの距離を測り、目標ギャップ(約4px)を維持するよう旋回する。
   - 壁が遠い場合は壁側へ寄り、近すぎる場合は離れる方向へ補正する。

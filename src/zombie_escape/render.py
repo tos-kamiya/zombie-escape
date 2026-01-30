@@ -796,7 +796,7 @@ def _draw_status_bar(
             zombies = [z for z in zombie_group if z.alive()]
             total = len(zombies)
             tracker = sum(1 for z in zombies if z.tracker)
-            wall = sum(1 for z in zombies if z.wall_follower)
+            wall = sum(1 for z in zombies if z.wall_hugging)
             normal = max(0, total - tracker - wall)
             parts.append(f"Z:{total} N:{normal} T:{tracker} W:{wall}")
             if falling_spawn_carry is not None:

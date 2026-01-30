@@ -16,7 +16,7 @@ from ..entities_constants import (
     HUMANOID_WALL_BUMP_FRAMES,
     PLAYER_SPEED,
     ZOMBIE_SEPARATION_DISTANCE,
-    ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE,
+    ZOMBIE_WALL_HUG_SENSOR_DISTANCE,
 )
 from ..gameplay_constants import (
     SHOES_SPEED_MULTIPLIER_ONE,
@@ -309,7 +309,7 @@ def update_entities(
                         + (pos[1] - zombie.y) ** 2,
                     )
         nearby_candidates = _nearby_zombies(idx)
-        zombie_search_radius = ZOMBIE_WALL_FOLLOW_SENSOR_DISTANCE + zombie.radius + 120
+        zombie_search_radius = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius + 120
         nearby_walls = _walls_near((zombie.x, zombie.y), zombie_search_radius)
         zombie.update(
             target,
@@ -345,7 +345,7 @@ def update_entities(
                 fall_duration_ms=500,
                 dust_duration_ms=0,
                 tracker=zombie.tracker,
-                wall_follower=zombie.wall_follower,
+                wall_hugging=zombie.wall_hugging,
                 mode="pitfall",
             )
             game_data.state.falling_zombies.append(fall)

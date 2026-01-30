@@ -85,22 +85,22 @@ def _car_appearance_for_stage(stage: Stage | None) -> str:
 def _pick_zombie_variant(stage: Stage | None) -> tuple[bool, bool]:
     normal_ratio = 1.0
     tracker_ratio = 0.0
-    wall_follower_ratio = 0.0
+    wall_hugging_ratio = 0.0
     if stage is not None:
         normal_ratio = max(0.0, min(1.0, stage.zombie_normal_ratio))
         tracker_ratio = max(0.0, min(1.0, stage.zombie_tracker_ratio))
-        wall_follower_ratio = max(0.0, min(1.0, stage.zombie_wall_follower_ratio))
-        if normal_ratio + tracker_ratio + wall_follower_ratio <= 0:
+        wall_hugging_ratio = max(0.0, min(1.0, stage.zombie_wall_hugging_ratio))
+        if normal_ratio + tracker_ratio + wall_hugging_ratio <= 0:
             normal_ratio = 1.0
             tracker_ratio = 0.0
-            wall_follower_ratio = 0.0
+            wall_hugging_ratio = 0.0
         if (
             normal_ratio == 1.0
-            and (tracker_ratio > 0.0 or wall_follower_ratio > 0.0)
-            and tracker_ratio + wall_follower_ratio <= 1.0
+            and (tracker_ratio > 0.0 or wall_hugging_ratio > 0.0)
+            and tracker_ratio + wall_hugging_ratio <= 1.0
         ):
-            normal_ratio = max(0.0, 1.0 - tracker_ratio - wall_follower_ratio)
-    total_ratio = normal_ratio + tracker_ratio + wall_follower_ratio
+            normal_ratio = max(0.0, 1.0 - tracker_ratio - wall_hugging_ratio)
+    total_ratio = normal_ratio + tracker_ratio + wall_hugging_ratio
     if total_ratio <= 0:
         return False, False
     pick = RNG.random() * total_ratio
@@ -213,7 +213,7 @@ def _schedule_falling_zombie(
     if len(zombie_group) + len(state.falling_zombies) >= MAX_ZOMBIES:
         return "blocked"
     min_distance = game_data.stage.tile_size * 0.5
-    tracker, wall_follower = _pick_zombie_variant(game_data.stage)
+    tracker, wall_hugging = _pick_zombie_variant(game_data.stage)
 
     def _candidate_clear(pos: tuple[int, int]) -> bool:
         candidate = _create_zombie(
@@ -221,7 +221,7 @@ def _schedule_falling_zombie(
             start_pos=pos,
             stage=game_data.stage,
             tracker=tracker,
-            wall_follower=wall_follower,
+            wall_hugging=wall_hugging,
         )
         return _is_spawn_position_clear(game_data, candidate)
 
@@ -244,7 +244,7 @@ def _schedule_falling_zombie(
         fall_duration_ms=FALLING_ZOMBIE_DURATION_MS,
         dust_duration_ms=FALLING_ZOMBIE_DUST_DURATION_MS,
         tracker=tracker,
-        wall_follower=wall_follower,
+        wall_hugging=wall_hugging,
     )
     state.falling_zombies.append(fall)
     return "scheduled"
@@ -257,7 +257,7 @@ def _create_zombie(
     hint_pos: tuple[float, float] | None = None,
     stage: Stage | None = None,
     tracker: bool | None = None,
-    wall_follower: bool | None = None,
+    wall_hugging: bool | None = None,
 ) -> Zombie:
     """Factory to create zombies with optional fast variants."""
     fast_conf = config.get("fast_zombies", {})
@@ -274,14 +274,14 @@ def _create_zombie(
         )
     else:
         aging_duration_frames = ZOMBIE_AGING_DURATION_FRAMES
-    if tracker is None or wall_follower is None:
-        picked_tracker, picked_wall_follower = _pick_zombie_variant(stage)
+    if tracker is None or wall_hugging is None:
+        picked_tracker, picked_wall_hugging = _pick_zombie_variant(stage)
         if tracker is None:
             tracker = picked_tracker
-        if wall_follower is None:
-            wall_follower = picked_wall_follower
+        if wall_hugging is None:
+            wall_hugging = picked_wall_hugging
     if tracker:
-        wall_follower = False
+        wall_hugging = False
     if tracker:
         ratio = (
             ZOMBIE_TRACKER_AGING_DURATION_FRAMES / ZOMBIE_AGING_DURATION_FRAMES
@@ -315,7 +315,7 @@ def _create_zombie(
         y=float(start_pos[1]),
         speed=base_speed,
         tracker=tracker,
-        wall_follower=wall_follower,
+        wall_hugging=wall_hugging,
         aging_duration_frames=aging_duration_frames,
     )
 
@@ -726,7 +726,7 @@ def spawn_initial_zombies(
             start_pos=candidate_center,
             stage=game_data.stage,
             tracker=True,
-            wall_follower=False,
+            wall_hugging=False,
         )
         if not spritecollideany_walls(tentative, wall_group):
             zombie_group.add(tentative)
@@ -745,13 +745,13 @@ def spawn_initial_zombies(
     )
 
     for pos in positions:
-        tracker, wall_follower = _pick_zombie_variant(game_data.stage)
+        tracker, wall_hugging = _pick_zombie_variant(game_data.stage)
         tentative = _create_zombie(
             config,
             start_pos=pos,
             stage=game_data.stage,
             tracker=tracker,
-            wall_follower=wall_follower,
+            wall_hugging=wall_hugging,
         )
         if spritecollideany_walls(tentative, wall_group):
             continue
@@ -933,7 +933,7 @@ def update_falling_zombies(game_data: GameData, config: dict[str, Any]) -> None:
                     start_pos=fall.target_pos,
                     stage=game_data.stage,
                     tracker=fall.tracker,
-                    wall_follower=fall.wall_follower,
+                    wall_hugging=fall.wall_hugging,
                 )
                 zombie_group.add(candidate)
                 all_sprites.add(candidate, layer=1)

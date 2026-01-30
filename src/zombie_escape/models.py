@@ -48,7 +48,7 @@ class FallingZombie:
     fall_duration_ms: int
     dust_duration_ms: int
     tracker: bool
-    wall_follower: bool
+    wall_hugging: bool
     dust_started: bool = False
     mode: str = "spawn"  # "spawn" (falling in) or "pitfall" (falling out)
 
@@ -171,7 +171,7 @@ class Stage:
     fall_spawn_floor_ratio: float = 0.0
     pitfall_density: float = 0.0
     zombie_tracker_ratio: float = 0.0
-    zombie_wall_follower_ratio: float = 0.0
+    zombie_wall_hugging_ratio: float = 0.0
     zombie_normal_ratio: float = 1.0
     zombie_aging_duration_frames: int = ZOMBIE_AGING_DURATION_FRAMES
     waiting_car_target_count: int = 1

@@ -149,15 +149,15 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
     _save_surface(tracker, tracker_path)
     saved.append(tracker_path)
 
-    wall_follower = zombie_base.copy()
+    wall_hugging = zombie_base.copy()
     draw_humanoid_hand(
-        wall_follower,
+        wall_hugging,
         radius=ZOMBIE_RADIUS,
         angle_rad=math.pi / 2.0,
         color=ZOMBIE_NOSE_COLOR,
     )
     wall_path = out / "zombie-wall.png"
-    _save_surface(wall_follower, wall_path)
+    _save_surface(wall_hugging, wall_path)
     saved.append(wall_path)
 
     buddy = _pick_directional_surface(
