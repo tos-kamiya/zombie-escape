@@ -39,6 +39,7 @@ from .render_assets import (
     resolve_car_color,
     resolve_wall_colors,
 )
+from .colors import FALL_ZONE_FLOOR_PRIMARY
 from .render_constants import (
     FALLING_ZOMBIE_COLOR,
     PITFALL_ABYSS_COLOR,
@@ -273,5 +274,11 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
     falling_path = out / "falling-zombie.png"
     _save_surface(falling, falling_path)
     saved.append(falling_path)
+
+    fall_zone = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
+    fall_zone.fill(FALL_ZONE_FLOOR_PRIMARY)
+    fall_zone_path = out / "fall-zone.png"
+    _save_surface(fall_zone, fall_zone_path)
+    saved.append(fall_zone_path)
 
     return saved

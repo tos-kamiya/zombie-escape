@@ -44,14 +44,21 @@ README_URLS: dict[str, str] = {
     "en": "https://github.com/tos-kamiya/zombie-escape/blob/main/README.md",
     "ja": "https://github.com/tos-kamiya/zombie-escape/blob/main/README-ja_JP.md",
 }
+STAGE6_URLS: dict[str, str] = {
+    "en": "https://github.com/tos-kamiya/zombie-escape/blob/main/docs/stages-6plus.md",
+    "ja": "https://github.com/tos-kamiya/zombie-escape/blob/main/docs/stages-6plus-ja_JP.md",
+}
 UNCLEARED_STAGE_COLOR: tuple[int, int, int] = (220, 80, 80)
 
 
-def _open_readme_link() -> None:
-    """Open the GitHub README for the active UI language."""
+def _open_readme_link(*, use_stage6: bool = False) -> None:
+    """Open the GitHub README or Stage 6+ guide for the active UI language."""
 
     language = get_language()
-    url = README_URLS.get(language, README_URLS["en"])
+    if use_stage6:
+        url = STAGE6_URLS.get(language, STAGE6_URLS["en"])
+    else:
+        url = README_URLS.get(language, README_URLS["en"])
     try:
         webbrowser.open(url, new=0, autoraise=True)
     except Exception as exc:  # pragma: no cover - best effort only
@@ -295,7 +302,7 @@ def title_screen(
                             seed_is_auto=current_seed_auto,
                         )
                     if current["type"] == "readme":
-                        _open_readme_link()
+                        _open_readme_link(use_stage6=current_page > 0)
                         continue
                     if current["type"] == "quit":
                         return ScreenTransition(
@@ -327,7 +334,7 @@ def title_screen(
                             seed_is_auto=current_seed_auto,
                         )
                     if current["type"] == "readme":
-                        _open_readme_link()
+                        _open_readme_link(use_stage6=current_page > 0)
                         continue
                     if current["type"] == "quit":
                         return ScreenTransition(
@@ -475,7 +482,8 @@ def title_screen(
                 if option["type"] == "settings":
                     label = tr("menu.settings")
                 elif option["type"] == "readme":
-                    label = f"> {tr('menu.readme')}"
+                    label_key = "menu.readme_stage6" if current_page > 0 else "menu.readme"
+                    label = f"> {tr(label_key)}"
                 else:
                     label = tr("menu.quit")
                 color = WHITE
@@ -508,7 +516,10 @@ def title_screen(
             elif current["type"] == "quit":
                 help_text = tr("menu.option_help.quit")
             elif current["type"] == "readme":
-                help_text = tr("menu.option_help.readme")
+                help_key = (
+                    "menu.option_help.readme_stage6" if current_page > 0 else "menu.option_help.readme"
+                )
+                help_text = tr(help_key)
 
             if help_text:
                 _blit_wrapped_text(

@@ -25,6 +25,7 @@
         "resources": "リソース"
       },
       "readme": "README を開く",
+      "readme_stage6": "ステージ6以降の説明を開く",
       "hints": {
         "navigate": "上下: 項目選択",
         "page_switch": "左右: ステージ群切替",
@@ -33,7 +34,8 @@
       "option_help": {
         "settings": "設定画面を開いて言語や補助オプションを変更します。",
         "quit": "ゲームを終了します。",
-        "readme": "GitHub の README ページをブラウザで開きます。"
+        "readme": "GitHub の README ページをブラウザで開きます。",
+        "readme_stage6": "ステージ6以降の説明ページをブラウザで開きます。"
       }
     },
     "stages": {

@@ -25,6 +25,7 @@
         "resources": "Resources"
       },
       "readme": "Open README",
+      "readme_stage6": "Open Stage 6+ Guide",
       "hints": {
         "navigate": "Up/Down: choose an option",
         "page_switch": "Left/Right: switch stage groups",
@@ -33,7 +34,8 @@
       "option_help": {
         "settings": "Open Settings to adjust assists and localization.",
         "quit": "Close the game.",
-        "readme": "Open the GitHub README in your browser."
+        "readme": "Open the GitHub README in your browser.",
+        "readme_stage6": "Open the Stage 6+ guide in your browser."
       }
     },
     "stages": {
