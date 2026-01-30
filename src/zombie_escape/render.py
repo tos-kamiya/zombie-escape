@@ -842,6 +842,68 @@ def _draw_play_area(
     fall_spawn_cells: set[tuple[int, int]],
     pitfall_cells: set[tuple[int, int]],
 ) -> tuple[int, int, int, int, set[tuple[int, int]]]:
+    pitfall_cache = getattr(_draw_play_area, "_pitfall_cache", None)
+    cached_cell_size = getattr(_draw_play_area, "_pitfall_cache_cell_size", None)
+    if pitfall_cache is None or cached_cell_size != assets.internal_wall_grid_snap:
+        pitfall_cache = {}
+        _draw_play_area._pitfall_cache = pitfall_cache
+        _draw_play_area._pitfall_cache_cell_size = assets.internal_wall_grid_snap
+
+    def _get_pitfall_tile(
+        cell_size: int,
+        left_open: bool,
+        right_open: bool,
+        top_open: bool,
+    ) -> surface.Surface:
+        key = (cell_size, left_open, right_open, top_open)
+        cached = pitfall_cache.get(key)
+        if cached is not None:
+            return cached
+        tile = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
+        tile.fill(PITFALL_ABYSS_COLOR)
+        if left_open:
+            for i in range(PITFALL_SHADOW_WIDTH):
+                t = i / (PITFALL_SHADOW_WIDTH - 1.0)
+                c = tuple(
+                    int(
+                        PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t)
+                        + PITFALL_ABYSS_COLOR[j] * t
+                    )
+                    for j in range(3)
+                )
+                pygame.draw.line(tile, c, (i, 0), (i, cell_size - 1))
+        if right_open:
+            for i in range(PITFALL_SHADOW_WIDTH):
+                t = i / (PITFALL_SHADOW_WIDTH - 1.0)
+                c = tuple(
+                    int(
+                        PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t)
+                        + PITFALL_ABYSS_COLOR[j] * t
+                    )
+                    for j in range(3)
+                )
+                pygame.draw.line(
+                    tile,
+                    c,
+                    (cell_size - 1 - i, 0),
+                    (cell_size - 1 - i, cell_size - 1),
+                )
+        if top_open:
+            edge_h = max(1, INTERNAL_WALL_BEVEL_DEPTH - PITFALL_EDGE_DEPTH_OFFSET)
+            pygame.draw.rect(
+                tile, PITFALL_EDGE_METAL_COLOR, (0, 0, cell_size, edge_h)
+            )
+            for sx in range(-edge_h, cell_size, PITFALL_EDGE_STRIPE_SPACING):
+                pygame.draw.line(
+                    tile,
+                    PITFALL_EDGE_STRIPE_COLOR,
+                    (max(0, sx), 0),
+                    (min(cell_size - 1, sx + edge_h), edge_h - 1),
+                    width=2,
+                )
+        pitfall_cache[key] = tile
+        return tile
+
     xs, ys, xe, ye = (
         field_rect.left,
         field_rect.top,
@@ -898,7 +960,6 @@ def _draw_play_area(
                 continue
 
             if (x, y) in pitfall_cells:
-                # 1. Base abyss color
                 lx, ly = (
                     x * assets.internal_wall_grid_snap,
                     y * assets.internal_wall_grid_snap,
@@ -913,61 +974,16 @@ def _draw_play_area(
                 if not sr.colliderect(screen.get_rect()):
                     continue
 
-                # Fill base
-                pygame.draw.rect(screen, PITFALL_ABYSS_COLOR, sr)
-
-                # 2. Left/Right side shadows for depth
-                if (x - 1, y) not in pitfall_cells:
-                    for i in range(PITFALL_SHADOW_WIDTH):
-                        t = i / (PITFALL_SHADOW_WIDTH - 1.0)
-                        c = tuple(
-                            int(
-                                PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t)
-                                + PITFALL_ABYSS_COLOR[j] * t
-                            )
-                            for j in range(3)
-                        )
-                        pygame.draw.line(
-                            screen, c, (sr.x + i, sr.y), (sr.x + i, sr.bottom - 1)
-                        )
-
-                if (x + 1, y) not in pitfall_cells:
-                    for i in range(PITFALL_SHADOW_WIDTH):
-                        t = i / (PITFALL_SHADOW_WIDTH - 1.0)
-                        c = tuple(
-                            int(
-                                PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t)
-                                + PITFALL_ABYSS_COLOR[j] * t
-                            )
-                            for j in range(3)
-                        )
-                        pygame.draw.line(
-                            screen,
-                            c,
-                            (sr.right - 1 - i, sr.y),
-                            (sr.right - 1 - i, sr.bottom - 1),
-                        )
-
-                # 3. Top inner wall (cross-section of floor) - Draw LAST
-                if (x, y - 1) not in pitfall_cells:
-                    edge_h = max(
-                        1, INTERNAL_WALL_BEVEL_DEPTH - PITFALL_EDGE_DEPTH_OFFSET
-                    )
-                    pygame.draw.rect(
-                        screen, PITFALL_EDGE_METAL_COLOR, (sr.x, sr.y, sr.w, edge_h)
-                    )
-
-                    # Draw diagonal metal texture lines
-                    for sx in range(
-                        sr.x - edge_h, sr.right, PITFALL_EDGE_STRIPE_SPACING
-                    ):
-                        pygame.draw.line(
-                            screen,
-                            PITFALL_EDGE_STRIPE_COLOR,
-                            (max(sr.x, sx), sr.y),
-                            (min(sr.right - 1, sx + edge_h), sr.y + edge_h - 1),
-                            width=2,
-                        )
+                left_open = (x - 1, y) not in pitfall_cells
+                right_open = (x + 1, y) not in pitfall_cells
+                top_open = (x, y - 1) not in pitfall_cells
+                tile = _get_pitfall_tile(
+                    assets.internal_wall_grid_snap,
+                    left_open,
+                    right_open,
+                    top_open,
+                )
+                screen.blit(tile, sr.topleft)
 
                 continue
 
