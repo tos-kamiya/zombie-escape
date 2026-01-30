@@ -43,6 +43,8 @@ At the title screen you can pick a stage:
 - **Stage 4: Evacuate Survivors** — start fueled, find the car, gather nearby civilians, and escape before zombies reach them. Stage 4 sprinkles extra parked cars across the map; slamming into one while already driving fully repairs your current ride and adds five more safe seats.
 - **Stage 5: Survive Until Dawn** — every car is bone-dry. Endure until the sun rises while the horde presses in from every direction. Once dawn hits, outdoor zombies carbonize and you must walk out through an existing exterior gap to win; cars remain unusable.
 
+Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/right to select later stages.
+
 **Stage names are red until cleared** and turn white after at least one clear.
 
 An objective reminder is shown at the top-left during play.
@@ -64,30 +66,51 @@ Open **Settings** from the title to toggle gameplay assists:
 
 ### Characters/Items
 
--   **Player:** A blue circle with small hands. Controlled with the WASD or arrow keys. When carrying fuel a tiny yellow square appears near the sprite so you can immediately see whether you're ready to drive.
--   **Zombie:** A red circle. Will chase the player (or car) once detected.
-    -   When out of sight, the zombie's movement mode will randomly switch every certain time (moving horizontally/vertically only, side-to-side movement, random movement, etc.).
-    -   Variants with different behavior have been observed.
--   **Car:** A yellow rectangle. The player can enter by making contact with it.
+#### Characters
+
+| Name | Image | Notes |
+| --- | --- | --- |
+| Player | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/player.png" width="64"> | Blue circle with small hands. |
+| Zombie (Normal) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/zombie-normal.png" width="64"> | Chases the player once detected. |
+| Car | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/car.png" width="64"> | Driveable escape vehicle with durability. |
+| Buddy (Stage 3) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/buddy.png" width="64"> | A green survivor you can rescue. |
+| Survivors (Stage 4) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/survivor.png" width="64"> | Civilians to evacuate by car. |
+
+- **Player:** Controlled with the WASD or arrow keys. When carrying fuel a tiny yellow square appears near the sprite so you can immediately see whether you're ready to drive.
+- **Zombie:** When out of sight, the zombie's movement mode will randomly switch every certain time (moving horizontally/vertically only, side-to-side movement, random movement, etc.).
+- **Car:**
     -   The car has durability. Durability decreases when colliding with internal walls or hitting zombies.
     -   If durability reaches 0, the car is destroyed and you are dumped on foot; you must track down another parked car hidden in the level.
     -   When you're already driving, ramming a parked car instantly restores your current car's health. On Stage 4 this also increases the safe passenger limit by five.
     -   After roughly 5 minutes of play, a small triangle near the player points toward the objective: fuel first (Stage 2 before pickup), car after fuel is collected (Stage 2/3), or car directly (Stage 1/4).
--   **Walls:** Outer walls are gray; inner walls are beige.
-    -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
-    -   **Inner Walls:** Beige walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. Zombies can also wear down walls, but far more slowly. The car cannot break walls.
--   **Flashlight:** Each pickup expands your visible radius by about 20% (grab two to reach the max boost).
--   **Steel Beam (optional):** A square post with crossed diagonals; same collision as inner walls but with triple durability. Spawns independently of inner walls (may overlap them). If an inner wall covers a beam, the beam appears once the wall is destroyed.
--   **Fuel Can (Stages 2 & 3):** A yellow jerrycan that only spawns on the fuel-run stages. Pick it up before driving the car; once collected the on-player indicator appears until you refuel the car.
--   **Buddy (Stage 3):** A green circle survivor with small hands and a blue outline who spawns somewhere in the building and waits.
+- **Buddy (Stage 3):**
     -   Zombies only choose to pursue the buddy if they are on-screen; otherwise they ignore them.
     -   If a zombie tags the buddy off-screen, the buddy quietly respawns somewhere else instead of ending the run.
     -   Touch the buddy on foot to make them follow you (at 70% of player speed). Touch them while driving to pick them up.
     -   If you bash an inner wall or steel beam, the buddy will drift toward that spot and help chip away at it.
--   **Survivors (Stage 4):** Pale gray civilians with a blue outline, scattered indoors.
+- **Survivors (Stage 4):**
     - They stand still until you get close, then shuffle toward you at about one-third of player speed.
     - Zombies can convert them if both are on-screen; the survivor shouts a line and turns instantly.
     - They only board the car; your safe capacity starts at five but grows by five each time you sideswipe a parked car while already driving. Speed loss is based on how full the car is relative to that capacity, so extra slots mean quicker getaways.
+
+#### Items
+
+| Name | Image | Notes |
+| --- | --- | --- |
+| Flashlight | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/flashlight.png" width="64"> | Each pickup expands your visible radius by about 20% (grab two to reach the max boost). |
+| Fuel Can (Stages 2 & 3) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/fuel.png" width="64"> | Must be collected before driving the car in fuel-run stages. |
+| Steel Beam (optional) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"> | Same collision as inner walls but with triple durability. |
+
+#### Environment
+
+| Name | Image | Notes |
+| --- | --- | --- |
+| Outer Wall | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-outer.png" width="64"> | Nearly indestructible; each side has exits. |
+| Inner Wall | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-inner.png" width="64"> | Breakable by the player; zombies chip away slowly. |
+
+- **Walls:** Outer walls are gray; inner walls are beige.
+    -   **Outer Walls:** Walls surrounding the stage that are nearly indestructible. Each side has at least three openings (exits).
+    -   **Inner Walls:** Beige walls randomly placed inside the building. Inner wall segments each have durability. **The player can break these walls** by repeatedly colliding with a segment to reduce its durability; when it reaches 0, the segment is destroyed and disappears. Zombies can also wear down walls, but far more slowly. The car cannot break walls.
 
 ### Win/Lose Conditions
 
