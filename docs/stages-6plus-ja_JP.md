@@ -10,4 +10,5 @@
 | 壁沿いゾンビ | <img src="../imgs/exports/zombie-wall.png" width="80"> | ステージ7 | 壁沿いに巡回する個体。 |
 | 靴 | <img src="../imgs/exports/shoes.png" width="80"> | ステージ11 | 移動速度が上がるアイテム。 |
 | 落下ゾンビ | <img src="../imgs/exports/falling-zombie.png" width="80"> | ステージ12 | 上空から落下して出現。 |
+| 落下スポーン床 | <img src="../imgs/exports/fall-zone.png" width="80"> | ステージ12 | 落下ゾンビが出現しうる床。 |
 | 落とし穴 | <img src="../imgs/exports/pitfall.png" width="80"> | ステージ16 | 人間はジャンプで回避、ゾンビは落下。 |
