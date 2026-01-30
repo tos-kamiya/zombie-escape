@@ -49,10 +49,10 @@ from .entities_constants import (
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_SPEED,
-    ZOMBIE_TRACKER_SCAN_INTERVAL_MS,
-    ZOMBIE_TRACKER_SCENT_RADIUS,
     ZOMBIE_TRACKER_FAR_SCENT_RADIUS,
     ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS,
+    ZOMBIE_TRACKER_SCAN_INTERVAL_MS,
+    ZOMBIE_TRACKER_SCENT_RADIUS,
     ZOMBIE_TRACKER_SCENT_TOP_K,
     ZOMBIE_TRACKER_SIGHT_RANGE,
     ZOMBIE_TRACKER_WANDER_INTERVAL_MS,
@@ -66,7 +66,6 @@ from .entities_constants import (
 )
 from .gameplay.constants import FOOTPRINT_STEP_DISTANCE
 from .models import Footprint
-from .render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR
 from .render_assets import (
     EnvironmentPalette,
     angle_bin_from_vector,
@@ -88,6 +87,7 @@ from .render_assets import (
     resolve_steel_beam_colors,
     resolve_wall_colors,
 )
+from .render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR
 from .rng import get_rng
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from .world_grid import WallIndex, apply_tile_edge_nudge, walls_for_radius
@@ -656,7 +656,9 @@ class Player(pygame.sprite.Sprite):
                 self.is_jumping = False
                 self._update_image_scale(1.0)
             else:
-                self._update_image_scale(_get_jump_scale(elapsed, self.jump_duration, JUMP_SCALE_MAX))
+                self._update_image_scale(
+                    _get_jump_scale(elapsed, self.jump_duration, JUMP_SCALE_MAX)
+                )
 
         # Pre-calculate jump possibility based on actual movement vector
         can_jump_now = (
@@ -684,7 +686,10 @@ class Player(pygame.sprite.Sprite):
             )
             blocked_by_pitfall = False
             if not self.is_jumping and pitfall_cells and cell_size:
-                cx, cy = int(self.rect.centerx // cell_size), int(self.rect.centery // cell_size)
+                cx, cy = (
+                    int(self.rect.centerx // cell_size),
+                    int(self.rect.centery // cell_size),
+                )
                 if (cx, cy) in pitfall_cells:
                     if can_jump_now:
                         self.is_jumping = True
@@ -720,7 +725,10 @@ class Player(pygame.sprite.Sprite):
             )
             blocked_by_pitfall = False
             if not self.is_jumping and pitfall_cells and cell_size:
-                cx, cy = int(self.rect.centerx // cell_size), int(self.rect.centery // cell_size)
+                cx, cy = (
+                    int(self.rect.centerx // cell_size),
+                    int(self.rect.centery // cell_size),
+                )
                 if (cx, cy) in pitfall_cells:
                     if can_jump_now:
                         self.is_jumping = True
@@ -756,7 +764,9 @@ class Player(pygame.sprite.Sprite):
             self.image = base_img
         else:
             w, h = base_img.get_size()
-            self.image = pygame.transform.scale(base_img, (int(w * scale), int(h * scale)))
+            self.image = pygame.transform.scale(
+                base_img, (int(w * scale), int(h * scale))
+            )
         old_center = self.rect.center
         self.rect = self.image.get_rect(center=old_center)
 
@@ -868,7 +878,9 @@ class Survivor(pygame.sprite.Sprite):
                 self.is_jumping = False
                 self._update_image_scale(1.0)
             else:
-                self._update_image_scale(_get_jump_scale(elapsed, self.jump_duration, JUMP_SCALE_MAX))
+                self._update_image_scale(
+                    _get_jump_scale(elapsed, self.jump_duration, JUMP_SCALE_MAX)
+                )
 
         if self.is_buddy:
             if self.rescued or not self.following:
@@ -922,7 +934,13 @@ class Survivor(pygame.sprite.Sprite):
                 and cell_size
                 and walkable_cells
                 and _can_humanoid_jump(
-                    self.x, self.y, move_x, move_y, SURVIVOR_JUMP_RANGE, cell_size, walkable_cells
+                    self.x,
+                    self.y,
+                    move_x,
+                    move_y,
+                    SURVIVOR_JUMP_RANGE,
+                    cell_size,
+                    walkable_cells,
                 )
             )
 
@@ -937,7 +955,10 @@ class Survivor(pygame.sprite.Sprite):
                 )
                 blocked_by_pitfall = False
                 if not self.is_jumping and pitfall_cells and cell_size:
-                    cx, cy = int(self.rect.centerx // cell_size), int(self.rect.centery // cell_size)
+                    cx, cy = (
+                        int(self.rect.centerx // cell_size),
+                        int(self.rect.centery // cell_size),
+                    )
                     if (cx, cy) in pitfall_cells:
                         if can_jump_now:
                             self.is_jumping = True
@@ -965,7 +986,10 @@ class Survivor(pygame.sprite.Sprite):
                 )
                 blocked_by_pitfall = False
                 if not self.is_jumping and pitfall_cells and cell_size:
-                    cx, cy = int(self.rect.centerx // cell_size), int(self.rect.centery // cell_size)
+                    cx, cy = (
+                        int(self.rect.centerx // cell_size),
+                        int(self.rect.centery // cell_size),
+                    )
                     if (cx, cy) in pitfall_cells:
                         if can_jump_now:
                             self.is_jumping = True
@@ -1021,7 +1045,13 @@ class Survivor(pygame.sprite.Sprite):
             and cell_size
             and walkable_cells
             and _can_humanoid_jump(
-                self.x, self.y, move_x, move_y, SURVIVOR_JUMP_RANGE, cell_size, walkable_cells
+                self.x,
+                self.y,
+                move_x,
+                move_y,
+                SURVIVOR_JUMP_RANGE,
+                cell_size,
+                walkable_cells,
             )
         )
 
@@ -1054,7 +1084,10 @@ class Survivor(pygame.sprite.Sprite):
             )
             blocked_by_pitfall = False
             if not self.is_jumping and pitfall_cells and cell_size:
-                cx, cy = int(self.rect.centerx // cell_size), int(self.rect.centery // cell_size)
+                cx, cy = (
+                    int(self.rect.centerx // cell_size),
+                    int(self.rect.centery // cell_size),
+                )
                 if (cx, cy) in pitfall_cells:
                     if can_jump_now:
                         self.is_jumping = True
@@ -1076,7 +1109,10 @@ class Survivor(pygame.sprite.Sprite):
             )
             blocked_by_pitfall = False
             if not self.is_jumping and pitfall_cells and cell_size:
-                cx, cy = int(self.rect.centerx // cell_size), int(self.rect.centery // cell_size)
+                cx, cy = (
+                    int(self.rect.centerx // cell_size),
+                    int(self.rect.centery // cell_size),
+                )
                 if (cx, cy) in pitfall_cells:
                     if can_jump_now:
                         self.is_jumping = True
@@ -1098,7 +1134,9 @@ class Survivor(pygame.sprite.Sprite):
             self.image = base_img
         else:
             w, h = base_img.get_size()
-            self.image = pygame.transform.scale(base_img, (int(w * scale), int(h * scale)))
+            self.image = pygame.transform.scale(
+                base_img, (int(w * scale), int(h * scale))
+            )
         old_center = self.rect.center
         self.rect = self.image.get_rect(center=old_center)
 
@@ -1774,7 +1812,7 @@ class Zombie(pygame.sprite.Sprite):
         self.wall_hug_stuck_flag = False
         self.pos_history = []
 
-    def _tracker_avoid_pitfalls(
+    def _avoid_pitfalls(
         self: Self,
         pitfall_cells: set[tuple[int, int]],
         cell_size: int,
@@ -1783,9 +1821,9 @@ class Zombie(pygame.sprite.Sprite):
             return 0.0, 0.0
         cell_x = int(self.x // cell_size)
         cell_y = int(self.y // cell_size)
-        search_cells = 2
-        avoid_radius = cell_size * 1.75
-        max_strength = self.speed * 0.35
+        search_cells = 1
+        avoid_radius = cell_size * 1.25
+        max_strength = self.speed * 0.5
         push_x = 0.0
         push_y = 0.0
         for cy in range(cell_y - search_cells, cell_y + search_cells + 1):
@@ -1845,7 +1883,7 @@ class Zombie(pygame.sprite.Sprite):
             outer_wall_cells,
         )
         if pitfall_cells is not None:
-            avoid_x, avoid_y = self._tracker_avoid_pitfalls(pitfall_cells, cell_size)
+            avoid_x, avoid_y = self._avoid_pitfalls(pitfall_cells, cell_size)
             move_x += avoid_x
             move_y += avoid_y
         if dist_to_player_sq <= avoid_radius_sq or self.wall_hugging:
