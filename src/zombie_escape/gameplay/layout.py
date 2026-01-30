@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import random
 from typing import Any
 
 import pygame
 
 from ..colors import get_environment_palette
-from ..entities import SteelBeam, Wall
-from ..entities_constants import INTERNAL_WALL_HEALTH, STEEL_BEAM_HEALTH
+from ..entities import RubbleWall, SteelBeam, Wall
+from ..entities_constants import (
+    INTERNAL_WALL_BEVEL_DEPTH,
+    INTERNAL_WALL_HEALTH,
+    STEEL_BEAM_HEALTH,
+)
+from ..render_assets import RUBBLE_ROTATION_DEG
 from .constants import OUTER_WALL_HEALTH
 from ..level_blueprints import MapGenerationError, choose_blueprint
 from ..models import GameData
@@ -15,6 +21,7 @@ from ..rng import get_rng
 __all__ = ["generate_level_from_blueprint", "MapGenerationError"]
 
 RNG = get_rng()
+
 
 
 def _rect_for_cell(x_idx: int, y_idx: int, cell_size: int) -> pygame.Rect:
@@ -112,6 +119,7 @@ def generate_level_from_blueprint(
     interior_max_y = stage.grid_rows - 3
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] = {}
     palette = get_environment_palette(game_data.state.ambient_palette_key)
+    rubble_ratio = max(0.0, min(1.0, getattr(stage, "wall_rubble_ratio", 0.0)))
 
     def add_beam_to_groups(beam: SteelBeam) -> None:
         if beam._added_to_groups:
@@ -188,22 +196,56 @@ def generate_level_from_blueprint(
                 if any(bevel_mask):
                     bevel_corners[(x, y)] = bevel_mask
                 wall_cell = (x, y)
-                wall = Wall(
-                    cell_rect.x,
-                    cell_rect.y,
-                    cell_rect.width,
-                    cell_rect.height,
-                    health=INTERNAL_WALL_HEALTH,
-                    palette=palette,
-                    palette_category="inner_wall",
-                    bevel_mask=bevel_mask,
-                    draw_bottom_side=draw_bottom_side,
-                    on_destroy=(
-                        (lambda _w, b=beam, cell=wall_cell: (remove_wall_cell(cell), add_beam_to_groups(b)))
-                        if beam
-                        else (lambda _w, cell=wall_cell: remove_wall_cell(cell))
-                    ),
-                )
+                use_rubble = rubble_ratio > 0 and random.random() < rubble_ratio
+                if use_rubble:
+                    rotation_deg = (
+                        RUBBLE_ROTATION_DEG
+                        if random.random() < 0.5
+                        else -RUBBLE_ROTATION_DEG
+                    )
+                    wall = RubbleWall(
+                        cell_rect.x,
+                        cell_rect.y,
+                        cell_rect.width,
+                        cell_rect.height,
+                        health=INTERNAL_WALL_HEALTH,
+                        palette=palette,
+                        palette_category="inner_wall",
+                        bevel_depth=INTERNAL_WALL_BEVEL_DEPTH,
+                        rubble_rotation_deg=rotation_deg,
+                        on_destroy=(
+                            (
+                                lambda _w, b=beam, cell=wall_cell: (
+                                    remove_wall_cell(cell),
+                                    add_beam_to_groups(b),
+                                )
+                            )
+                            if beam
+                            else (lambda _w, cell=wall_cell: remove_wall_cell(cell))
+                        ),
+                    )
+                else:
+                    wall = Wall(
+                        cell_rect.x,
+                        cell_rect.y,
+                        cell_rect.width,
+                        cell_rect.height,
+                        health=INTERNAL_WALL_HEALTH,
+                        palette=palette,
+                        palette_category="inner_wall",
+                        bevel_mask=bevel_mask,
+                        draw_bottom_side=draw_bottom_side,
+                        on_destroy=(
+                            (
+                                lambda _w, b=beam, cell=wall_cell: (
+                                    remove_wall_cell(cell),
+                                    add_beam_to_groups(b),
+                                )
+                            )
+                            if beam
+                            else (lambda _w, cell=wall_cell: remove_wall_cell(cell))
+                        ),
+                    )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
             else:

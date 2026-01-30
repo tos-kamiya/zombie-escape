@@ -75,6 +75,7 @@ from .render_assets import (
     build_flashlight_surface,
     build_fuel_can_surface,
     build_player_directional_surfaces,
+    build_rubble_wall_surface,
     build_shoes_surface,
     build_survivor_directional_surfaces,
     build_zombie_directional_surfaces,
@@ -83,9 +84,11 @@ from .render_assets import (
     paint_car_surface,
     paint_steel_beam_surface,
     paint_wall_surface,
+    rubble_offset_for_size,
     resolve_car_color,
     resolve_steel_beam_colors,
     resolve_wall_colors,
+    RUBBLE_ROTATION_DEG,
 )
 from .render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR
 from .rng import get_rng
@@ -216,6 +219,67 @@ class Wall(pygame.sprite.Sprite):
             return
         self.palette = palette
         self._update_color()
+
+
+class RubbleWall(Wall):
+    def __init__(
+        self: Self,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        *,
+        health: int = INTERNAL_WALL_HEALTH,
+        palette: EnvironmentPalette | None = None,
+        palette_category: str = "inner_wall",
+        bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
+        rubble_rotation_deg: float | None = None,
+        rubble_offset_px: int | None = None,
+        on_destroy: Callable[[Self], None] | None = None,
+    ) -> None:
+        self._rubble_rotation_deg = (
+            RUBBLE_ROTATION_DEG if rubble_rotation_deg is None else rubble_rotation_deg
+        )
+        base_size = max(1, min(width, height))
+        self._rubble_offset_px = (
+            rubble_offset_for_size(base_size)
+            if rubble_offset_px is None
+            else rubble_offset_px
+        )
+        super().__init__(
+            x,
+            y,
+            width,
+            height,
+            health=health,
+            palette=palette,
+            palette_category=palette_category,
+            bevel_depth=bevel_depth,
+            bevel_mask=(False, False, False, False),
+            draw_bottom_side=False,
+            on_destroy=on_destroy,
+        )
+
+    def _update_color(self: Self) -> None:
+        if self.health <= 0:
+            health_ratio = 0.0
+        else:
+            health_ratio = max(0.0, self.health / self.max_health)
+        fill_color, border_color = resolve_wall_colors(
+            health_ratio=health_ratio,
+            palette_category=self.palette_category,
+            palette=self.palette,
+        )
+        rubble_surface = build_rubble_wall_surface(
+            self.image.get_width(),
+            fill_color=fill_color,
+            border_color=border_color,
+            angle_deg=self._rubble_rotation_deg,
+            offset_px=self._rubble_offset_px,
+            bevel_depth=self.bevel_depth,
+        )
+        self.image.fill((0, 0, 0, 0))
+        self.image.blit(rubble_surface, (0, 0))
 
 
 class SteelBeam(pygame.sprite.Sprite):
@@ -2080,6 +2144,7 @@ def _car_body_radius(width: float, height: float) -> float:
 
 __all__ = [
     "Wall",
+    "RubbleWall",
     "SteelBeam",
     "Camera",
     "Player",

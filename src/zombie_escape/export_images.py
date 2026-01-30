@@ -29,6 +29,7 @@ from .render_assets import (
     build_flashlight_surface,
     build_fuel_can_surface,
     build_player_directional_surfaces,
+    build_rubble_wall_surface,
     build_shoes_surface,
     build_survivor_directional_surfaces,
     build_zombie_directional_surfaces,
@@ -38,6 +39,7 @@ from .render_assets import (
     paint_wall_surface,
     resolve_car_color,
     resolve_wall_colors,
+    RUBBLE_ROTATION_DEG,
 )
 from .colors import FALL_ZONE_FLOOR_PRIMARY
 from .render_constants import (
@@ -236,6 +238,16 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
     inner_wall_path = out / "wall-inner.png"
     _save_surface(inner_wall, inner_wall_path)
     saved.append(inner_wall_path)
+
+    rubble_wall = build_rubble_wall_surface(
+        cell_size,
+        fill_color=inner_fill,
+        border_color=inner_border,
+        angle_deg=RUBBLE_ROTATION_DEG,
+    )
+    rubble_wall_path = out / "wall-rubble.png"
+    _save_surface(rubble_wall, rubble_wall_path)
+    saved.append(rubble_wall_path)
 
     outer_wall = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
     outer_fill, outer_border = resolve_wall_colors(

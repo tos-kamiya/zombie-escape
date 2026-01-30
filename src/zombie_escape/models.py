@@ -176,6 +176,7 @@ class Stage:
     zombie_aging_duration_frames: int = ZOMBIE_AGING_DURATION_FRAMES
     waiting_car_target_count: int = 1
     wall_algorithm: str = "default"
+    wall_rubble_ratio: float = 0.0
 
     @property
     def name(self) -> str:

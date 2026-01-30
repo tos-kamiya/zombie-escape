@@ -214,6 +214,7 @@ STAGES: list[Stage] = [
         interior_spawn_weight=0.1,
         interior_fall_spawn_weight=0.7,
         fall_spawn_floor_ratio=0.05,
+        wall_rubble_ratio=0.35,
         initial_flashlight_count=3,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
         initial_shoes_count=1,
@@ -271,6 +272,7 @@ STAGES: list[Stage] = [
         exterior_spawn_weight=0.1,
         interior_spawn_weight=0.9,
         zombie_tracker_ratio=1.0,
+        wall_rubble_ratio=0.25,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
     ),
 ]

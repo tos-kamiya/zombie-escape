@@ -18,6 +18,7 @@ from .colors import (
     EnvironmentPalette,
     get_environment_palette,
 )
+from .entities_constants import INTERNAL_WALL_BEVEL_DEPTH
 from .render_constants import (
     ANGLE_BINS,
     BUDDY_COLOR,
@@ -61,6 +62,22 @@ _SURVIVOR_DIRECTIONAL_CACHE: dict[
     tuple[int, bool, bool, int], list[pygame.Surface]
 ] = {}
 _ZOMBIE_DIRECTIONAL_CACHE: dict[tuple[int, bool, int], list[pygame.Surface]] = {}
+_RUBBLE_SURFACE_CACHE: dict[tuple, pygame.Surface] = {}
+
+RUBBLE_ROTATION_DEG = 5.0
+RUBBLE_OFFSET_RATIO = 0.06
+RUBBLE_SCALE_RATIO = 0.9
+RUBBLE_SHADOW_RATIO = 0.9
+
+
+def _scale_color(
+    color: tuple[int, int, int], *, ratio: float
+) -> tuple[int, int, int]:
+    return tuple(max(0, min(255, int(c * ratio + 0.5))) for c in color)
+
+
+def rubble_offset_for_size(size: int) -> int:
+    return max(1, int(round(size * RUBBLE_OFFSET_RATIO)))
 
 
 def angle_bin_from_vector(
@@ -706,6 +723,80 @@ def paint_wall_surface(
         _draw_face(surface)
 
 
+def build_rubble_wall_surface(
+    size: int,
+    *,
+    fill_color: tuple[int, int, int],
+    border_color: tuple[int, int, int],
+    angle_deg: float,
+    offset_px: int | None = None,
+    scale_ratio: float = RUBBLE_SCALE_RATIO,
+    shadow_ratio: float = RUBBLE_SHADOW_RATIO,
+    bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
+) -> pygame.Surface:
+    offset_px = offset_px if offset_px is not None else rubble_offset_for_size(size)
+    safe_size = max(1, size)
+    base_size = max(1, int(round(safe_size * scale_ratio)))
+    tuned_bevel = min(bevel_depth, max(1, base_size // 2))
+    cache_key = (
+        safe_size,
+        fill_color,
+        border_color,
+        angle_deg,
+        offset_px,
+        scale_ratio,
+        shadow_ratio,
+        tuned_bevel,
+    )
+    cached = _RUBBLE_SURFACE_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    top_surface = pygame.Surface((base_size, base_size), pygame.SRCALPHA)
+    paint_wall_surface(
+        top_surface,
+        fill_color=fill_color,
+        border_color=border_color,
+        bevel_depth=tuned_bevel,
+        bevel_mask=(False, False, False, False),
+        draw_bottom_side=False,
+        bottom_side_ratio=0.1,
+        side_shade_ratio=0.9,
+    )
+
+    shadow_fill = _scale_color(fill_color, ratio=shadow_ratio)
+    shadow_border = _scale_color(border_color, ratio=shadow_ratio)
+    shadow_surface = pygame.Surface((base_size, base_size), pygame.SRCALPHA)
+    paint_wall_surface(
+        shadow_surface,
+        fill_color=shadow_fill,
+        border_color=shadow_border,
+        bevel_depth=tuned_bevel,
+        bevel_mask=(False, False, False, False),
+        draw_bottom_side=False,
+        bottom_side_ratio=0.1,
+        side_shade_ratio=0.9,
+    )
+
+    if angle_deg:
+        top_surface = pygame.transform.rotate(top_surface, angle_deg)
+        shadow_surface = pygame.transform.rotate(shadow_surface, angle_deg)
+
+    final_surface = pygame.Surface((safe_size, safe_size), pygame.SRCALPHA)
+    center = final_surface.get_rect().center
+
+    shadow_rect = shadow_surface.get_rect(
+        center=(center[0] + offset_px, center[1] + offset_px)
+    )
+    final_surface.blit(shadow_surface, shadow_rect.topleft)
+
+    top_rect = top_surface.get_rect(center=center)
+    final_surface.blit(top_surface, top_rect.topleft)
+
+    _RUBBLE_SURFACE_CACHE[cache_key] = final_surface
+    return final_surface
+
+
 def paint_steel_beam_surface(
     surface: pygame.Surface,
     *,
@@ -788,6 +879,9 @@ __all__ = [
     "build_car_directional_surfaces",
     "paint_car_surface",
     "paint_wall_surface",
+    "build_rubble_wall_surface",
+    "rubble_offset_for_size",
+    "RUBBLE_ROTATION_DEG",
     "paint_steel_beam_surface",
     "build_fuel_can_surface",
     "build_flashlight_surface",
