@@ -255,6 +255,7 @@ STAGES: list[Stage] = [
         initial_interior_spawn_rate=0.07,
         exterior_spawn_weight=0.1,
         interior_spawn_weight=0.9,
+        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"
