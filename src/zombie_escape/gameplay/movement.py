@@ -323,6 +323,7 @@ def update_entities(
             level_height=game_data.level_height,
             outer_wall_cells=game_data.layout.outer_wall_cells,
             wall_cells=game_data.layout.wall_cells,
+            pitfall_cells=game_data.layout.pitfall_cells,
             bevel_corners=game_data.layout.bevel_corners,
         )
 

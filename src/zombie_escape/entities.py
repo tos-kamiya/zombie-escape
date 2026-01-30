@@ -50,8 +50,9 @@ from .entities_constants import (
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_SPEED,
     ZOMBIE_TRACKER_SCAN_INTERVAL_MS,
-    ZOMBIE_TRACKER_SCAN_RADIUS_MULTIPLIER,
     ZOMBIE_TRACKER_SCENT_RADIUS,
+    ZOMBIE_TRACKER_FAR_SCENT_RADIUS,
+    ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS,
     ZOMBIE_TRACKER_SCENT_TOP_K,
     ZOMBIE_TRACKER_SIGHT_RANGE,
     ZOMBIE_TRACKER_WANDER_INTERVAL_MS,
@@ -1387,7 +1388,21 @@ def _zombie_update_tracker_target(
         return
     nearby: list[Footprint] = []
     last_target_time = zombie.tracker_target_time
-    scan_radius = ZOMBIE_TRACKER_SCENT_RADIUS * ZOMBIE_TRACKER_SCAN_RADIUS_MULTIPLIER
+    far_radius_sq = ZOMBIE_TRACKER_FAR_SCENT_RADIUS * ZOMBIE_TRACKER_FAR_SCENT_RADIUS
+    latest_fp_time: int | None = None
+    for fp in footprints:
+        dx = fp.pos[0] - zombie.x
+        dy = fp.pos[1] - zombie.y
+        if dx * dx + dy * dy <= far_radius_sq:
+            if latest_fp_time is None or fp.time > latest_fp_time:
+                latest_fp_time = fp.time
+    use_far_scan = last_target_time is None or (
+        latest_fp_time is not None
+        and latest_fp_time - last_target_time >= ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS
+    )
+    scan_radius = (
+        ZOMBIE_TRACKER_FAR_SCENT_RADIUS if use_far_scan else ZOMBIE_TRACKER_SCENT_RADIUS
+    )
     scent_radius_sq = scan_radius * scan_radius
     min_target_dist_sq = (FOOTPRINT_STEP_DISTANCE * 0.5) ** 2
     for fp in footprints:
@@ -1759,6 +1774,39 @@ class Zombie(pygame.sprite.Sprite):
         self.wall_hug_stuck_flag = False
         self.pos_history = []
 
+    def _tracker_avoid_pitfalls(
+        self: Self,
+        pitfall_cells: set[tuple[int, int]],
+        cell_size: int,
+    ) -> tuple[float, float]:
+        if cell_size <= 0 or not pitfall_cells:
+            return 0.0, 0.0
+        cell_x = int(self.x // cell_size)
+        cell_y = int(self.y // cell_size)
+        search_cells = 2
+        avoid_radius = cell_size * 1.75
+        max_strength = self.speed * 0.35
+        push_x = 0.0
+        push_y = 0.0
+        for cy in range(cell_y - search_cells, cell_y + search_cells + 1):
+            for cx in range(cell_x - search_cells, cell_x + search_cells + 1):
+                if (cx, cy) not in pitfall_cells:
+                    continue
+                pit_x = (cx + 0.5) * cell_size
+                pit_y = (cy + 0.5) * cell_size
+                dx = self.x - pit_x
+                dy = self.y - pit_y
+                dist_sq = dx * dx + dy * dy
+                if dist_sq <= 0:
+                    continue
+                dist = math.sqrt(dist_sq)
+                if dist >= avoid_radius:
+                    continue
+                strength = (1.0 - dist / avoid_radius) * max_strength
+                push_x += (dx / dist) * strength
+                push_y += (dy / dist) * strength
+        return push_x, push_y
+
     def update(
         self: Self,
         player_center: tuple[int, int],
@@ -1773,6 +1821,7 @@ class Zombie(pygame.sprite.Sprite):
         level_height: int,
         outer_wall_cells: set[tuple[int, int]] | None = None,
         wall_cells: set[tuple[int, int]] | None = None,
+        pitfall_cells: set[tuple[int, int]] | None = None,
         bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
         | None = None,
     ) -> None:
@@ -1795,6 +1844,10 @@ class Zombie(pygame.sprite.Sprite):
             grid_rows,
             outer_wall_cells,
         )
+        if pitfall_cells is not None:
+            avoid_x, avoid_y = self._tracker_avoid_pitfalls(pitfall_cells, cell_size)
+            move_x += avoid_x
+            move_y += avoid_y
         if dist_to_player_sq <= avoid_radius_sq or self.wall_hugging:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
         if wall_cells is not None:
