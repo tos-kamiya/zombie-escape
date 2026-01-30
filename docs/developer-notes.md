@@ -18,9 +18,9 @@ uv pip install -p .venv/bin/python -e ".[dev]"
 ## Verification
 
 ```bash
-uv run -p .venv/bin/python -m pytest
-uv run -p .venv/bin/python -m ruff check
-uv run -p .venv/bin/python -m pyright
+uv run -p .venv/bin/python pytest
+uv run -p .venv/bin/python ruff check
+uv run -p .venv/bin/python pyright
 ```
 
 ## Export Documentation Images
