@@ -53,6 +53,11 @@ def _parse_cli_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:
         default="profile.prof",
         help="cProfile output path (default: profile.prof)",
     )
+    parser.add_argument(
+        "--export-images",
+        action="store_true",
+        help="Export documentation images to imgs/exports and exit",
+    )
     parser.add_argument("--seed")
     return parser.parse_known_args(argv)
 
@@ -103,6 +108,15 @@ def main() -> None:
     cli_seed_text, cli_seed_is_auto = _sanitize_seed_text(args.seed)
     title_seed_text, title_seed_is_auto = cli_seed_text, cli_seed_is_auto
     last_stage_id: str | None = None
+
+    if args.export_images:
+        from .export_images import export_images
+
+        output_dir = Path.cwd() / "imgs" / "exports"
+        saved = export_images(output_dir, cell_size=DEFAULT_TILE_SIZE)
+        print(f"Exported {len(saved)} images to {output_dir}")
+        pygame.quit()
+        return
 
     config: dict[str, Any]
     config, config_path = load_config()
