@@ -89,6 +89,7 @@
 - 変種移動ルーチン: `zombie_wall_hugging_ratio`（壁沿い巡回型の出現率）
 - エイジング速度: `zombie_aging_duration_frames`（値が大きいほど老化が遅い）
 - 壁生成アルゴリズム: `wall_algorithm` ("default", "empty", "grid_wire")
+- 瓦礫壁の割合: `wall_rubble_ratio`（内部壁のうち、瓦礫外観に差し替える比率）
 - 落とし穴の出現率: `pitfall_density` (0.0〜1.0)
 - 落下スポーン領域: `fall_spawn_zones`, `fall_spawn_floor_ratio`
 - ステージ公開: `available`
@@ -114,6 +115,7 @@
 ### 3.6 エンティティ (entities.py)
 
 - `Wall`: 内壁。体力を持ち、破壊時に `on_destroy` を発火。
+- `RubbleWall`: 内壁と同じ当たり判定/耐久を持ち、見た目だけを瓦礫風に差し替えた壁。
 - `SteelBeam`: 簡易な強化障害物。
 - `Camera`: 画面スクロール用の矩形管理。
 - `Player`, `Zombie`, `Car`, `Survivor`（`is_buddy` フラグで相棒を表現）
@@ -184,6 +186,7 @@
   - `level_blueprints` から壁・歩行セル・外部セル・落とし穴を作成。
   - 連結性検証の結果得られた「車で到達可能なタイル（`car_walkable_cells`）」を保持。
   - 予約記号（`f`, `l`, `s` 等）を解釈し、アイテムの確定配置地点を決定。
+  - 内部壁の一部は `wall_rubble_ratio` に応じて `RubbleWall` に差し替える（見た目のみ、シード再現性には依存しない）。
 - `setup_player_and_cars(game_data, layout_data, car_count)` (`gameplay/spawn.py`)
   - プレイヤーと待機車両を配置。車は必ず「車で到達可能なエリア」に配置される。
 - `spawn_initial_zombies(game_data, player, layout_data, config)` (`gameplay/spawn.py`)
