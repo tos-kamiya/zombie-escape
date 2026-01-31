@@ -82,7 +82,8 @@ def game_over_screen(
                     ],
                     survivors=list(game_data.groups.survivor_group),
                     pitfall_cells=game_data.layout.pitfall_cells,
-                    walkable_cells=game_data.layout.walkable_cells,
+                    wall_cells=game_data.layout.wall_cells,
+                    outer_wall_cells=game_data.layout.outer_wall_cells,
                     palette_key=state.ambient_palette_key,
                 )
 

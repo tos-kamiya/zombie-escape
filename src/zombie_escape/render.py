@@ -390,7 +390,8 @@ def draw_level_overview(
     buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
     pitfall_cells: set[tuple[int, int]] | None = None,
-    walkable_cells: list[tuple[int, int]] | None = None,
+    wall_cells: set[tuple[int, int]] | None = None,
+    outer_wall_cells: set[tuple[int, int]] | None = None,
     palette_key: str | None = None,
 ) -> None:
     palette = get_environment_palette(palette_key)
@@ -398,37 +399,52 @@ def draw_level_overview(
     dark_floor = tuple(max(0, int(channel * 0.35)) for channel in base_floor)
     floor_color = tuple(max(0, int(channel * 0.65)) for channel in base_floor)
     surface.fill(dark_floor)
-    if walkable_cells:
-        cell_size = assets.internal_wall_grid_snap
-        for x, y in walkable_cells:
-            pygame.draw.rect(
-                surface,
-                floor_color,
-                pygame.Rect(
-                    x * cell_size,
-                    y * cell_size,
-                    cell_size,
-                    cell_size,
-                ),
-            )
+    cell_size = assets.internal_wall_grid_snap
+    if cell_size > 0:
+        cols = max(0, surface.get_width() // cell_size)
+        rows = max(0, surface.get_height() // cell_size)
+        wall_set = wall_cells or set()
+        outer_set = outer_wall_cells or set()
+        pitfall_set = pitfall_cells or set()
+        for y in range(rows):
+            for x in range(cols):
+                if (x, y) in wall_set or (x, y) in outer_set or (x, y) in pitfall_set:
+                    continue
+                pygame.draw.rect(
+                    surface,
+                    floor_color,
+                    pygame.Rect(
+                        x * cell_size,
+                        y * cell_size,
+                        cell_size,
+                        cell_size,
+                    ),
+                )
+
     for wall in wall_group:
         if wall.max_health > 0:
             health_ratio = max(0.0, min(1.0, wall.health / wall.max_health))
         else:
             health_ratio = 0.0
         if isinstance(wall, Wall):
-            fill_color, _ = resolve_wall_colors(
-                health_ratio=health_ratio,
-                palette_category=wall.palette_category,
-                palette=palette,
-            )
-            pygame.draw.rect(surface, fill_color, wall.rect)
+            if health_ratio <= 0.0:
+                pygame.draw.rect(surface, floor_color, wall.rect)
+            else:
+                fill_color, _ = resolve_wall_colors(
+                    health_ratio=health_ratio,
+                    palette_category=wall.palette_category,
+                    palette=palette,
+                )
+                pygame.draw.rect(surface, fill_color, wall.rect)
         elif isinstance(wall, SteelBeam):
-            fill_color, _ = resolve_steel_beam_colors(
-                health_ratio=health_ratio,
-                palette=palette,
-            )
-            pygame.draw.rect(surface, fill_color, wall.rect)
+            if health_ratio <= 0.0:
+                pygame.draw.rect(surface, floor_color, wall.rect)
+            else:
+                fill_color, _ = resolve_steel_beam_colors(
+                    health_ratio=health_ratio,
+                    palette=palette,
+                )
+                pygame.draw.rect(surface, fill_color, wall.rect)
     now = pygame.time.get_ticks()
     for fp in footprints:
         age = now - fp.time
