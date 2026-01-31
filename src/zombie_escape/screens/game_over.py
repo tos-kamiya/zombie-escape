@@ -18,8 +18,10 @@ from ..input_utils import is_confirm_event, is_select_event
 from ..screens import (
     ScreenID,
     ScreenTransition,
+    nudge_window_scale,
     present,
     sync_window_size,
+    toggle_fullscreen,
 )
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 
@@ -174,6 +176,15 @@ def game_over_screen(
                 sync_window_size(event, game_data=game_data)
                 continue
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFTBRACKET:
+                    nudge_window_scale(0.5, game_data=game_data)
+                    continue
+                if event.key == pygame.K_RIGHTBRACKET:
+                    nudge_window_scale(2.0, game_data=game_data)
+                    continue
+                if event.key == pygame.K_f:
+                    toggle_fullscreen(game_data=game_data)
+                    continue
                 if event.key in (pygame.K_ESCAPE, pygame.K_SPACE):
                     return ScreenTransition(ScreenID.TITLE)
                 if event.key == pygame.K_r and stage is not None:

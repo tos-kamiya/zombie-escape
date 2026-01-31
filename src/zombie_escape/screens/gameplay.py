@@ -53,8 +53,10 @@ from ..progress import record_stage_clear
 from ..screens import (
     ScreenID,
     ScreenTransition,
+    nudge_window_scale,
     present,
     sync_window_size,
+    toggle_fullscreen,
 )
 
 if TYPE_CHECKING:
@@ -78,6 +80,18 @@ def gameplay_screen(
 
     screen_width = screen.get_width()
     screen_height = screen.get_height()
+    mouse_hidden = False
+
+    def _set_mouse_hidden(hidden: bool) -> None:
+        nonlocal mouse_hidden
+        if mouse_hidden == hidden:
+            return
+        pygame.mouse.set_visible(not hidden)
+        mouse_hidden = hidden
+
+    def _finalize(transition: ScreenTransition) -> ScreenTransition:
+        _set_mouse_hidden(False)
+        return transition
 
     seed_value = seed if seed is not None else generate_seed()
     applied_seed = seed_rng(seed_value)
@@ -104,6 +118,7 @@ def gameplay_screen(
     ignore_focus_loss_until = 0
     controller = init_first_controller()
     joystick = init_first_joystick() if controller is None else None
+    _set_mouse_hidden(pygame.mouse.get_focused())
 
     try:
         layout_data = generate_level_from_blueprint(game_data, config)
@@ -127,7 +142,7 @@ def gameplay_screen(
         )
         present(screen)
         pygame.time.delay(3000)
-        return ScreenTransition(ScreenID.TITLE)
+        return _finalize(ScreenTransition(ScreenID.TITLE))
 
     sync_ambient_palette_with_flashlights(game_data, force=True)
     initial_waiting = max(0, stage.waiting_car_target_count)
@@ -218,16 +233,18 @@ def gameplay_screen(
                         )
                     present(screen)
                     continue
-            return ScreenTransition(
-                ScreenID.GAME_OVER,
-                stage=stage,
-                game_data=game_data,
-                config=config,
+            return _finalize(
+                ScreenTransition(
+                    ScreenID.GAME_OVER,
+                    stage=stage,
+                    game_data=game_data,
+                    config=config,
+                )
             )
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return ScreenTransition(ScreenID.EXIT)
+                return _finalize(ScreenTransition(ScreenID.EXIT))
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event, game_data=game_data)
                 continue
@@ -256,6 +273,15 @@ def gameplay_screen(
                 if joystick and not joystick.get_init():
                     joystick = None
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFTBRACKET:
+                    nudge_window_scale(0.5, game_data=game_data)
+                    continue
+                if event.key == pygame.K_RIGHTBRACKET:
+                    nudge_window_scale(2.0, game_data=game_data)
+                    continue
+                if event.key == pygame.K_f:
+                    toggle_fullscreen(game_data=game_data)
+                    continue
                 if event.key == pygame.K_s and (
                     pygame.key.get_mods() & pygame.KMOD_CTRL
                 ):
@@ -274,7 +300,7 @@ def gameplay_screen(
                     continue
                 if paused_manual:
                     if event.key == pygame.K_ESCAPE:
-                        return ScreenTransition(ScreenID.TITLE)
+                        return _finalize(ScreenTransition(ScreenID.TITLE))
                     if event.key == pygame.K_p:
                         paused_manual = False
                     continue
@@ -287,19 +313,21 @@ def gameplay_screen(
             ):
                 if debug_mode:
                     if is_select_event(event):
-                        return ScreenTransition(ScreenID.TITLE)
+                        return _finalize(ScreenTransition(ScreenID.TITLE))
                     if is_start_event(event):
                         paused_manual = not paused_manual
                     continue
                 if paused_manual:
                     if is_select_event(event):
-                        return ScreenTransition(ScreenID.TITLE)
+                        return _finalize(ScreenTransition(ScreenID.TITLE))
                     if is_start_event(event):
                         paused_manual = False
                     continue
                 if is_select_event(event) or is_start_event(event):
                     paused_manual = True
                     continue
+
+        _set_mouse_hidden(pygame.mouse.get_focused())
 
         paused = paused_manual or paused_focus
         if paused:
@@ -467,4 +495,4 @@ def gameplay_screen(
         )
 
     # Should not reach here, but return to title if it happens
-    return ScreenTransition(ScreenID.TITLE)
+    return _finalize(ScreenTransition(ScreenID.TITLE))

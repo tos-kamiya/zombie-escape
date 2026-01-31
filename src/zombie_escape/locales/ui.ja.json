@@ -16,7 +16,7 @@
       "settings": "設定",
       "quit": "終了",
       "locked_suffix": "[Locked]",
-      "window_hint": "[キーでウィンドウを小さく、]キーで大きく。\nF: フルスクリーン切替。\n（タイトル、設定画面のみ）",
+      "window_hint": "[キーでウィンドウを小さく、]キーで大きく。\nF: フルスクリーン切替。",
       "seed_label": "シード: %{value}",
       "seed_hint": "数字キーで入力、BSでクリア",
       "seed_empty": "(自動)",
