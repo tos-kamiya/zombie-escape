@@ -73,7 +73,7 @@
 | 名前 | 画像 | メモ |
 | --- | --- | --- |
 | プレイヤー | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/player.png" width="64"> | 手が付いた青い丸。WASDキー/矢印キーで操作。燃料所持中は右下に小さな黄色の四角が表示されます。 |
-| ゾンビ | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/zombie-normal.png" width="64"> | プレイヤー（または車）を発見すると追跡。視界外では一定時間ごとに移動モードが切り替わり、異なる挙動の変種も存在します。 |
+| ゾンビ | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/zombie-normal.png" width="64"> | プレイヤー（または車）を発見すると追跡。視界外では一定時間ごとに移動モードが切り替わります。 |
 | 車 | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/car.png" width="64"> | 接触で乗車。耐久力は壁衝突や轢きで減少し、0で破壊。運転中に待機車へぶつかると耐久力全回復（Stage 4 は定員+5）。約5分後、目的地を示す三角マーカーが表示されます。 |
 | 相棒 (Stage 3) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/buddy.png" width="64"> | 画面内のときだけゾンビに狙われ、画面外で触れられても別地点に再出現。徒歩で触れると追尾（約70%速度）、車で触れると回収。壁や鉄筋を叩くと寄って削ってくれます。 |
 | 生存者 (Stage 4) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/survivor.png" width="64"> | 近づくと約1/3速度で追従。画面内でゾンビに触れられると即変異。車にのみ乗車し、定員は最初5人。運転中に待機車へぶつかると定員+5。上限超過で車が損傷し全員降車。 |
@@ -90,7 +90,7 @@
 
 | 名前 | 画像 | メモ |
 | --- | --- | --- |
-| 外周壁 | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-outer.png" width="64"> | グレーの外周壁。破壊不能に近く、各辺に最低3つの開口部（出口）があります。 |
+| 外周壁 | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-outer.png" width="64"> | グレーの外周壁。破壊不能に近く、各辺に1つの開口部（出口）があります。 |
 | 内部壁 | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-inner.png" width="64"> | ベージュの内部壁。耐久力を持ち、プレイヤーは繰り返し接触して破壊できます。ゾンビも削れますが遅く、車では破壊できません。 |
 
 ### 勝利・敗北条件
