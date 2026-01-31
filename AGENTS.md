@@ -13,6 +13,7 @@
 - For Python version compatibility checks with uv + pytest, see `docs/python-compat-uv.md`.
 - Package check: `uv pip install .` to verify a clean install flow before tagging a release.
 - Before committing, run `uv run ruff check` and ensure it passes cleanly.
+- Developer docs live in `docs/developer/` (Windows build, multi-Python checks).
 
 ## Coding Style & Naming Conventions
 - Follow PEP 8 with 4-space indentation and type hints (see existing signatures). Use `UPPER_SNAKE_CASE` for constants, `lower_snake_case` for functions/variables, and `CamelCase` for classes.
@@ -39,3 +40,8 @@
 - Fog-of-war uses `fog_surfaces` (`hard` alpha mask + `soft` hatch overlay) and `FOG_RINGS` to cut a transparent hole around the current FOV target; `get_fog_scale()` boosts radius when the flashlight pickup is active and caches Bayer-dither patterns per ring thickness.
 - Objective/hint overlays: `_draw_hint_arrow()` renders a soft arrow toward car/fuel targets after fog placement; `draw()` also stamps objective text, status bar (config flags), and optional “Need fuel” message.
 - Game-over view builds a full-level overview once via `draw_level_overview()` on a cached surface, then smooth-scales it to fit the logical screen for end-state display.
+
+## Developer Docs
+- `docs/developer/README.md`: entry point for developer docs.
+- `docs/developer/windows-build.md`: Windows binary build notes.
+- `docs/developer/python-compat.md`: multi-Python `ruff`/`pytest` checks.

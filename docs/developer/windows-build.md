@@ -1,20 +1,19 @@
-# Memo: Build Windows binary with PyInstaller
+# Windows Build (PyInstaller)
 
-This is a personal memo describing how to build a Windows binary
-(one-folder, zip distribution) for **zombie-escape**.
+Notes for building a Windows binary (one-folder, zip distribution) for
+**zombie-escape**.
 
-## 1. Environment
+## Environment
 
 - Windows 11 (64-bit)
 - Python 3.13 (64-bit)
 
-## 2. Prepare an entry point for PyInstaller
+## Prepare an entry point for PyInstaller
 
 Create a temporary file `./pyinstaller_main.py`
-(not committed to the repository) with the following content:
+(do not commit it) with the following content:
 
 ```python
-# pyinstaller_main.py
 from __future__ import annotations
 
 from zombie_escape import main
@@ -29,7 +28,7 @@ if __name__ == "__main__":
         raise
 ```
 
-## 3. Build
+## Build
 
 ```bat
 cd <project-dir>
@@ -51,7 +50,7 @@ pyinstaller --clean -y -n zombie-escape --onedir ^
   pyinstaller_main.py
 ```
 
-## 4. Check
+## Check
 
 ```bat
 .\dist\zombie-escape\zombie-escape.exe
@@ -59,6 +58,6 @@ pyinstaller --clean -y -n zombie-escape --onedir ^
 
 ## Notes
 
-* One-folder mode is used for stability.
-* Distribution is done by zipping the entire `dist/zombie-escape/` directory.
-* For debugging, rebuild without `--windowed`.
+- One-folder mode is used for stability.
+- Distribution is done by zipping the entire `dist/zombie-escape/` directory.
+- For debugging, rebuild without `--windowed`.
