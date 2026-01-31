@@ -70,6 +70,7 @@ def generate_level_from_blueprint(
         rows=stage.grid_rows,
         wall_algo=stage.wall_algorithm,
         pitfall_density=getattr(stage, "pitfall_density", 0.0),
+        pitfall_zones=getattr(stage, "pitfall_zones", []),
         base_seed=game_data.state.seed,
     )
     if isinstance(blueprint_data, dict):

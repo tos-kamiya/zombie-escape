@@ -91,6 +91,7 @@
 - 壁生成アルゴリズム: `wall_algorithm` ("default", "empty", "grid_wire")
 - 瓦礫壁の割合: `wall_rubble_ratio`（内部壁のうち、瓦礫外観に差し替える比率）
 - 落とし穴の出現率: `pitfall_density` (0.0〜1.0)
+- 落とし穴の固定配置: `pitfall_zones`（矩形指定で落とし穴セルを確定配置）
 - 落下スポーン領域: `fall_spawn_zones`, `fall_spawn_floor_ratio`
 - ステージ公開: `available`
 - タイルサイズ: `tile_size`（ステージごとのワールド縮尺）
@@ -326,6 +327,10 @@
   - `fall_spawn_zones`（ステージ定義の矩形群）をセル集合に展開し、`fall_spawn_cells` として保持。
   - `fall_spawn_floor_ratio` が有効なら、内部セルから一定割合を落下候補セルに追加。
   - `fall_spawn_cells` は落下スポーン位置の候補として利用される（床のハイライトにも使用）。
+
+- 落とし穴ゾーン
+  - `pitfall_zones`（ステージ定義の矩形群）をセル集合に展開し、対象セルを落とし穴に設定。
+  - 出口周辺セルは落とし穴対象から除外される。
 
 ### 6.1 連結性保証とリトライロジック
 

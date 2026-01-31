@@ -279,12 +279,28 @@ def draw_level_overview(
     shoes: list[Shoes] | None = None,
     buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
+    pitfall_cells: set[tuple[int, int]] | None = None,
+    walkable_cells: list[tuple[int, int]] | None = None,
     palette_key: str | None = None,
 ) -> None:
     palette = get_environment_palette(palette_key)
     base_floor = palette.floor_primary
-    dark_floor = tuple(max(0, int(channel * 0.55)) for channel in base_floor)
+    dark_floor = tuple(max(0, int(channel * 0.35)) for channel in base_floor)
+    floor_color = tuple(max(0, int(channel * 0.65)) for channel in base_floor)
     surface.fill(dark_floor)
+    if walkable_cells:
+        cell_size = assets.internal_wall_grid_snap
+        for x, y in walkable_cells:
+            pygame.draw.rect(
+                surface,
+                floor_color,
+                pygame.Rect(
+                    x * cell_size,
+                    y * cell_size,
+                    cell_size,
+                    cell_size,
+                ),
+            )
     for wall in wall_group:
         if wall.max_health > 0:
             health_ratio = max(0.0, min(1.0, wall.health / wall.max_health))

@@ -6,14 +6,7 @@ import pygame
 from pygame import surface, time
 
 from ..colors import BLACK, GREEN, LIGHT_GRAY, RED, WHITE
-from ..localization import translate as tr
-from ..models import GameData, Stage
-from ..render import (
-    RenderAssets,
-    draw_level_overview,
-    _draw_status_bar,
-    show_message,
-)
+from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 from ..input_utils import (
     CONTROLLER_BUTTON_DOWN,
     CONTROLLER_DEVICE_ADDED,
@@ -23,6 +16,14 @@ from ..input_utils import (
     is_confirm_event,
     is_select_event,
 )
+from ..localization import translate as tr
+from ..models import GameData, Stage
+from ..render import (
+    RenderAssets,
+    _draw_status_bar,
+    draw_level_overview,
+    show_message,
+)
 from ..screens import (
     ScreenID,
     ScreenTransition,
@@ -31,7 +32,6 @@ from ..screens import (
     sync_window_size,
     toggle_fullscreen,
 )
-from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 
 
 def game_over_screen(
@@ -74,15 +74,17 @@ def game_over_screen(
                 footprints_to_draw,
                 fuel=game_data.fuel,
                 flashlights=game_data.flashlights or [],
-                shoes=game_data.shoes or [],
-                buddies=[
-                    survivor
-                    for survivor in game_data.groups.survivor_group
-                    if survivor.alive() and survivor.is_buddy and not survivor.rescued
-                ],
-                survivors=list(game_data.groups.survivor_group),
-                palette_key=state.ambient_palette_key,
-            )
+                    shoes=game_data.shoes or [],
+                    buddies=[
+                        survivor
+                        for survivor in game_data.groups.survivor_group
+                        if survivor.alive() and survivor.is_buddy and not survivor.rescued
+                    ],
+                    survivors=list(game_data.groups.survivor_group),
+                    pitfall_cells=game_data.layout.pitfall_cells,
+                    walkable_cells=game_data.layout.walkable_cells,
+                    palette_key=state.ambient_palette_key,
+                )
 
             level_aspect = level_width / max(1, level_height)
             screen_aspect = screen_width / max(1, screen_height)

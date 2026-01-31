@@ -171,6 +171,7 @@ class Stage:
     fall_spawn_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
     fall_spawn_floor_ratio: float = 0.0
     pitfall_density: float = 0.0
+    pitfall_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
     zombie_tracker_ratio: float = 0.0
     zombie_wall_hugging_ratio: float = 0.0
     zombie_normal_ratio: float = 1.0

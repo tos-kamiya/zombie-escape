@@ -396,16 +396,32 @@ def _place_pitfalls(
     grid: list[list[str]],
     *,
     density: float,
+    pitfall_zones: list[tuple[int, int, int, int]] | None = None,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
     """Replace empty floor tiles with pitfalls based on density."""
-    if density <= 0.0:
-        return
     cols, rows = len(grid[0]), len(grid)
     forbidden = _collect_exit_adjacent_cells(grid)
     if forbidden_cells:
         forbidden |= forbidden_cells
 
+    if pitfall_zones:
+        for col, row, width, height in pitfall_zones:
+            if width <= 0 or height <= 0:
+                continue
+            start_x = max(0, col)
+            start_y = max(0, row)
+            end_x = min(cols, col + width)
+            end_y = min(rows, row + height)
+            for y in range(start_y, end_y):
+                for x in range(start_x, end_x):
+                    if (x, y) in forbidden:
+                        continue
+                    if grid[y][x] == ".":
+                        grid[y][x] = "x"
+
+    if density <= 0.0:
+        return
     for y in range(1, rows - 1):
         for x in range(1, cols - 1):
             if (x, y) in forbidden:
@@ -443,6 +459,7 @@ def _generate_random_blueprint(
     rows: int,
     wall_algo: str = "default",
     pitfall_density: float = 0.0,
+    pitfall_zones: list[tuple[int, int, int, int]] | None = None,
 ) -> dict:
     grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE)
@@ -536,6 +553,7 @@ def _generate_random_blueprint(
     _place_pitfalls(
         grid,
         density=pitfall_density,
+        pitfall_zones=pitfall_zones,
         forbidden_cells=reserved_cells,
     )
 
@@ -560,6 +578,7 @@ def choose_blueprint(
     rows: int,
     wall_algo: str = "default",
     pitfall_density: float = 0.0,
+    pitfall_zones: list[tuple[int, int, int, int]] | None = None,
     base_seed: int | None = None,
 ) -> dict:
     # Currently only random generation; hook for future variants.
@@ -579,6 +598,7 @@ def choose_blueprint(
             rows=rows,
             wall_algo=wall_algo,
             pitfall_density=pitfall_density,
+            pitfall_zones=pitfall_zones,
         )
 
         car_reachable = validate_connectivity(blueprint["grid"])

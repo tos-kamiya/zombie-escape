@@ -137,6 +137,10 @@
       "stage17": {
         "name": "#17 Harder to Trap Zombies",
         "description": "Zombies track your trail and are harder to lure into pitfalls."
+      },
+      "stage18": {
+        "name": "#18 Six Rooms",
+        "description": "Six rooms linked by catwalks over the abyss."
       }
     },
     "status": {
