@@ -47,7 +47,7 @@ from ..gameplay.spawn import _alive_waiting_cars
 from ..world_grid import build_wall_index
 from ..localization import translate as tr
 from ..models import Stage
-from ..render import draw, prewarm_fog_overlays, show_message
+from ..render import draw, prewarm_fog_overlays, show_message, show_message_wrapped
 from ..rng import generate_seed, seed_rng
 from ..progress import record_stage_clear
 from ..screens import (
@@ -124,21 +124,14 @@ def gameplay_screen(
         layout_data = generate_level_from_blueprint(game_data, config)
     except MapGenerationError:
         # If generation fails after retries, show error and back to title
-        draw(
-            render_assets,
-            screen,
-            game_data,
-            config=config,
-            hint_color=None,
-            fps=fps,
-            present_fn=present,
-        )
-        show_message(
+        screen.fill((0, 0, 0))
+        show_message_wrapped(
             screen,
             tr("errors.map_generation_failed"),
             16,
             RED,
             (screen_width // 2, screen_height // 2),
+            max_width=screen_width - 40,
         )
         present(screen)
         pygame.time.delay(3000)

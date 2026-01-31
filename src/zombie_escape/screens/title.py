@@ -12,7 +12,7 @@ from ..localization import get_font_settings, get_language
 from ..localization import translate as tr
 from ..models import Stage
 from ..progress import load_progress
-from ..render import show_message
+from ..render import blit_wrapped_text, show_message, wrap_text
 from ..rng import generate_seed
 from ..input_utils import (
     CONTROLLER_BUTTON_DOWN,
@@ -63,77 +63,6 @@ def _open_readme_link(*, use_stage6: bool = False) -> None:
         webbrowser.open(url, new=0, autoraise=True)
     except Exception as exc:  # pragma: no cover - best effort only
         print(f"Unable to open README URL {url}: {exc}")
-
-
-def _wrap_long_segment(
-    segment: str, font: pygame.font.Font, max_width: int
-) -> list[str]:
-    lines: list[str] = []
-    current = ""
-    for char in segment:
-        candidate = current + char
-        if font.size(candidate)[0] <= max_width or not current:
-            current = candidate
-        else:
-            lines.append(current)
-            current = char
-    if current:
-        lines.append(current)
-    return lines
-
-
-def _wrap_text(text: str, font: pygame.font.Font, max_width: int) -> list[str]:
-    """Break text into multiple lines within a max width (supports CJK text)."""
-
-    if max_width <= 0:
-        return [text]
-    paragraphs = text.splitlines() or [text]
-    lines: list[str] = []
-    for paragraph in paragraphs:
-        if not paragraph:
-            lines.append("")
-            continue
-        words = paragraph.split(" ")
-        if len(words) == 1:
-            lines.extend(_wrap_long_segment(paragraph, font, max_width))
-            continue
-        current = ""
-        for word in words:
-            candidate = f"{current} {word}".strip() if current else word
-            if font.size(candidate)[0] <= max_width:
-                current = candidate
-                continue
-            if current:
-                lines.append(current)
-            if font.size(word)[0] <= max_width:
-                current = word
-            else:
-                lines.extend(_wrap_long_segment(word, font, max_width))
-                current = ""
-        if current:
-            lines.append(current)
-    return lines
-
-
-def _blit_wrapped_text(
-    target: surface.Surface,
-    text: str,
-    font: pygame.font.Font,
-    color: tuple[int, int, int],
-    topleft: tuple[int, int],
-    max_width: int,
-) -> None:
-    """Render text with simple wrapping constrained to max_width."""
-
-    x, y = topleft
-    line_height = font.get_linesize()
-    for line in _wrap_text(text, font, max_width):
-        if not line:
-            y += line_height
-            continue
-        rendered = font.render(line, False, color)
-        target.blit(rendered, (x, y))
-        y += line_height
 
 
 def _generate_auto_seed_text() -> str:
@@ -500,7 +429,7 @@ def title_screen(
             desc_area_top = section_top
             if current["type"] == "stage":
                 desc_color = WHITE if current.get("available") else GRAY
-                _blit_wrapped_text(
+                blit_wrapped_text(
                     screen,
                     current["stage"].description,
                     desc_font,
@@ -522,7 +451,7 @@ def title_screen(
                 help_text = tr(help_key)
 
             if help_text:
-                _blit_wrapped_text(
+                blit_wrapped_text(
                     screen,
                     help_text,
                     desc_font,
@@ -557,10 +486,10 @@ def title_screen(
             screen.blit(seed_surface, seed_rect)
 
             seed_hint = tr("menu.seed_hint")
-            seed_hint_lines = _wrap_text(seed_hint, hint_font, info_column_width)
+            seed_hint_lines = wrap_text(seed_hint, hint_font, info_column_width)
             seed_hint_height = len(seed_hint_lines) * hint_line_height
             seed_hint_top = seed_rect.top - 4 - seed_hint_height
-            _blit_wrapped_text(
+            blit_wrapped_text(
                 screen,
                 seed_hint,
                 hint_font,

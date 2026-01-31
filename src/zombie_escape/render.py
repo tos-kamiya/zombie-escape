@@ -265,6 +265,116 @@ def show_message(
         print(f"Error rendering font or surface: {e}")
 
 
+def wrap_long_segment(
+    segment: str, font: pygame.font.Font, max_width: int
+) -> list[str]:
+    lines: list[str] = []
+    current = ""
+    for char in segment:
+        candidate = current + char
+        if font.size(candidate)[0] <= max_width or not current:
+            current = candidate
+        else:
+            lines.append(current)
+            current = char
+    if current:
+        lines.append(current)
+    return lines
+
+
+def wrap_text(text: str, font: pygame.font.Font, max_width: int) -> list[str]:
+    if max_width <= 0:
+        return [text]
+    paragraphs = text.splitlines() or [text]
+    lines: list[str] = []
+    for paragraph in paragraphs:
+        if not paragraph:
+            lines.append("")
+            continue
+        words = paragraph.split(" ")
+        if len(words) == 1:
+            lines.extend(wrap_long_segment(paragraph, font, max_width))
+            continue
+        current = ""
+        for word in words:
+            candidate = f"{current} {word}".strip() if current else word
+            if font.size(candidate)[0] <= max_width:
+                current = candidate
+                continue
+            if current:
+                lines.append(current)
+            if font.size(word)[0] <= max_width:
+                current = word
+            else:
+                lines.extend(wrap_long_segment(word, font, max_width))
+                current = ""
+        if current:
+            lines.append(current)
+    return lines
+
+
+def blit_wrapped_text(
+    target: surface.Surface,
+    text: str,
+    font: pygame.font.Font,
+    color: tuple[int, int, int],
+    topleft: tuple[int, int],
+    max_width: int,
+) -> None:
+    """Render text with simple wrapping constrained to max_width."""
+
+    x, y = topleft
+    line_height = font.get_linesize()
+    for line in wrap_text(text, font, max_width):
+        if not line:
+            y += line_height
+            continue
+        rendered = font.render(line, False, color)
+        target.blit(rendered, (x, y))
+        y += line_height
+
+
+def show_message_wrapped(
+    screen: surface.Surface,
+    text: str,
+    size: int,
+    color: tuple[int, int, int],
+    position: tuple[int, int],
+    *,
+    max_width: int,
+    line_spacing: int = 2,
+) -> None:
+    try:
+        font_settings = get_font_settings()
+        font = load_font(font_settings.resource, font_settings.scaled_size(size))
+        lines = wrap_text(text, font, max_width)
+        if not lines:
+            return
+        rendered = [font.render(line, False, color) for line in lines]
+        max_line_width = max(surface.get_width() for surface in rendered)
+        line_height = font.get_linesize()
+        total_height = line_height * len(rendered) + line_spacing * (len(rendered) - 1)
+
+        center_x, center_y = position
+        top = center_y - total_height // 2
+
+        bg_padding = 15
+        bg_width = max_line_width + bg_padding * 2
+        bg_height = total_height + bg_padding * 2
+        bg_rect = pygame.Rect(0, 0, bg_width, bg_height)
+        bg_rect.center = (center_x, center_y)
+        bg_surface = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+        bg_surface.fill((0, 0, 0, 180))
+        screen.blit(bg_surface, bg_rect.topleft)
+
+        y = top
+        for text_surface in rendered:
+            text_rect = text_surface.get_rect(centerx=center_x, y=y)
+            screen.blit(text_surface, text_rect)
+            y += line_height + line_spacing
+    except pygame.error as e:
+        print(f"Error rendering font or surface: {e}")
+
 def draw_level_overview(
     assets: RenderAssets,
     surface: surface.Surface,
