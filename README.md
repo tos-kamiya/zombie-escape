@@ -84,7 +84,7 @@ Open **Settings** from the title to toggle gameplay assists:
 | --- | --- | --- |
 | Flashlight | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/flashlight.png" width="64"> | Each pickup expands your visible radius by about 20% (grab two to reach the max boost). |
 | Fuel Can (Stages 2 & 3) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/fuel.png" width="64"> | Must be collected before driving the car in fuel-run stages. |
-| Steel Beam (optional) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"> | Same collision as inner walls but with triple durability. |
+| Steel Beam (optional) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"> | Same collision as inner walls but with 1.5x durability. |
 
 #### Environment
 

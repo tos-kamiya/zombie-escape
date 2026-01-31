@@ -84,7 +84,7 @@
 | --- | --- | --- |
 | 懐中電灯 | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/flashlight.png" width="64"> | 拾うたびに視界が約20%ずつ拡大（例: 2個で約1.6倍）。 |
 | 燃料缶 (Stage 2/3) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/fuel.png" width="64"> | 燃料なしで始まるステージのみ出現。拾うと燃料所持インジケーターが表示され、車に乗れるようになります。 |
-| 鉄筋 (オプション) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"> | 斜線入りの障害物。内壁と同じく通行不可で、耐久力は内壁の3倍。内壁と重なる場合は内壁破壊後に出現します。 |
+| 鉄筋 (オプション) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"> | 斜線入りの障害物。内壁と同じく通行不可で、耐久力は内壁の1.5倍。内壁と重なる場合は内壁破壊後に出現します。 |
 
 #### 環境
 
