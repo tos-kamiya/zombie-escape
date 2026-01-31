@@ -70,28 +70,110 @@ Open **Settings** from the title to toggle gameplay assists:
 
 #### Characters
 
-| Name | Image | Notes |
-| --- | --- | --- |
-| Player | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/player.png" width="64"> | Blue circle with small hands; controlled with WASD/arrow keys. When carrying fuel, a tiny yellow square appears near the sprite. |
-| Zombie (Normal) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/zombie-normal.png" width="64"> | Chases the player once detected; out of sight it periodically switches movement modes. |
-| Car | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/car.png" width="64"> | Driveable escape vehicle with durability; wall hits and zombie collisions reduce health. If it breaks, you're on foot until you find another car. Ramming a parked car restores health (and in Stage 4 increases safe passenger capacity). After ~5 minutes, a small triangle points to the current objective. |
-| Buddy (Stage 3) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/buddy.png" width="64"> | Green survivor you can rescue; zombies only target them on-screen and off-screen catches just respawn them. Touch on foot to follow (70% speed), touch while driving to pick up. Helps chip away at walls you bash. |
-| Survivors (Stage 4) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/survivor.png" width="64"> | Civilians to evacuate by car; they idle until approached, then follow at ~1/3 speed. On-screen zombie contact converts them. They only board cars; safe capacity starts at five and grows by five when you sideswipe parked cars, with speed loss based on how full the car is. |
+<table>
+  <colgroup>
+    <col style="width:20%">
+    <col>
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Image</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Player</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/player.png" width="64"></td>
+      <td>Blue circle with small hands; controlled with WASD/arrow keys. When carrying fuel, a tiny yellow square appears near the sprite.</td>
+    </tr>
+    <tr>
+      <td>Zombie (Normal)</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/zombie-normal.png" width="64"></td>
+      <td>Chases the player once detected; out of sight it periodically switches movement modes.</td>
+    </tr>
+    <tr>
+      <td>Car</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/car.png" width="64"></td>
+      <td>Driveable escape vehicle with durability; wall hits and zombie collisions reduce health. If it breaks, you're on foot until you find another car. Ramming a parked car restores health (and in Stage 4 increases safe passenger capacity). After ~5 minutes, a small triangle points to the current objective.</td>
+    </tr>
+    <tr>
+      <td>Buddy (Stage 3)</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/buddy.png" width="64"></td>
+      <td>Green survivor you can rescue; zombies only target them on-screen and off-screen catches just respawn them. Touch on foot to follow (70% speed), touch while driving to pick up. Helps chip away at walls you bash.</td>
+    </tr>
+    <tr>
+      <td>Survivors (Stage 4)</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/survivor.png" width="64"></td>
+      <td>Civilians to evacuate by car; they idle until approached, then follow at ~1/3 speed. On-screen zombie contact converts them. They only board cars; safe capacity starts at five and grows by five when you sideswipe parked cars, with speed loss based on how full the car is.</td>
+    </tr>
+  </tbody>
+</table>
 
 #### Items
 
-| Name | Image | Notes |
-| --- | --- | --- |
-| Flashlight | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/flashlight.png" width="64"> | Each pickup expands your visible radius by about 20% (grab two to reach the max boost). |
-| Fuel Can (Stages 2 & 3) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/fuel.png" width="64"> | Must be collected before driving the car in fuel-run stages. |
-| Steel Beam (optional) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"> | Same collision as inner walls but with 1.5x durability. |
+<table>
+  <colgroup>
+    <col style="width:20%">
+    <col>
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Image</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Flashlight</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/flashlight.png" width="64"></td>
+      <td>Each pickup expands your visible radius by about 20% (grab two to reach the max boost).</td>
+    </tr>
+    <tr>
+      <td>Fuel Can (Stages 2 & 3)</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/fuel.png" width="64"></td>
+      <td>Must be collected before driving the car in fuel-run stages.</td>
+    </tr>
+    <tr>
+      <td>Steel Beam (optional)</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"></td>
+      <td>Same collision as inner walls but with 1.5x durability.</td>
+    </tr>
+  </tbody>
+</table>
 
 #### Environment
 
-| Name | Image | Notes |
-| --- | --- | --- |
-| Outer Wall | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-outer.png" width="64"> | Gray perimeter walls that are nearly indestructible; each side has a single opening (exit). |
-| Inner Wall | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-inner.png" width="64"> | Beige interior walls with durability. The player can break them by repeated collisions; zombies wear them down slowly; the car cannot break them. |
+<table>
+  <colgroup>
+    <col style="width:20%">
+    <col>
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Image</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Outer Wall</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-outer.png" width="64"></td>
+      <td>Gray perimeter walls that are nearly indestructible; each side has a single opening (exit).</td>
+    </tr>
+    <tr>
+      <td>Inner Wall</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-inner.png" width="64"></td>
+      <td>Beige interior walls with durability. The player can break them by repeated collisions; zombies wear them down slowly; the car cannot break them.</td>
+    </tr>
+  </tbody>
+</table>
 
 ### Win/Lose Conditions
 

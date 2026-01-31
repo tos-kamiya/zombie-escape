@@ -70,28 +70,110 @@
 
 #### キャラクター
 
-| 名前 | 画像 | メモ |
-| --- | --- | --- |
-| プレイヤー | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/player.png" width="64"> | 手が付いた青い丸。WASDキー/矢印キーで操作。燃料所持中は右下に小さな黄色の四角が表示されます。 |
-| ゾンビ | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/zombie-normal.png" width="64"> | プレイヤー（または車）を発見すると追跡。視界外では一定時間ごとに移動モードが切り替わります。 |
-| 車 | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/car.png" width="64"> | 接触で乗車。耐久力は壁衝突や轢きで減少し、0で破壊。運転中に待機車へぶつかると耐久力全回復（Stage 4 は定員+5）。約5分後、目的地を示す三角マーカーが表示されます。 |
-| 相棒 (Stage 3) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/buddy.png" width="64"> | 画面内のときだけゾンビに狙われ、画面外で触れられても別地点に再出現。徒歩で触れると追尾（約70%速度）、車で触れると回収。壁や鉄筋を叩くと寄って削ってくれます。 |
-| 生存者 (Stage 4) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/survivor.png" width="64"> | 近づくと約1/3速度で追従。画面内でゾンビに触れられると即変異。車にのみ乗車し、定員は最初5人。運転中に待機車へぶつかると定員+5。上限超過で車が損傷し全員降車。 |
+<table>
+  <colgroup>
+    <col style="width:20%">
+    <col>
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th>名前</th>
+      <th>画像</th>
+      <th>メモ</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>プレイヤー</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/player.png" width="64"></td>
+      <td>手が付いた青い丸。WASDキー/矢印キーで操作。燃料所持中は右下に小さな黄色の四角が表示されます。</td>
+    </tr>
+    <tr>
+      <td>ゾンビ</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/zombie-normal.png" width="64"></td>
+      <td>プレイヤー（または車）を発見すると追跡。視界外では一定時間ごとに移動モードが切り替わります。</td>
+    </tr>
+    <tr>
+      <td>車</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/car.png" width="64"></td>
+      <td>接触で乗車。耐久力は壁衝突や轢きで減少し、0で破壊。運転中に待機車へぶつかると耐久力全回復（Stage 4 は定員+5）。約5分後、目的地を示す三角マーカーが表示されます。</td>
+    </tr>
+    <tr>
+      <td>相棒 (Stage 3)</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/buddy.png" width="64"></td>
+      <td>画面内のときだけゾンビに狙われ、画面外で触れられても別地点に再出現。徒歩で触れると追尾（約70%速度）、車で触れると回収。壁や鉄筋を叩くと寄って削ってくれます。</td>
+    </tr>
+    <tr>
+      <td>生存者 (Stage 4)</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/survivor.png" width="64"></td>
+      <td>近づくと約1/3速度で追従。画面内でゾンビに触れられると即変異。車にのみ乗車し、定員は最初5人。運転中に待機車へぶつかると定員+5。上限超過で車が損傷し全員降車。</td>
+    </tr>
+  </tbody>
+</table>
 
 #### アイテム
 
-| 名前 | 画像 | メモ |
-| --- | --- | --- |
-| 懐中電灯 | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/flashlight.png" width="64"> | 拾うたびに視界が約20%ずつ拡大（例: 2個で約1.6倍）。 |
-| 燃料缶 (Stage 2/3) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/fuel.png" width="64"> | 燃料なしで始まるステージのみ出現。拾うと燃料所持インジケーターが表示され、車に乗れるようになります。 |
-| 鉄筋 (オプション) | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"> | 斜線入りの障害物。内壁と同じく通行不可で、耐久力は内壁の1.5倍。内壁と重なる場合は内壁破壊後に出現します。 |
+<table>
+  <colgroup>
+    <col style="width:20%">
+    <col>
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th>名前</th>
+      <th>画像</th>
+      <th>メモ</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>懐中電灯</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/flashlight.png" width="64"></td>
+      <td>拾うたびに視界が約20%ずつ拡大（例: 2個で約1.6倍）。</td>
+    </tr>
+    <tr>
+      <td>燃料缶 (Stage 2/3)</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/fuel.png" width="64"></td>
+      <td>燃料なしで始まるステージのみ出現。拾うと燃料所持インジケーターが表示され、車に乗れるようになります。</td>
+    </tr>
+    <tr>
+      <td>鉄筋 (オプション)</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"></td>
+      <td>斜線入りの障害物。内壁と同じく通行不可で、耐久力は内壁の1.5倍。内壁と重なる場合は内壁破壊後に出現します。</td>
+    </tr>
+  </tbody>
+</table>
 
 #### 環境
 
-| 名前 | 画像 | メモ |
-| --- | --- | --- |
-| 外周壁 | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-outer.png" width="64"> | グレーの外周壁。破壊不能に近く、各辺に1つの開口部（出口）があります。 |
-| 内部壁 | <img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-inner.png" width="64"> | ベージュの内部壁。耐久力を持ち、プレイヤーは繰り返し接触して破壊できます。ゾンビも削れますが遅く、車では破壊できません。 |
+<table>
+  <colgroup>
+    <col style="width:20%">
+    <col>
+    <col>
+  </colgroup>
+  <thead>
+    <tr>
+      <th>名前</th>
+      <th>画像</th>
+      <th>メモ</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>外周壁</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-outer.png" width="64"></td>
+      <td>グレーの外周壁。破壊不能に近く、各辺に1つの開口部（出口）があります。</td>
+    </tr>
+    <tr>
+      <td>内部壁</td>
+      <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/wall-inner.png" width="64"></td>
+      <td>ベージュの内部壁。耐久力を持ち、プレイヤーは繰り返し接触して破壊できます。ゾンビも削れますが遅く、車では破壊できません。</td>
+    </tr>
+  </tbody>
+</table>
 
 ### 勝利・敗北条件
 
