@@ -72,6 +72,7 @@ def gameplay_screen(
     seed: int | None,
     render_assets: "RenderAssets",
     debug_mode: bool = False,
+    show_fps: bool = False,
 ) -> ScreenTransition:
     """Main gameplay loop that returns the next screen transition."""
 
@@ -84,6 +85,7 @@ def gameplay_screen(
     game_data = initialize_game_state(config, stage)
     game_data.state.seed = applied_seed
     game_data.state.debug_mode = debug_mode
+    game_data.state.show_fps = show_fps
     if debug_mode and stage.endurance_stage:
         goal_ms = max(0, stage.endurance_goal_ms)
         if goal_ms > 0:

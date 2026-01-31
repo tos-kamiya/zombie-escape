@@ -753,6 +753,7 @@ def _draw_status_bar(
     debug_mode: bool = False,
     zombie_group: sprite.Group | None = None,
     falling_spawn_carry: int | None = None,
+    show_fps: bool = False,
     fps: float | None = None,
 ) -> None:
     """Render a compact status bar with current config flags and stage info."""
@@ -796,12 +797,10 @@ def _draw_status_bar(
             tracker = sum(1 for z in zombies if z.tracker)
             wall = sum(1 for z in zombies if z.wall_hugging)
             normal = max(0, total - tracker - wall)
-            parts.append(f"Z:{total} N:{normal} T:{tracker} W:{wall}")
+            debug_counts = f"Z:{total} N:{normal} T:{tracker} W:{wall}"
             if falling_spawn_carry is not None:
-                parts.append(f"C:{max(0, falling_spawn_carry)}")
-        if fps is not None:
-            parts.append(f"FPS:{fps:.1f}")
-
+                debug_counts = f"{debug_counts} C:{max(0, falling_spawn_carry)}"
+            parts.append(debug_counts)
     status_text = " | ".join(parts)
     color = LIGHT_GRAY
 
@@ -818,7 +817,7 @@ def _draw_status_bar(
                 right=bar_rect.right - 12, centery=bar_rect.centery
             )
             screen.blit(seed_surface, seed_rect)
-        if debug_mode and fps is not None:
+        if show_fps and fps is not None:
             fps_text = f"FPS:{fps:.1f}"
             fps_surface = font.render(fps_text, False, LIGHT_GRAY)
             fps_rect = fps_surface.get_rect(
@@ -1737,6 +1736,7 @@ def draw(
         debug_mode=state.debug_mode,
         zombie_group=zombie_group,
         falling_spawn_carry=state.falling_spawn_carry,
+        show_fps=state.show_fps,
         fps=fps,
     )
     if do_flip:

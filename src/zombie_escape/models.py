@@ -105,6 +105,7 @@ class ProgressState:
     last_zombie_spawn_time: int
     dawn_carbonized: bool
     debug_mode: bool
+    show_fps: bool
     falling_zombies: list[FallingZombie]
     falling_spawn_carry: int
     dust_rings: list[DustRing]

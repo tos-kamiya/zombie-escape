@@ -44,6 +44,11 @@ def _parse_cli_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:
         help="Enable debugging aids for Stage 5 and hide pause overlay",
     )
     parser.add_argument(
+        "--show-fps",
+        action="store_true",
+        help="Show FPS overlay during gameplay",
+    )
+    parser.add_argument(
         "--profile",
         action="store_true",
         help="Profile gameplay and write cProfile output to disk",
@@ -105,6 +110,7 @@ def main() -> None:
     clock = pygame.time.Clock()
 
     debug_mode = bool(args.debug)
+    show_fps = bool(args.show_fps) or debug_mode
     cli_seed_text, cli_seed_is_auto = _sanitize_seed_text(args.seed)
     title_seed_text, title_seed_is_auto = cli_seed_text, cli_seed_is_auto
     last_stage_id: str | None = None
@@ -135,6 +141,7 @@ def main() -> None:
         seed: int | None,
         render_assets: RenderAssets,
         debug_mode: bool,
+        show_fps: bool,
     ) -> ScreenTransition:
         import cProfile
         import pstats
@@ -152,6 +159,7 @@ def main() -> None:
                 seed=seed,
                 render_assets=render_assets,
                 debug_mode=debug_mode,
+                show_fps=show_fps,
             )
         finally:
             output_path = Path(args.profile_output)
@@ -220,6 +228,7 @@ def main() -> None:
                         seed=seed_value,
                         render_assets=render_assets,
                         debug_mode=debug_mode,
+                        show_fps=show_fps,
                     )
                 except SystemExit:
                     running = False
