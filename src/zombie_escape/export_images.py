@@ -41,7 +41,7 @@ from .render_assets import (
     resolve_wall_colors,
     RUBBLE_ROTATION_DEG,
 )
-from .colors import FALL_ZONE_FLOOR_PRIMARY
+from .colors import FALL_ZONE_FLOOR_PRIMARY, FALL_ZONE_FLOOR_SECONDARY
 from .render_constants import (
     FALLING_ZOMBIE_COLOR,
     PITFALL_ABYSS_COLOR,
@@ -292,8 +292,20 @@ def export_images(
     _save_surface(falling, falling_path, scale=output_scale)
     saved.append(falling_path)
 
-    fall_zone = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
-    fall_zone.fill(FALL_ZONE_FLOOR_PRIMARY)
+    fall_zone_size = cell_size * 2
+    fall_zone = pygame.Surface((fall_zone_size, fall_zone_size), pygame.SRCALPHA)
+    for y in range(2):
+        for x in range(2):
+            color = (
+                FALL_ZONE_FLOOR_SECONDARY
+                if (x + y) % 2 == 0
+                else FALL_ZONE_FLOOR_PRIMARY
+            )
+            pygame.draw.rect(
+                fall_zone,
+                color,
+                (x * cell_size, y * cell_size, cell_size, cell_size),
+            )
     fall_zone_path = out / "fall-zone.png"
     _save_surface(fall_zone, fall_zone_path, scale=output_scale)
     saved.append(fall_zone_path)
