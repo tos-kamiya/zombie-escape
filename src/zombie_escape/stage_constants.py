@@ -62,6 +62,19 @@ def _build_stage18_pitfall_zones(
         pitfall_cells.discard((x, 2))
         pitfall_cells.discard((x, grid_rows - 3))
 
+    # Jagged room edges: every 2 tiles, let the room "bite" into pitfall bands.
+    for row in range(rooms_per_side):
+        for col in range(rooms_per_side):
+            start_x = 3 + col * (room_size + gap_width)
+            start_y = 3 + row * (room_size + gap_width)
+            for offset in range(0, room_size, 2):
+                x = start_x + offset
+                y = start_y + offset
+                pitfall_cells.discard((x, start_y - 1))
+                pitfall_cells.discard((x, start_y + room_size))
+                pitfall_cells.discard((start_x - 1, y))
+                pitfall_cells.discard((start_x + room_size, y))
+
     pitfall_zones = [(x, y, 1, 1) for x, y in sorted(pitfall_cells)]
     room_cells: set[tuple[int, int]] = set()
     for row in range(rooms_per_side):
@@ -366,9 +379,10 @@ STAGES: list[Stage] = [
         initial_interior_spawn_rate=0.2,
         exterior_spawn_weight=0.2,
         interior_spawn_weight=0.8,
-        zombie_normal_ratio=0.5,
-        zombie_tracker_ratio=0.5,
+        zombie_normal_ratio=0.4,
+        zombie_tracker_ratio=0.6,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        wall_rubble_ratio=0.15,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"
