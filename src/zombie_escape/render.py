@@ -375,10 +375,27 @@ def show_message_wrapped(
     except pygame.error as e:
         print(f"Error rendering font or surface: {e}")
 
+
+def compute_floor_cells(
+    *,
+    cols: int,
+    rows: int,
+    wall_cells: set[tuple[int, int]],
+    outer_wall_cells: set[tuple[int, int]],
+    pitfall_cells: set[tuple[int, int]],
+) -> set[tuple[int, int]]:
+    """Return floor cells for the minimap base pass."""
+    # The layout wall sets are updated when walls are destroyed, so removing
+    # those cells here makes the minimap treat destroyed walls as floor.
+    blocked = wall_cells | outer_wall_cells | pitfall_cells
+    return {(x, y) for y in range(rows) for x in range(cols) if (x, y) not in blocked}
+
+
 def draw_level_overview(
     assets: RenderAssets,
     surface: surface.Surface,
     wall_group: sprite.Group,
+    floor_cells: set[tuple[int, int]],
     player: Player | None,
     car: Car | None,
     waiting_cars: list[Car] | None,
@@ -389,9 +406,6 @@ def draw_level_overview(
     shoes: list[Shoes] | None = None,
     buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
-    pitfall_cells: set[tuple[int, int]] | None = None,
-    wall_cells: set[tuple[int, int]] | None = None,
-    outer_wall_cells: set[tuple[int, int]] | None = None,
     palette_key: str | None = None,
 ) -> None:
     palette = get_environment_palette(palette_key)
@@ -401,25 +415,17 @@ def draw_level_overview(
     surface.fill(dark_floor)
     cell_size = assets.internal_wall_grid_snap
     if cell_size > 0:
-        cols = max(0, surface.get_width() // cell_size)
-        rows = max(0, surface.get_height() // cell_size)
-        wall_set = wall_cells or set()
-        outer_set = outer_wall_cells or set()
-        pitfall_set = pitfall_cells or set()
-        for y in range(rows):
-            for x in range(cols):
-                if (x, y) in wall_set or (x, y) in outer_set or (x, y) in pitfall_set:
-                    continue
-                pygame.draw.rect(
-                    surface,
-                    floor_color,
-                    pygame.Rect(
-                        x * cell_size,
-                        y * cell_size,
-                        cell_size,
-                        cell_size,
-                    ),
-                )
+        for x, y in floor_cells:
+            pygame.draw.rect(
+                surface,
+                floor_color,
+                pygame.Rect(
+                    x * cell_size,
+                    y * cell_size,
+                    cell_size,
+                    cell_size,
+                ),
+            )
 
     for wall in wall_group:
         if wall.max_health > 0:

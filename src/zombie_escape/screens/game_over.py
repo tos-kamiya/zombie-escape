@@ -21,6 +21,7 @@ from ..models import GameData, Stage
 from ..render import (
     RenderAssets,
     _draw_status_bar,
+    compute_floor_cells,
     draw_level_overview,
     show_message,
 )
@@ -63,29 +64,37 @@ def game_over_screen(
             level_width = level_rect.width
             level_height = level_rect.height
             overview_surface = pygame.Surface((level_width, level_height))
+            cell_size = render_assets.internal_wall_grid_snap
+            floor_cells: set[tuple[int, int]] = set()
+            if cell_size > 0:
+                floor_cells = compute_floor_cells(
+                    cols=max(0, level_width // cell_size),
+                    rows=max(0, level_height // cell_size),
+                    wall_cells=game_data.layout.wall_cells,
+                    outer_wall_cells=game_data.layout.outer_wall_cells,
+                    pitfall_cells=game_data.layout.pitfall_cells,
+                )
             footprints_to_draw = state.footprints if footprints_enabled else []
             draw_level_overview(
                 render_assets,
                 overview_surface,
                 wall_group,
+                floor_cells,
                 game_data.player,
                 game_data.car,
                 game_data.waiting_cars,
                 footprints_to_draw,
                 fuel=game_data.fuel,
                 flashlights=game_data.flashlights or [],
-                    shoes=game_data.shoes or [],
-                    buddies=[
-                        survivor
-                        for survivor in game_data.groups.survivor_group
-                        if survivor.alive() and survivor.is_buddy and not survivor.rescued
-                    ],
-                    survivors=list(game_data.groups.survivor_group),
-                    pitfall_cells=game_data.layout.pitfall_cells,
-                    wall_cells=game_data.layout.wall_cells,
-                    outer_wall_cells=game_data.layout.outer_wall_cells,
-                    palette_key=state.ambient_palette_key,
-                )
+                shoes=game_data.shoes or [],
+                buddies=[
+                    survivor
+                    for survivor in game_data.groups.survivor_group
+                    if survivor.alive() and survivor.is_buddy and not survivor.rescued
+                ],
+                survivors=list(game_data.groups.survivor_group),
+                palette_key=state.ambient_palette_key,
+            )
 
             level_aspect = level_width / max(1, level_height)
             screen_aspect = screen_width / max(1, screen_height)
