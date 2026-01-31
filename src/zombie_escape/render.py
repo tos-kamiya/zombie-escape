@@ -453,6 +453,8 @@ def draw_level_overview(
                 pygame.draw.rect(surface, fill_color, wall.rect)
     now = pygame.time.get_ticks()
     for fp in footprints:
+        if not fp.visible:
+            continue
         age = now - fp.time
         fade = 1 - (age / assets.footprint_lifetime_ms)
         fade = max(assets.footprint_min_fade, fade)
@@ -1330,6 +1332,8 @@ def _draw_footprints(
         return
     now = pygame.time.get_ticks()
     for fp in footprints:
+        if not fp.visible:
+            continue
         age = now - fp.time
         fade = 1 - (age / assets.footprint_lifetime_ms)
         fade = max(assets.footprint_min_fade, fade)

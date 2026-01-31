@@ -1557,13 +1557,23 @@ def _zombie_update_tracker_target(
     if not nearby:
         return
 
-    nearby.sort(key=lambda fp: fp.time, reverse=True)
+    nearby.sort(key=lambda fp: fp.time)
     if last_target_time is not None:
         newer = [fp for fp in nearby if fp.time > last_target_time]
     else:
         newer = nearby
 
-    for fp in newer[:ZOMBIE_TRACKER_SCENT_TOP_K]:
+    if use_far_scan or last_target_time is None:
+        candidates = list(reversed(newer))[:ZOMBIE_TRACKER_SCENT_TOP_K]
+    else:
+        newer_threshold = last_target_time + ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS
+        very_new = [fp for fp in newer if fp.time >= newer_threshold]
+        if very_new:
+            candidates = list(reversed(very_new))[:ZOMBIE_TRACKER_SCENT_TOP_K]
+        else:
+            candidates = newer[:ZOMBIE_TRACKER_SCENT_TOP_K]
+
+    for fp in candidates:
         pos = fp.pos
         fp_time = fp.time
         if _line_of_sight_clear((zombie.x, zombie.y), pos, walls):

@@ -28,6 +28,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         overview_created=False,
         footprints=[],
         last_footprint_pos=None,
+        footprint_visible_toggle=True,
         elapsed_play_ms=0,
         has_fuel=starts_with_fuel,
         flashlight_count=initial_flashlights,

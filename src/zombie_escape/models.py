@@ -66,8 +66,9 @@ class DustRing:
 class Footprint:
     """Tracked player footprint."""
 
-    pos: tuple[float, float]
+    pos: tuple[int, int]
     time: int
+    visible: bool = True
 
 
 @dataclass
@@ -81,7 +82,8 @@ class ProgressState:
     scaled_overview: surface.Surface | None
     overview_created: bool
     footprints: list[Footprint]
-    last_footprint_pos: tuple[float, float] | None
+    last_footprint_pos: tuple[int, int] | None
+    footprint_visible_toggle: bool
     elapsed_play_ms: int
     has_fuel: bool
     flashlight_count: int
