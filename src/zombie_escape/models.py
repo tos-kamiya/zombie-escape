@@ -147,38 +147,52 @@ class GameData:
 
 @dataclass(frozen=True)
 class Stage:
+    # Id, name, description
     id: str
     name_key: str
     description_key: str
     available: bool = True
+
+    # Map layout
     tile_size: int = 50
     grid_cols: int = DEFAULT_GRID_COLS
     grid_rows: int = DEFAULT_GRID_ROWS
+    wall_algorithm: str = "default"
+    wall_rubble_ratio: float = 0.0
+    fall_spawn_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
+    fall_spawn_floor_ratio: float = 0.0
+    pitfall_density: float = 0.0
+    pitfall_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
+
+    # Stage objective
     requires_fuel: bool = False
     buddy_required_count: int = 0
     rescue_stage: bool = False
     endurance_stage: bool = False
     endurance_goal_ms: int = 0
+
+    # Items
     fuel_spawn_count: int = 1
     initial_flashlight_count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT
     initial_shoes_count: int = DEFAULT_SHOES_SPAWN_COUNT
-    survivor_spawn_rate: float = SURVIVOR_SPAWN_RATE
+    waiting_car_target_count: int = 1
+
+    # Zombie spawning/aging
+    # - initial_interior_spawn_rate: fraction of interior floor tiles to seed.
+    # - spawn weights: pick area by weight (normalized).
+    # - zombie ratios: pick variant by weight (normalized).
     spawn_interval_ms: int = ZOMBIE_SPAWN_DELAY_MS
     initial_interior_spawn_rate: float = 0.015
     exterior_spawn_weight: float = 1.0
     interior_spawn_weight: float = 0.0
     interior_fall_spawn_weight: float = 0.0
-    fall_spawn_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
-    fall_spawn_floor_ratio: float = 0.0
-    pitfall_density: float = 0.0
-    pitfall_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
     zombie_tracker_ratio: float = 0.0
     zombie_wall_hugging_ratio: float = 0.0
     zombie_normal_ratio: float = 1.0
     zombie_aging_duration_frames: int = ZOMBIE_AGING_DURATION_FRAMES
-    waiting_car_target_count: int = 1
-    wall_algorithm: str = "default"
-    wall_rubble_ratio: float = 0.0
+
+    # Survivor spawning
+    survivor_spawn_rate: float = SURVIVOR_SPAWN_RATE
 
     @property
     def name(self) -> str:
