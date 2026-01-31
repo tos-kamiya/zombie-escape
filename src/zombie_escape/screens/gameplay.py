@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pygame
 from pygame import surface, time
 
-from ..colors import LIGHT_GRAY, RED, WHITE, YELLOW
+from ..colors import BLACK, LIGHT_GRAY, RED, WHITE, YELLOW
 from ..gameplay_constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
     SURVIVAL_TIME_ACCEL_SUBSTEPS,
@@ -47,7 +47,14 @@ from ..gameplay.spawn import _alive_waiting_cars
 from ..world_grid import build_wall_index
 from ..localization import translate as tr
 from ..models import Stage
-from ..render import draw, prewarm_fog_overlays, show_message, show_message_wrapped
+from ..render import (
+    compute_floor_cells,
+    draw,
+    draw_level_overview,
+    prewarm_fog_overlays,
+    show_message,
+    show_message_wrapped,
+)
 from ..rng import generate_seed, seed_rng
 from ..progress import record_stage_clear
 from ..screens import (
@@ -116,6 +123,7 @@ def gameplay_screen(
     paused_manual = False
     paused_focus = False
     ignore_focus_loss_until = 0
+    debug_overview = False
     controller = init_first_controller()
     joystick = init_first_joystick() if controller is None else None
     _set_mouse_hidden(pygame.mouse.get_focused())
@@ -197,6 +205,8 @@ def gameplay_screen(
 
     spawn_initial_zombies(game_data, player, layout_data, config)
     update_footprints(game_data, config)
+    level_rect = game_data.layout.field_rect
+    overview_surface = pygame.Surface((level_rect.width, level_rect.height))
     while True:
         dt = clock.tick(fps) / 1000.0
         current_fps = clock.get_fps()
@@ -290,6 +300,8 @@ def gameplay_screen(
                         return ScreenTransition(ScreenID.TITLE)
                     if event.key == pygame.K_p:
                         paused_manual = not paused_manual
+                    if event.key == pygame.K_o:
+                        debug_overview = not debug_overview
                     continue
                 if paused_manual:
                     if event.key == pygame.K_ESCAPE:
@@ -428,6 +440,82 @@ def gameplay_screen(
         player = game_data.player
         if player is None:
             raise ValueError("Player missing from game data")
+
+        if debug_overview:
+            cell_size = render_assets.internal_wall_grid_snap
+            floor_cells: set[tuple[int, int]] = set()
+            if cell_size > 0:
+                floor_cells = compute_floor_cells(
+                    cols=max(0, level_rect.width // cell_size),
+                    rows=max(0, level_rect.height // cell_size),
+                    wall_cells=game_data.layout.wall_cells,
+                    outer_wall_cells=game_data.layout.outer_wall_cells,
+                    pitfall_cells=game_data.layout.pitfall_cells,
+                )
+            footprints_enabled = config.get("footprints", {}).get("enabled", True)
+            footprints_to_draw = (
+                game_data.state.footprints if footprints_enabled else []
+            )
+            draw_level_overview(
+                render_assets,
+                overview_surface,
+                game_data.groups.wall_group,
+                floor_cells,
+                game_data.player,
+                game_data.car,
+                game_data.waiting_cars,
+                footprints_to_draw,
+                fuel=game_data.fuel,
+                flashlights=game_data.flashlights or [],
+                shoes=game_data.shoes or [],
+                buddies=[
+                    survivor
+                    for survivor in game_data.groups.survivor_group
+                    if survivor.alive() and survivor.is_buddy and not survivor.rescued
+                ],
+                survivors=list(game_data.groups.survivor_group),
+                palette_key=game_data.state.ambient_palette_key,
+            )
+            zombie_color = (200, 80, 80)
+            zombie_radius = max(2, int(render_assets.player_radius * 1.2))
+            for zombie in game_data.groups.zombie_group:
+                if zombie.alive():
+                    pygame.draw.circle(
+                        overview_surface,
+                        zombie_color,
+                        zombie.rect.center,
+                        zombie_radius,
+                    )
+            cam_offset = game_data.camera.camera
+            camera_rect = pygame.Rect(
+                -cam_offset.x,
+                -cam_offset.y,
+                screen_width,
+                screen_height,
+            )
+            pygame.draw.rect(overview_surface, WHITE, camera_rect, width=1)
+            level_aspect = level_rect.width / max(1, level_rect.height)
+            screen_aspect = screen_width / max(1, screen_height)
+            if level_aspect > screen_aspect:
+                scaled_w = screen_width - 40
+                scaled_h = int(scaled_w / level_aspect)
+            else:
+                scaled_h = screen_height - 40
+                scaled_w = int(scaled_h * level_aspect)
+            scaled_w = max(1, scaled_w)
+            scaled_h = max(1, scaled_h)
+            scaled_overview = pygame.transform.smoothscale(
+                overview_surface, (scaled_w, scaled_h)
+            )
+            screen.fill(BLACK)
+            screen.blit(
+                scaled_overview,
+                scaled_overview.get_rect(
+                    center=(screen_width // 2, screen_height // 2)
+                ),
+            )
+            present(screen)
+            continue
 
         car_hint_conf = config.get("car_hint", {})
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)

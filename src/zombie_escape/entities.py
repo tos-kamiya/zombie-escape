@@ -1266,6 +1266,7 @@ def _zombie_tracker_movement(
     grid_cols: int,
     grid_rows: int,
     outer_wall_cells: set[tuple[int, int]] | None,
+    pitfall_cells: set[tuple[int, int]] | None,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if not is_in_sight:
@@ -1284,6 +1285,7 @@ def _zombie_tracker_movement(
                 grid_cols=grid_cols,
                 grid_rows=grid_rows,
                 outer_wall_cells=outer_wall_cells,
+                pitfall_cells=pitfall_cells,
             )
         _zombie_update_tracker_target(zombie, footprints, walls)
         if zombie.tracker_target_pos is not None:
@@ -1295,6 +1297,7 @@ def _zombie_tracker_movement(
             grid_cols=grid_cols,
             grid_rows=grid_rows,
             outer_wall_cells=outer_wall_cells,
+            pitfall_cells=pitfall_cells,
         )
     return _zombie_move_toward(zombie, player_center)
 
@@ -1309,6 +1312,7 @@ def _zombie_wander_movement(
     grid_cols: int,
     grid_rows: int,
     outer_wall_cells: set[tuple[int, int]] | None,
+    pitfall_cells: set[tuple[int, int]] | None,
 ) -> tuple[float, float]:
     return _zombie_wander_move(
         zombie,
@@ -1317,6 +1321,7 @@ def _zombie_wander_movement(
         grid_cols=grid_cols,
         grid_rows=grid_rows,
         outer_wall_cells=outer_wall_cells,
+        pitfall_cells=pitfall_cells,
     )
 
 
@@ -1382,6 +1387,7 @@ def _zombie_wall_hug_movement(
     grid_cols: int,
     grid_rows: int,
     outer_wall_cells: set[tuple[int, int]] | None,
+    pitfall_cells: set[tuple[int, int]] | None,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if zombie.wall_hug_angle is None:
@@ -1425,6 +1431,7 @@ def _zombie_wall_hug_movement(
                 grid_cols=grid_cols,
                 grid_rows=grid_rows,
                 outer_wall_cells=outer_wall_cells,
+                pitfall_cells=pitfall_cells,
             )
 
     sensor_distance = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius
@@ -1487,6 +1494,7 @@ def _zombie_normal_movement(
     grid_cols: int,
     grid_rows: int,
     outer_wall_cells: set[tuple[int, int]] | None,
+    pitfall_cells: set[tuple[int, int]] | None,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_SIGHT_RANGE)
     if not is_in_sight:
@@ -1497,6 +1505,7 @@ def _zombie_normal_movement(
             grid_cols=grid_cols,
             grid_rows=grid_rows,
             outer_wall_cells=outer_wall_cells,
+            pitfall_cells=pitfall_cells,
         )
     return _zombie_move_toward(zombie, player_center)
 
@@ -1629,6 +1638,7 @@ def _zombie_wander_move(
     grid_cols: int,
     grid_rows: int,
     outer_wall_cells: set[tuple[int, int]] | None,
+    pitfall_cells: set[tuple[int, int]] | None,
 ) -> tuple[float, float]:
     now = pygame.time.get_ticks()
     changed_angle = False
@@ -1695,6 +1705,26 @@ def _zombie_wander_move(
 
     move_x = math.cos(zombie.wander_angle) * zombie.speed
     move_y = math.sin(zombie.wander_angle) * zombie.speed
+    if pitfall_cells is not None:
+        avoid_x, avoid_y = zombie._avoid_pitfalls(pitfall_cells, cell_size)
+        move_x += avoid_x
+        move_y += avoid_y
+        if cell_size > 0:
+            next_x = zombie.x + move_x
+            next_y = zombie.y + move_y
+            next_cell = (int(next_x // cell_size), int(next_y // cell_size))
+            if next_cell in pitfall_cells:
+                zombie.wander_angle = (zombie.wander_angle + math.pi) % math.tau
+                move_x = math.cos(zombie.wander_angle) * zombie.speed
+                move_y = math.sin(zombie.wander_angle) * zombie.speed
+                avoid_x, avoid_y = zombie._avoid_pitfalls(pitfall_cells, cell_size)
+                move_x += avoid_x
+                move_y += avoid_y
+                next_x = zombie.x + move_x
+                next_y = zombie.y + move_y
+                next_cell = (int(next_x // cell_size), int(next_y // cell_size))
+                if next_cell in pitfall_cells:
+                    return 0.0, 0.0
     return move_x, move_y
 
 
@@ -2015,11 +2045,8 @@ class Zombie(pygame.sprite.Sprite):
             grid_cols,
             grid_rows,
             outer_wall_cells,
+            pitfall_cells,
         )
-        if pitfall_cells is not None:
-            avoid_x, avoid_y = self._avoid_pitfalls(pitfall_cells, cell_size)
-            move_x += avoid_x
-            move_y += avoid_y
         if dist_to_player_sq <= avoid_radius_sq or self.wall_hugging:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
         if wall_cells is not None:
