@@ -120,7 +120,7 @@ def apply_window_scale(
         (window_width, window_height), pygame.RESIZABLE
     )
     _update_window_size((window_width, window_height), source="apply_scale")
-    _update_window_caption(window_width, window_height)
+    _update_window_caption()
 
     if game_data is not None:
         game_data.state.overview_created = False
@@ -149,7 +149,7 @@ def toggle_fullscreen(
             (window_width, window_height), pygame.RESIZABLE
         )
         _restore_window()
-        _update_window_caption(window_width, window_height)
+        _update_window_caption()
         _update_window_size((window_width, window_height), source="toggle_windowed")
     else:
         last_window_scale = current_window_scale
@@ -157,7 +157,7 @@ def toggle_fullscreen(
         window = pygame.display.set_mode(_fetch_window_size(None), pygame.RESIZABLE)
         _maximize_window()
         window_width, window_height = _fetch_window_size(window)
-        _update_window_caption(window_width, window_height)
+        _update_window_caption()
         _update_window_size((window_width, window_height), source="toggle_fullscreen")
     pygame.mouse.set_visible(not current_maximized)
     if game_data is not None:
@@ -188,7 +188,7 @@ def sync_window_size(
         scale = max(WINDOW_SCALE_MIN, min(WINDOW_SCALE_MAX, min(scale_x, scale_y)))
         current_window_scale = scale
         last_window_scale = scale
-    _update_window_caption(window_width, window_height)
+    _update_window_caption()
     if game_data is not None:
         game_data.state.overview_created = False
 
@@ -219,8 +219,8 @@ def _update_window_size(size: tuple[int, int], *, source: str) -> None:
         last_logged_window_size = size
 
 
-def _update_window_caption(window_width: int, window_height: int) -> None:
-    pygame.display.set_caption(f"Zombie Escape ({window_width}x{window_height})")
+def _update_window_caption() -> None:
+    pygame.display.set_caption("Zombie Escape")
 
 
 def _maximize_window() -> None:
