@@ -7,6 +7,74 @@ from .gameplay_constants import SURVIVOR_SPAWN_RATE
 from .level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from .models import Stage
 
+
+def _build_stage18_pitfall_zones(
+    *,
+    grid_cols: int,
+    grid_rows: int,
+    rooms_per_side: int,
+    room_size: int,
+    gap_width: int,
+) -> list[tuple[int, int, int, int]]:
+    pitfall_cells: set[tuple[int, int]] = set()
+
+    # Outer pitfall ring inside the outer wall band.
+    for y in range(2, grid_rows - 2):
+        pitfall_cells.add((2, y))
+        pitfall_cells.add((grid_cols - 3, y))
+    for x in range(2, grid_cols - 2):
+        pitfall_cells.add((x, 2))
+        pitfall_cells.add((x, grid_rows - 3))
+
+    # Room gap bands.
+    inner_start = 3
+    inner_end = grid_cols - 4
+    gap_cols: list[int] = []
+    gap_rows: list[int] = []
+    step = room_size + gap_width
+    for idx in range(1, rooms_per_side):
+        gap_start = inner_start + idx * step - gap_width
+        gap_cols.extend(range(gap_start, gap_start + gap_width))
+        gap_rows.extend(range(gap_start, gap_start + gap_width))
+    for x in gap_cols:
+        for y in range(3, grid_rows - 3):
+            pitfall_cells.add((x, y))
+    for y in gap_rows:
+        for x in range(3, grid_cols - 3):
+            pitfall_cells.add((x, y))
+
+    # Corridor openings (width 1) through the gap bands.
+    room_centers = [
+        inner_start + (room_size // 2) + idx * step for idx in range(rooms_per_side)
+    ]
+    for y in room_centers:
+        for x in gap_cols:
+            pitfall_cells.discard((x, y))
+    for x in room_centers:
+        for y in gap_rows:
+            pitfall_cells.discard((x, y))
+
+    # Faux corridors through the outer pitfall ring.
+    for y in room_centers:
+        pitfall_cells.discard((2, y))
+        pitfall_cells.discard((grid_cols - 3, y))
+    for x in room_centers:
+        pitfall_cells.discard((x, 2))
+        pitfall_cells.discard((x, grid_rows - 3))
+
+    pitfall_zones = [(x, y, 1, 1) for x, y in sorted(pitfall_cells)]
+    room_cells: set[tuple[int, int]] = set()
+    for row in range(rooms_per_side):
+        for col in range(rooms_per_side):
+            start_x = 3 + col * (room_size + gap_width)
+            start_y = 3 + row * (room_size + gap_width)
+            for y in range(start_y, start_y + room_size):
+                for x in range(start_x, start_x + room_size):
+                    room_cells.add((x, y))
+
+    return pitfall_zones
+
+
 STAGES: list[Stage] = [
     Stage(
         id="stage1",
@@ -284,26 +352,17 @@ STAGES: list[Stage] = [
         description_key="stages.stage18.description",
         available=True,
         requires_fuel=True,
+        grid_cols=36,
+        grid_rows=36,
         wall_algorithm="sparse_ortho.30%",
-        pitfall_zones=[
-            (2, 2, 1, 26),
-            (45, 2, 1, 26),
-            (2, 2, 44, 1),
-            (2, 27, 44, 1),
-            (15, 2, 4, 6),
-            (15, 9, 4, 5),
-            (15, 15, 4, 6),
-            (15, 22, 4, 6),
-            (30, 2, 4, 6),
-            (30, 9, 4, 5),
-            (30, 15, 4, 6),
-            (30, 22, 4, 6),
-            (2, 13, 7, 3),
-            (10, 13, 14, 3),
-            (25, 13, 14, 3),
-            (40, 13, 6, 3),
-        ],
-        fall_spawn_floor_ratio=0.01,
+        pitfall_zones=_build_stage18_pitfall_zones(
+            grid_cols=36,
+            grid_rows=36,
+            rooms_per_side=3,
+            room_size=8,
+            gap_width=3,
+        ),
+        fall_spawn_floor_ratio=0.03,
         initial_interior_spawn_rate=0.2,
         exterior_spawn_weight=0.2,
         interior_spawn_weight=0.8,
