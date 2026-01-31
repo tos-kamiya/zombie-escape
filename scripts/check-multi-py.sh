@@ -8,6 +8,7 @@ for version in ${PY_VERSIONS}; do
   echo "==> Python ${version}"
   uv venv --clear --python "${version}" "${venv_dir}"
   uv pip install -p "${venv_dir}/bin/python" -e ".[dev]"
-  uv run -p "${venv_dir}/bin/python" ruff check
-  uv run -p "${venv_dir}/bin/python" pytest
+  "${venv_dir}/bin/python" -m ruff check
+  "${venv_dir}/bin/python" -m pytest
+  "${venv_dir}/bin/python" -m compileall src
 done

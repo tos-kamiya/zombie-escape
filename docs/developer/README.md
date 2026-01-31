@@ -55,7 +55,8 @@ PY_VERSIONS="3.10 3.12" ./scripts/check-multi-py.sh
 
 - Creates per-version virtual environments in `.venv-py310`, `.venv-py311`, etc.
 - Installs dev dependencies.
-- Runs `ruff check` and `pytest` for each version.
+- Runs `python -m ruff check` and `python -m pytest` for each version.
+- Runs `python -m compileall src` to verify bytecode compilation.
 
 ## Related docs
 
