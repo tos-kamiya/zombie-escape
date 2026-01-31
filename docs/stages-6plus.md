@@ -11,4 +11,4 @@ Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/righ
 | Shoes | <img src="../imgs/exports/shoes.png" width="80"> | Stage 11 | Movement speed boost pickup. |
 | Falling Zombie | <img src="../imgs/exports/falling-zombie.png" width="80"> | Stage 12 | Drops from above into the level. |
 | Falling Spawn Floor | <img src="../imgs/exports/fall-zone.png" width="80"> | Stage 12 | Highlighted floor where falling spawns can occur. |
-| Pitfall | <img src="../imgs/exports/pitfall.png" width="80"> | Stage 16 | Humans can jump; zombies fall in. |
+| Pitfall | <img src="../imgs/exports/pitfall.png" width="80"> | Stage 16 | Humans can hop a very short corner gap; zombies fall in. |
