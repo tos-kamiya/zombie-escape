@@ -50,7 +50,11 @@ from .entities_constants import (
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_SPEED,
     ZOMBIE_TRACKER_FAR_SCENT_RADIUS,
+    ZOMBIE_TRACKER_CROWD_BAND_LENGTH,
+    ZOMBIE_TRACKER_CROWD_BAND_WIDTH,
+    ZOMBIE_TRACKER_CROWD_COUNT,
     ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS,
+    ZOMBIE_TRACKER_RELOCK_DELAY_MS,
     ZOMBIE_TRACKER_SCAN_INTERVAL_MS,
     ZOMBIE_TRACKER_SCENT_RADIUS,
     ZOMBIE_TRACKER_SCENT_TOP_K,
@@ -342,6 +346,7 @@ MovementStrategy = Callable[
         "Zombie",
         tuple[int, int],
         list[Wall],
+        Iterable["Zombie"],
         list[Footprint],
         int,
         int,
@@ -1255,6 +1260,7 @@ def _zombie_tracker_movement(
     zombie: Zombie,
     player_center: tuple[int, int],
     walls: list[Wall],
+    nearby_zombies: Iterable[Zombie],
     footprints: list[Footprint],
     cell_size: int,
     grid_cols: int,
@@ -1263,6 +1269,22 @@ def _zombie_tracker_movement(
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if not is_in_sight:
+        if _zombie_tracker_is_crowded(zombie, nearby_zombies):
+            last_target_time = zombie.tracker_target_time
+            if last_target_time is None:
+                last_target_time = pygame.time.get_ticks()
+            zombie.tracker_relock_after_time = (
+                last_target_time + ZOMBIE_TRACKER_RELOCK_DELAY_MS
+            )
+            zombie.tracker_target_pos = None
+            return _zombie_wander_move(
+                zombie,
+                walls,
+                cell_size=cell_size,
+                grid_cols=grid_cols,
+                grid_rows=grid_rows,
+                outer_wall_cells=outer_wall_cells,
+            )
         _zombie_update_tracker_target(zombie, footprints, walls)
         if zombie.tracker_target_pos is not None:
             return _zombie_move_toward(zombie, zombie.tracker_target_pos)
@@ -1281,6 +1303,7 @@ def _zombie_wander_movement(
     zombie: Zombie,
     _player_center: tuple[int, int],
     walls: list[Wall],
+    _nearby_zombies: Iterable[Zombie],
     _footprints: list[Footprint],
     cell_size: int,
     grid_cols: int,
@@ -1353,6 +1376,7 @@ def _zombie_wall_hug_movement(
     zombie: Zombie,
     player_center: tuple[int, int],
     walls: list[Wall],
+    _nearby_zombies: Iterable[Zombie],
     _footprints: list[Footprint],
     cell_size: int,
     grid_cols: int,
@@ -1457,6 +1481,7 @@ def _zombie_normal_movement(
     zombie: Zombie,
     player_center: tuple[int, int],
     walls: list[Wall],
+    _nearby_zombies: Iterable[Zombie],
     _footprints: list[Footprint],
     cell_size: int,
     grid_cols: int,
@@ -1492,6 +1517,7 @@ def _zombie_update_tracker_target(
     last_target_time = zombie.tracker_target_time
     far_radius_sq = ZOMBIE_TRACKER_FAR_SCENT_RADIUS * ZOMBIE_TRACKER_FAR_SCENT_RADIUS
     latest_fp_time: int | None = None
+    relock_after = zombie.tracker_relock_after_time
     for fp in footprints:
         dx = fp.pos[0] - zombie.x
         dy = fp.pos[1] - zombie.y
@@ -1510,6 +1536,8 @@ def _zombie_update_tracker_target(
     for fp in footprints:
         pos = fp.pos
         fp_time = fp.time
+        if relock_after is not None and fp_time < relock_after:
+            continue
         dx = pos[0] - zombie.x
         dy = pos[1] - zombie.y
         if dx * dx + dy * dy <= min_target_dist_sq:
@@ -1532,6 +1560,8 @@ def _zombie_update_tracker_target(
         if _line_of_sight_clear((zombie.x, zombie.y), pos, walls):
             zombie.tracker_target_pos = pos
             zombie.tracker_target_time = fp_time
+            if relock_after is not None and fp_time >= relock_after:
+                zombie.tracker_relock_after_time = None
             return
 
     if (
@@ -1552,7 +1582,43 @@ def _zombie_update_tracker_target(
     next_fp = candidates[0]
     zombie.tracker_target_pos = next_fp.pos
     zombie.tracker_target_time = next_fp.time
+    if relock_after is not None and next_fp.time >= relock_after:
+        zombie.tracker_relock_after_time = None
     return
+
+
+def _zombie_tracker_is_crowded(
+    zombie: Zombie,
+    nearby_zombies: Iterable[Zombie],
+) -> bool:
+    dx = zombie.last_move_dx
+    dy = zombie.last_move_dy
+    if abs(dx) <= 0.001 and abs(dy) <= 0.001:
+        return False
+    angle = math.atan2(dy, dx)
+    angle_step = math.pi / 4.0
+    angle_bin = int(round(angle / angle_step)) % 8
+    dir_x = math.cos(angle_bin * angle_step)
+    dir_y = math.sin(angle_bin * angle_step)
+    perp_x = -dir_y
+    perp_y = dir_x
+    half_width = ZOMBIE_TRACKER_CROWD_BAND_WIDTH * 0.5
+    length = ZOMBIE_TRACKER_CROWD_BAND_LENGTH
+    count = 0
+    for other in nearby_zombies:
+        if other is zombie or not other.alive() or not other.tracker:
+            continue
+        offset_x = other.x - zombie.x
+        offset_y = other.y - zombie.y
+        forward = offset_x * dir_x + offset_y * dir_y
+        if forward <= 0 or forward > length:
+            continue
+        side = offset_x * perp_x + offset_y * perp_y
+        if abs(side) <= half_width:
+            count += 1
+            if count >= ZOMBIE_TRACKER_CROWD_COUNT:
+                return True
+    return False
 
 
 def _zombie_wander_move(
@@ -1689,6 +1755,7 @@ class Zombie(pygame.sprite.Sprite):
         self.tracker_target_time: int | None = None
         self.tracker_last_scan_time = 0
         self.tracker_scan_interval_ms = ZOMBIE_TRACKER_SCAN_INTERVAL_MS
+        self.tracker_relock_after_time: int | None = None
         self.wall_hug_side = RNG.choice([-1.0, 1.0]) if wall_hugging else 0.0
         self.wall_hug_angle = RNG.uniform(0, math.tau) if wall_hugging else None
         self.wall_hug_last_wall_time: int | None = None
@@ -1703,6 +1770,8 @@ class Zombie(pygame.sprite.Sprite):
         self.wander_change_interval = max(
             0, self.wander_interval_ms + RNG.randint(-500, 500)
         )
+        self.last_move_dx = 0.0
+        self.last_move_dy = 0.0
 
     def _update_mode(
         self: Self, player_center: tuple[int, int], sight_range: float
@@ -1940,6 +2009,7 @@ class Zombie(pygame.sprite.Sprite):
             self,
             player_center,
             walls,
+            nearby_zombies,
             footprints or [],
             cell_size,
             grid_cols,
@@ -1966,6 +2036,8 @@ class Zombie(pygame.sprite.Sprite):
             )
         self._update_facing_from_movement(move_x, move_y)
         self._apply_render_overlays()
+        self.last_move_dx = move_x
+        self.last_move_dy = move_y
         final_x, final_y = self._handle_wall_collision(
             self.x + move_x, self.y + move_y, walls
         )

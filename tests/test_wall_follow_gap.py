@@ -25,6 +25,7 @@ def test_wall_hug_turns_away_when_too_close() -> None:
         (9999, 9999),
         [wall],
         [],
+        [],
         cell_size=DEFAULT_TILE_SIZE,
         grid_cols=DEFAULT_GRID_COLS,
         grid_rows=DEFAULT_GRID_ROWS,
