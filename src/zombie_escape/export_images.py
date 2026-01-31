@@ -67,7 +67,10 @@ def _ensure_pygame_ready() -> None:
         pygame.display.set_mode((1, 1), flags=flags)
 
 
-def _save_surface(surface: pygame.Surface, path: Path) -> None:
+def _save_surface(surface: pygame.Surface, path: Path, *, scale: int = 1) -> None:
+    if scale != 1:
+        width, height = surface.get_size()
+        surface = pygame.transform.scale(surface, (width * scale, height * scale))
     path.parent.mkdir(parents=True, exist_ok=True)
     pygame.image.save(surface, str(path))
 
@@ -118,7 +121,9 @@ def _build_pitfall_tile(cell_size: int) -> pygame.Surface:
     return surface
 
 
-def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> list[Path]:
+def export_images(
+    output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE, output_scale: int = 4
+) -> list[Path]:
     _ensure_pygame_ready()
 
     saved: list[Path] = []
@@ -129,7 +134,7 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
         bin_index=0,
     )
     player_path = out / "player.png"
-    _save_surface(player, player_path)
+    _save_surface(player, player_path, scale=output_scale)
     saved.append(player_path)
 
     zombie_base = _pick_directional_surface(
@@ -137,7 +142,7 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
         bin_index=0,
     )
     zombie_normal_path = out / "zombie-normal.png"
-    _save_surface(zombie_base, zombie_normal_path)
+    _save_surface(zombie_base, zombie_normal_path, scale=output_scale)
     saved.append(zombie_normal_path)
 
     tracker = zombie_base.copy()
@@ -148,7 +153,7 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
         color=ZOMBIE_NOSE_COLOR,
     )
     tracker_path = out / "zombie-tracker.png"
-    _save_surface(tracker, tracker_path)
+    _save_surface(tracker, tracker_path, scale=output_scale)
     saved.append(tracker_path)
 
     wall_hugging = zombie_base.copy()
@@ -159,7 +164,7 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
         color=ZOMBIE_NOSE_COLOR,
     )
     wall_path = out / "zombie-wall.png"
-    _save_surface(wall_hugging, wall_path)
+    _save_surface(wall_hugging, wall_path, scale=output_scale)
     saved.append(wall_path)
 
     buddy = _pick_directional_surface(
@@ -171,7 +176,7 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
         bin_index=0,
     )
     buddy_path = out / "buddy.png"
-    _save_surface(buddy, buddy_path)
+    _save_surface(buddy, buddy_path, scale=output_scale)
     saved.append(buddy_path)
 
     survivor = _pick_directional_surface(
@@ -183,7 +188,7 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
         bin_index=0,
     )
     survivor_path = out / "survivor.png"
-    _save_surface(survivor, survivor_path)
+    _save_surface(survivor, survivor_path, scale=output_scale)
     saved.append(survivor_path)
 
     car_surface = build_car_surface(CAR_WIDTH, CAR_HEIGHT)
@@ -196,27 +201,27 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
     )
     car = _pick_directional_surface(build_car_directional_surfaces(car_surface), bin_index=0)
     car_path = out / "car.png"
-    _save_surface(car, car_path)
+    _save_surface(car, car_path, scale=output_scale)
     saved.append(car_path)
 
     fuel = build_fuel_can_surface(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
     fuel_path = out / "fuel.png"
-    _save_surface(fuel, fuel_path)
+    _save_surface(fuel, fuel_path, scale=output_scale)
     saved.append(fuel_path)
 
     flashlight = build_flashlight_surface(FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT)
     flashlight_path = out / "flashlight.png"
-    _save_surface(flashlight, flashlight_path)
+    _save_surface(flashlight, flashlight_path, scale=output_scale)
     saved.append(flashlight_path)
 
     shoes = build_shoes_surface(SHOES_WIDTH, SHOES_HEIGHT)
     shoes_path = out / "shoes.png"
-    _save_surface(shoes, shoes_path)
+    _save_surface(shoes, shoes_path, scale=output_scale)
     saved.append(shoes_path)
 
     beam = SteelBeam(0, 0, cell_size, health=STEEL_BEAM_HEALTH, palette=None)
     beam_path = out / "steel-beam.png"
-    _save_surface(beam.image, beam_path)
+    _save_surface(beam.image, beam_path, scale=output_scale)
     saved.append(beam_path)
 
     inner_wall = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
@@ -236,7 +241,7 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
         side_shade_ratio=0.9,
     )
     inner_wall_path = out / "wall-inner.png"
-    _save_surface(inner_wall, inner_wall_path)
+    _save_surface(inner_wall, inner_wall_path, scale=output_scale)
     saved.append(inner_wall_path)
 
     rubble_wall = build_rubble_wall_surface(
@@ -246,7 +251,7 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
         angle_deg=RUBBLE_ROTATION_DEG,
     )
     rubble_wall_path = out / "wall-rubble.png"
-    _save_surface(rubble_wall, rubble_wall_path)
+    _save_surface(rubble_wall, rubble_wall_path, scale=output_scale)
     saved.append(rubble_wall_path)
 
     outer_wall = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
@@ -266,12 +271,12 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
         side_shade_ratio=0.9,
     )
     outer_wall_path = out / "wall-outer.png"
-    _save_surface(outer_wall, outer_wall_path)
+    _save_surface(outer_wall, outer_wall_path, scale=output_scale)
     saved.append(outer_wall_path)
 
     pitfall = _build_pitfall_tile(cell_size)
     pitfall_path = out / "pitfall.png"
-    _save_surface(pitfall, pitfall_path)
+    _save_surface(pitfall, pitfall_path, scale=output_scale)
     saved.append(pitfall_path)
 
     fall_radius = max(1, int(ZOMBIE_RADIUS))
@@ -284,13 +289,13 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE) -> li
         fall_radius,
     )
     falling_path = out / "falling-zombie.png"
-    _save_surface(falling, falling_path)
+    _save_surface(falling, falling_path, scale=output_scale)
     saved.append(falling_path)
 
     fall_zone = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
     fall_zone.fill(FALL_ZONE_FLOOR_PRIMARY)
     fall_zone_path = out / "fall-zone.png"
-    _save_surface(fall_zone, fall_zone_path)
+    _save_surface(fall_zone, fall_zone_path, scale=output_scale)
     saved.append(fall_zone_path)
 
     return saved

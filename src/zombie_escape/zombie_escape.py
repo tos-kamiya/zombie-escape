@@ -61,7 +61,7 @@ def _parse_cli_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:
     parser.add_argument(
         "--export-images",
         action="store_true",
-        help="Export documentation images to imgs/exports and exit",
+        help="Export documentation images to imgs/exports at 4x size and exit",
     )
     parser.add_argument("--seed")
     return parser.parse_known_args(argv)

@@ -29,4 +29,4 @@ uv run -p .venv/bin/python pyright
 uv run -p .venv/bin/python -m zombie_escape --export-images
 ```
 
-Images are written to `imgs/exports/` and are intended to be committed.
+Images are written to `imgs/exports/` at 4x size and are intended to be committed.
