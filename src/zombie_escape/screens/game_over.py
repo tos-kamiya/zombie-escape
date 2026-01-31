@@ -14,7 +14,15 @@ from ..render import (
     _draw_status_bar,
     show_message,
 )
-from ..input_utils import is_confirm_event, is_select_event
+from ..input_utils import (
+    CONTROLLER_BUTTON_DOWN,
+    CONTROLLER_DEVICE_ADDED,
+    CONTROLLER_DEVICE_REMOVED,
+    init_first_controller,
+    init_first_joystick,
+    is_confirm_event,
+    is_select_event,
+)
 from ..screens import (
     ScreenID,
     ScreenTransition,
@@ -46,6 +54,8 @@ def game_over_screen(
     state = game_data.state
     wall_group = game_data.groups.wall_group
     footprints_enabled = config.get("footprints", {}).get("enabled", True)
+    controller = init_first_controller()
+    joystick = init_first_joystick() if controller is None else None
 
     while True:
         if not state.overview_created:
@@ -193,6 +203,25 @@ def game_over_screen(
                         stage=stage,
                         seed=state.seed,
                     )
-            if event.type in (pygame.CONTROLLERBUTTONDOWN, pygame.JOYBUTTONDOWN):
+            if event.type == pygame.JOYDEVICEADDED or (
+                CONTROLLER_DEVICE_ADDED is not None
+                and event.type == CONTROLLER_DEVICE_ADDED
+            ):
+                if controller is None:
+                    controller = init_first_controller()
+                if controller is None:
+                    joystick = init_first_joystick()
+            if event.type == pygame.JOYDEVICEREMOVED or (
+                CONTROLLER_DEVICE_REMOVED is not None
+                and event.type == CONTROLLER_DEVICE_REMOVED
+            ):
+                if controller and not controller.get_init():
+                    controller = None
+                if joystick and not joystick.get_init():
+                    joystick = None
+            if event.type == pygame.JOYBUTTONDOWN or (
+                CONTROLLER_BUTTON_DOWN is not None
+                and event.type == CONTROLLER_BUTTON_DOWN
+            ):
                 if is_select_event(event) or is_confirm_event(event):
                     return ScreenTransition(ScreenID.TITLE)
