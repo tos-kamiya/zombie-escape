@@ -129,8 +129,11 @@ def generate_level_from_blueprint(
         all_sprites.add(beam, layer=0)
         beam._added_to_groups = True
 
-    def remove_wall_cell(cell: tuple[int, int]) -> None:
-        wall_cells.discard(cell)
+    def remove_wall_cell(cell: tuple[int, int], *, allow_walkable: bool = True) -> None:
+        if cell in wall_cells:
+            wall_cells.discard(cell)
+            if allow_walkable and cell not in walkable_cells:
+                walkable_cells.append(cell)
         outer_wall_cells.discard(cell)
 
     for y, row in enumerate(blueprint):
@@ -158,7 +161,9 @@ def generate_level_from_blueprint(
                     palette_category="outer_wall",
                     bevel_depth=0,
                     draw_bottom_side=draw_bottom_side,
-                    on_destroy=(lambda _w, cell=wall_cell: remove_wall_cell(cell)),
+                    on_destroy=(
+                        lambda _w, cell=wall_cell: remove_wall_cell(cell)
+                    ),
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
@@ -217,12 +222,14 @@ def generate_level_from_blueprint(
                         on_destroy=(
                             (
                                 lambda _w, b=beam, cell=wall_cell: (
-                                    remove_wall_cell(cell),
+                                    remove_wall_cell(cell, allow_walkable=False),
                                     add_beam_to_groups(b),
                                 )
                             )
                             if beam
-                            else (lambda _w, cell=wall_cell: remove_wall_cell(cell))
+                            else (
+                                lambda _w, cell=wall_cell: remove_wall_cell(cell)
+                            )
                         ),
                     )
                 else:
@@ -239,12 +246,14 @@ def generate_level_from_blueprint(
                         on_destroy=(
                             (
                                 lambda _w, b=beam, cell=wall_cell: (
-                                    remove_wall_cell(cell),
+                                    remove_wall_cell(cell, allow_walkable=False),
                                     add_beam_to_groups(b),
                                 )
                             )
                             if beam
-                            else (lambda _w, cell=wall_cell: remove_wall_cell(cell))
+                            else (
+                                lambda _w, cell=wall_cell: remove_wall_cell(cell)
+                            )
                         ),
                     )
                 wall_group.add(wall)
