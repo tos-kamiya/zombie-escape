@@ -235,8 +235,8 @@ def export_images(
         fill_color=inner_fill,
         border_color=inner_border,
         bevel_depth=INTERNAL_WALL_BEVEL_DEPTH,
-        bevel_mask=(False, False, False, False),
-        draw_bottom_side=False,
+        bevel_mask=(True, True, True, True),
+        draw_bottom_side=True,
         bottom_side_ratio=0.1,
         side_shade_ratio=0.9,
     )
@@ -265,8 +265,8 @@ def export_images(
         fill_color=outer_fill,
         border_color=outer_border,
         bevel_depth=0,
-        bevel_mask=(False, False, False, False),
-        draw_bottom_side=False,
+        bevel_mask=(True, True, True, True),
+        draw_bottom_side=True,
         bottom_side_ratio=0.1,
         side_shade_ratio=0.9,
     )
