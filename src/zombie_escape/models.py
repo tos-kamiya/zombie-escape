@@ -95,6 +95,8 @@ class ProgressState:
     buddy_rescued: int
     buddy_onboard: int
     buddy_merged_count: int
+    intro_message: str | None
+    intro_message_until: int
     survivors_onboard: int
     survivors_rescued: int
     survivor_messages: list
@@ -155,6 +157,7 @@ class Stage:
     name_key: str
     description_key: str
     available: bool = True
+    intro_key: str | None = None
 
     # Map layout
     tile_size: int = 50

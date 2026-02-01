@@ -17,6 +17,7 @@ from ..entities_constants import (
     SHOES_WIDTH,
 )
 from ..font_utils import load_font
+from ..gameplay.constants import INTRO_MESSAGE_CHAR_MS
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 from ..localization import get_font_settings
 from ..localization import translate as tr
@@ -312,6 +313,51 @@ def _draw_survivor_messages(
             screen.blit(msg_surface, msg_rect)
     except pygame.error as e:
         print(f"Error rendering survivor message: {e}")
+
+
+def _draw_intro_message(
+    screen: surface.Surface,
+    assets: RenderAssets,
+    *,
+    player: Player | None,
+    camera: Camera,
+    message: str | None,
+    elapsed_play_ms: int,
+    expires_at_ms: int,
+) -> None:
+    if not message:
+        return
+    if elapsed_play_ms > expires_at_ms:
+        return
+    if INTRO_MESSAGE_CHAR_MS <= 0:
+        return
+    visible_chars = min(len(message), int(elapsed_play_ms / INTRO_MESSAGE_CHAR_MS))
+    if visible_chars <= 0:
+        return
+    visible_message = message[:visible_chars]
+    try:
+        font_settings = get_font_settings()
+        font = load_font(font_settings.resource, font_settings.scaled_size(13))
+        text_surface = font.render(visible_message, False, LIGHT_GRAY)
+        if player:
+            player_rect = camera.apply_rect(player.rect)
+            text_rect = text_surface.get_rect(
+                center=(
+                    player_rect.centerx,
+                    max(16, player_rect.top - 16),
+                )
+            )
+        else:
+            text_rect = text_surface.get_rect(center=(assets.screen_width // 2, 32))
+        padding_x = 8
+        padding_y = 4
+        band_rect = text_rect.inflate(padding_x * 2, padding_y * 2)
+        band_surface = pygame.Surface(band_rect.size, pygame.SRCALPHA)
+        band_surface.fill((0, 0, 0, 140))
+        screen.blit(band_surface, band_rect.topleft)
+        screen.blit(text_surface, text_rect)
+    except pygame.error as e:
+        print(f"Error rendering intro message: {e}")
 
 
 def _build_objective_lines(

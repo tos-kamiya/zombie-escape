@@ -44,6 +44,7 @@ from .hud import (
     _build_objective_lines,
     _draw_endurance_timer,
     _draw_hint_indicator,
+    _draw_intro_message,
     _draw_inventory_icons,
     _draw_objective,
     _draw_status_bar,
@@ -970,6 +971,15 @@ def draw(
     )
     if objective_lines:
         _draw_objective(objective_lines, screen=screen)
+    _draw_intro_message(
+        screen,
+        assets,
+        player=player,
+        camera=camera,
+        message=state.intro_message,
+        elapsed_play_ms=state.elapsed_play_ms,
+        expires_at_ms=state.intro_message_until,
+    )
     _draw_inventory_icons(
         screen,
         assets,

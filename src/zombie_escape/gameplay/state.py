@@ -6,9 +6,11 @@ import pygame
 
 from ..colors import DAWN_AMBIENT_PALETTE_KEY, ambient_palette_key_for_flashlights
 from ..entities_constants import SURVIVOR_MAX_SAFE_PASSENGERS
+from ..localization import translate as tr
 from ..models import GameData, Groups, LevelLayout, ProgressState, Stage
 from ..entities import Camera
 from .ambient import _set_ambient_palette
+from .constants import INTRO_MESSAGE_CHAR_MS
 
 
 def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
@@ -19,6 +21,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     starts_with_flashlight = False
     initial_flashlights = 1 if starts_with_flashlight else 0
     initial_palette_key = ambient_palette_key_for_flashlights(initial_flashlights)
+    intro_message = tr(stage.intro_key) if stage.intro_key else None
+    intro_message_until = ((len(intro_message) + 3) * INTRO_MESSAGE_CHAR_MS) if intro_message else 0
     game_state = ProgressState(
         game_over=False,
         game_won=False,
@@ -40,6 +44,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         buddy_rescued=0,
         buddy_onboard=0,
         buddy_merged_count=0,
+        intro_message=intro_message,
+        intro_message_until=intro_message_until,
         survivors_onboard=0,
         survivors_rescued=0,
         survivor_messages=[],

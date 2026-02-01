@@ -349,6 +349,9 @@ def gameplay_screen(
                 shoes_count=game_data.state.shoes_count,
                 pad_input=pad_vector,
             )
+            if game_data.state.intro_message and (player_dx or player_dy or car_dx or car_dy):
+                game_data.state.intro_message = None
+                game_data.state.intro_message_until = 0
             update_entities(
                 game_data,
                 player_dx,

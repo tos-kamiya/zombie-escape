@@ -67,7 +67,8 @@
       },
       "stage5": {
         "name": "#5 Survive Until Dawn",
-        "description": "No fuel—endure 20 minutes, then walk out when dawn arrives."
+        "description": "No fuel—endure 20 minutes, then walk out when dawn arrives.",
+        "intro": "(No fuel inside, it seems...\nGuess I'll have to survive until dawn.)"
       },
       "stage6": {
         "name": "#6 Tracker Run",
@@ -145,6 +146,11 @@
       "stage19": {
         "name": "#19 Corridors",
         "description": "A floor of narrow corridors."
+      },
+      "stage20": {
+        "name": "#20 Rescue Request",
+        "description": "Link up and escape by car.",
+        "intro": "\"...\nThe team should be inside.\nLink up with them.\""
       }
     },
     "status": {
