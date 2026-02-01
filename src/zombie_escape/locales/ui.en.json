@@ -135,12 +135,16 @@
         "description": "Circumnavigate the collapsed floor panels and lure the zombies into the abyss."
       },
       "stage17": {
-        "name": "#17 Harder to Trap Zombies",
+        "name": "#17 Harder to Trap",
         "description": "Zombies track your trail and are harder to lure into pitfalls."
       },
       "stage18": {
         "name": "#18 Mold Factory",
         "description": "Don’t get cornered at the edges."
+      },
+      "stage19": {
+        "name": "#19 Corridors",
+        "description": "A floor of narrow corridors."
       }
     },
     "status": {
