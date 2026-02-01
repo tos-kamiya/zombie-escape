@@ -51,6 +51,18 @@ Open the Stage 6+ description: [docs/stages-6plus.md](docs/stages-6plus.md)
 
 An objective reminder is shown at the top-left during play.
 
+### Win/Lose Conditions
+
+-   **Win Condition:** Escape the stage (level) boundaries while inside the car.
+    - Stage 1 and Stage 4 follow the base rule: drive out of the building by car.
+    - Stage 2 also requires that you have collected the fuel can before driving out.
+    - Stage 3 requires meeting up with your buddy and escaping the building by car.
+    - Stage 5 has no working cars; survive until dawn, then walk out through an exterior opening on foot.
+-   **Lose Condition:**
+    -   The player is touched by a zombie while *not* inside a car.
+    -   In Stage 3, if your buddy is caught (when visible), it's game over.
+    -   (Note: In the current implementation, the game does not end immediately when the car is destroyed. The player can search for another car and continue trying to escape.)
+
 ### Shared Seeds
 
 The title screen also lets you enter a numeric **seed**. Type digits (or pass `--seed <number>` on the CLI) to lock the procedural layout, wall placement, and pickups; share that seed with a friend and you will both play the exact same stage even on different machines. The current seed is shown at the bottom right of the title screen and in-game HUD. Backspace reverts to an automatically generated value so you can quickly roll a fresh challenge.
@@ -174,18 +186,6 @@ Open **Settings** from the title to toggle gameplay assists:
     </tr>
   </tbody>
 </table>
-
-### Win/Lose Conditions
-
--   **Win Condition:** Escape the stage (level) boundaries while inside the car.
-    - Stage 1 and Stage 4 follow the base rule: find the car (already fueled) and drive out.
-    - Stage 2 also requires that you have collected the fuel can before driving out.
-    - Stage 3 requires both fuel and having picked up your buddy with the car before driving out.
-    - Stage 5 has no working cars; survive until dawn, then walk out through an exterior opening on foot.
--   **Lose Condition:**
-    -   The player is touched by a zombie while *not* inside a car.
-    -   In Stage 3, if your buddy is caught (when visible), it's game over.
-    -   (Note: In the current implementation, the game does not end immediately when the car is destroyed. The player can search for another car and continue trying to escape.)
 
 ## How to Run
 
