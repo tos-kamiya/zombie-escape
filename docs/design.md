@@ -56,7 +56,8 @@
 - ゲームオーバー画面用: `scaled_overview`, `overview_created`
 - 進行演出: `footprints`, `last_footprint_pos`, `footprint_visible_toggle`, `elapsed_play_ms`
 - アイテム状態: `has_fuel`, `flashlight_count`, `shoes_count`
-- ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`
+- ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`,
+  `intro_message`, `intro_message_until`
 - ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
 - 相棒の壁ターゲット: `player_wall_target_cell`, `player_wall_target_ttl`（壁接触後7フレームで失効）
 - サバイバル用: `endurance_elapsed_ms`, `endurance_goal_ms`, `dawn_ready`, `dawn_prompt_at`, `dawn_carbonized`
@@ -82,7 +83,7 @@
 
 `Stage` はステージ属性を保持する `dataclass`。
 
-- プレイ特性: `requires_fuel`, `buddy_required_count`, `rescue_stage`, `endurance_stage`
+- プレイ特性: `requires_fuel`, `buddy_required_count`, `rescue_stage`, `endurance_stage`, `intro_key`
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`, `survivor_spawn_rate`
 - 内外/落下スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`, `interior_fall_spawn_weight`（重みを分け合う）
 - サバイバル設定: `endurance_goal_ms`, `fuel_spawn_count`
@@ -267,6 +268,10 @@
   - 夜明け時の屋外ゾンビ炭化処理。
 - `sync_ambient_palette_with_flashlights(game_data, force=False)` (`gameplay/ambient.py`)
   - 懐中電灯数に合わせて環境パレットを同期。
+ - ステージ導入セリフ
+   - `Stage.intro_key` にローカライズキーを設定。
+   - `initialize_game_state()` で `intro_message` / `intro_message_until` を初期化（文字数×表示速度でタイマー計算）。
+   - `screens/gameplay.py` で移動入力があれば導入セリフを即スキップ。
 
 ### 速度/容量補助
 
@@ -299,6 +304,9 @@
 
 - `draw_status_bar()`
   - 設定フラグやステージ番号、シード値を表示。
+- 導入セリフ (`_draw_intro_message` in `render/hud.py`)
+  - 画面上部のプレイヤー位置付近に、タイプライター表示（1文字ずつ）。
+  - 半透明帯の上に LIGHT_GRAY で描画。
 
 - `draw_level_overview()` (`render/overview.py`)
   - `game_over` 画面用のレベル縮小図（落下ゾンビ床も表示）。
