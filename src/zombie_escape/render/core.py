@@ -491,10 +491,11 @@ def _draw_falling_fx(
     falling_zombies: list[FallingZombie],
     flashlight_count: int,
     dust_rings: list[DustRing],
+    now_ms: int,
 ) -> None:
     if not falling_zombies and not dust_rings:
         return
-    now = pygame.time.get_ticks()
+    now = now_ms
     for fall in falling_zombies:
         pre_fx_ms = max(0, fall.pre_fx_ms)
         fall_duration_ms = max(1, fall.fall_duration_ms)
@@ -926,6 +927,7 @@ def draw(
         state.falling_zombies,
         state.flashlight_count,
         state.dust_rings,
+        state.elapsed_play_ms,
     )
 
     _draw_hint_indicator(

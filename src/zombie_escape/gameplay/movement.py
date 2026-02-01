@@ -327,7 +327,7 @@ def update_entities(
             fall = FallingZombie(
                 start_pos=(int(zombie.x), int(zombie.y)),
                 target_pos=pitfall_target,
-                started_at_ms=pygame.time.get_ticks(),
+                started_at_ms=game_data.state.elapsed_play_ms,
                 pre_fx_ms=0,
                 fall_duration_ms=500,
                 dust_duration_ms=0,

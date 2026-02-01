@@ -239,7 +239,7 @@ def _schedule_falling_zombie(
     fall = FallingZombie(
         start_pos=start_pos,
         target_pos=(int(spawn_pos[0]), int(spawn_pos[1])),
-        started_at_ms=pygame.time.get_ticks(),
+        started_at_ms=game_data.state.elapsed_play_ms,
         pre_fx_ms=FALLING_ZOMBIE_PRE_FX_MS,
         fall_duration_ms=FALLING_ZOMBIE_DURATION_MS,
         dust_duration_ms=FALLING_ZOMBIE_DUST_DURATION_MS,
@@ -879,7 +879,7 @@ def update_falling_zombies(game_data: GameData, config: dict[str, Any]) -> None:
     state = game_data.state
     if not state.falling_zombies:
         return
-    now = pygame.time.get_ticks()
+    now = state.elapsed_play_ms
     zombie_group = game_data.groups.zombie_group
     all_sprites = game_data.groups.all_sprites
     for fall in list(state.falling_zombies):
