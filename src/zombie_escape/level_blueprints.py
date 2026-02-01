@@ -243,24 +243,28 @@ def _place_walls_grid_wire(
         x = rng(2, cols - 3)
         y = rng(2, rows - 2 - length)
 
+        # Reject if the new segment would connect end-to-end with another vertical segment.
         can_place = True
-        for i in range(length):
-            cy = y + i
-            # 1. Global forbidden check (exits, outer walls in main grid)
-            if (x, cy) in forbidden:
-                can_place = False
-                break
-            if grid[cy][x] not in (".",):
-                can_place = False
-                break
-            # 2. Local self-overlap check
-            if grid_v[cy][x] != ".":
-                can_place = False
-                break
-            # 3. Parallel adjacency check (only against other vertical walls)
-            if grid_v[cy][x - 1] == "1" or grid_v[cy][x + 1] == "1":
-                can_place = False
-                break
+        if grid_v[y - 1][x] == "1" or grid_v[y + length][x] == "1":
+            can_place = False
+        else:
+            for i in range(length):
+                cy = y + i
+                # 1. Global forbidden check (exits, outer walls in main grid)
+                if (x, cy) in forbidden:
+                    can_place = False
+                    break
+                if grid[cy][x] not in (".",):
+                    can_place = False
+                    break
+                # 2. Local self-overlap check
+                if grid_v[cy][x] != ".":
+                    can_place = False
+                    break
+                # 3. Parallel adjacency check (only against other vertical walls)
+                if grid_v[cy][x - 1] == "1" or grid_v[cy][x + 1] == "1":
+                    can_place = False
+                    break
 
         if can_place:
             for i in range(length):
@@ -272,24 +276,28 @@ def _place_walls_grid_wire(
         x = rng(2, cols - 2 - length)
         y = rng(2, rows - 3)
 
+        # Reject if the new segment would connect end-to-end with another horizontal segment.
         can_place = True
-        for i in range(length):
-            cx = x + i
-            # 1. Global forbidden check
-            if (cx, y) in forbidden:
-                can_place = False
-                break
-            if grid[y][cx] not in (".",):
-                can_place = False
-                break
-            # 2. Local self-overlap check
-            if grid_h[y][cx] != ".":
-                can_place = False
-                break
-            # 3. Parallel adjacency check (only against other horizontal walls)
-            if grid_h[y - 1][cx] == "1" or grid_h[y + 1][cx] == "1":
-                can_place = False
-                break
+        if grid_h[y][x - 1] == "1" or grid_h[y][x + length] == "1":
+            can_place = False
+        else:
+            for i in range(length):
+                cx = x + i
+                # 1. Global forbidden check
+                if (cx, y) in forbidden:
+                    can_place = False
+                    break
+                if grid[y][cx] not in (".",):
+                    can_place = False
+                    break
+                # 2. Local self-overlap check
+                if grid_h[y][cx] != ".":
+                    can_place = False
+                    break
+                # 3. Parallel adjacency check (only against other horizontal walls)
+                if grid_h[y - 1][cx] == "1" or grid_h[y + 1][cx] == "1":
+                    can_place = False
+                    break
 
         if can_place:
             for i in range(length):
