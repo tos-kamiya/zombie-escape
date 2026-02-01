@@ -377,6 +377,17 @@ def _build_objective_lines(
             objective_lines.append(tr("objectives.get_outside"))
         else:
             objective_lines.append(tr("objectives.survive_until_dawn"))
+        if stage.buddy_required_count > 0:
+            buddy_ready = buddy_merged_count >= buddy_required
+            if not buddy_ready:
+                if buddy_required == 1:
+                    objective_lines.append(tr("objectives.merge_buddy_single"))
+                else:
+                    objective_lines.append(
+                        tr("objectives.merge_buddy_multi", count=buddy_merged_count, limit=buddy_required)
+                    )
+        return objective_lines
+
     if stage and stage.buddy_required_count > 0:
         buddy_ready = buddy_merged_count >= buddy_required
         if not buddy_ready:

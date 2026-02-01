@@ -721,6 +721,7 @@ def _draw_entities(
     player: Player,
     *,
     has_fuel: bool,
+    show_fuel_indicator: bool,
 ) -> pygame.Rect:
     screen_rect_inflated = screen.get_rect().inflate(100, 100)
     player_screen_rect: pygame.Rect | None = None
@@ -730,12 +731,13 @@ def _draw_entities(
             screen.blit(entity.image, sprite_screen_rect)
         if entity is player:
             player_screen_rect = sprite_screen_rect
-            _draw_fuel_indicator(
-                screen,
-                player_screen_rect,
-                has_fuel=has_fuel,
-                in_car=player.in_car,
-            )
+            if show_fuel_indicator:
+                _draw_fuel_indicator(
+                    screen,
+                    player_screen_rect,
+                    has_fuel=has_fuel,
+                    in_car=player.in_car,
+                )
     return player_screen_rect or camera.apply_rect(player.rect)
 
 
@@ -920,6 +922,7 @@ def draw(
         all_sprites,
         player,
         has_fuel=has_fuel,
+        show_fuel_indicator=not (stage and stage.endurance_stage),
     )
 
     _draw_falling_fx(
@@ -951,13 +954,14 @@ def draw(
         flashlight_count=flashlight_count,
         dawn_ready=state.dawn_ready,
     )
-    _draw_need_fuel_message(
-        screen,
-        assets,
-        has_fuel=has_fuel,
-        fuel_message_until=state.fuel_message_until,
-        elapsed_play_ms=state.elapsed_play_ms,
-    )
+    if not (stage and stage.endurance_stage):
+        _draw_need_fuel_message(
+            screen,
+            assets,
+            has_fuel=has_fuel,
+            fuel_message_until=state.fuel_message_until,
+            elapsed_play_ms=state.elapsed_play_ms,
+        )
 
     objective_lines = _build_objective_lines(
         stage=stage,
