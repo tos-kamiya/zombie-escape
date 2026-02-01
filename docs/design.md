@@ -18,10 +18,12 @@
   - 進行状態やステージ情報のデータ構造（`dataclass`）。
 - `src/zombie_escape/stage_constants.py`
   - ステージ構成とデフォルト設定の一覧。
-- `src/zombie_escape/render.py`
-  - 描画パイプライン（床/壁/霧/足跡/HUD呼び出し/ヒント矢印など）。
-- `src/zombie_escape/render_hud.py`
-  - HUD描画（目的/アイコン/ステータスバー/タイマー/ヒント矢印など）の切り出し先。
+- `src/zombie_escape/render/`
+  - 描画パイプラインの分割モジュール群。
+  - `render/core.py`: 床/壁/霧/足跡/HUD呼び出し/ヒント矢印などの中心描画。
+  - `render/hud.py`: HUD描画（目的/アイコン/ステータスバー/タイマー/ヒント矢印など）。
+  - `render/shadows.py`: 壁影/エンティティ影の生成と描画。
+  - `render/overview.py`: ゲームオーバー用縮小図、デバッグ用全体表示。
 - `src/zombie_escape/level_blueprints.py`
   - マップのセル配置生成（外周・出口・内部壁・スポーン候補）。
 - `src/zombie_escape/config.py`
@@ -277,7 +279,7 @@
 - `_handle_pitfall_detection(x, y, ...)` (`gameplay/movement.py`)
   - 座標が落とし穴にあるか判定し、中心への吸い込みターゲット座標を計算。
 
-## 5. 描画パイプライン (render.py)
+## 5. 描画パイプライン (render/core.py)
 
 - `draw(...)` が描画の中心。
   1. 環境色で背景塗りつぶし
@@ -298,8 +300,10 @@
 - `draw_status_bar()`
   - 設定フラグやステージ番号、シード値を表示。
 
-- `draw_level_overview()`
+- `draw_level_overview()` (`render/overview.py`)
   - `game_over` 画面用のレベル縮小図。
+- `draw_debug_overview()` (`render/overview.py`)
+  - デバッグ用の全体表示（ゾンビ位置＋カメラ枠）。
 
 ## 5.1 ウィンドウ/最大化
 
