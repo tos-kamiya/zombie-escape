@@ -2,19 +2,21 @@
 
 from collections import deque
 
+from .level_constants import (
+    DEFAULT_GRID_WIRE_WALL_LINES,
+    DEFAULT_SPARSE_WALL_DENSITY,
+    DEFAULT_STEEL_BEAM_CHANCE,
+    DEFAULT_WALL_LINES,
+)
 from .rng import get_rng, seed_rng
 
 EXITS_PER_SIDE = 1  # currently fixed to 1 per side (can be tuned)
-DEFAULT_WALL_LINES = 80  # reduced density (roughly 1/5 of previous 450)
-DEFAULT_GRID_WIRE_WALL_LINES = int(DEFAULT_WALL_LINES * 0.7)
 WALL_MIN_LEN = 3
 WALL_MAX_LEN = 10
-SPARSE_WALL_DENSITY = 0.10
 SPAWN_MARGIN = 3  # keep spawns away from walls/edges
 SPAWN_ZOMBIES = 3
 
 RNG = get_rng()
-STEEL_BEAM_CHANCE = 0.02
 
 
 class MapGenerationError(Exception):
@@ -304,7 +306,7 @@ def _place_walls_grid_wire(
 def _place_walls_sparse_moore(
     grid: list[list[str]],
     *,
-    density: float = SPARSE_WALL_DENSITY,
+    density: float = DEFAULT_SPARSE_WALL_DENSITY,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
     """Place isolated wall tiles at a low density, avoiding adjacency."""
@@ -337,7 +339,7 @@ def _place_walls_sparse_moore(
 def _place_walls_sparse_ortho(
     grid: list[list[str]],
     *,
-    density: float = SPARSE_WALL_DENSITY,
+    density: float = DEFAULT_SPARSE_WALL_DENSITY,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
     """Place isolated wall tiles at a low density, avoiding orthogonal adjacency."""
@@ -370,7 +372,7 @@ WALL_ALGORITHMS = {
 def _place_steel_beams(
     grid: list[list[str]],
     *,
-    chance: float = STEEL_BEAM_CHANCE,
+    chance: float = DEFAULT_STEEL_BEAM_CHANCE,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> set[tuple[int, int]]:
     """Pick individual cells for steel beams, avoiding exits and their neighbors."""
@@ -491,7 +493,7 @@ def _generate_random_blueprint(
         reserved_cells.add((sx, sy))
 
     # Select and run the wall placement algorithm (after reserving spawns)
-    sparse_density = SPARSE_WALL_DENSITY
+    sparse_density = DEFAULT_SPARSE_WALL_DENSITY
     wall_line_count = DEFAULT_WALL_LINES
     original_wall_algo = wall_algo
     if wall_algo == "sparse":
@@ -597,9 +599,9 @@ def choose_blueprint(
     # Currently only random generation; hook for future variants.
     steel_conf = config.get("steel_beams", {})
     try:
-        steel_chance = float(steel_conf.get("chance", STEEL_BEAM_CHANCE))
+        steel_chance = float(steel_conf.get("chance", DEFAULT_STEEL_BEAM_CHANCE))
     except (TypeError, ValueError):
-        steel_chance = STEEL_BEAM_CHANCE
+        steel_chance = DEFAULT_STEEL_BEAM_CHANCE
 
     for attempt in range(20):
         if base_seed is not None:
