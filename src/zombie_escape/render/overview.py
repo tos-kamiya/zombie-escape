@@ -3,10 +3,10 @@ from __future__ import annotations
 import pygame
 from pygame import sprite, surface
 
-from .colors import BLACK, BLUE, FOOTPRINT_COLOR, WHITE, YELLOW, get_environment_palette
-from .entities import Car, Flashlight, FuelCan, Player, Shoes, SteelBeam, Survivor, Wall
-from .models import Footprint, GameData
-from .render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
+from ..colors import BLACK, BLUE, FOOTPRINT_COLOR, WHITE, YELLOW, get_environment_palette
+from ..entities import Car, Flashlight, FuelCan, Player, Shoes, SteelBeam, Survivor, Wall
+from ..models import Footprint, GameData
+from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
 
 
 def compute_floor_cells(

@@ -8,7 +8,7 @@ import pygame
 import pygame.surfarray as pg_surfarray  # type: ignore
 from pygame import sprite, surface
 
-from .colors import (
+from ..colors import (
     FOOTPRINT_COLOR,
     LIGHT_GRAY,
     ORANGE,
@@ -16,18 +16,18 @@ from .colors import (
     YELLOW,
     get_environment_palette,
 )
-from .entities import (
+from ..entities import (
     Camera,
     Player,
 )
-from .entities_constants import INTERNAL_WALL_BEVEL_DEPTH, ZOMBIE_RADIUS
-from .font_utils import load_font
-from .gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
-from .localization import get_font_settings
-from .localization import translate as tr
-from .models import DustRing, FallingZombie, Footprint, GameData, Stage
-from .render_assets import RenderAssets
-from .render_constants import (
+from ..entities_constants import INTERNAL_WALL_BEVEL_DEPTH, ZOMBIE_RADIUS
+from ..font_utils import load_font
+from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
+from ..localization import get_font_settings
+from ..localization import translate as tr
+from ..models import DustRing, FallingZombie, Footprint, GameData, Stage
+from ..render_assets import RenderAssets
+from ..render_constants import (
     ENTITY_SHADOW_ALPHA,
     FALLING_DUST_COLOR,
     FALLING_WHIRLWIND_COLOR,
@@ -40,7 +40,7 @@ from .render_constants import (
     PLAYER_SHADOW_ALPHA_MULT,
     PLAYER_SHADOW_RADIUS_MULT,
 )
-from .render_hud import (
+from .hud import (
     _build_objective_lines,
     _draw_endurance_timer,
     _draw_hint_indicator,
@@ -51,7 +51,7 @@ from .render_hud import (
     _draw_time_accel_indicator,
     _get_fog_scale,
 )
-from .render_shadows import (
+from .shadows import (
     _draw_entity_shadows,
     _draw_single_entity_shadow,
     _draw_wall_shadows,

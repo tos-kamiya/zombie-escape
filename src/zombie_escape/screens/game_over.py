@@ -18,8 +18,7 @@ from ..input_utils import (
 )
 from ..localization import translate as tr
 from ..models import GameData, Stage
-from ..render import RenderAssets, _draw_status_bar, show_message
-from ..render_overview import compute_floor_cells, draw_level_overview
+from ..render import RenderAssets, _draw_status_bar, compute_floor_cells, draw_level_overview, show_message
 from ..screens import (
     ScreenID,
     ScreenTransition,

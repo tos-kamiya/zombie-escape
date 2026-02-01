@@ -6,9 +6,9 @@ from typing import Any
 import pygame
 from pygame import sprite, surface
 
-from .colors import LIGHT_GRAY, ORANGE, YELLOW
-from .entities import Camera, Car, Player
-from .entities_constants import (
+from ..colors import LIGHT_GRAY, ORANGE, YELLOW
+from ..entities import Camera, Car, Player
+from ..entities_constants import (
     FLASHLIGHT_HEIGHT,
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
@@ -16,18 +16,18 @@ from .entities_constants import (
     SHOES_HEIGHT,
     SHOES_WIDTH,
 )
-from .font_utils import load_font
-from .gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
-from .localization import get_font_settings
-from .localization import translate as tr
-from .models import Stage
-from .render_assets import (
+from ..font_utils import load_font
+from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
+from ..localization import get_font_settings
+from ..localization import translate as tr
+from ..models import Stage
+from ..render_assets import (
     RenderAssets,
     build_flashlight_surface,
     build_fuel_can_surface,
     build_shoes_surface,
 )
-from .render_constants import FLASHLIGHT_FOG_SCALE_ONE, FLASHLIGHT_FOG_SCALE_TWO
+from ..render_constants import FLASHLIGHT_FOG_SCALE_ONE, FLASHLIGHT_FOG_SCALE_TWO
 
 _HUD_ICON_CACHE: dict[str, surface.Surface] = {}
 

@@ -47,8 +47,7 @@ from ..gameplay.spawn import _alive_waiting_cars
 from ..world_grid import build_wall_index
 from ..localization import translate as tr
 from ..models import Stage
-from ..render import draw, draw_pause_overlay, prewarm_fog_overlays, show_message, show_message_wrapped
-from ..render_overview import draw_debug_overview
+from ..render import draw, draw_debug_overview, draw_pause_overlay, prewarm_fog_overlays, show_message, show_message_wrapped
 from ..rng import generate_seed, seed_rng
 from ..progress import record_stage_clear
 from ..screens import (

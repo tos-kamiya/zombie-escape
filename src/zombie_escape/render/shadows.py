@@ -5,9 +5,9 @@ import math
 import pygame
 from pygame import sprite, surface
 
-from .entities import Camera, Car, Player, SteelBeam, Survivor, Zombie
-from .entities_constants import JUMP_SHADOW_OFFSET, ZOMBIE_RADIUS
-from .render_constants import (
+from ..entities import Camera, Car, Player, SteelBeam, Survivor, Zombie
+from ..entities_constants import JUMP_SHADOW_OFFSET, ZOMBIE_RADIUS
+from ..render_constants import (
     ENTITY_SHADOW_ALPHA,
     ENTITY_SHADOW_EDGE_SOFTNESS,
     ENTITY_SHADOW_RADIUS_MULT,
