@@ -19,7 +19,9 @@
 - `src/zombie_escape/stage_constants.py`
   - ステージ構成とデフォルト設定の一覧。
 - `src/zombie_escape/render.py`
-  - 描画パイプライン（床/壁/霧/足跡/HUD/ヒント矢印など）。
+  - 描画パイプライン（床/壁/霧/足跡/HUD呼び出し/ヒント矢印など）。
+- `src/zombie_escape/render_hud.py`
+  - HUD描画（目的/アイコン/ステータスバー/タイマー/ヒント矢印など）の切り出し先。
 - `src/zombie_escape/level_blueprints.py`
   - マップのセル配置生成（外周・出口・内部壁・スポーン候補）。
 - `src/zombie_escape/config.py`
@@ -50,7 +52,7 @@
 
 - 勝敗・ゲーム終了関連: `game_over`, `game_won`, `game_over_message`, `game_over_at`
 - ゲームオーバー画面用: `scaled_overview`, `overview_created`
-- 進行演出: `footprints`, `last_footprint_pos`, `elapsed_play_ms`
+- 進行演出: `footprints`, `last_footprint_pos`, `footprint_visible_toggle`, `elapsed_play_ms`
 - アイテム状態: `has_fuel`, `flashlight_count`, `shoes_count`
 - ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`
 - ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
@@ -132,6 +134,12 @@
 プレイヤー/相棒/生存者/ゾンビ/車は 16 方向（22.5度刻み）の画像を使う。人型（プレイヤー/相棒/生存者/ゾンビ）の 16 方向画像は条件（半径/色/手の有無）ごとに共有キャッシュされ、インスタンスごとに再生成しない。車は事前生成した 16 方向画像を描画時に選択し、毎フレーム回転はしない（回転用に拡大した元画像を使って超解像度回転→縮小）。
 相棒は内部壁/鉄筋に衝突すると、プレイヤーの70%のダメージを与える。
 
+### 3.6.1 足跡 (models.Footprint)
+
+- `pos` は `tuple[int, int]`（ピクセル座標）。
+- `visible` で描画の有無を制御（追跡は可視/不可視を問わず参照）。
+- 記録密度は従来の2倍、表示は1つおき（`footprint_visible_toggle`）で見た目密度を維持。
+
 ## 3.7 ゾンビ移動戦略
 
 ゾンビの移動は `MovementStrategy`（`entities.py` 内の関数群）として切り出し、`Zombie.update()` から呼び出す。
@@ -144,9 +152,12 @@
   - 視界範囲 `ZOMBIE_TRACKER_SIGHT_RANGE` でプレイヤーを検知したら直進追尾。
   - 視界外は足跡 (`footprints`) を追跡する。
     - 足跡探索は約30フレームに1回だけ実施。
-    - 探索半径は `ZOMBIE_TRACKER_SCENT_RADIUS * 5`。
-    - 半径内の足跡から最新3件を候補とし、ゾンビから近すぎる足跡（`FOOTPRINT_STEP_DISTANCE * 0.5` 以内）は除外。
-    - 候補の中で「壁がない直線経路」が成立する最新足跡をターゲットにする。
+    - 探索半径は `ZOMBIE_TRACKER_SCENT_RADIUS` / `ZOMBIE_TRACKER_FAR_SCENT_RADIUS` の2段階。
+    - 半径内の足跡から候補を集め、ゾンビから近すぎる足跡（`FOOTPRINT_STEP_DISTANCE * 0.5` 以内）は除外。
+    - `SCENT_RADIUS` のときは「前回ターゲットより新しい足跡のうち一番古いもの」を優先し、
+      ただし `ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS` 以上新しい足跡があれば最新側を優先する。
+    - `FAR_SCENT_RADIUS` のときは新しい順に候補（最大3件）を評価する。
+    - 候補の中で「壁がない直線経路」が成立する足跡をターゲットにする。
     - ターゲットが見つからない場合は、(a) 現在ターゲット上にいなければ維持、(b) 現在ターゲット上なら次に新しい足跡へ更新。
 - 壁沿い移動 (`zombie_wall_hug_movement`)
   - 視界範囲 `ZOMBIE_TRACKER_SIGHT_RANGE` でプレイヤーを検知したら直進追尾。
@@ -162,6 +173,7 @@
   - `outer_wall_cells` がない場合でも、壁衝突を避けられるなら内側へ 1 ステップ押し戻す。
 - `Zombie.update()` 側で壁衝突・近接回避・外周逸脱時の補正を処理。
 - 落とし穴（`pitfall_cells`）に中心座標が入った場合、ゾンビは即座に消滅し、縮小しながら穴へ吸い込まれる落下アニメーション（`mode="pitfall"`）が再生される。
+- wander中は落とし穴を避ける（次セルが落とし穴なら反転して回避し、回避不能ならそのフレームは停止）。追跡/直進時は落下し得る。
 - `create_zombie()` で `stage.zombie_tracker_ratio` を参照し追跡型の出現率を決定。
 
 ### 3.7.1 追跡ゾンビの行列対策（設計案）
