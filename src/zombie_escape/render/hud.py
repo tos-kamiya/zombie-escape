@@ -321,7 +321,7 @@ def _build_objective_lines(
     player: Player,
     active_car: Car | None,
     has_fuel: bool,
-    buddy_onboard: int,
+    buddy_merged_count: int,
     buddy_required: int,
     survivors_onboard: int,
 ) -> list[str]:
@@ -331,23 +331,26 @@ def _build_objective_lines(
             objective_lines.append(tr("objectives.get_outside"))
         else:
             objective_lines.append(tr("objectives.survive_until_dawn"))
-    elif stage and stage.buddy_required_count > 0:
-        buddy_ready = buddy_onboard >= buddy_required
-        if not active_car:
-            objective_lines.append(tr("objectives.pickup_buddy"))
-            if stage.requires_fuel and not has_fuel:
-                objective_lines.append(tr("objectives.find_fuel"))
+    if stage and stage.buddy_required_count > 0:
+        buddy_ready = buddy_merged_count >= buddy_required
+        if not buddy_ready:
+            if buddy_required == 1:
+                objective_lines.append(tr("objectives.merge_buddy_single"))
             else:
-                objective_lines.append(tr("objectives.find_car"))
-        else:
-            if stage.requires_fuel and not has_fuel:
-                objective_lines.append(tr("objectives.find_fuel"))
-            elif not buddy_ready:
-                objective_lines.append(tr("objectives.board_buddy"))
-                objective_lines.append(tr("objectives.buddy_onboard", count=buddy_onboard))
-                objective_lines.append(tr("objectives.escape"))
+                objective_lines.append(
+                    tr("objectives.merge_buddy_multi", count=buddy_merged_count, limit=buddy_required)
+                )
+        if not stage.endurance_stage:
+            if not active_car:
+                if stage.requires_fuel and not has_fuel:
+                    objective_lines.append(tr("objectives.find_fuel"))
+                else:
+                    objective_lines.append(tr("objectives.find_car"))
             else:
-                objective_lines.append(tr("objectives.escape"))
+                if stage.requires_fuel and not has_fuel:
+                    objective_lines.append(tr("objectives.find_fuel"))
+                else:
+                    objective_lines.append(tr("objectives.escape"))
     elif stage and stage.requires_fuel and not has_fuel:
         objective_lines.append(tr("objectives.find_fuel"))
     elif stage and stage.rescue_stage:

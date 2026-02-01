@@ -154,6 +154,8 @@ def gameplay_screen(
     cell_size = game_data.cell_size
     if stage.requires_fuel:
         fuel_spawn_count = stage.fuel_spawn_count
+        if stage.endurance_stage:
+            fuel_spawn_count = 0
         fuel_can = place_fuel_can(
             layout_data["fuel_cells"] or layout_data["walkable_cells"],
             cell_size,

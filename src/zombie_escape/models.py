@@ -94,6 +94,7 @@ class ProgressState:
     fuel_message_until: int
     buddy_rescued: int
     buddy_onboard: int
+    buddy_merged_count: int
     survivors_onboard: int
     survivors_rescued: int
     survivor_messages: list

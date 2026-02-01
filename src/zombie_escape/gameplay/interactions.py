@@ -5,6 +5,7 @@ from typing import Any
 import pygame
 
 from ..entities_constants import (
+    BUDDY_MERGE_DISTANCE,
     CAR_HEIGHT,
     CAR_WIDTH,
     FLASHLIGHT_HEIGHT,
@@ -145,7 +146,6 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     buddies = [
         survivor for survivor in survivor_group if survivor.alive() and survivor.is_buddy and not survivor.rescued
     ]
-
     # Buddy interactions (Stage 3)
     if stage.buddy_required_count > 0 and buddies:
         for buddy in list(buddies):
@@ -185,6 +185,20 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     else:
                         buddy.teleport((game_data.level_width // 2, game_data.level_height // 2))
                     buddy.following = False
+
+    if stage.buddy_required_count > 0:
+        near_following_count = 0
+        max_dist_sq = BUDDY_MERGE_DISTANCE * BUDDY_MERGE_DISTANCE
+        for buddy in buddies:
+            if not buddy.following:
+                continue
+            dx = player.x - buddy.x
+            dy = player.y - buddy.y
+            if (dx * dx + dy * dy) <= max_dist_sq:
+                near_following_count += 1
+        state.buddy_merged_count = state.buddy_onboard + near_following_count
+    else:
+        state.buddy_merged_count = 0
 
     # Player entering an active car already under control
     if not player.in_car and _player_near_car(active_car) and active_car and active_car.health > 0:
@@ -318,17 +332,21 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         and (player_cell := _rect_center_cell(player.rect)) is not None
         and player_cell in outside_cells
     ):
-        state.game_won = True
+        buddy_ready = True
+        if stage.buddy_required_count > 0:
+            buddy_ready = state.buddy_merged_count >= stage.buddy_required_count
+        if buddy_ready:
+            state.game_won = True
 
     # Player escaping the level
     if player.in_car and car and car.alive() and state.has_fuel:
         buddy_ready = True
         if stage.buddy_required_count > 0:
-            buddy_ready = state.buddy_onboard >= stage.buddy_required_count
+            buddy_ready = state.buddy_merged_count >= stage.buddy_required_count
         car_cell = _rect_center_cell(car.rect)
         if buddy_ready and car_cell is not None and car_cell in outside_cells:
             if stage.buddy_required_count > 0:
-                state.buddy_rescued = min(stage.buddy_required_count, state.buddy_onboard)
+                state.buddy_rescued = min(stage.buddy_required_count, state.buddy_merged_count)
             if stage.rescue_stage and state.survivors_onboard:
                 state.survivors_rescued += state.survivors_onboard
                 state.survivors_onboard = 0

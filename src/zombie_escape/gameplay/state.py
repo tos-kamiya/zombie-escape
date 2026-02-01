@@ -39,6 +39,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         fuel_message_until=0,
         buddy_rescued=0,
         buddy_onboard=0,
+        buddy_merged_count=0,
         survivors_onboard=0,
         survivors_rescued=0,
         survivor_messages=[],

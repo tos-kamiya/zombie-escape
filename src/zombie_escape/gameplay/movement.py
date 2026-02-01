@@ -128,6 +128,7 @@ def update_entities(
     active_car = car if car and car.alive() else None
     wall_cells = game_data.layout.wall_cells
     pitfall_cells = game_data.layout.pitfall_cells
+    field_rect = game_data.layout.field_rect
     walkable_cells = game_data.layout.walkable_cells
     bevel_corners = game_data.layout.bevel_corners
 
@@ -167,6 +168,13 @@ def update_entities(
             cell_size=game_data.cell_size,
             pitfall_cells=pitfall_cells,
         )
+        if field_rect is not None:
+            car_allow_rect = field_rect.inflate(active_car.rect.width, active_car.rect.height)
+            clamped_rect = active_car.rect.clamp(car_allow_rect)
+            if clamped_rect.topleft != active_car.rect.topleft:
+                active_car.rect = clamped_rect
+                active_car.x = float(active_car.rect.centerx)
+                active_car.y = float(active_car.rect.centery)
         player.rect.center = active_car.rect.center
         player.x, player.y = active_car.x, active_car.y
     elif not player.in_car:

@@ -84,6 +84,50 @@ def update_survivors(
     for survivor in survivors:
         _separate_from_point(survivor, player_point, player_overlap)
 
+    def _resolve_wall_overlap(survivor: Survivor) -> None:
+        for _ in range(4):
+            hit_wall = spritecollideany_walls(
+                survivor,
+                wall_group,
+                wall_index=wall_index,
+                cell_size=game_data.cell_size,
+                grid_cols=game_data.stage.grid_cols,
+                grid_rows=game_data.stage.grid_rows,
+            )
+            if not hit_wall:
+                return
+            cx, cy = survivor.rect.center
+            radius = survivor.radius
+            rect = hit_wall.rect
+            closest_x = min(max(cx, rect.left), rect.right)
+            closest_y = min(max(cy, rect.top), rect.bottom)
+            dx = cx - closest_x
+            dy = cy - closest_y
+            if dx == 0 and dy == 0:
+                left_pen = cx - rect.left
+                right_pen = rect.right - cx
+                top_pen = cy - rect.top
+                bottom_pen = rect.bottom - cy
+                min_pen = min(left_pen, right_pen, top_pen, bottom_pen)
+                if min_pen == left_pen:
+                    cx = rect.left - radius
+                elif min_pen == right_pen:
+                    cx = rect.right + radius
+                elif min_pen == top_pen:
+                    cy = rect.top - radius
+                else:
+                    cy = rect.bottom + radius
+            else:
+                dist = math.hypot(dx, dy)
+                if dist == 0:
+                    return
+                push = max(1.0, radius - dist)
+                cx += (dx / dist) * push
+                cy += (dy / dist) * push
+            survivor.x = float(cx)
+            survivor.y = float(cy)
+            survivor.rect.center = (int(survivor.x), int(survivor.y))
+
     survivors_with_x = sorted(((survivor.x, survivor) for survivor in survivors), key=lambda item: item[0])
     for i, (base_x, survivor) in enumerate(survivors_with_x):
         for other_base_x, other in survivors_with_x[i + 1 :]:
@@ -106,6 +150,9 @@ def update_survivors(
                 other.y += offset_y
                 survivor.rect.center = (int(survivor.x), int(survivor.y))
                 other.rect.center = (int(other.x), int(other.y))
+
+    for survivor in survivors:
+        _resolve_wall_overlap(survivor)
 
 
 def calculate_car_speed_for_passengers(passengers: int, *, capacity: int = SURVIVOR_MAX_SAFE_PASSENGERS) -> float:
