@@ -39,12 +39,14 @@ def draw_level_overview(
     shoes: list[Shoes] | None = None,
     buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
+    fall_spawn_cells: set[tuple[int, int]] | None = None,
     palette_key: str | None = None,
 ) -> None:
     palette = get_environment_palette(palette_key)
     base_floor = palette.floor_primary
     dark_floor = tuple(max(0, int(channel * 0.35)) for channel in base_floor)
     floor_color = tuple(max(0, int(channel * 0.65)) for channel in base_floor)
+    fall_floor = tuple(max(0, int(channel * 0.55)) for channel in palette.fall_zone_primary)
     surface.fill(dark_floor)
     cell_size = assets.internal_wall_grid_snap
     if cell_size > 0:
@@ -59,6 +61,18 @@ def draw_level_overview(
                     cell_size,
                 ),
             )
+        if fall_spawn_cells:
+            for x, y in fall_spawn_cells:
+                pygame.draw.rect(
+                    surface,
+                    fall_floor,
+                    pygame.Rect(
+                        x * cell_size,
+                        y * cell_size,
+                        cell_size,
+                        cell_size,
+                    ),
+                )
 
     for wall in wall_group:
         if wall.max_health > 0:
@@ -179,6 +193,7 @@ def draw_debug_overview(
             if survivor.alive() and survivor.is_buddy and not survivor.rescued
         ],
         survivors=list(game_data.groups.survivor_group),
+        fall_spawn_cells=game_data.layout.fall_spawn_cells,
         palette_key=game_data.state.ambient_palette_key,
     )
     zombie_color = (200, 80, 80)
