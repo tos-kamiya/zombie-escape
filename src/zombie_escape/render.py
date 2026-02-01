@@ -1720,21 +1720,10 @@ def draw(
 
     camera = game_data.camera
     stage = game_data.stage
-    field_rect = game_data.layout.field_rect
     outside_cells = game_data.layout.outside_cells
     all_sprites = game_data.groups.all_sprites
-    fog_surfaces = game_data.fog
-    footprints = state.footprints
     has_fuel = state.has_fuel
     flashlight_count = state.flashlight_count
-    shoes_count = state.shoes_count
-    elapsed_play_ms = state.elapsed_play_ms
-    fuel_message_until = state.fuel_message_until
-    buddy_onboard = state.buddy_onboard
-    buddy_required = stage.buddy_required_count if stage else 0
-    survivors_onboard = state.survivors_onboard
-    survivor_messages = list(state.survivor_messages)
-    zombie_group = game_data.groups.zombie_group
     active_car = game_data.car if game_data.car and game_data.car.alive() else None
     if player.in_car and game_data.car and game_data.car.alive():
         fov_target = game_data.car
@@ -1749,7 +1738,7 @@ def draw(
         camera,
         assets,
         palette,
-        field_rect,
+        game_data.layout.field_rect,
         outside_cells,
         game_data.layout.fall_spawn_cells,
         game_data.layout.pitfall_cells,
@@ -1810,7 +1799,7 @@ def draw(
         screen,
         camera,
         assets,
-        footprints,
+        state.footprints,
         config=config,
     )
     _draw_entities(
@@ -1843,7 +1832,7 @@ def draw(
         screen,
         camera,
         assets,
-        fog_surfaces,
+        game_data.fog,
         fov_target,
         stage=stage,
         flashlight_count=flashlight_count,
@@ -1853,8 +1842,8 @@ def draw(
         screen,
         assets,
         has_fuel=has_fuel,
-        fuel_message_until=fuel_message_until,
-        elapsed_play_ms=elapsed_play_ms,
+        fuel_message_until=state.fuel_message_until,
+        elapsed_play_ms=state.elapsed_play_ms,
     )
 
     objective_lines = _build_objective_lines(
@@ -1863,9 +1852,9 @@ def draw(
         player=player,
         active_car=active_car,
         has_fuel=has_fuel,
-        buddy_onboard=buddy_onboard,
-        buddy_required=buddy_required,
-        survivors_onboard=survivors_onboard,
+        buddy_onboard=state.buddy_onboard,
+        buddy_required=stage.buddy_required_count if stage else 0,
+        survivors_onboard=state.survivors_onboard,
     )
     if objective_lines:
         _draw_objective(objective_lines, screen=screen)
@@ -1874,9 +1863,9 @@ def draw(
         assets,
         has_fuel=has_fuel,
         flashlight_count=flashlight_count,
-        shoes_count=shoes_count,
+        shoes_count=state.shoes_count,
     )
-    _draw_survivor_messages(screen, assets, survivor_messages)
+    _draw_survivor_messages(screen, assets, list(state.survivor_messages))
     _draw_endurance_timer(screen, assets, stage=stage, state=state)
     _draw_time_accel_indicator(screen, assets, stage=stage, state=state)
     _draw_status_bar(
@@ -1886,7 +1875,7 @@ def draw(
         stage=stage,
         seed=state.seed,
         debug_mode=state.debug_mode,
-        zombie_group=zombie_group,
+        zombie_group=game_data.groups.zombie_group,
         falling_spawn_carry=state.falling_spawn_carry,
         show_fps=state.show_fps,
         fps=fps,
