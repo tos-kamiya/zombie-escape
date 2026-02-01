@@ -17,6 +17,7 @@ from .entities_constants import (
     BUDDY_FOLLOW_SPEED,
     BUDDY_RADIUS,
     BUDDY_WALL_DAMAGE,
+    BUDDY_WALL_DAMAGE_RANGE,
     CAR_HEALTH,
     CAR_HEIGHT,
     CAR_SPEED,
@@ -986,7 +987,12 @@ class Survivor(pygame.sprite.Sprite):
                 if hit_wall or blocked_by_pitfall:
                     if hit_wall:
                         if hit_wall.alive():
-                            hit_wall._take_damage(amount=max(1, BUDDY_WALL_DAMAGE))
+                            dx_to_player = player_pos[0] - self.x
+                            dy_to_player = player_pos[1] - self.y
+                            if dx_to_player * dx_to_player + dy_to_player * dy_to_player <= (
+                                BUDDY_WALL_DAMAGE_RANGE * BUDDY_WALL_DAMAGE_RANGE
+                            ):
+                                hit_wall._take_damage(amount=max(1, BUDDY_WALL_DAMAGE))
                         if _is_inner_wall(hit_wall):
                             inner_wall_hit = True
                     self.x -= move_x
@@ -1017,7 +1023,12 @@ class Survivor(pygame.sprite.Sprite):
                 if hit_wall or blocked_by_pitfall:
                     if hit_wall:
                         if hit_wall.alive():
-                            hit_wall._take_damage(amount=max(1, BUDDY_WALL_DAMAGE))
+                            dx_to_player = player_pos[0] - self.x
+                            dy_to_player = player_pos[1] - self.y
+                            if dx_to_player * dx_to_player + dy_to_player * dy_to_player <= (
+                                BUDDY_WALL_DAMAGE_RANGE * BUDDY_WALL_DAMAGE_RANGE
+                            ):
+                                hit_wall._take_damage(amount=max(1, BUDDY_WALL_DAMAGE))
                         if _is_inner_wall(hit_wall):
                             inner_wall_hit = True
                     self.y -= move_y

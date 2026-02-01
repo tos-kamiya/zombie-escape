@@ -5,6 +5,8 @@ from typing import Any
 import pygame
 
 from ..entities_constants import (
+    BUDDY_FOLLOW_START_DISTANCE,
+    BUDDY_FOLLOW_STOP_DISTANCE,
     BUDDY_MERGE_DISTANCE,
     CAR_HEIGHT,
     CAR_WIDTH,
@@ -15,7 +17,6 @@ from ..entities_constants import (
     HUMANOID_RADIUS,
     SHOES_HEIGHT,
     SHOES_WIDTH,
-    SURVIVOR_APPROACH_RADIUS,
     SURVIVOR_MAX_SAFE_PASSENGERS,
 )
 from .constants import (
@@ -154,7 +155,10 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             buddy_on_screen = rect_visible_on_screen(camera, buddy.rect)
             if not player.in_car:
                 dist_to_player_sq = (player.x - buddy.x) ** 2 + (player.y - buddy.y) ** 2
-                if dist_to_player_sq <= SURVIVOR_APPROACH_RADIUS * SURVIVOR_APPROACH_RADIUS:
+                if buddy.following:
+                    if dist_to_player_sq >= BUDDY_FOLLOW_STOP_DISTANCE * BUDDY_FOLLOW_STOP_DISTANCE:
+                        buddy.following = False
+                elif dist_to_player_sq <= BUDDY_FOLLOW_START_DISTANCE * BUDDY_FOLLOW_START_DISTANCE:
                     buddy.set_following()
             elif player.in_car and active_car and shrunk_car:
                 g = pygame.sprite.Group()
