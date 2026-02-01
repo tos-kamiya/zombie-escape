@@ -147,16 +147,12 @@ def gameplay_screen(
 
     sync_ambient_palette_with_flashlights(game_data, force=True)
     initial_waiting = max(0, stage.waiting_car_target_count)
-    player, waiting_cars = setup_player_and_cars(
-        game_data, layout_data, car_count=initial_waiting
-    )
+    player, waiting_cars = setup_player_and_cars(game_data, layout_data, car_count=initial_waiting)
     game_data.player = player
     game_data.waiting_cars = waiting_cars
     game_data.car = None
     # Only top up if initial placement spawned fewer than the intended baseline (shouldn't happen)
-    maintain_waiting_car_supply(
-        game_data, minimum=stage.waiting_car_target_count
-    )
+    maintain_waiting_car_supply(game_data, minimum=stage.waiting_car_target_count)
     apply_passenger_speed_penalty(game_data)
 
     spawn_survivors(game_data, layout_data)
@@ -260,16 +256,14 @@ def gameplay_screen(
             if event.type == pygame.MOUSEBUTTONDOWN:
                 paused_focus = False
             if event.type == pygame.JOYDEVICEADDED or (
-                CONTROLLER_DEVICE_ADDED is not None
-                and event.type == CONTROLLER_DEVICE_ADDED
+                CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
             ):
                 if controller is None:
                     controller = init_first_controller()
                 if controller is None:
                     joystick = init_first_joystick()
             if event.type == pygame.JOYDEVICEREMOVED or (
-                CONTROLLER_DEVICE_REMOVED is not None
-                and event.type == CONTROLLER_DEVICE_REMOVED
+                CONTROLLER_DEVICE_REMOVED is not None and event.type == CONTROLLER_DEVICE_REMOVED
             ):
                 if controller and not controller.get_init():
                     controller = None
@@ -285,14 +279,8 @@ def gameplay_screen(
                 if event.key == pygame.K_f:
                     toggle_fullscreen(game_data=game_data)
                     continue
-                if event.key == pygame.K_s and (
-                    pygame.key.get_mods() & pygame.KMOD_CTRL
-                ):
-                    state_snapshot = {
-                        k: v
-                        for k, v in vars(game_data.state).items()
-                        if k != "footprints"
-                    }
+                if event.key == pygame.K_s and (pygame.key.get_mods() & pygame.KMOD_CTRL):
+                    state_snapshot = {k: v for k, v in vars(game_data.state).items() if k != "footprints"}
                     print("STATE DEBUG:", state_snapshot)
                     continue
                 if debug_mode:
@@ -313,8 +301,7 @@ def gameplay_screen(
                     paused_manual = True
                     continue
             if event.type == pygame.JOYBUTTONDOWN or (
-                CONTROLLER_BUTTON_DOWN is not None
-                and event.type == CONTROLLER_BUTTON_DOWN
+                CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN
             ):
                 if debug_mode:
                     if is_select_event(event):
@@ -390,20 +377,12 @@ def gameplay_screen(
             continue
 
         keys = pygame.key.get_pressed()
-        accel_allowed = not (
-            game_data.state.game_over or game_data.state.game_won
-        )
-        accel_active = accel_allowed and is_accel_active(
-            keys, controller, joystick
-        )
+        accel_allowed = not (game_data.state.game_over or game_data.state.game_won)
+        accel_active = accel_allowed and is_accel_active(keys, controller, joystick)
         game_data.state.time_accel_active = accel_active
         substeps = SURVIVAL_TIME_ACCEL_SUBSTEPS if accel_active else 1
-        sub_dt = (
-            min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
-        )
-        wall_index = build_wall_index(
-            game_data.groups.wall_group, cell_size=game_data.cell_size
-        )
+        sub_dt = min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
+        wall_index = build_wall_index(game_data.groups.wall_group, cell_size=game_data.cell_size)
         for _ in range(substeps):
             player_ref = game_data.player
             if player_ref is None:
@@ -453,9 +432,7 @@ def gameplay_screen(
                     pitfall_cells=game_data.layout.pitfall_cells,
                 )
             footprints_enabled = config.get("footprints", {}).get("enabled", True)
-            footprints_to_draw = (
-                game_data.state.footprints if footprints_enabled else []
-            )
+            footprints_to_draw = game_data.state.footprints if footprints_enabled else []
             draw_level_overview(
                 render_assets,
                 overview_surface,
@@ -504,15 +481,11 @@ def gameplay_screen(
                 scaled_w = int(scaled_h * level_aspect)
             scaled_w = max(1, scaled_w)
             scaled_h = max(1, scaled_h)
-            scaled_overview = pygame.transform.smoothscale(
-                overview_surface, (scaled_w, scaled_h)
-            )
+            scaled_overview = pygame.transform.smoothscale(overview_surface, (scaled_w, scaled_h))
             screen.fill(BLACK)
             screen.blit(
                 scaled_overview,
-                scaled_overview.get_rect(
-                    center=(screen_width // 2, screen_height // 2)
-                ),
+                scaled_overview.get_rect(center=(screen_width // 2, screen_height // 2)),
             )
             present(screen)
             continue
@@ -531,36 +504,25 @@ def gameplay_screen(
         if hint_enabled:
             if not has_fuel and game_data.fuel and game_data.fuel.alive():
                 target_type = "fuel"
-            elif not player.in_car and (
-                active_car or _alive_waiting_cars(game_data)
-            ):
+            elif not player.in_car and (active_car or _alive_waiting_cars(game_data)):
                 target_type = "car"
             else:
                 target_type = None
 
             if target_type != hint_target_type:
                 game_data.state.hint_target_type = target_type
-                game_data.state.hint_expires_at = (
-                    elapsed_ms + hint_delay if target_type else 0
-                )
+                game_data.state.hint_expires_at = elapsed_ms + hint_delay if target_type else 0
                 hint_expires_at = game_data.state.hint_expires_at
                 hint_target_type = target_type
 
-            if (
-                target_type
-                and hint_expires_at
-                and elapsed_ms >= hint_expires_at
-                and not player.in_car
-            ):
+            if target_type and hint_expires_at and elapsed_ms >= hint_expires_at and not player.in_car:
                 if target_type == "fuel" and game_data.fuel and game_data.fuel.alive():
                     hint_target = game_data.fuel.rect.center
                 elif target_type == "car":
                     if active_car:
                         hint_target = active_car.rect.center
                     else:
-                        waiting_target = nearest_waiting_car(
-                            game_data, (player.x, player.y)
-                        )
+                        waiting_target = nearest_waiting_car(game_data, (player.x, player.y))
                         if waiting_target:
                             hint_target = waiting_target.rect.center
 

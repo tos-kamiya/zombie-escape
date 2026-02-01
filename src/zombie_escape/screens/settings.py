@@ -198,16 +198,14 @@ def settings_screen(
                 sync_window_size(event)
                 continue
             if event.type == pygame.JOYDEVICEADDED or (
-                CONTROLLER_DEVICE_ADDED is not None
-                and event.type == CONTROLLER_DEVICE_ADDED
+                CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
             ):
                 if controller is None:
                     controller = init_first_controller()
                 if controller is None:
                     joystick = init_first_joystick()
             if event.type == pygame.JOYDEVICEREMOVED or (
-                CONTROLLER_DEVICE_REMOVED is not None
-                and event.type == CONTROLLER_DEVICE_REMOVED
+                CONTROLLER_DEVICE_REMOVED is not None and event.type == CONTROLLER_DEVICE_REMOVED
             ):
                 if controller and not controller.get_init():
                     controller = None
@@ -254,8 +252,7 @@ def settings_screen(
                     working = copy.deepcopy(DEFAULT_CONFIG)
                     set_language(working.get("language"))
             if event.type == pygame.JOYBUTTONDOWN or (
-                CONTROLLER_BUTTON_DOWN is not None
-                and event.type == CONTROLLER_BUTTON_DOWN
+                CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN
             ):
                 current_row = rows[selected]
                 row_type = current_row.get("type", "toggle")
@@ -267,15 +264,9 @@ def settings_screen(
                     elif row_type == "choice":
                         cycle_choice(current_row, 1)
                 if CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN:
-                    if (
-                        CONTROLLER_BUTTON_DPAD_UP is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_UP
-                    ):
+                    if CONTROLLER_BUTTON_DPAD_UP is not None and event.button == CONTROLLER_BUTTON_DPAD_UP:
                         selected = (selected - 1) % row_count
-                    if (
-                        CONTROLLER_BUTTON_DPAD_DOWN is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_DOWN
-                    ):
+                    if CONTROLLER_BUTTON_DPAD_DOWN is not None and event.button == CONTROLLER_BUTTON_DPAD_DOWN:
                         selected = (selected + 1) % row_count
                     if (
                         CONTROLLER_BUTTON_DPAD_LEFT is not None
@@ -332,15 +323,9 @@ def settings_screen(
 
         try:
             font_settings = get_font_settings()
-            label_font = load_font(
-                font_settings.resource, font_settings.scaled_size(12)
-            )
-            value_font = load_font(
-                font_settings.resource, font_settings.scaled_size(12)
-            )
-            section_font = load_font(
-                font_settings.resource, font_settings.scaled_size(13)
-            )
+            label_font = load_font(font_settings.resource, font_settings.scaled_size(12))
+            value_font = load_font(font_settings.resource, font_settings.scaled_size(12))
+            section_font = load_font(font_settings.resource, font_settings.scaled_size(13))
             highlight_color = (70, 70, 70)
 
             row_height = 20
@@ -360,20 +345,14 @@ def settings_screen(
             section_states: dict[str, dict] = {}
             y_cursor = start_y
             for section in sections:
-                header_surface = section_font.render(
-                    section["label"], False, LIGHT_GRAY
-                )
+                header_surface = section_font.render(section["label"], False, LIGHT_GRAY)
                 section_states[section["label"]] = {
                     "next_y": y_cursor + header_surface.get_height() + 4,
                     "header_surface": header_surface,
                     "header_pos": (column_margin, y_cursor),
                 }
                 rows_in_section = len(section["rows"])
-                y_cursor = (
-                    section_states[section["label"]]["next_y"]
-                    + rows_in_section * row_height
-                    + section_spacing
-                )
+                y_cursor = section_states[section["label"]]["next_y"] + rows_in_section * row_height + section_spacing
 
             for state in section_states.values():
                 screen.blit(state["header_surface"], state["header_pos"])
@@ -393,9 +372,7 @@ def settings_screen(
                 row_y_current = state["next_y"]
                 state["next_y"] += row_height
 
-                highlight_rect = pygame.Rect(
-                    col_x, row_y_current - 2, row_width, row_height
-                )
+                highlight_rect = pygame.Rect(col_x, row_y_current - 2, row_width, row_height)
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
@@ -409,11 +386,7 @@ def settings_screen(
                 screen.blit(label_surface, label_rect)
                 if row_type == "choice":
                     display_fn = row.get("get_display")
-                    display_text = (
-                        display_fn(value)
-                        if display_fn and value is not None
-                        else str(value)
-                    )
+                    display_text = display_fn(value) if display_fn and value is not None else str(value)
                     value_surface = value_font.render(display_text, False, WHITE)
                     value_rect = value_surface.get_rect(
                         midright=(
@@ -425,9 +398,7 @@ def settings_screen(
                 elif row_type == "toggle":
                     slider_y = row_y_current + (row_height - segment_height) // 2 - 2
                     slider_x = col_x + row_width - segment_total_width
-                    left_rect = pygame.Rect(
-                        slider_x, slider_y, segment_width, segment_height
-                    )
+                    left_rect = pygame.Rect(slider_x, slider_y, segment_width, segment_height)
                     right_rect = pygame.Rect(
                         left_rect.right + segment_gap,
                         slider_y,
@@ -438,9 +409,7 @@ def settings_screen(
                     left_active = value == row["easy_value"]
                     right_active = not left_active
 
-                    def draw_segment(
-                        rect: pygame.Rect, text: str, active: bool
-                    ) -> None:
+                    def draw_segment(rect: pygame.Rect, text: str, active: bool) -> None:
                         base_color = (35, 35, 35)
                         active_color = (60, 90, 60) if active else base_color
                         outline_color = GREEN if active else LIGHT_GRAY
@@ -482,18 +451,12 @@ def settings_screen(
 
             path_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             config_text = tr("settings.config_path", path=str(config_path))
-            progress_text = tr(
-                "settings.progress_path", path=str(user_progress_path())
-            )
+            progress_text = tr("settings.progress_path", path=str(user_progress_path()))
             line_height = path_font.get_linesize()
             config_surface = path_font.render(config_text, False, LIGHT_GRAY)
             progress_surface = path_font.render(progress_text, False, LIGHT_GRAY)
-            config_rect = config_surface.get_rect(
-                midtop=(screen_width // 2, screen_height - 32 - line_height)
-            )
-            progress_rect = progress_surface.get_rect(
-                midtop=(screen_width // 2, screen_height - 32)
-            )
+            config_rect = config_surface.get_rect(midtop=(screen_width // 2, screen_height - 32 - line_height))
+            progress_rect = progress_surface.get_rect(midtop=(screen_width // 2, screen_height - 32))
             screen.blit(config_surface, config_rect)
             screen.blit(progress_surface, progress_rect)
         except pygame.error as e:

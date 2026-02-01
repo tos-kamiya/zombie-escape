@@ -142,42 +142,28 @@ def get_environment_palette(key: str | None) -> EnvironmentPalette:
 
     if not key:
         return ENVIRONMENT_PALETTES[DEFAULT_AMBIENT_PALETTE_KEY]
-    return ENVIRONMENT_PALETTES.get(
-        key, ENVIRONMENT_PALETTES[DEFAULT_AMBIENT_PALETTE_KEY]
-    )
+    return ENVIRONMENT_PALETTES.get(key, ENVIRONMENT_PALETTES[DEFAULT_AMBIENT_PALETTE_KEY])
 
 
 def ambient_palette_key_for_flashlights(count: int) -> str:
     """Return the palette key for the provided flashlight inventory count."""
 
-    return (
-        DEFAULT_AMBIENT_PALETTE_KEY if max(0, count) > 0 else NO_FLASHLIGHT_PALETTE_KEY
-    )
+    return DEFAULT_AMBIENT_PALETTE_KEY if max(0, count) > 0 else NO_FLASHLIGHT_PALETTE_KEY
 
 
 # World colors (default palette versions preserved for backwards compatibility).
 INTERNAL_WALL_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.inner_wall
-INTERNAL_WALL_BORDER_COLOR: tuple[int, int, int] = (
-    _DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border
-)
+INTERNAL_WALL_BORDER_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border
 OUTER_WALL_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outer_wall
-OUTER_WALL_BORDER_COLOR: tuple[int, int, int] = (
-    _DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border
-)
+OUTER_WALL_BORDER_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border
 FLOOR_COLOR_PRIMARY: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.floor_primary
-FLOOR_COLOR_SECONDARY: tuple[int, int, int] = (
-    _DEFAULT_ENVIRONMENT_PALETTE.floor_secondary
-)
+FLOOR_COLOR_SECONDARY: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.floor_secondary
 FLOOR_COLOR_OUTSIDE: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outside
 FOOTPRINT_COLOR: tuple[int, int, int] = (110, 200, 255)
 STEEL_BEAM_COLOR: tuple[int, int, int] = (110, 50, 50)
 STEEL_BEAM_LINE_COLOR: tuple[int, int, int] = (180, 90, 90)
-FALL_ZONE_FLOOR_PRIMARY: tuple[int, int, int] = (
-    _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_primary
-)
-FALL_ZONE_FLOOR_SECONDARY: tuple[int, int, int] = (
-    _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_secondary
-)
+FALL_ZONE_FLOOR_PRIMARY: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_primary
+FALL_ZONE_FLOOR_SECONDARY: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.fall_zone_secondary
 
 
 __all__ = [

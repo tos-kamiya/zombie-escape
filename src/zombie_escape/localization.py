@@ -117,9 +117,7 @@ def translate_list(key: str) -> list[Any]:
 
 def get_font_settings(*, name: str = "primary") -> FontSettings:
     _get_language_options()  # ensure locale data is loaded
-    locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(
-        DEFAULT_LANGUAGE, {}
-    )
+    locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(DEFAULT_LANGUAGE, {})
     fonts = locale_data.get("fonts", {}) if isinstance(locale_data, dict) else {}
     data = fonts.get(name, {}) if isinstance(fonts, dict) else {}
     resource = data.get("resource") or DEFAULT_FONT_RESOURCE
@@ -136,9 +134,7 @@ def _qualify_key(key: str) -> str:
 
 
 def _lookup_locale_value(key: str) -> Any:
-    locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(
-        DEFAULT_LANGUAGE, {}
-    )
+    locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(DEFAULT_LANGUAGE, {})
     if not isinstance(locale_data, dict):
         return None
     qualified = _qualify_key(key)
@@ -184,11 +180,7 @@ def _get_language_options() -> tuple[LanguageOption, ...]:
             data = {}
         locale_data = data.get(code, {}) if isinstance(data, dict) else {}
         _LOCALE_DATA[code] = locale_data if isinstance(locale_data, dict) else {}
-        lang_name = (
-            locale_data.get("meta", {}).get("language_name")
-            if isinstance(locale_data, dict)
-            else None
-        )
+        lang_name = locale_data.get("meta", {}).get("language_name") if isinstance(locale_data, dict) else None
         options.append(LanguageOption(code=code, name=lang_name or code))
 
     if not options:

@@ -44,6 +44,7 @@ def _interaction_radius(width: float, height: float) -> float:
     """Approximate interaction reach for a humanoid and an object."""
     return HUMANOID_RADIUS + (width + height) / 4
 
+
 RNG = get_rng()
 
 
@@ -71,9 +72,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
 
     car_interaction_radius = _interaction_radius(CAR_WIDTH, CAR_HEIGHT)
     fuel_interaction_radius = _interaction_radius(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
-    flashlight_interaction_radius = _interaction_radius(
-        FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT
-    )
+    flashlight_interaction_radius = _interaction_radius(FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT)
     shoes_interaction_radius = _interaction_radius(SHOES_WIDTH, SHOES_HEIGHT)
 
     def _rect_center_cell(rect: pygame.Rect) -> tuple[int, int] | None:
@@ -92,14 +91,8 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         dy = point[1] - player.y
         return dx * dx + dy * dy <= radius * radius
 
-    def _player_near_sprite(
-        sprite_obj: pygame.sprite.Sprite | None, radius: float
-    ) -> bool:
-        return bool(
-            sprite_obj
-            and sprite_obj.alive()
-            and _player_near_point(sprite_obj.rect.center, radius)
-        )
+    def _player_near_sprite(sprite_obj: pygame.sprite.Sprite | None, radius: float) -> bool:
+        return bool(sprite_obj and sprite_obj.alive() and _player_near_point(sprite_obj.rect.center, radius))
 
     def _player_near_car(car_obj: Car | None) -> bool:
         return _player_near_sprite(car_obj, car_interaction_radius)
@@ -120,9 +113,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         for flashlight in list(flashlights):
             if not flashlight.alive():
                 continue
-            if _player_near_point(
-                flashlight.rect.center, flashlight_interaction_radius
-            ):
+            if _player_near_point(flashlight.rect.center, flashlight_interaction_radius):
                 state.flashlight_count += 1
                 state.hint_expires_at = 0
                 state.hint_target_type = None
@@ -152,9 +143,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     sync_ambient_palette_with_flashlights(game_data)
 
     buddies = [
-        survivor
-        for survivor in survivor_group
-        if survivor.alive() and survivor.is_buddy and not survivor.rescued
+        survivor for survivor in survivor_group if survivor.alive() and survivor.is_buddy and not survivor.rescued
     ]
 
     # Buddy interactions (Stage 3)
@@ -164,20 +153,13 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 continue
             buddy_on_screen = rect_visible_on_screen(camera, buddy.rect)
             if not player.in_car:
-                dist_to_player_sq = (player.x - buddy.x) ** 2 + (
-                    player.y - buddy.y
-                ) ** 2
-                if (
-                    dist_to_player_sq
-                    <= SURVIVOR_APPROACH_RADIUS * SURVIVOR_APPROACH_RADIUS
-                ):
+                dist_to_player_sq = (player.x - buddy.x) ** 2 + (player.y - buddy.y) ** 2
+                if dist_to_player_sq <= SURVIVOR_APPROACH_RADIUS * SURVIVOR_APPROACH_RADIUS:
                     buddy.set_following()
             elif player.in_car and active_car and shrunk_car:
                 g = pygame.sprite.Group()
                 g.add(buddy)
-                if pygame.sprite.spritecollide(
-                    shrunk_car, g, False, pygame.sprite.collide_circle
-                ):
+                if pygame.sprite.spritecollide(shrunk_car, g, False, pygame.sprite.collide_circle):
                     prospective_passengers = state.survivors_onboard + 1
                     capacity_limit = state.survivor_capacity
                     if prospective_passengers > capacity_limit:
@@ -191,9 +173,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     buddy.kill()
                     continue
 
-            if buddy.alive() and pygame.sprite.spritecollide(
-                buddy, zombie_group, False, pygame.sprite.collide_circle
-            ):
+            if buddy.alive() and pygame.sprite.spritecollide(buddy, zombie_group, False, pygame.sprite.collide_circle):
                 if buddy_on_screen:
                     state.game_over_message = tr("game_over.scream")
                     state.game_over = True
@@ -203,18 +183,11 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                         new_cell = RNG.choice(walkable_cells)
                         buddy.teleport(_cell_center(new_cell))
                     else:
-                        buddy.teleport(
-                            (game_data.level_width // 2, game_data.level_height // 2)
-                        )
+                        buddy.teleport((game_data.level_width // 2, game_data.level_height // 2))
                     buddy.following = False
 
     # Player entering an active car already under control
-    if (
-        not player.in_car
-        and _player_near_car(active_car)
-        and active_car
-        and active_car.health > 0
-    ):
+    if not player.in_car and _player_near_car(active_car) and active_car and active_car.health > 0:
         if state.has_fuel:
             player.in_car = True
             all_sprites.remove(player)
@@ -258,9 +231,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     # Bonus: collide a parked car while driving to repair/extend capabilities
     if player.in_car and active_car and shrunk_car and waiting_cars:
         waiting_group = pygame.sprite.Group(waiting_cars)
-        collided_waiters = pygame.sprite.spritecollide(
-            shrunk_car, waiting_group, False, pygame.sprite.collide_rect
-        )
+        collided_waiters = pygame.sprite.spritecollide(shrunk_car, waiting_group, False, pygame.sprite.collide_rect)
         if collided_waiters:
             removed_any = False
             capacity_increments = 0
@@ -288,16 +259,8 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         if zombies_hit:
             active_car._take_damage(CAR_ZOMBIE_DAMAGE * len(zombies_hit))
 
-    if (
-        stage.rescue_stage
-        and player.in_car
-        and active_car
-        and shrunk_car
-        and survivor_group
-    ):
-        boarded = pygame.sprite.spritecollide(
-            shrunk_car, survivor_group, True, pygame.sprite.collide_circle
-        )
+    if stage.rescue_stage and player.in_car and active_car and shrunk_car and survivor_group:
+        boarded = pygame.sprite.spritecollide(shrunk_car, survivor_group, True, pygame.sprite.collide_circle)
         if boarded:
             state.survivors_onboard += len(boarded)
             apply_passenger_speed_penalty(game_data)
@@ -339,9 +302,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     # Player getting caught by zombies
     if not player.in_car and player in all_sprites:
         shrunk_player = get_shrunk_sprite(player, 0.8)
-        collisions = pygame.sprite.spritecollide(
-            shrunk_player, zombie_group, False, pygame.sprite.collide_circle
-        )
+        collisions = pygame.sprite.spritecollide(shrunk_player, zombie_group, False, pygame.sprite.collide_circle)
         if any(not zombie.carbonized for zombie in collisions):
             if not state.game_over:
                 state.game_over = True
@@ -367,9 +328,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         car_cell = _rect_center_cell(car.rect)
         if buddy_ready and car_cell is not None and car_cell in outside_cells:
             if stage.buddy_required_count > 0:
-                state.buddy_rescued = min(
-                    stage.buddy_required_count, state.buddy_onboard
-                )
+                state.buddy_rescued = min(stage.buddy_required_count, state.buddy_onboard)
             if stage.rescue_stage and state.survivors_onboard:
                 state.survivors_rescued += state.survivors_onboard
                 state.survivors_onboard = 0

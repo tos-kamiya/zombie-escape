@@ -300,13 +300,8 @@ def _create_zombie(
         level_width = grid_cols * tile_size
         level_height = grid_rows * tile_size
         if hint_pos is not None:
-            points = [
-                random_position_outside_building(level_width, level_height)
-                for _ in range(5)
-            ]
-            points.sort(
-                key=lambda p: (p[0] - hint_pos[0]) ** 2 + (p[1] - hint_pos[1]) ** 2
-            )
+            points = [random_position_outside_building(level_width, level_height) for _ in range(5)]
+            points.sort(key=lambda p: (p[0] - hint_pos[0]) ** 2 + (p[1] - hint_pos[1]) ** 2)
             start_pos = points[0]
         else:
             start_pos = random_position_outside_building(level_width, level_height)
@@ -392,9 +387,7 @@ def _place_flashlight(
             continue
         if cars:
             if any(
-                (center[0] - parked.rect.centerx) ** 2
-                + (center[1] - parked.rect.centery) ** 2
-                < min_car_dist_sq
+                (center[0] - parked.rect.centerx) ** 2 + (center[1] - parked.rect.centery) ** 2 < min_car_dist_sq
                 for parked in cars
             ):
                 continue
@@ -431,9 +424,7 @@ def place_flashlights(
             break
         # Avoid clustering too tightly
         if any(
-            (other.rect.centerx - fl.rect.centerx) ** 2
-            + (other.rect.centery - fl.rect.centery) ** 2
-            < 120 * 120
+            (other.rect.centerx - fl.rect.centerx) ** 2 + (other.rect.centery - fl.rect.centery) ** 2 < 120 * 120
             for other in placed
         ):
             continue
@@ -469,9 +460,7 @@ def _place_shoes(
             continue
         if cars:
             if any(
-                (center[0] - parked.rect.centerx) ** 2
-                + (center[1] - parked.rect.centery) ** 2
-                < min_car_dist_sq
+                (center[0] - parked.rect.centerx) ** 2 + (center[1] - parked.rect.centery) ** 2 < min_car_dist_sq
                 for parked in cars
             ):
                 continue
@@ -507,9 +496,7 @@ def place_shoes(
         if not shoes:
             break
         if any(
-            (other.rect.centerx - shoes.rect.centerx) ** 2
-            + (other.rect.centery - shoes.rect.centery) ** 2
-            < 120 * 120
+            (other.rect.centerx - shoes.rect.centerx) ** 2 + (other.rect.centery - shoes.rect.centery) ** 2 < 120 * 120
             for other in placed
         ):
             continue
@@ -568,30 +555,20 @@ def place_new_car(
         temp_car = Car(c_x, c_y, appearance=appearance)
         temp_rect = temp_car.rect.inflate(30, 30)
         nearby_walls = pygame.sprite.Group()
-        nearby_walls.add(
-            [
-                w
-                for w in wall_group
-                if abs(w.rect.centerx - c_x) < 150 and abs(w.rect.centery - c_y) < 150
-            ]
-        )
+        nearby_walls.add([w for w in wall_group if abs(w.rect.centerx - c_x) < 150 and abs(w.rect.centery - c_y) < 150])
         collides_wall = spritecollideany_walls(temp_car, nearby_walls)
         collides_player = temp_rect.colliderect(player.rect.inflate(50, 50))
         car_overlap = False
         if existing_cars:
             car_overlap = any(
-                temp_car.rect.colliderect(other.rect)
-                for other in existing_cars
-                if other and other.alive()
+                temp_car.rect.colliderect(other.rect) for other in existing_cars if other and other.alive()
             )
         if not collides_wall and not collides_player and not car_overlap:
             return temp_car
     return None
 
 
-def spawn_survivors(
-    game_data: GameData, layout_data: Mapping[str, list[tuple[int, int]]]
-) -> list[Survivor]:
+def spawn_survivors(game_data: GameData, layout_data: Mapping[str, list[tuple[int, int]]]) -> list[Survivor]:
     """Populate rescue-stage survivors and buddy-stage buddies."""
     survivors: list[Survivor] = []
     if not (game_data.stage.rescue_stage or game_data.stage.buddy_required_count > 0):
@@ -671,9 +648,7 @@ def setup_player_and_cars(
         RNG.shuffle(car_candidates)
         for candidate in car_candidates:
             center = _cell_center(candidate, cell_size)
-            if (center[0] - player_pos[0]) ** 2 + (
-                center[1] - player_pos[1]
-            ) ** 2 >= 400 * 400:
+            if (center[0] - player_pos[0]) ** 2 + (center[1] - player_pos[1]) ** 2 >= 400 * 400:
                 car_candidates.remove(candidate)
                 return center
         choice = car_candidates.pop()
@@ -803,9 +778,7 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
     return None
 
 
-def maintain_waiting_car_supply(
-    game_data: GameData, *, minimum: int | None = None
-) -> None:
+def maintain_waiting_car_supply(game_data: GameData, *, minimum: int | None = None) -> None:
     """Ensure a baseline count of parked cars exists."""
     target = 1 if minimum is None else max(0, minimum)
     current = len(_alive_waiting_cars(game_data))
@@ -839,8 +812,7 @@ def nearest_waiting_car(game_data: GameData, origin: tuple[float, float]) -> Car
         return None
     return min(
         cars,
-        key=lambda car: (car.rect.centerx - origin[0]) ** 2
-        + (car.rect.centery - origin[1]) ** 2,
+        key=lambda car: (car.rect.centerx - origin[0]) ** 2 + (car.rect.centery - origin[1]) ** 2,
     )
 
 

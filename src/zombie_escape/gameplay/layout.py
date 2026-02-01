@@ -23,7 +23,6 @@ __all__ = ["generate_level_from_blueprint", "MapGenerationError"]
 RNG = get_rng()
 
 
-
 def _rect_for_cell(x_idx: int, y_idx: int, cell_size: int) -> pygame.Rect:
     return pygame.Rect(
         x_idx * cell_size,
@@ -53,9 +52,7 @@ def _expand_zone_cells(
     return cells
 
 
-def generate_level_from_blueprint(
-    game_data: GameData, config: dict[str, Any]
-) -> dict[str, list[pygame.Rect]]:
+def generate_level_from_blueprint(game_data: GameData, config: dict[str, Any]) -> dict[str, list[pygame.Rect]]:
     """Build walls/spawn candidates/outside area from a blueprint grid."""
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
@@ -82,23 +79,11 @@ def generate_level_from_blueprint(
         steel_cells_raw = set()
         car_reachable_cells = set()
 
-    steel_cells = (
-        {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
-    )
+    steel_cells = {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
     game_data.layout.car_walkable_cells = car_reachable_cells
     cell_size = game_data.cell_size
-    outer_wall_cells = {
-        (x, y)
-        for y, row in enumerate(blueprint)
-        for x, ch in enumerate(row)
-        if ch == "B"
-    }
-    wall_cells = {
-        (x, y)
-        for y, row in enumerate(blueprint)
-        for x, ch in enumerate(row)
-        if ch in {"B", "1"}
-    }
+    outer_wall_cells = {(x, y) for y, row in enumerate(blueprint) for x, ch in enumerate(row) if ch == "B"}
+    wall_cells = {(x, y) for y, row in enumerate(blueprint) for x, ch in enumerate(row) if ch in {"B", "1"}}
 
     def _has_wall(nx: int, ny: int) -> bool:
         if nx < 0 or ny < 0 or nx >= stage.grid_cols or ny >= stage.grid_rows:
@@ -138,10 +123,7 @@ def generate_level_from_blueprint(
 
     for y, row in enumerate(blueprint):
         if len(row) != stage.grid_cols:
-            raise ValueError(
-                "Blueprint width mismatch at row "
-                f"{y}: {len(row)} != {stage.grid_cols}"
-            )
+            raise ValueError(f"Blueprint width mismatch at row {y}: {len(row)} != {stage.grid_cols}")
         for x, ch in enumerate(row):
             cell_rect = _rect_for_cell(x, y, cell_size)
             cell_has_beam = steel_enabled and (x, y) in steel_cells
@@ -161,9 +143,7 @@ def generate_level_from_blueprint(
                     palette_category="outer_wall",
                     bevel_depth=0,
                     draw_bottom_side=draw_bottom_side,
-                    on_destroy=(
-                        lambda _w, cell=wall_cell: remove_wall_cell(cell)
-                    ),
+                    on_destroy=(lambda _w, cell=wall_cell: remove_wall_cell(cell)),
                 )
                 wall_group.add(wall)
                 all_sprites.add(wall, layer=0)
@@ -186,29 +166,17 @@ def generate_level_from_blueprint(
                     )
                 draw_bottom_side = not _has_wall(x, y + 1)
                 bevel_mask = (
-                    not _has_wall(x, y - 1)
-                    and not _has_wall(x - 1, y)
-                    and not _has_wall(x - 1, y - 1),
-                    not _has_wall(x, y - 1)
-                    and not _has_wall(x + 1, y)
-                    and not _has_wall(x + 1, y - 1),
-                    not _has_wall(x, y + 1)
-                    and not _has_wall(x + 1, y)
-                    and not _has_wall(x + 1, y + 1),
-                    not _has_wall(x, y + 1)
-                    and not _has_wall(x - 1, y)
-                    and not _has_wall(x - 1, y + 1),
+                    not _has_wall(x, y - 1) and not _has_wall(x - 1, y) and not _has_wall(x - 1, y - 1),
+                    not _has_wall(x, y - 1) and not _has_wall(x + 1, y) and not _has_wall(x + 1, y - 1),
+                    not _has_wall(x, y + 1) and not _has_wall(x + 1, y) and not _has_wall(x + 1, y + 1),
+                    not _has_wall(x, y + 1) and not _has_wall(x - 1, y) and not _has_wall(x - 1, y + 1),
                 )
                 if any(bevel_mask):
                     bevel_corners[(x, y)] = bevel_mask
                 wall_cell = (x, y)
                 use_rubble = rubble_ratio > 0 and random.random() < rubble_ratio
                 if use_rubble:
-                    rotation_deg = (
-                        RUBBLE_ROTATION_DEG
-                        if random.random() < 0.5
-                        else -RUBBLE_ROTATION_DEG
-                    )
+                    rotation_deg = RUBBLE_ROTATION_DEG if random.random() < 0.5 else -RUBBLE_ROTATION_DEG
                     wall = RubbleWall(
                         cell_rect.x,
                         cell_rect.y,
@@ -227,9 +195,7 @@ def generate_level_from_blueprint(
                                 )
                             )
                             if beam
-                            else (
-                                lambda _w, cell=wall_cell: remove_wall_cell(cell)
-                            )
+                            else (lambda _w, cell=wall_cell: remove_wall_cell(cell))
                         ),
                     )
                 else:
@@ -251,9 +217,7 @@ def generate_level_from_blueprint(
                                 )
                             )
                             if beam
-                            else (
-                                lambda _w, cell=wall_cell: remove_wall_cell(cell)
-                            )
+                            else (lambda _w, cell=wall_cell: remove_wall_cell(cell))
                         ),
                     )
                 wall_group.add(wall)

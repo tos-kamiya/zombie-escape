@@ -105,12 +105,8 @@ def find_nearby_offscreen_spawn_position(
             SCREEN_HEIGHT,
         )
         view_rect.inflate_ip(SCREEN_WIDTH, SCREEN_HEIGHT)
-    min_distance_sq = (
-        None if min_player_dist is None else min_player_dist * min_player_dist
-    )
-    max_distance_sq = (
-        None if max_player_dist is None else max_player_dist * max_player_dist
-    )
+    min_distance_sq = None if min_player_dist is None else min_player_dist * min_player_dist
+    max_distance_sq = None if max_player_dist is None else max_player_dist * max_player_dist
     for _ in range(max(1, attempts)):
         cell_x, cell_y = RNG.choice(walkable_cells)
         jitter_extent = cell_size * 0.35
@@ -120,9 +116,7 @@ def find_nearby_offscreen_spawn_position(
             int((cell_x * cell_size) + (cell_size / 2) + jitter_x),
             int((cell_y * cell_size) + (cell_size / 2) + jitter_y),
         )
-        if player is not None and (
-            min_distance_sq is not None or max_distance_sq is not None
-        ):
+        if player is not None and (min_distance_sq is not None or max_distance_sq is not None):
             dx = candidate[0] - player.x
             dy = candidate[1] - player.y
             dist_sq = dx * dx + dy * dy
@@ -174,10 +168,7 @@ def find_exterior_spawn_position(
 ) -> tuple[int, int]:
     if hint_pos is None:
         return random_position_outside_building(level_width, level_height)
-    points = [
-        random_position_outside_building(level_width, level_height)
-        for _ in range(max(1, attempts))
-    ]
+    points = [random_position_outside_building(level_width, level_height) for _ in range(max(1, attempts))]
     return min(
         points,
         key=lambda pos: (pos[0] - hint_pos[0]) ** 2 + (pos[1] - hint_pos[1]) ** 2,

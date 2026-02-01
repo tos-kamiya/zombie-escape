@@ -211,11 +211,7 @@ def update_entities(
         if game_data.state.player_wall_target_ttl <= 0:
             game_data.state.player_wall_target_cell = None
 
-    wall_target_cell = (
-        game_data.state.player_wall_target_cell
-        if game_data.state.player_wall_target_ttl > 0
-        else None
-    )
+    wall_target_cell = game_data.state.player_wall_target_cell if game_data.state.player_wall_target_ttl > 0 else None
 
     update_survivors(
         game_data,
@@ -237,17 +233,11 @@ def update_entities(
             game_data.state.last_zombie_spawn_time = current_time
 
     # Update zombies
-    target_center = (
-        active_car.rect.center if player.in_car and active_car else player.rect.center
-    )
+    target_center = active_car.rect.center if player.in_car and active_car else player.rect.center
     buddies = [
-        survivor
-        for survivor in survivor_group
-        if survivor.alive() and survivor.is_buddy and not survivor.rescued
+        survivor for survivor in survivor_group if survivor.alive() and survivor.is_buddy and not survivor.rescued
     ]
-    buddies_on_screen = [
-        buddy for buddy in buddies if rect_visible_on_screen(camera, buddy.rect)
-    ]
+    buddies_on_screen = [buddy for buddy in buddies if rect_visible_on_screen(camera, buddy.rect)]
 
     survivors_on_screen: list[Survivor] = []
     if stage.rescue_stage:
@@ -279,13 +269,10 @@ def update_entities(
     for idx, zombie in enumerate(zombies_sorted):
         target = target_center
         if buddies_on_screen:
-            dist_to_target_sq = (target_center[0] - zombie.x) ** 2 + (
-                target_center[1] - zombie.y
-            ) ** 2
+            dist_to_target_sq = (target_center[0] - zombie.x) ** 2 + (target_center[1] - zombie.y) ** 2
             nearest_buddy = min(
                 buddies_on_screen,
-                key=lambda buddy: (buddy.rect.centerx - zombie.x) ** 2
-                + (buddy.rect.centery - zombie.y) ** 2,
+                key=lambda buddy: (buddy.rect.centerx - zombie.x) ** 2 + (buddy.rect.centery - zombie.y) ** 2,
             )
             dist_to_buddy_sq = (nearest_buddy.rect.centerx - zombie.x) ** 2 + (
                 nearest_buddy.rect.centery - zombie.y
@@ -305,8 +292,7 @@ def update_entities(
                 if candidate_positions:
                     target = min(
                         candidate_positions,
-                        key=lambda pos: (pos[0] - zombie.x) ** 2
-                        + (pos[1] - zombie.y) ** 2,
+                        key=lambda pos: (pos[0] - zombie.x) ** 2 + (pos[1] - zombie.y) ** 2,
                     )
         nearby_candidates = _nearby_zombies(idx)
         zombie_search_radius = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius + 120

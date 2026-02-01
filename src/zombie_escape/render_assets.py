@@ -46,9 +46,7 @@ def _draw_outlined_circle(
         pygame.draw.circle(surface, outline_color, center, radius, width=outline_width)
 
 
-def _brighten_color(
-    color: tuple[int, int, int], *, factor: float = 1.25
-) -> tuple[int, int, int]:
+def _brighten_color(color: tuple[int, int, int], *, factor: float = 1.25) -> tuple[int, int, int]:
     return tuple(min(255, int(c * factor + 0.5)) for c in color)
 
 
@@ -58,9 +56,7 @@ _PLAYER_UPSCALE_FACTOR = 4
 _CAR_UPSCALE_FACTOR = 4
 
 _PLAYER_DIRECTIONAL_CACHE: dict[tuple[int, int], list[pygame.Surface]] = {}
-_SURVIVOR_DIRECTIONAL_CACHE: dict[
-    tuple[int, bool, bool, int], list[pygame.Surface]
-] = {}
+_SURVIVOR_DIRECTIONAL_CACHE: dict[tuple[int, bool, bool, int], list[pygame.Surface]] = {}
 _ZOMBIE_DIRECTIONAL_CACHE: dict[tuple[int, bool, int], list[pygame.Surface]] = {}
 _RUBBLE_SURFACE_CACHE: dict[tuple, pygame.Surface] = {}
 
@@ -70,9 +66,7 @@ RUBBLE_SCALE_RATIO = 0.9
 RUBBLE_SHADOW_RATIO = 0.9
 
 
-def _scale_color(
-    color: tuple[int, int, int], *, ratio: float
-) -> tuple[int, int, int]:
+def _scale_color(color: tuple[int, int, int], *, ratio: float) -> tuple[int, int, int]:
     return tuple(max(0, min(255, int(c * ratio + 0.5))) for c in color)
 
 
@@ -80,9 +74,7 @@ def rubble_offset_for_size(size: int) -> int:
     return max(1, int(round(size * RUBBLE_OFFSET_RATIO)))
 
 
-def angle_bin_from_vector(
-    dx: float, dy: float, *, bins: int = ANGLE_BINS
-) -> int | None:
+def angle_bin_from_vector(dx: float, dy: float, *, bins: int = ANGLE_BINS) -> int | None:
     if dx == 0 and dy == 0:
         return None
     angle = math.atan2(dy, dx)
@@ -388,9 +380,7 @@ def resolve_steel_beam_colors(
     return STEEL_BEAM_COLOR, STEEL_BEAM_LINE_COLOR
 
 
-def build_player_directional_surfaces(
-    radius: int, *, bins: int = ANGLE_BINS
-) -> list[pygame.Surface]:
+def build_player_directional_surfaces(radius: int, *, bins: int = ANGLE_BINS) -> list[pygame.Surface]:
     cache_key = (radius, bins)
     if cache_key in _PLAYER_DIRECTIONAL_CACHE:
         return _PLAYER_DIRECTIONAL_CACHE[cache_key]
@@ -545,9 +535,7 @@ def paint_car_surface(
         up_width = width * upscale
         up_height = height * upscale
         up_surface = pygame.Surface((up_width, up_height), pygame.SRCALPHA)
-        _paint_car_surface_base(
-            up_surface, width=up_width, height=up_height, color=color
-        )
+        _paint_car_surface_base(up_surface, width=up_width, height=up_height, color=color)
         scaled = pygame.transform.smoothscale(up_surface, (width, height))
         surface.fill((0, 0, 0, 0))
         surface.blit(scaled, (0, 0))
@@ -604,9 +592,7 @@ def _paint_car_surface_base(
     pygame.draw.ellipse(surface, headlight_color, headlight_right)
 
 
-def build_car_directional_surfaces(
-    base_surface: pygame.Surface, *, bins: int = ANGLE_BINS
-) -> list[pygame.Surface]:
+def build_car_directional_surfaces(base_surface: pygame.Surface, *, bins: int = ANGLE_BINS) -> list[pygame.Surface]:
     """Return pre-rotated car surfaces matching angle_bin_from_vector bins."""
     surfaces: list[pygame.Surface] = []
     upscale = _CAR_UPSCALE_FACTOR
@@ -660,9 +646,7 @@ def paint_wall_surface(
     ) -> None:
         face_width, face_height = face_size or target.get_size()
         if bevel_depth > 0 and any(bevel_mask):
-            face_polygon = build_beveled_polygon(
-                face_width, face_height, bevel_depth, bevel_mask
-            )
+            face_polygon = build_beveled_polygon(face_width, face_height, bevel_depth, bevel_mask)
             pygame.draw.polygon(target, border_color, face_polygon)
         else:
             target.fill(border_color)
@@ -671,9 +655,7 @@ def paint_wall_surface(
         if inner_rect.width > 0 and inner_rect.height > 0:
             inner_depth = max(0, bevel_depth - border_width)
             if inner_depth > 0 and any(bevel_mask):
-                inner_polygon = build_beveled_polygon(
-                    inner_rect.width, inner_rect.height, inner_depth, bevel_mask
-                )
+                inner_polygon = build_beveled_polygon(inner_rect.width, inner_rect.height, inner_depth, bevel_mask)
                 inner_offset_polygon = [
                     (
                         int(point[0] + inner_rect.left),
@@ -703,9 +685,7 @@ def paint_wall_surface(
         side_color = tuple(int(c * side_shade_ratio) for c in fill_color)
         side_surface = pygame.Surface(rect_obj.size, pygame.SRCALPHA)
         if bevel_depth > 0 and any(bevel_mask):
-            side_polygon = build_beveled_polygon(
-                rect_obj.width, rect_obj.height, bevel_depth, bevel_mask
-            )
+            side_polygon = build_beveled_polygon(rect_obj.width, rect_obj.height, bevel_depth, bevel_mask)
             pygame.draw.polygon(side_surface, side_color, side_polygon)
         else:
             pygame.draw.rect(side_surface, side_color, rect_obj)
@@ -785,9 +765,7 @@ def build_rubble_wall_surface(
     final_surface = pygame.Surface((safe_size, safe_size), pygame.SRCALPHA)
     center = final_surface.get_rect().center
 
-    shadow_rect = shadow_surface.get_rect(
-        center=(center[0] + offset_px, center[1] + offset_px)
-    )
+    shadow_rect = shadow_surface.get_rect(center=(center[0] + offset_px, center[1] + offset_px))
     final_surface.blit(shadow_surface, shadow_rect.topleft)
 
     top_rect = top_surface.get_rect(center=center)

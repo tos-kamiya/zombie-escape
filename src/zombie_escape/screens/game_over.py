@@ -106,18 +106,14 @@ def game_over_screen(
                 scaled_w = int(scaled_h * level_aspect)
             scaled_w = max(1, scaled_w)
             scaled_h = max(1, scaled_h)
-            state.scaled_overview = pygame.transform.smoothscale(
-                overview_surface, (scaled_w, scaled_h)
-            )
+            state.scaled_overview = pygame.transform.smoothscale(overview_surface, (scaled_w, scaled_h))
             state.overview_created = True
 
         screen.fill(BLACK)
         if state.scaled_overview:
             screen.blit(
                 state.scaled_overview,
-                state.scaled_overview.get_rect(
-                    center=(screen_width // 2, screen_height // 2)
-                ),
+                state.scaled_overview.get_rect(center=(screen_width // 2, screen_height // 2)),
             )
             if state.game_won:
                 show_message(
@@ -216,24 +212,21 @@ def game_over_screen(
                         seed=state.seed,
                     )
             if event.type == pygame.JOYDEVICEADDED or (
-                CONTROLLER_DEVICE_ADDED is not None
-                and event.type == CONTROLLER_DEVICE_ADDED
+                CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
             ):
                 if controller is None:
                     controller = init_first_controller()
                 if controller is None:
                     joystick = init_first_joystick()
             if event.type == pygame.JOYDEVICEREMOVED or (
-                CONTROLLER_DEVICE_REMOVED is not None
-                and event.type == CONTROLLER_DEVICE_REMOVED
+                CONTROLLER_DEVICE_REMOVED is not None and event.type == CONTROLLER_DEVICE_REMOVED
             ):
                 if controller and not controller.get_init():
                     controller = None
                 if joystick and not joystick.get_init():
                     joystick = None
             if event.type == pygame.JOYBUTTONDOWN or (
-                CONTROLLER_BUTTON_DOWN is not None
-                and event.type == CONTROLLER_BUTTON_DOWN
+                CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN
             ):
                 if is_select_event(event) or is_confirm_event(event):
                     return ScreenTransition(ScreenID.TITLE)

@@ -75,9 +75,7 @@ def _save_surface(surface: pygame.Surface, path: Path, *, scale: int = 1) -> Non
     pygame.image.save(surface, str(path))
 
 
-def _pick_directional_surface(
-    surfaces: list[pygame.Surface], *, bin_index: int = 0
-) -> pygame.Surface:
+def _pick_directional_surface(surfaces: list[pygame.Surface], *, bin_index: int = 0) -> pygame.Surface:
     if not surfaces:
         return pygame.Surface((1, 1), pygame.SRCALPHA)
     return surfaces[bin_index % len(surfaces)]
@@ -90,10 +88,7 @@ def _build_pitfall_tile(cell_size: int) -> pygame.Surface:
 
     for i in range(PITFALL_SHADOW_WIDTH):
         t = i / (PITFALL_SHADOW_WIDTH - 1.0)
-        color = tuple(
-            int(PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t) + PITFALL_ABYSS_COLOR[j] * t)
-            for j in range(3)
-        )
+        color = tuple(int(PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t) + PITFALL_ABYSS_COLOR[j] * t) for j in range(3))
         pygame.draw.line(
             surface,
             color,
@@ -121,9 +116,7 @@ def _build_pitfall_tile(cell_size: int) -> pygame.Surface:
     return surface
 
 
-def export_images(
-    output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE, output_scale: int = 4
-) -> list[Path]:
+def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE, output_scale: int = 4) -> list[Path]:
     _ensure_pygame_ready()
 
     saved: list[Path] = []
@@ -296,11 +289,7 @@ def export_images(
     fall_zone = pygame.Surface((fall_zone_size, fall_zone_size), pygame.SRCALPHA)
     for y in range(2):
         for x in range(2):
-            color = (
-                FALL_ZONE_FLOOR_SECONDARY
-                if (x + y) % 2 == 0
-                else FALL_ZONE_FLOOR_PRIMARY
-            )
+            color = FALL_ZONE_FLOOR_SECONDARY if (x + y) % 2 == 0 else FALL_ZONE_FLOOR_PRIMARY
             pygame.draw.rect(
                 fall_zone,
                 color,

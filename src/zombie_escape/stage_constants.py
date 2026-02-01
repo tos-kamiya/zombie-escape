@@ -28,7 +28,6 @@ def _build_stage18_pitfall_zones(
 
     # Room gap bands.
     inner_start = 3
-    inner_end = grid_cols - 4
     gap_cols: list[int] = []
     gap_rows: list[int] = []
     step = room_size + gap_width
@@ -44,9 +43,7 @@ def _build_stage18_pitfall_zones(
             pitfall_cells.add((x, y))
 
     # Corridor openings (width 1) through the gap bands.
-    room_centers = [
-        inner_start + (room_size // 2) + idx * step for idx in range(rooms_per_side)
-    ]
+    room_centers = [inner_start + (room_size // 2) + idx * step for idx in range(rooms_per_side)]
     for y in room_centers:
         for x in gap_cols:
             pitfall_cells.discard((x, y))
@@ -267,9 +264,7 @@ STAGES: list[Stage] = [
         available=True,
         wall_algorithm="grid_wire",
         fall_spawn_zones=[
-            (x, y, 2, 2)
-            for y in range(2, DEFAULT_GRID_ROWS - 2, 4)
-            for x in range(2, DEFAULT_GRID_COLS - 2, 4)
+            (x, y, 2, 2) for y in range(2, DEFAULT_GRID_ROWS - 2, 4) for x in range(2, DEFAULT_GRID_COLS - 2, 4)
         ],
         requires_fuel=True,
         buddy_required_count=1,
@@ -337,9 +332,9 @@ STAGES: list[Stage] = [
         requires_fuel=True,
         initial_flashlight_count=1,
         initial_shoes_count=1,
-        initial_interior_spawn_rate=0.12,
-        exterior_spawn_weight=0.1,
-        interior_spawn_weight=0.9,
+        initial_interior_spawn_rate=0.05,
+        exterior_spawn_weight=0.7,
+        interior_spawn_weight=0.3,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
     ),
     Stage(
@@ -354,8 +349,8 @@ STAGES: list[Stage] = [
         initial_flashlight_count=1,
         initial_shoes_count=1,
         initial_interior_spawn_rate=0.1,
-        exterior_spawn_weight=0.1,
-        interior_spawn_weight=0.9,
+        exterior_spawn_weight=0.5,
+        interior_spawn_weight=0.5,
         zombie_tracker_ratio=1.0,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
     ),
@@ -377,12 +372,31 @@ STAGES: list[Stage] = [
             gap_width=3,
         ),
         requires_fuel=True,
-        initial_interior_spawn_rate=0.2,
-        exterior_spawn_weight=0.2,
-        interior_spawn_weight=0.8,
-        zombie_tracker_ratio=0.6,
-        zombie_normal_ratio=0.4,
+        initial_interior_spawn_rate=0.08,
+        exterior_spawn_weight=0.6,
+        interior_spawn_weight=0.4,
+        zombie_tracker_ratio=0.5,
+        zombie_normal_ratio=0.5,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+    ),
+    Stage(
+        id="stage19",
+        name_key="stages.stage19.name",
+        description_key="stages.stage19.description",
+        available=True,
+        grid_cols=20,
+        grid_rows=20,
+        wall_algorithm="empty",
+        pitfall_zones=[
+            (3, 3, 2, 14),
+            (7, 3, 2, 14),
+            (11, 3, 2, 14),
+            (15, 3, 2, 14),
+        ],
+        initial_interior_spawn_rate=0.0,
+        exterior_spawn_weight=0.5,
+        interior_spawn_weight=0.5,
+        zombie_normal_ratio=0.4,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

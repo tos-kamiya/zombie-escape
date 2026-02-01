@@ -351,14 +351,10 @@ def _place_walls_sparse_ortho(
                 continue
             if RNG.random() >= density:
                 continue
-            if (
-                grid[y - 1][x] == "1"
-                or grid[y + 1][x] == "1"
-                or grid[y][x - 1] == "1"
-                or grid[y][x + 1] == "1"
-            ):
+            if grid[y - 1][x] == "1" or grid[y + 1][x] == "1" or grid[y][x - 1] == "1" or grid[y][x + 1] == "1":
                 continue
             grid[y][x] = "1"
+
 
 WALL_ALGORITHMS = {
     "default": _place_walls_default,
@@ -496,15 +492,10 @@ def _generate_random_blueprint(
     sparse_density = SPARSE_WALL_DENSITY
     original_wall_algo = wall_algo
     if wall_algo == "sparse":
-        print(
-            "WARNING: 'sparse' is deprecated. Use 'sparse_moore' instead."
-        )
+        print("WARNING: 'sparse' is deprecated. Use 'sparse_moore' instead.")
         wall_algo = "sparse_moore"
     elif wall_algo.startswith("sparse."):
-        print(
-            "WARNING: 'sparse.<int>%' is deprecated. Use "
-            "'sparse_moore.<int>%' instead."
-        )
+        print("WARNING: 'sparse.<int>%' is deprecated. Use 'sparse_moore.<int>%' instead.")
         suffix = wall_algo[len("sparse.") :]
         wall_algo = "sparse_moore"
         if suffix.endswith("%") and suffix[:-1].isdigit():
@@ -544,9 +535,7 @@ def _generate_random_blueprint(
             wall_algo = base
 
     if wall_algo not in WALL_ALGORITHMS:
-        print(
-            f"WARNING: Unknown wall algorithm '{wall_algo}'. Falling back to 'default'."
-        )
+        print(f"WARNING: Unknown wall algorithm '{wall_algo}'. Falling back to 'default'.")
         wall_algo = "default"
 
     # Place pitfalls BEFORE walls so walls avoid them (consistent with spawn reservation)
@@ -563,9 +552,7 @@ def _generate_random_blueprint(
     else:
         algo_func(grid, forbidden_cells=reserved_cells)
 
-    steel_beams = _place_steel_beams(
-        grid, chance=steel_chance, forbidden_cells=reserved_cells
-    )
+    steel_beams = _place_steel_beams(grid, chance=steel_chance, forbidden_cells=reserved_cells)
 
     blueprint_rows = ["".join(row) for row in grid]
     return {"grid": blueprint_rows, "steel_cells": steel_beams}

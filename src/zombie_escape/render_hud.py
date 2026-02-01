@@ -140,9 +140,7 @@ def _draw_status_bar(
         if seed is not None:
             seed_text = tr("status.seed", value=str(seed))
             seed_surface = font.render(seed_text, False, LIGHT_GRAY)
-            seed_rect = seed_surface.get_rect(
-                right=bar_rect.right - 12, centery=bar_rect.centery
-            )
+            seed_rect = seed_surface.get_rect(right=bar_rect.right - 12, centery=bar_rect.centery)
             screen.blit(seed_surface, seed_rect)
         if show_fps and fps is not None:
             fps_text = f"FPS:{fps:.1f}"
@@ -253,16 +251,12 @@ def _draw_endurance_timer(
         if state.time_accel_active:
             accel_text = tr("hud.time_accel")
             accel_surface = font.render(accel_text, False, YELLOW)
-            accel_rect = accel_surface.get_rect(
-                right=bar_rect.right, bottom=bar_rect.top - 2
-            )
+            accel_rect = accel_surface.get_rect(right=bar_rect.right, bottom=bar_rect.top - 2)
             screen.blit(accel_surface, accel_rect)
         else:
             hint_text = tr("hud.time_accel_hint")
             hint_surface = font.render(hint_text, False, LIGHT_GRAY)
-            hint_rect = hint_surface.get_rect(
-                right=bar_rect.right, bottom=bar_rect.top - 2
-            )
+            hint_rect = hint_surface.get_rect(right=bar_rect.right, bottom=bar_rect.top - 2)
             screen.blit(hint_surface, hint_rect)
     except pygame.error as e:
         print(f"Error rendering endurance timer: {e}")
@@ -313,9 +307,7 @@ def _draw_survivor_messages(
             if not text:
                 continue
             msg_surface = font.render(text, False, ORANGE)
-            msg_rect = msg_surface.get_rect(
-                center=(assets.screen_width // 2, base_y + idx * 18)
-            )
+            msg_rect = msg_surface.get_rect(center=(assets.screen_width // 2, base_y + idx * 18))
             screen.blit(msg_surface, msg_rect)
     except pygame.error as e:
         print(f"Error rendering survivor message: {e}")
@@ -351,9 +343,7 @@ def _build_objective_lines(
                 objective_lines.append(tr("objectives.find_fuel"))
             elif not buddy_ready:
                 objective_lines.append(tr("objectives.board_buddy"))
-                objective_lines.append(
-                    tr("objectives.buddy_onboard", count=buddy_onboard)
-                )
+                objective_lines.append(tr("objectives.buddy_onboard", count=buddy_onboard))
                 objective_lines.append(tr("objectives.escape"))
             else:
                 objective_lines.append(tr("objectives.escape"))
@@ -371,9 +361,7 @@ def _build_objective_lines(
 
     if stage and stage.rescue_stage and (survivors_onboard is not None):
         limit = state.survivor_capacity
-        objective_lines.append(
-            tr("objectives.survivors_onboard", count=survivors_onboard, limit=limit)
-        )
+        objective_lines.append(tr("objectives.survivors_onboard", count=survivors_onboard, limit=limit))
     return objective_lines
 
 
@@ -413,11 +401,7 @@ def _draw_hint_arrow(
         return
     dir_x = dx / dist
     dir_y = dy / dist
-    ring_radius = (
-        ring_radius
-        if ring_radius is not None
-        else assets.fov_radius * 0.5 * assets.fog_radius_scale
-    )
+    ring_radius = ring_radius if ring_radius is not None else assets.fov_radius * 0.5 * assets.fog_radius_scale
     center_x = player_screen[0] + dir_x * ring_radius
     center_y = player_screen[1] + dir_y * ring_radius
     arrow_len = 6

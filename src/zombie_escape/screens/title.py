@@ -34,6 +34,7 @@ from ..screens import (
     sync_window_size,
     toggle_fullscreen,
 )
+
 try:  # pragma: no cover - version fallback not critical for tests
     from ..__about__ import __version__
 except Exception:  # pragma: no cover - fallback version
@@ -87,24 +88,17 @@ def title_screen(
 
     width, height = screen_size
     stage_options_all: list[dict] = [
-        {"type": "stage", "stage": stage, "available": stage.available}
-        for stage in stages
-        if stage.available
+        {"type": "stage", "stage": stage, "available": stage.available} for stage in stages if stage.available
     ]
     page_size = 5
-    stage_pages = [
-        stage_options_all[i : i + page_size]
-        for i in range(0, len(stage_options_all), page_size)
-    ]
+    stage_pages = [stage_options_all[i : i + page_size] for i in range(0, len(stage_options_all), page_size)]
     action_options: list[dict[str, Any]] = [
         {"type": "settings"},
         {"type": "readme"},
         {"type": "quit"},
     ]
     generated = seed_text is None
-    current_seed_text = (
-        seed_text if seed_text is not None else _generate_auto_seed_text()
-    )
+    current_seed_text = seed_text if seed_text is not None else _generate_auto_seed_text()
     current_seed_auto = seed_is_auto or generated
     stage_progress, _ = load_progress()
 
@@ -112,9 +106,7 @@ def title_screen(
         if page_index <= 0:
             return True
         required = stage_options_all[:page_size]
-        return all(
-            stage_progress.get(option["stage"].id, 0) > 0 for option in required
-        )
+        return all(stage_progress.get(option["stage"].id, 0) > 0 for option in required)
 
     current_page = 0
     if stage_options_all:
@@ -133,11 +125,7 @@ def title_screen(
 
     options, stage_options = _build_options(current_page)
     selected_stage_index = next(
-        (
-            i
-            for i, opt in enumerate(options)
-            if opt["type"] == "stage" and opt["stage"].id == default_stage_id
-        ),
+        (i for i, opt in enumerate(options) if opt["type"] == "stage" and opt["stage"].id == default_stage_id),
         0,
     )
     selected = min(selected_stage_index, len(options) - 1)
@@ -156,16 +144,14 @@ def title_screen(
                 sync_window_size(event)
                 continue
             if event.type == pygame.JOYDEVICEADDED or (
-                CONTROLLER_DEVICE_ADDED is not None
-                and event.type == CONTROLLER_DEVICE_ADDED
+                CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
             ):
                 if controller is None:
                     controller = init_first_controller()
                 if controller is None:
                     joystick = init_first_joystick()
             if event.type == pygame.JOYDEVICEREMOVED or (
-                CONTROLLER_DEVICE_REMOVED is not None
-                and event.type == CONTROLLER_DEVICE_REMOVED
+                CONTROLLER_DEVICE_REMOVED is not None and event.type == CONTROLLER_DEVICE_REMOVED
             ):
                 if controller and not controller.get_init():
                     controller = None
@@ -199,10 +185,7 @@ def title_screen(
                         selected = 0
                     continue
                 if event.key == pygame.K_RIGHT:
-                    if (
-                        current_page < len(stage_pages) - 1
-                        and _page_available(current_page + 1)
-                    ):
+                    if current_page < len(stage_pages) - 1 and _page_available(current_page + 1):
                         current_page += 1
                         options, stage_options = _build_options(current_page)
                         selected = 0
@@ -214,9 +197,7 @@ def title_screen(
                 elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
                     current = options[selected]
                     if current["type"] == "stage" and current.get("available"):
-                        seed_value = (
-                            int(current_seed_text) if current_seed_text else None
-                        )
+                        seed_value = int(current_seed_text) if current_seed_text else None
                         return ScreenTransition(
                             ScreenID.GAMEPLAY,
                             stage=current["stage"],
@@ -240,15 +221,12 @@ def title_screen(
                             seed_is_auto=current_seed_auto,
                         )
             if event.type == pygame.JOYBUTTONDOWN or (
-                CONTROLLER_BUTTON_DOWN is not None
-                and event.type == CONTROLLER_BUTTON_DOWN
+                CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN
             ):
                 if is_confirm_event(event):
                     current = options[selected]
                     if current["type"] == "stage" and current.get("available"):
-                        seed_value = (
-                            int(current_seed_text) if current_seed_text else None
-                        )
+                        seed_value = int(current_seed_text) if current_seed_text else None
                         return ScreenTransition(
                             ScreenID.GAMEPLAY,
                             stage=current["stage"],
@@ -272,32 +250,17 @@ def title_screen(
                             seed_is_auto=current_seed_auto,
                         )
                 if CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN:
-                    if (
-                        CONTROLLER_BUTTON_DPAD_UP is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_UP
-                    ):
+                    if CONTROLLER_BUTTON_DPAD_UP is not None and event.button == CONTROLLER_BUTTON_DPAD_UP:
                         selected = (selected - 1) % len(options)
-                    if (
-                        CONTROLLER_BUTTON_DPAD_DOWN is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_DOWN
-                    ):
+                    if CONTROLLER_BUTTON_DPAD_DOWN is not None and event.button == CONTROLLER_BUTTON_DPAD_DOWN:
                         selected = (selected + 1) % len(options)
-                    if (
-                        CONTROLLER_BUTTON_DPAD_LEFT is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_LEFT
-                    ):
+                    if CONTROLLER_BUTTON_DPAD_LEFT is not None and event.button == CONTROLLER_BUTTON_DPAD_LEFT:
                         if current_page > 0:
                             current_page -= 1
                             options, stage_options = _build_options(current_page)
                             selected = 0
-                    if (
-                        CONTROLLER_BUTTON_DPAD_RIGHT is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_RIGHT
-                    ):
-                        if (
-                            current_page < len(stage_pages) - 1
-                            and _page_available(current_page + 1)
-                        ):
+                    if CONTROLLER_BUTTON_DPAD_RIGHT is not None and event.button == CONTROLLER_BUTTON_DPAD_RIGHT:
+                        if current_page < len(stage_pages) - 1 and _page_available(current_page + 1):
                             current_page += 1
                             options, stage_options = _build_options(current_page)
                             selected = 0
@@ -313,10 +276,7 @@ def title_screen(
                         options, stage_options = _build_options(current_page)
                         selected = 0
                 elif hat_x == 1:
-                    if (
-                        current_page < len(stage_pages) - 1
-                        and _page_available(current_page + 1)
-                    ):
+                    if current_page < len(stage_pages) - 1 and _page_available(current_page + 1):
                         current_page += 1
                         options, stage_options = _build_options(current_page)
                         selected = 0
@@ -327,16 +287,10 @@ def title_screen(
 
         try:
             font_settings = get_font_settings()
-            title_font = load_font(
-                font_settings.resource, font_settings.scaled_size(32)
-            )
-            option_font = load_font(
-                font_settings.resource, font_settings.scaled_size(14)
-            )
+            title_font = load_font(font_settings.resource, font_settings.scaled_size(32))
+            option_font = load_font(font_settings.resource, font_settings.scaled_size(14))
             desc_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            section_font = load_font(
-                font_settings.resource, font_settings.scaled_size(13)
-            )
+            section_font = load_font(font_settings.resource, font_settings.scaled_size(13))
             hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
 
             row_height = 20
@@ -354,20 +308,13 @@ def title_screen(
             show_page_arrows = len(stage_pages) > 1 and _page_available(1)
             if show_page_arrows:
                 left_arrow = "<- " if current_page > 0 else ""
-                right_arrow = (
-                    " ->"
-                    if current_page < len(stage_pages) - 1
-                    and _page_available(current_page + 1)
-                    else ""
-                )
+                right_arrow = " ->" if current_page < len(stage_pages) - 1 and _page_available(current_page + 1) else ""
                 stage_header_text = f"{left_arrow}{stage_header_text}{right_arrow}"
             stage_header = section_font.render(stage_header_text, False, LIGHT_GRAY)
             stage_header_pos = (list_column_x, section_top)
             screen.blit(stage_header, stage_header_pos)
             stage_rows_start = stage_header_pos[1] + stage_header.get_height() + 6
-            action_header = section_font.render(
-                tr("menu.sections.resources"), False, LIGHT_GRAY
-            )
+            action_header = section_font.render(tr("menu.sections.resources"), False, LIGHT_GRAY)
             action_header_pos = (
                 list_column_x,
                 stage_rows_start + stage_count * row_height + 14,
@@ -377,9 +324,7 @@ def title_screen(
 
             for idx, option in enumerate(stage_options):
                 row_top = stage_rows_start + idx * row_height
-                highlight_rect = pygame.Rect(
-                    list_column_x, row_top - 2, list_column_width, row_height
-                )
+                highlight_rect = pygame.Rect(list_column_x, row_top - 2, list_column_width, row_height)
                 cleared = stage_progress.get(option["stage"].id, 0) > 0
                 base_color = WHITE if cleared else UNCLEARED_STAGE_COLOR
                 color = base_color
@@ -402,9 +347,7 @@ def title_screen(
             for idx, option in enumerate(action_options):
                 option_idx = stage_count + idx
                 row_top = action_rows_start + idx * row_height
-                highlight_rect = pygame.Rect(
-                    list_column_x, row_top - 2, list_column_width, row_height
-                )
+                highlight_rect = pygame.Rect(list_column_x, row_top - 2, list_column_width, row_height)
                 is_selected = option_idx == selected
                 if is_selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
@@ -445,9 +388,7 @@ def title_screen(
             elif current["type"] == "quit":
                 help_text = tr("menu.option_help.quit")
             elif current["type"] == "readme":
-                help_key = (
-                    "menu.option_help.readme_stage6" if current_page > 0 else "menu.option_help.readme"
-                )
+                help_key = "menu.option_help.readme_stage6" if current_page > 0 else "menu.option_help.readme"
                 help_text = tr(help_key)
 
             if help_text:
@@ -469,20 +410,14 @@ def title_screen(
             hint_start_y = action_header_pos[1]
             for offset, line in enumerate(hint_lines):
                 hint_surface = hint_font.render(line, False, WHITE)
-                hint_rect = hint_surface.get_rect(
-                    topleft=(info_column_x, hint_start_y + offset * hint_line_height)
-                )
+                hint_rect = hint_surface.get_rect(topleft=(info_column_x, hint_start_y + offset * hint_line_height))
                 screen.blit(hint_surface, hint_rect)
 
-            seed_value_display = (
-                current_seed_text if current_seed_text else tr("menu.seed_empty")
-            )
+            seed_value_display = current_seed_text if current_seed_text else tr("menu.seed_empty")
             seed_label = tr("menu.seed_label", value=seed_value_display)
             seed_surface = hint_font.render(seed_label, False, LIGHT_GRAY)
             seed_offset_y = hint_line_height
-            seed_rect = seed_surface.get_rect(
-                bottomleft=(info_column_x, height - 30 + seed_offset_y)
-            )
+            seed_rect = seed_surface.get_rect(bottomleft=(info_column_x, height - 30 + seed_offset_y))
             screen.blit(seed_surface, seed_rect)
 
             seed_hint = tr("menu.seed_hint")
@@ -500,13 +435,9 @@ def title_screen(
 
             title_surface = title_font.render(title_text, False, LIGHT_GRAY)
             title_rect = title_surface.get_rect(center=(width // 2, 40))
-            version_font = load_font(
-                font_settings.resource, font_settings.scaled_size(15)
-            )
+            version_font = load_font(font_settings.resource, font_settings.scaled_size(15))
             version_surface = version_font.render(f"v{__version__}", False, LIGHT_GRAY)
-            version_rect = version_surface.get_rect(
-                topleft=(title_rect.right + 4, title_rect.bottom - 4)
-            )
+            version_rect = version_surface.get_rect(topleft=(title_rect.right + 4, title_rect.bottom - 4))
             screen.blit(version_surface, version_rect)
 
         except pygame.error as e:

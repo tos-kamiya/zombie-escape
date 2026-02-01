@@ -43,9 +43,7 @@ class DeterministicRNG:
         self._state[0] = seed32
         for i in range(1, self._N):
             prev = self._state[i - 1]
-            self._state[i] = (
-                (1812433253 * (prev ^ (prev >> 30)) + i) & 0xFFFFFFFF
-            )
+            self._state[i] = (1812433253 * (prev ^ (prev >> 30)) + i) & 0xFFFFFFFF
         self._index = self._N
 
     @property
@@ -93,17 +91,15 @@ class DeterministicRNG:
             self._twist()
         y = self._state[self._index]
         self._index += 1
-        y ^= (y >> 11)
+        y ^= y >> 11
         y ^= (y << 7) & 0x9D2C5680
         y ^= (y << 15) & 0xEFC60000
-        y ^= (y >> 18)
+        y ^= y >> 18
         return y & 0xFFFFFFFF
 
     def _twist(self) -> None:
         for i in range(self._N):
-            x = (self._state[i] & self._UPPER_MASK) + (
-                self._state[(i + 1) % self._N] & self._LOWER_MASK
-            )
+            x = (self._state[i] & self._UPPER_MASK) + (self._state[(i + 1) % self._N] & self._LOWER_MASK)
             xA = x >> 1
             if x & 1:
                 xA ^= self._MATRIX_A

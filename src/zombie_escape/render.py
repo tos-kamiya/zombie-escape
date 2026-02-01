@@ -218,9 +218,7 @@ def show_message(
         print(f"Error rendering font or surface: {e}")
 
 
-def wrap_long_segment(
-    segment: str, font: pygame.font.Font, max_width: int
-) -> list[str]:
+def wrap_long_segment(segment: str, font: pygame.font.Font, max_width: int) -> list[str]:
     lines: list[str] = []
     current = ""
     for char in segment:
@@ -425,9 +423,7 @@ def draw_level_overview(
         for flashlight in flashlights:
             if flashlight.alive():
                 pygame.draw.rect(surface, YELLOW, flashlight.rect, border_radius=2)
-                pygame.draw.rect(
-                    surface, BLACK, flashlight.rect, width=2, border_radius=2
-                )
+                pygame.draw.rect(surface, BLACK, flashlight.rect, width=2, border_radius=2)
     if shoes:
         for item in shoes:
             if item.alive():
@@ -447,9 +443,7 @@ def draw_level_overview(
         buddy_color = (0, 200, 70)
         for buddy in buddies:
             if buddy.alive() and not buddy.rescued:
-                pygame.draw.circle(
-                    surface, buddy_color, buddy.rect.center, assets.player_radius * 2
-                )
+                pygame.draw.circle(surface, buddy_color, buddy.rect.center, assets.player_radius * 2)
     drawn_cars: list[Car] = []
     if car and car.alive():
         car_rect = car.image.get_rect(center=car.rect.center)
@@ -609,9 +603,7 @@ def _get_fog_overlay_surfaces(
     for ring_surface in ring_surfaces:
         combined_surface.blit(ring_surface, (0, 0))
 
-    visible_fade_surface = _build_flashlight_fade_surface(
-        (width, height), center, max_radius
-    )
+    visible_fade_surface = _build_flashlight_fade_surface((width, height), center, max_radius)
     combined_surface.blit(visible_fade_surface, (0, 0))
 
     overlay_entry = {
@@ -872,15 +864,9 @@ def _draw_play_area(
                 pygame.draw.rect(screen, PITFALL_ABYSS_COLOR, sr)
 
                 if (x, y - 1) not in pitfall_cells:
-                    edge_h = max(
-                        1, INTERNAL_WALL_BEVEL_DEPTH - PITFALL_EDGE_DEPTH_OFFSET
-                    )
-                    pygame.draw.rect(
-                        screen, PITFALL_EDGE_METAL_COLOR, (sr.x, sr.y, sr.w, edge_h)
-                    )
-                    for sx in range(
-                        sr.x - edge_h, sr.right, PITFALL_EDGE_STRIPE_SPACING
-                    ):
+                    edge_h = max(1, INTERNAL_WALL_BEVEL_DEPTH - PITFALL_EDGE_DEPTH_OFFSET)
+                    pygame.draw.rect(screen, PITFALL_EDGE_METAL_COLOR, (sr.x, sr.y, sr.w, edge_h))
+                    for sx in range(sr.x - edge_h, sr.right, PITFALL_EDGE_STRIPE_SPACING):
                         pygame.draw.line(
                             screen,
                             PITFALL_EDGE_STRIPE_COLOR,
@@ -893,11 +879,7 @@ def _draw_play_area(
 
             use_secondary = ((x // 2) + (y // 2)) % 2 == 0
             if (x, y) in fall_spawn_cells:
-                color = (
-                    palette.fall_zone_secondary
-                    if use_secondary
-                    else palette.fall_zone_primary
-                )
+                color = palette.fall_zone_secondary if use_secondary else palette.fall_zone_primary
             elif not use_secondary:
                 continue
             else:
@@ -1052,9 +1034,7 @@ def _draw_entity_shadows(
         if getattr(entity, "is_jumping", False):
             jump_dy = JUMP_SHADOW_OFFSET
 
-        shadow_rect = shadow_surface.get_rect(
-            center=(int(cx + offset_x), int(cy + offset_y + jump_dy))
-        )
+        shadow_rect = shadow_surface.get_rect(center=(int(cx + offset_x), int(cy + offset_y + jump_dy)))
         shadow_screen_rect = camera.apply_rect(shadow_rect)
         if not shadow_screen_rect.colliderect(screen_rect):
             continue
@@ -1079,12 +1059,7 @@ def _draw_single_entity_shadow(
     alpha: int,
     edge_softness: float = ENTITY_SHADOW_EDGE_SOFTNESS,
 ) -> bool:
-    if (
-        entity is None
-        or not entity.alive()
-        or light_source_pos is None
-        or shadow_radius <= 0
-    ):
+    if entity is None or not entity.alive() or light_source_pos is None or shadow_radius <= 0:
         return False
     if outside_cells and cell_size > 0:
         cell = (
@@ -1117,9 +1092,7 @@ def _draw_single_entity_shadow(
     if getattr(entity, "is_jumping", False):
         jump_dy = JUMP_SHADOW_OFFSET
 
-    shadow_rect = shadow_surface.get_rect(
-        center=(int(cx + offset_x), int(cy + offset_y + jump_dy))
-    )
+    shadow_rect = shadow_surface.get_rect(center=(int(cx + offset_x), int(cy + offset_y + jump_dy)))
     shadow_screen_rect = camera.apply_rect(shadow_rect)
     if not shadow_screen_rect.colliderect(screen_rect):
         return False
@@ -1263,6 +1236,7 @@ def _draw_need_fuel_message(
         (assets.screen_width // 2, assets.screen_height // 2),
     )
 
+
 def draw(
     assets: RenderAssets,
     screen: surface.Surface,
@@ -1315,11 +1289,7 @@ def draw(
         wall_group=game_data.groups.wall_group,
         outer_wall_cells=game_data.layout.outer_wall_cells,
         cell_size=game_data.cell_size,
-        light_source_pos=(
-            None
-            if (stage and stage.endurance_stage and state.dawn_ready)
-            else fov_target.rect.center
-        )
+        light_source_pos=(None if (stage and stage.endurance_stage and state.dawn_ready) else fov_target.rect.center)
         if fov_target
         else None,
     )
