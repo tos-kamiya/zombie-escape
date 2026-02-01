@@ -301,7 +301,7 @@
   - 設定フラグやステージ番号、シード値を表示。
 
 - `draw_level_overview()` (`render/overview.py`)
-  - `game_over` 画面用のレベル縮小図。
+  - `game_over` 画面用のレベル縮小図（落下ゾンビ床も表示）。
 - `draw_debug_overview()` (`render/overview.py`)
   - デバッグ用の全体表示（ゾンビ位置＋カメラ枠）。
 
@@ -343,6 +343,7 @@
   - `fall_spawn_zones`（ステージ定義の矩形群）をセル集合に展開し、`fall_spawn_cells` として保持。
   - `fall_spawn_floor_ratio` が有効なら、内部セルから一定割合を落下候補セルに追加。
   - `fall_spawn_cells` は落下スポーン位置の候補として利用される（床のハイライトにも使用）。
+  - `draw_level_overview()` でも暗色で可視化される。
 
 - 落とし穴ゾーン
   - `pitfall_zones`（ステージ定義の矩形群）をセル集合に展開し、対象セルを落とし穴に設定。
@@ -371,6 +372,18 @@
 
 - `progress.py`
   - ステージクリア回数を `user_data_dir()` 配下へ保存。
+
+## 7.1 相棒ステージの勝利条件（追加仕様）
+
+相棒ステージ（`buddy_required_count > 0`）の勝利判定は以下のAND条件。
+
+- **脱出条件**:
+  - 車があるステージ: プレイヤーが車に乗って外周へ到達
+  - 車がないステージ: endurance の時間達成（既存判定）
+- **相棒条件**:
+  - `buddy_onboard` と「プレイヤーから 30px 以内かつ追尾中」の人数の合算が
+    `buddy_required_count` を満たすこと。
+  - HUD では人数に応じて「相棒/同僚と合流する（合流済: X/Y人）」を表示する。
 
 ## 8. 乱数とシード
 
