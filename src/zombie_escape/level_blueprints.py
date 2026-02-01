@@ -5,7 +5,8 @@ from collections import deque
 from .rng import get_rng, seed_rng
 
 EXITS_PER_SIDE = 1  # currently fixed to 1 per side (can be tuned)
-NUM_WALL_LINES = 80  # reduced density (roughly 1/5 of previous 450)
+DEFAULT_WALL_LINES = 80  # reduced density (roughly 1/5 of previous 450)
+DEFAULT_GRID_WIRE_WALL_LINES = int(DEFAULT_WALL_LINES * 0.7)
 WALL_MIN_LEN = 3
 WALL_MAX_LEN = 10
 SPARSE_WALL_DENSITY = 0.10
@@ -168,6 +169,7 @@ def _place_exits(grid: list[list[str]], exits_per_side: int) -> None:
 def _place_walls_default(
     grid: list[list[str]],
     *,
+    line_count: int = DEFAULT_WALL_LINES,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
     cols, rows = len(grid[0]), len(grid)
@@ -177,7 +179,7 @@ def _place_walls_default(
     if forbidden_cells:
         forbidden |= forbidden_cells
 
-    for _ in range(NUM_WALL_LINES):
+    for _ in range(line_count):
         length = rng(WALL_MIN_LEN, WALL_MAX_LEN)
         horizontal = RNG.choice([True, False])
         if horizontal:
@@ -210,6 +212,7 @@ def _place_walls_empty(
 def _place_walls_grid_wire(
     grid: list[list[str]],
     *,
+    line_count: int = DEFAULT_GRID_WIRE_WALL_LINES,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
     """
@@ -230,8 +233,7 @@ def _place_walls_grid_wire(
     grid_v = [["." for _ in range(cols)] for _ in range(rows)]
     grid_h = [["." for _ in range(cols)] for _ in range(rows)]
 
-    # Use a similar density to default.
-    lines_per_pass = int(NUM_WALL_LINES * 0.7)
+    lines_per_pass = line_count
 
     # --- Pass 1: Vertical Walls (on grid_v) ---
     for _ in range(lines_per_pass):
@@ -490,6 +492,7 @@ def _generate_random_blueprint(
 
     # Select and run the wall placement algorithm (after reserving spawns)
     sparse_density = SPARSE_WALL_DENSITY
+    wall_line_count = DEFAULT_WALL_LINES
     original_wall_algo = wall_algo
     if wall_algo == "sparse":
         print("WARNING: 'sparse' is deprecated. Use 'sparse_moore' instead.")
@@ -513,16 +516,37 @@ def _generate_random_blueprint(
                 "'sparse_moore.<int>%' or 'sparse_ortho.<int>%'. "
                 f"Got '{original_wall_algo}'. Falling back to default sparse density."
             )
+    if wall_algo.startswith("default.") or wall_algo.startswith("grid_wire."):
+        base, suffix = wall_algo.split(".", 1)
+        base_line_count = DEFAULT_WALL_LINES if base == "default" else DEFAULT_GRID_WIRE_WALL_LINES
+        if suffix.endswith("%") and suffix[:-1].isdigit():
+            percent = int(suffix[:-1])
+            if 0 <= percent <= 200:
+                wall_line_count = int(base_line_count * (percent / 100.0))
+                wall_algo = base
+            else:
+                print(
+                    "WARNING: Wall line density must be 0-200%. "
+                    f"Got '{suffix}'. Falling back to default line count."
+                )
+                wall_algo = base
+        else:
+            print(
+                "WARNING: Invalid wall line format. Use "
+                "'default.<int>%' or 'grid_wire.<int>%'. "
+                f"Got '{wall_algo}'. Falling back to default line count."
+            )
+            wall_algo = base
     if wall_algo.startswith("sparse_moore.") or wall_algo.startswith("sparse_ortho."):
         base, suffix = wall_algo.split(".", 1)
         if suffix.endswith("%") and suffix[:-1].isdigit():
             percent = int(suffix[:-1])
-            if 0 <= percent <= 100:
+            if 0 <= percent <= 200:
                 sparse_density = percent / 100.0
                 wall_algo = base
             else:
                 print(
-                    "WARNING: Sparse wall density must be 0-100%. "
+                    "WARNING: Sparse wall density must be 0-200%. "
                     f"Got '{suffix}'. Falling back to default sparse density."
                 )
                 wall_algo = base
@@ -549,6 +573,8 @@ def _generate_random_blueprint(
     algo_func = WALL_ALGORITHMS[wall_algo]
     if wall_algo in {"sparse_moore", "sparse_ortho"}:
         algo_func(grid, density=sparse_density, forbidden_cells=reserved_cells)
+    elif wall_algo in {"default", "grid_wire"}:
+        algo_func(grid, line_count=wall_line_count, forbidden_cells=reserved_cells)
     else:
         algo_func(grid, forbidden_cells=reserved_cells)
 
