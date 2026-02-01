@@ -246,7 +246,7 @@ STAGES: list[Stage] = [
         fall_spawn_zones=[
             (4, 4, 10, 10),
             (4, 18, 10, 10),
-            (18, 18, 10, 10),
+            (18, 4, 10, 10),
             (18, 18, 10, 10),
         ],
         requires_fuel=True,
