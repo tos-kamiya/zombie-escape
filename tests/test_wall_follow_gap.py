@@ -30,6 +30,7 @@ def test_wall_hug_turns_away_when_too_close() -> None:
         grid_cols=DEFAULT_GRID_COLS,
         grid_rows=DEFAULT_GRID_ROWS,
         outer_wall_cells=set(),
+        pitfall_cells=None,
     )
     delta = (zombie.wall_hug_angle - before + math.pi) % (2 * math.pi) - math.pi
 
