@@ -66,8 +66,8 @@ def generate_level_from_blueprint(game_data: GameData, config: dict[str, Any]) -
         cols=stage.grid_cols,
         rows=stage.grid_rows,
         wall_algo=stage.wall_algorithm,
-        pitfall_density=getattr(stage, "pitfall_density", 0.0),
-        pitfall_zones=getattr(stage, "pitfall_zones", []),
+        pitfall_density=stage.pitfall_density,
+        pitfall_zones=stage.pitfall_zones,
         base_seed=game_data.state.seed,
     )
     if isinstance(blueprint_data, dict):
@@ -105,7 +105,7 @@ def generate_level_from_blueprint(game_data: GameData, config: dict[str, Any]) -
     interior_max_y = stage.grid_rows - 3
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] = {}
     palette = get_environment_palette(game_data.state.ambient_palette_key)
-    rubble_ratio = max(0.0, min(1.0, getattr(stage, "wall_rubble_ratio", 0.0)))
+    rubble_ratio = max(0.0, min(1.0, stage.wall_rubble_ratio))
 
     def add_beam_to_groups(beam: SteelBeam) -> None:
         if beam._added_to_groups:

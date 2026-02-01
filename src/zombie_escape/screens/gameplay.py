@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pygame
 from pygame import surface, time
 
-from ..colors import BLACK, LIGHT_GRAY, RED, WHITE, YELLOW
+from ..colors import BLACK, RED, WHITE, YELLOW
 from ..gameplay_constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
     SURVIVAL_TIME_ACCEL_SUBSTEPS,
@@ -50,6 +50,7 @@ from ..models import Stage
 from ..render import (
     compute_floor_cells,
     draw,
+    draw_pause_overlay,
     draw_level_overview,
     prewarm_fog_overlays,
     show_message,
@@ -220,7 +221,6 @@ def gameplay_screen(
                         config=config,
                         hint_color=None,
                         fps=current_fps,
-                        present_fn=present,
                     )
                     if game_data.state.game_over_message:
                         show_message(
@@ -328,52 +328,11 @@ def gameplay_screen(
                 screen,
                 game_data,
                 config=config,
-                do_flip=not show_pause_overlay,
                 fps=current_fps,
-                present_fn=present,
             )
             if show_pause_overlay:
-                overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
-                overlay.fill((0, 0, 0, 150))
-                pause_radius = 53
-                cx = screen_width // 2
-                cy = screen_height // 2 - 18
-                pygame.draw.circle(
-                    overlay,
-                    LIGHT_GRAY,
-                    (cx, cy),
-                    pause_radius,
-                    width=3,
-                )
-                bar_width = 10
-                bar_height = 38
-                gap = 12
-                pygame.draw.rect(
-                    overlay,
-                    LIGHT_GRAY,
-                    (cx - gap - bar_width, cy - bar_height // 2, bar_width, bar_height),
-                )
-                pygame.draw.rect(
-                    overlay,
-                    LIGHT_GRAY,
-                    (cx + gap, cy - bar_height // 2, bar_width, bar_height),
-                )
-                screen.blit(overlay, (0, 0))
-                show_message(
-                    screen,
-                    tr("hud.paused"),
-                    18,
-                    WHITE,
-                    (screen_width // 2, 28),
-                )
-                show_message(
-                    screen,
-                    tr("hud.pause_hint"),
-                    16,
-                    LIGHT_GRAY,
-                    (screen_width // 2, screen_height // 2 + 70),
-                )
-                present(screen)
+                draw_pause_overlay(screen)
+            present(screen)
             continue
 
         keys = pygame.key.get_pressed()
@@ -534,8 +493,8 @@ def gameplay_screen(
             hint_target=hint_target,
             hint_color=hint_color,
             fps=current_fps,
-            present_fn=present,
         )
+        present(screen)
 
     # Should not reach here, but return to title if it happens
     return _finalize(ScreenTransition(ScreenID.TITLE))

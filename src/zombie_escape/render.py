@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 import pygame
 import pygame.surfarray as pg_surfarray  # type: ignore
@@ -12,7 +12,9 @@ from .colors import (
     BLACK,
     BLUE,
     FOOTPRINT_COLOR,
+    LIGHT_GRAY,
     ORANGE,
+    WHITE,
     YELLOW,
     get_environment_palette,
 )
@@ -325,6 +327,50 @@ def show_message_wrapped(
             y += line_height + line_spacing
     except pygame.error as e:
         print(f"Error rendering font or surface: {e}")
+
+
+def draw_pause_overlay(screen: pygame.Surface) -> None:
+    screen_width, screen_height = screen.get_size()
+    overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 150))
+    pause_radius = 53
+    cx = screen_width // 2
+    cy = screen_height // 2 - 18
+    pygame.draw.circle(
+        overlay,
+        LIGHT_GRAY,
+        (cx, cy),
+        pause_radius,
+        width=3,
+    )
+    bar_width = 10
+    bar_height = 38
+    gap = 12
+    pygame.draw.rect(
+        overlay,
+        LIGHT_GRAY,
+        (cx - gap - bar_width, cy - bar_height // 2, bar_width, bar_height),
+    )
+    pygame.draw.rect(
+        overlay,
+        LIGHT_GRAY,
+        (cx + gap, cy - bar_height // 2, bar_width, bar_height),
+    )
+    screen.blit(overlay, (0, 0))
+    show_message(
+        screen,
+        tr("hud.paused"),
+        18,
+        WHITE,
+        (screen_width // 2, 28),
+    )
+    show_message(
+        screen,
+        tr("hud.pause_hint"),
+        16,
+        LIGHT_GRAY,
+        (screen_width // 2, screen_height // 2 + 70),
+    )
 
 
 def compute_floor_cells(
@@ -1245,8 +1291,6 @@ def draw(
     config: dict[str, Any],
     hint_target: tuple[int, int] | None = None,
     hint_color: tuple[int, int, int] | None = None,
-    do_flip: bool = True,
-    present_fn: Callable[[surface.Surface], None] | None = None,
     fps: float | None = None,
 ) -> None:
     hint_color = hint_color or YELLOW
@@ -1413,8 +1457,3 @@ def draw(
         show_fps=state.show_fps,
         fps=fps,
     )
-    if do_flip:
-        if present_fn:
-            present_fn(screen)
-        else:
-            pygame.display.flip()
