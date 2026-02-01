@@ -17,7 +17,6 @@ from ..entities_constants import (
     SHOES_WIDTH,
 )
 from ..font_utils import load_font
-from ..gameplay.constants import INTRO_MESSAGE_CHAR_MS
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 from ..localization import get_font_settings
 from ..localization import translate as tr
@@ -327,18 +326,14 @@ def _draw_intro_message(
 ) -> None:
     if not message:
         return
+    if expires_at_ms <= 0:
+        return
     if elapsed_play_ms > expires_at_ms:
         return
-    if INTRO_MESSAGE_CHAR_MS <= 0:
-        return
-    visible_chars = min(len(message), int(elapsed_play_ms / INTRO_MESSAGE_CHAR_MS))
-    if visible_chars <= 0:
-        return
-    visible_message = message[:visible_chars]
     try:
         font_settings = get_font_settings()
         font = load_font(font_settings.resource, font_settings.scaled_size(13))
-        text_surface = font.render(visible_message, False, LIGHT_GRAY)
+        text_surface = font.render(message, False, LIGHT_GRAY)
         if player:
             player_rect = camera.apply_rect(player.rect)
             text_rect = text_surface.get_rect(
