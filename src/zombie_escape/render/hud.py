@@ -145,10 +145,7 @@ def _draw_status_bar(
         if show_fps and fps is not None:
             fps_text = f"FPS:{fps:.1f}"
             fps_surface = font.render(fps_text, False, LIGHT_GRAY)
-            fps_rect = fps_surface.get_rect(
-                left=12,
-                bottom=max(2, bar_rect.top - 4),
-            )
+            fps_rect = fps_surface.get_rect(left=12, bottom=max(2, bar_rect.top))
             screen.blit(fps_surface, fps_rect)
     except pygame.error as e:
         print(f"Error rendering status bar: {e}")
@@ -212,8 +209,10 @@ def _draw_endurance_timer(
     elapsed_ms = max(0, min(goal_ms, state.endurance_elapsed_ms))
     remaining_ms = max(0, goal_ms - elapsed_ms)
     padding = 12
-    bar_height = 8
-    y_pos = assets.screen_height - assets.status_bar_height - bar_height - 10
+    bar_height = 6
+    text_bottom = assets.screen_height - assets.status_bar_height - bar_height - 8
+    bar_overlap = 6
+    y_pos = text_bottom + 2 - bar_overlap
     bar_rect = pygame.Rect(
         padding,
         y_pos,
@@ -226,16 +225,18 @@ def _draw_endurance_timer(
     progress_ratio = elapsed_ms / goal_ms if goal_ms else 0.0
     progress_width = int(bar_rect.width * max(0.0, min(1.0, progress_ratio)))
     if progress_width > 0:
-        fill_color = (120, 20, 20)
+        fill_color = (120, 20, 20, 160)
         if state.dawn_ready:
-            fill_color = (25, 40, 120)
+            fill_color = (25, 40, 120, 160)
         fill_rect = pygame.Rect(
             bar_rect.left,
             bar_rect.top,
             progress_width,
             bar_rect.height,
         )
-        pygame.draw.rect(screen, fill_color, fill_rect)
+        fill_surface = pygame.Surface((progress_width, bar_rect.height), pygame.SRCALPHA)
+        fill_surface.fill(fill_color)
+        screen.blit(fill_surface, fill_rect.topleft)
     display_ms = int(remaining_ms * SURVIVAL_FAKE_CLOCK_RATIO)
     display_ms = max(0, display_ms)
     display_hours = display_ms // 3_600_000
@@ -246,17 +247,17 @@ def _draw_endurance_timer(
         font_settings = get_font_settings()
         font = load_font(font_settings.resource, font_settings.scaled_size(12))
         text_surface = font.render(timer_text, False, LIGHT_GRAY)
-        text_rect = text_surface.get_rect(left=bar_rect.left, bottom=bar_rect.top - 2)
+        text_rect = text_surface.get_rect(left=bar_rect.left, bottom=text_bottom)
         screen.blit(text_surface, text_rect)
         if state.time_accel_active:
             accel_text = tr("hud.time_accel")
             accel_surface = font.render(accel_text, False, YELLOW)
-            accel_rect = accel_surface.get_rect(right=bar_rect.right, bottom=bar_rect.top - 2)
+            accel_rect = accel_surface.get_rect(right=bar_rect.right, bottom=text_bottom)
             screen.blit(accel_surface, accel_rect)
         else:
             hint_text = tr("hud.time_accel_hint")
             hint_surface = font.render(hint_text, False, LIGHT_GRAY)
-            hint_rect = hint_surface.get_rect(right=bar_rect.right, bottom=bar_rect.top - 2)
+            hint_rect = hint_surface.get_rect(right=bar_rect.right, bottom=text_bottom)
             screen.blit(hint_surface, hint_rect)
     except pygame.error as e:
         print(f"Error rendering endurance timer: {e}")
