@@ -38,11 +38,11 @@ This game is a simple 2D top-down action game where the player aims to escape by
 
 At the title screen you can pick a stage:
 
-- **Stage 1: Find the Car** — locate the car and drive out (you already start with fuel).
+- **Stage 1: Find the Car** — you already start with fuel; find the car and escape.
 - **Stage 2: Fuel Run** — you start with no fuel; find a fuel can first, pick it up, then find the car and escape.
-- **Stage 3: Rescue Buddy** — same fuel hunt as Stage 2 (you begin empty) plus grab your buddy, pick them up with the car, then escape together.
-- **Stage 4: Evacuate Survivors** — start fueled, find the car, gather nearby civilians, and escape before zombies reach them. Stage 4 sprinkles extra parked cars across the map; slamming into one while already driving fully repairs your current ride and adds five more safe seats.
-- **Stage 5: Survive Until Dawn** — every car is bone-dry. Endure until the sun rises while the horde presses in from every direction. Once dawn hits, outdoor zombies carbonize and you must walk out through an existing exterior gap to win; cars remain unusable.
+- **Stage 3: Rescue Buddy** — same fuel hunt as Stage 2 (you begin empty) plus locate your buddy, pick them up with the car, then escape together.
+- **Stage 4: Evacuate Survivors** — start fueled, find the car, gather survivors, and escape before zombies reach them. The stage includes extra parked cars; ramming one while driving fully repairs your current ride and adds five seats each time.
+- **Stage 5: Survive Until Dawn** — every car is empty. Endure until sunrise while the horde presses in from every direction. Once dawn hits and outdoor zombies carbonize, walk out through an existing exterior gap to win; cars remain unusable.
 
 Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/right to select later stages.
 Open the Stage 6+ description: [docs/stages-6plus.md](docs/stages-6plus.md)
@@ -74,7 +74,7 @@ Open **Settings** from the title to toggle gameplay assists:
 -   **Footprints:** Leave breadcrumb trails so you can backtrack in the dark.
 -   **Fast zombies:** Allow faster zombie variants; each zombie rolls a random speed between the normal and fast ranges.
 -   **Car hint:** After a delay, show a small triangle pointing toward the fuel (Stage 2 before pickup) or the car.
--   **Steel beams:** Adds tougher single-cell obstacles (5% density) that block movement; hidden when stacked with an inner wall until that wall is destroyed.
+-   **Steel beams:** Adds tougher single-cell obstacles (about 5% density) that block movement.
 
 ## Game Rules
 
@@ -109,7 +109,7 @@ Open **Settings** from the title to toggle gameplay assists:
     <tr>
       <td>Car</td>
       <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/car.png" width="64"></td>
-      <td>Driveable escape vehicle with durability; wall hits and zombie collisions reduce health. If it breaks, you're on foot until you find another car. Ramming a parked car restores health (and in Stage 4 increases safe passenger capacity). After ~5 minutes, a small triangle points to the current objective.</td>
+      <td>Driveable escape vehicle; touch to enter. Durability drops from wall hits and running over zombies; if it reaches 0, the car breaks. Capacity starts at five. Ramming a parked car while driving restores health and adds +5 capacity. After ~5 minutes, a small triangle points to the current objective.</td>
     </tr>
     <tr>
       <td>Buddy (Stage 3)</td>
@@ -119,7 +119,7 @@ Open **Settings** from the title to toggle gameplay assists:
     <tr>
       <td>Survivors (Stage 4)</td>
       <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/survivor.png" width="64"></td>
-      <td>Civilians to evacuate by car; they idle until approached, then follow at ~1/3 speed. On-screen zombie contact converts them. They only board cars; safe capacity starts at five and grows by five when you sideswipe parked cars, with speed loss based on how full the car is.</td>
+      <td>Civilians to evacuate by car; they idle until approached, then follow at ~1/3 speed. On-screen zombie contact converts them. If you exceed the car's capacity, the car is damaged and everyone disembarks.</td>
     </tr>
   </tbody>
 </table>
@@ -143,17 +143,17 @@ Open **Settings** from the title to toggle gameplay assists:
     <tr>
       <td>Flashlight</td>
       <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/flashlight.png" width="64"></td>
-      <td>Each pickup expands your visible radius by about 20% (grab two to reach the max boost).</td>
+      <td>Each pickup expands your visible radius by about 20%.</td>
     </tr>
     <tr>
       <td>Fuel Can (Stages 2 & 3)</td>
       <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/fuel.png" width="64"></td>
-      <td>Must be collected before driving the car in fuel-run stages.</td>
+      <td>Appears only in stages that begin without fuel; pick it up to unlock driving.</td>
     </tr>
     <tr>
       <td>Steel Beam (optional)</td>
       <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"></td>
-      <td>Same collision as inner walls but with 1.5x durability.</td>
+      <td>Striped obstacle with the same collision as inner walls, but 1.5x durability. Can also appear after an inner wall is destroyed.</td>
     </tr>
   </tbody>
 </table>
