@@ -302,7 +302,7 @@
 - 影は `shadow_layer` に壁影とエンティティ影を描き、光源（プレイヤーまたは車）基準でずらして合成する。
   - 屋外セル（`outside_cells`）上のエンティティは影を描かない。
 
-- `draw_status_bar()`
+- `_draw_status_bar()`
   - 設定フラグやステージ番号、シード値を表示。
 - 導入セリフ (`_draw_intro_message` in `render/hud.py`)
   - 画面上部のプレイヤー位置付近に、タイプライター表示（1文字ずつ）。

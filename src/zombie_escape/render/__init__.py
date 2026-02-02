@@ -25,6 +25,6 @@ __all__ = [
     "show_message",
     "show_message_wrapped",
     "wrap_text",
-    "_draw_status_bar",
-    "_get_fog_scale",
+    "_draw_status_bar",  # export for testing
+    "_get_fog_scale",  # export for testing
 ]
