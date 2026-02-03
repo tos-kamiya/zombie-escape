@@ -1217,7 +1217,7 @@ def _zombie_tracker_movement(
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if not is_in_sight:
-        if _zombie_tracker_is_crowded(zombie, nearby_zombies):
+        if zombie.tracker_force_wander:
             last_target_time = zombie.tracker_target_time
             if last_target_time is None:
                 last_target_time = pygame.time.get_ticks()
@@ -1440,6 +1440,7 @@ def _zombie_update_tracker_target(
     footprints: list[Footprint],
     walls: list[Wall],
 ) -> None:
+    # footprints are ordered oldest -> newest by time.
     now = pygame.time.get_ticks()
     if now - zombie.tracker_last_scan_time < zombie.tracker_scan_interval_ms:
         return
@@ -1447,43 +1448,40 @@ def _zombie_update_tracker_target(
     if not footprints:
         zombie.tracker_target_pos = None
         return
-    nearby: list[Footprint] = []
     last_target_time = zombie.tracker_target_time
     far_radius_sq = ZOMBIE_TRACKER_FAR_SCENT_RADIUS * ZOMBIE_TRACKER_FAR_SCENT_RADIUS
-    latest_fp_time: int | None = None
     relock_after = zombie.tracker_relock_after_time
+    far_candidates: list[tuple[float, Footprint]] = []
     for fp in footprints:
         dx = fp.pos[0] - zombie.x
         dy = fp.pos[1] - zombie.y
-        if dx * dx + dy * dy <= far_radius_sq:
-            if latest_fp_time is None or fp.time > latest_fp_time:
-                latest_fp_time = fp.time
+        d2 = dx * dx + dy * dy
+        if d2 <= far_radius_sq:
+            far_candidates.append((d2, fp))
+    if not far_candidates:
+        return
+    latest_fp_time = far_candidates[-1][1].time
     use_far_scan = last_target_time is None or (
         latest_fp_time is not None and latest_fp_time - last_target_time >= ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS
     )
     scan_radius = ZOMBIE_TRACKER_FAR_SCENT_RADIUS if use_far_scan else ZOMBIE_TRACKER_SCENT_RADIUS
     scent_radius_sq = scan_radius * scan_radius
     min_target_dist_sq = (FOOTPRINT_STEP_DISTANCE * 0.5) ** 2
-    for fp in footprints:
+
+    newer: list[Footprint] = []
+    for d2, fp in far_candidates:
         pos = fp.pos
         fp_time = fp.time
         if relock_after is not None and fp_time < relock_after:
             continue
-        dx = pos[0] - zombie.x
-        dy = pos[1] - zombie.y
-        if dx * dx + dy * dy <= min_target_dist_sq:
+        if d2 <= min_target_dist_sq:
             continue
-        if dx * dx + dy * dy <= scent_radius_sq:
-            nearby.append(fp)
+        if d2 <= scent_radius_sq:
+            if last_target_time is None or fp_time > last_target_time:
+                newer.append(fp)
 
-    if not nearby:
+    if not newer:
         return
-
-    nearby.sort(key=lambda fp: fp.time)
-    if last_target_time is not None:
-        newer = [fp for fp in nearby if fp.time > last_target_time]
-    else:
-        newer = nearby
 
     if use_far_scan or last_target_time is None:
         candidates = list(reversed(newer))[:ZOMBIE_TRACKER_SCENT_TOP_K]
@@ -1515,50 +1513,12 @@ def _zombie_update_tracker_target(
     if last_target_time is None:
         return
 
-    candidates = [fp for fp in nearby if fp.time > last_target_time]
-    if not candidates:
-        return
-    candidates.sort(key=lambda fp: fp.time)
-    next_fp = candidates[0]
+    next_fp = newer[0]
     zombie.tracker_target_pos = next_fp.pos
     zombie.tracker_target_time = next_fp.time
     if relock_after is not None and next_fp.time >= relock_after:
         zombie.tracker_relock_after_time = None
     return
-
-
-def _zombie_tracker_is_crowded(
-    zombie: Zombie,
-    nearby_zombies: Iterable[Zombie],
-) -> bool:
-    dx = zombie.last_move_dx
-    dy = zombie.last_move_dy
-    if abs(dx) <= 0.001 and abs(dy) <= 0.001:
-        return False
-    angle = math.atan2(dy, dx)
-    angle_step = math.pi / 4.0
-    angle_bin = int(round(angle / angle_step)) % 8
-    dir_x = math.cos(angle_bin * angle_step)
-    dir_y = math.sin(angle_bin * angle_step)
-    perp_x = -dir_y
-    perp_y = dir_x
-    half_width = ZOMBIE_TRACKER_CROWD_BAND_WIDTH * 0.5
-    length = ZOMBIE_TRACKER_CROWD_BAND_LENGTH
-    count = 0
-    for other in nearby_zombies:
-        if other is zombie or not other.alive() or not other.tracker:
-            continue
-        offset_x = other.x - zombie.x
-        offset_y = other.y - zombie.y
-        forward = offset_x * dir_x + offset_y * dir_y
-        if forward <= 0 or forward > length:
-            continue
-        side = offset_x * perp_x + offset_y * perp_y
-        if abs(side) <= half_width:
-            count += 1
-            if count >= ZOMBIE_TRACKER_CROWD_COUNT:
-                return True
-    return False
 
 
 def _zombie_wander_move(
@@ -1711,6 +1671,7 @@ class Zombie(pygame.sprite.Sprite):
         self.tracker_last_scan_time = 0
         self.tracker_scan_interval_ms = ZOMBIE_TRACKER_SCAN_INTERVAL_MS
         self.tracker_relock_after_time: int | None = None
+        self.tracker_force_wander = False
         self.wall_hug_side = RNG.choice([-1.0, 1.0]) if wall_hugging else 0.0
         self.wall_hug_angle = RNG.uniform(0, math.tau) if wall_hugging else None
         self.wall_hug_last_wall_time: int | None = None

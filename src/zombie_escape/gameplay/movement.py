@@ -16,6 +16,8 @@ from ..entities_constants import (
     HUMANOID_WALL_BUMP_FRAMES,
     PLAYER_SPEED,
     ZOMBIE_SEPARATION_DISTANCE,
+    ZOMBIE_TRACKER_CROWD_BAND_WIDTH,
+    ZOMBIE_TRACKER_GRID_CROWD_COUNT,
     ZOMBIE_WALL_HUG_SENSOR_DISTANCE,
 )
 from ..gameplay_constants import (
@@ -23,11 +25,14 @@ from ..gameplay_constants import (
     SHOES_SPEED_MULTIPLIER_TWO,
 )
 from ..models import FallingZombie, GameData
+from ..rng import get_rng
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
 from .constants import MAX_ZOMBIES
 from .spawn import spawn_weighted_zombie, update_falling_zombies
 from .survivors import update_survivors
 from .utils import rect_visible_on_screen
+
+RNG = get_rng()
 
 
 def process_player_input(
@@ -255,6 +260,28 @@ def update_entities(
                     survivors_on_screen.append(survivor)
 
     zombies_sorted: list[Zombie] = sorted(list(zombie_group), key=lambda z: z.x)
+
+    tracker_buckets: dict[tuple[int, int, int], list[Zombie]] = {}
+    tracker_cell_size = ZOMBIE_TRACKER_CROWD_BAND_WIDTH
+    angle_step = math.pi / 4.0
+    for zombie in zombies_sorted:
+        if not zombie.alive() or not zombie.tracker:
+            continue
+        zombie.tracker_force_wander = False
+        dx = zombie.last_move_dx
+        dy = zombie.last_move_dy
+        if abs(dx) <= 0.001 and abs(dy) <= 0.001:
+            continue
+        angle = math.atan2(dy, dx)
+        angle_bin = int(round(angle / angle_step)) % 8
+        cell_x = int(zombie.x // tracker_cell_size)
+        cell_y = int(zombie.y // tracker_cell_size)
+        tracker_buckets.setdefault((cell_x, cell_y, angle_bin), []).append(zombie)
+
+    for bucket in tracker_buckets.values():
+        if len(bucket) < ZOMBIE_TRACKER_GRID_CROWD_COUNT:
+            continue
+        RNG.choice(bucket).tracker_force_wander = True
 
     def _nearby_zombies(index: int) -> list[Zombie]:
         center = zombies_sorted[index]
