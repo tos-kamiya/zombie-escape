@@ -54,7 +54,7 @@ def walls_for_radius(
     return candidates
 
 
-def apply_tile_edge_nudge(
+def apply_cell_edge_nudge(
     x: float,
     y: float,
     dx: float,

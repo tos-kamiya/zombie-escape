@@ -42,4 +42,4 @@ def test_validate_connectivity_returns_reachable_cells_when_valid() -> None:
 
     reachable = validate_connectivity(grid)
     assert reachable is not None
-    assert (3, 1) in reachable  # exit tile
+    assert (3, 1) in reachable  # exit cell

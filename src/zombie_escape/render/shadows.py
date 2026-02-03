@@ -22,7 +22,7 @@ _SHADOW_LAYER_CACHE: dict[tuple[int, int], surface.Surface] = {}
 _SHADOW_CIRCLE_CACHE: dict[tuple[int, int, float], surface.Surface] = {}
 
 
-def _get_shadow_tile_surface(
+def _get_shadow_cell_surface(
     cell_size: int,
     alpha: int,
     *,
@@ -176,7 +176,7 @@ def _draw_wall_shadows(
         return False
     base_shadow_size = max(cell_size + 2, int(cell_size * 1.35))
     shadow_size = max(1, int(base_shadow_size * 1.5))
-    shadow_surface = _get_shadow_tile_surface(
+    shadow_surface = _get_shadow_cell_surface(
         shadow_size,
         alpha,
         edge_softness=0.12,

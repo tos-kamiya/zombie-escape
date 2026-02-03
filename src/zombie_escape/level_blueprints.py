@@ -14,7 +14,6 @@ EXITS_PER_SIDE = 1  # currently fixed to 1 per side (can be tuned)
 WALL_MIN_LEN = 3
 WALL_MAX_LEN = 10
 SPAWN_MARGIN = 3  # keep spawns away from walls/edges
-SPAWN_ZOMBIES = 3
 
 RNG = get_rng()
 
@@ -25,14 +24,14 @@ class MapGenerationError(Exception):
 
 def validate_car_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
     """Check if the Car can reach at least one exit (4-way BFS).
-    Returns the set of reachable tiles if valid, otherwise None.
+    Returns the set of reachable cells if valid, otherwise None.
     """
     rows = len(grid)
     cols = len(grid[0])
 
     start_pos = None
-    passable_tiles = set()
-    exit_tiles = set()
+    passable_cells = set()
+    exit_cells = set()
 
     for y in range(rows):
         for x in range(cols):
@@ -40,13 +39,13 @@ def validate_car_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
             if ch == "C":
                 start_pos = (x, y)
             if ch not in ("x", "B"):
-                passable_tiles.add((x, y))
+                passable_cells.add((x, y))
                 if ch == "E":
-                    exit_tiles.add((x, y))
+                    exit_cells.add((x, y))
 
     if start_pos is None:
         # If no car candidate, we can't validate car pathing.
-        return passable_tiles
+        return passable_cells
 
     reachable = {start_pos}
     queue = deque([start_pos])
@@ -54,23 +53,23 @@ def validate_car_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
         x, y = queue.popleft()
         for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
             nx, ny = x + dx, y + dy
-            if (nx, ny) in passable_tiles and (nx, ny) not in reachable:
+            if (nx, ny) in passable_cells and (nx, ny) not in reachable:
                 reachable.add((nx, ny))
                 queue.append((nx, ny))
 
     # Car must reach at least one exit
-    if exit_tiles and not any(e in reachable for e in exit_tiles):
+    if exit_cells and not any(e in reachable for e in exit_cells):
         return None
     return reachable
 
 
 def validate_humanoid_connectivity(grid: list[str]) -> bool:
-    """Check if all floor tiles are reachable by Humans (8-way BFS with jumps)."""
+    """Check if all floor cells are reachable by Humans (8-way BFS with jumps)."""
     rows = len(grid)
     cols = len(grid[0])
 
     start_pos = None
-    passable_tiles = set()
+    passable_cells = set()
 
     for y in range(rows):
         for x in range(cols):
@@ -78,7 +77,7 @@ def validate_humanoid_connectivity(grid: list[str]) -> bool:
             if ch == "P":
                 start_pos = (x, y)
             if ch not in ("x", "B"):
-                passable_tiles.add((x, y))
+                passable_cells.add((x, y))
 
     if start_pos is None:
         return False
@@ -89,16 +88,16 @@ def validate_humanoid_connectivity(grid: list[str]) -> bool:
         x, y = queue.popleft()
         for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)):
             nx, ny = x + dx, y + dy
-            if (nx, ny) in passable_tiles and (nx, ny) not in reachable:
+            if (nx, ny) in passable_cells and (nx, ny) not in reachable:
                 reachable.add((nx, ny))
                 queue.append((nx, ny))
 
-    return len(passable_tiles) == len(reachable)
+    return len(passable_cells) == len(reachable)
 
 
 def validate_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
     """Validate both car and humanoid movement conditions.
-    Returns car reachable tiles if both pass, otherwise None.
+    Returns car reachable cells if both pass, otherwise None.
     """
     car_reachable = validate_car_connectivity(grid)
     if car_reachable is None:
@@ -190,7 +189,7 @@ def _place_walls_default(
             for i in range(length):
                 if (x + i, y) in forbidden:
                     continue
-                if grid[y][x + i] in (".", "Z"):
+                if grid[y][x + i] == ".":
                     grid[y][x + i] = "1"
         else:
             x = rng(2, cols - 3)
@@ -198,7 +197,7 @@ def _place_walls_default(
             for i in range(length):
                 if (x, y + i) in forbidden:
                     continue
-                if grid[y + i][x] in (".", "Z"):
+                if grid[y + i][x] == ".":
                     grid[y + i][x] = "1"
 
 
@@ -317,7 +316,7 @@ def _place_walls_sparse_moore(
     density: float = DEFAULT_SPARSE_WALL_DENSITY,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
-    """Place isolated wall tiles at a low density, avoiding adjacency."""
+    """Place isolated wall cells at a low density, avoiding adjacency."""
     cols, rows = len(grid[0]), len(grid)
     forbidden = _collect_exit_adjacent_cells(grid)
     if forbidden_cells:
@@ -350,7 +349,7 @@ def _place_walls_sparse_ortho(
     density: float = DEFAULT_SPARSE_WALL_DENSITY,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
-    """Place isolated wall tiles at a low density, avoiding orthogonal adjacency."""
+    """Place isolated wall cells at a low density, avoiding orthogonal adjacency."""
     cols, rows = len(grid[0]), len(grid)
     forbidden = _collect_exit_adjacent_cells(grid)
     if forbidden_cells:
@@ -407,7 +406,7 @@ def _place_pitfalls(
     pitfall_zones: list[tuple[int, int, int, int]] | None = None,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
-    """Replace empty floor tiles with pitfalls based on density."""
+    """Replace empty floor cells with pitfalls based on density."""
     cols, rows = len(grid[0]), len(grid)
     forbidden = _collect_exit_adjacent_cells(grid)
     if forbidden_cells:
@@ -472,7 +471,7 @@ def _generate_random_blueprint(
     grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE)
 
-    # Spawns: player, car, zombies
+    # Spawns: player, car
     reserved_cells: set[tuple[int, int]] = set()
     px, py = _pick_empty_cell(grid, SPAWN_MARGIN)
     grid[py][px] = "P"
@@ -480,10 +479,7 @@ def _generate_random_blueprint(
     cx, cy = _pick_empty_cell(grid, SPAWN_MARGIN)
     grid[cy][cx] = "C"
     reserved_cells.add((cx, cy))
-    for _ in range(SPAWN_ZOMBIES):
-        zx, zy = _pick_empty_cell(grid, SPAWN_MARGIN)
-        grid[zy][zx] = "Z"
-        reserved_cells.add((zx, zy))
+    # (No zombie candidate cells; initial spawns are handled by gameplay.)
 
     # Items
     fx, fy = _pick_empty_cell(grid, SPAWN_MARGIN)

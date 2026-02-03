@@ -95,7 +95,6 @@ def generate_level_from_blueprint(game_data: GameData, config: dict[str, Any]) -
     pitfall_cells: set[tuple[int, int]] = set()
     player_cells: list[tuple[int, int]] = []
     car_cells: list[tuple[int, int]] = []
-    zombie_cells: list[tuple[int, int]] = []
     fuel_cells: list[tuple[int, int]] = []
     flashlight_cells: list[tuple[int, int]] = []
     shoes_cells: list[tuple[int, int]] = []
@@ -230,8 +229,6 @@ def generate_level_from_blueprint(game_data: GameData, config: dict[str, Any]) -
                 player_cells.append((x, y))
             if ch == "C":
                 car_cells.append((x, y))
-            if ch == "Z":
-                zombie_cells.append((x, y))
             if ch == "f":
                 fuel_cells.append((x, y))
             if ch == "l":
@@ -284,7 +281,6 @@ def generate_level_from_blueprint(game_data: GameData, config: dict[str, Any]) -
     return {
         "player_cells": player_cells,
         "car_cells": car_cells,
-        "zombie_cells": zombie_cells,
         "fuel_cells": fuel_cells,
         "flashlight_cells": flashlight_cells,
         "shoes_cells": shoes_cells,

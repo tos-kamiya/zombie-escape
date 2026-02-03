@@ -99,7 +99,7 @@
 - 落とし穴の固定配置: `pitfall_zones`（矩形指定で落とし穴セルを確定配置）
 - 落下スポーン領域: `fall_spawn_zones`, `fall_spawn_floor_ratio`
 - ステージ公開: `available`
-- タイルサイズ: `tile_size`（ステージごとのワールド縮尺）
+- セルサイズ: `cell_size`（ステージごとのワールド縮尺）
 - グリッドサイズ: `grid_cols`, `grid_rows`（タイル数。デフォルトは `level_constants.py` の値）
 
 ### 3.4 レベルレイアウト (models.LevelLayout)
@@ -328,14 +328,13 @@
   - `.`: 空床（walkable floor）
   - `P`: プレイヤー候補（player spawn candidate）
   - `C`: 車候補（car spawn candidate）
-  - `Z`: ゾンビ候補（zombie spawn candidate）
   - `x`: 落とし穴（pitfall trap）
   - `f`: 燃料候補（fuel candidate）
   - `l`: 懐中電灯候補（flashlight candidate）
   - `s`: 靴候補（shoes candidate）
 
 - `generate_random_blueprint(wall_algo)`
-  - 外周 -> 出口 -> スポーン・アイテム候補（P/C/Z/f/l/s）予約 -> 落とし穴 -> 壁 -> 鉄筋候補 の順に生成。
+  - 外周 -> 出口 -> スポーン・アイテム候補（P/C/f/l/s）予約 -> 落とし穴 -> 壁 -> 鉄筋候補 の順に生成。
   - 予約地点（`reserved_cells`）には壁や落とし穴が生成されないよう保護される。
   - `wall_algo` により壁配置戦略を切り替え可能。
     - `"default"`: ランダムな長さの直線をランダム配置。
@@ -411,6 +410,12 @@
 - `level_constants.py`: グリッドのデフォルト値（48x30）。
 - `gameplay_constants.py`: 速度、判定半径、スポーンレートなど。
 - `render_constants.py`: 霧や足跡の描画パラメータ。
+
+## TODO
+
+* ゲームプレイ画面に描画される文字はすべて.size(11)で描いているので、これを定数にする。
+* ゲームオーバー画面での文字サイズも全て.size(11)にする（もし違う大きさのものがあれば）。
+* タイトル画面と設定画面の描画では、ゲームプレイ画面とは描画方法を変えて、小さいサーフェイスを経由せずに直接等倍で描画する。文字の描画を少しでもきれいにするため
 
 ---
 

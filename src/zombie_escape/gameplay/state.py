@@ -74,7 +74,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     survivor_group = pygame.sprite.Group()
 
     # Create camera
-    cell_size = stage.tile_size
+    cell_size = stage.cell_size
     level_width = stage.grid_cols * cell_size
     level_height = stage.grid_rows * cell_size
     camera = Camera(level_width, level_height)

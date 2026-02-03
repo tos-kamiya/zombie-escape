@@ -22,7 +22,7 @@ from .entities_constants import (
     SURVIVOR_RADIUS,
     ZOMBIE_RADIUS,
 )
-from .level_constants import DEFAULT_TILE_SIZE
+from .level_constants import DEFAULT_CELL_SIZE
 from .render_assets import (
     build_car_directional_surfaces,
     build_car_surface,
@@ -81,7 +81,7 @@ def _pick_directional_surface(surfaces: list[pygame.Surface], *, bin_index: int 
     return surfaces[bin_index % len(surfaces)]
 
 
-def _build_pitfall_tile(cell_size: int) -> pygame.Surface:
+def _build_pitfall_cell(cell_size: int) -> pygame.Surface:
     surface = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
     rect = surface.get_rect()
     pygame.draw.rect(surface, PITFALL_ABYSS_COLOR, rect)
@@ -116,7 +116,7 @@ def _build_pitfall_tile(cell_size: int) -> pygame.Surface:
     return surface
 
 
-def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE, output_scale: int = 4) -> list[Path]:
+def export_images(output_dir: Path, *, cell_size: int = DEFAULT_CELL_SIZE, output_scale: int = 4) -> list[Path]:
     _ensure_pygame_ready()
 
     saved: list[Path] = []
@@ -267,7 +267,7 @@ def export_images(output_dir: Path, *, cell_size: int = DEFAULT_TILE_SIZE, outpu
     _save_surface(outer_wall, outer_wall_path, scale=output_scale)
     saved.append(outer_wall_path)
 
-    pitfall = _build_pitfall_tile(cell_size)
+    pitfall = _build_pitfall_cell(cell_size)
     pitfall_path = out / "pitfall.png"
     _save_surface(pitfall, pitfall_path, scale=output_scale)
     saved.append(pitfall_path)

@@ -23,7 +23,7 @@ from ..gameplay_constants import (
     SHOES_SPEED_MULTIPLIER_TWO,
 )
 from ..models import FallingZombie, GameData
-from ..world_grid import WallIndex, apply_tile_edge_nudge, walls_for_radius
+from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
 from .constants import MAX_ZOMBIES
 from .spawn import spawn_weighted_zombie, update_falling_zombies
 from .survivors import update_survivors
@@ -148,7 +148,7 @@ def update_entities(
 
     # Update player/car movement
     if player.in_car and active_car:
-        car_dx, car_dy = apply_tile_edge_nudge(
+        car_dx, car_dy = apply_cell_edge_nudge(
             active_car.x,
             active_car.y,
             car_dx,
@@ -181,7 +181,7 @@ def update_entities(
         # Ensure player is in all_sprites if not in car
         if player not in all_sprites:
             all_sprites.add(player, layer=2)
-        player_dx, player_dy = apply_tile_edge_nudge(
+        player_dx, player_dy = apply_cell_edge_nudge(
             player.x,
             player.y,
             player_dx,

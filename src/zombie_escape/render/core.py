@@ -292,7 +292,7 @@ def _get_hatch_pattern(
     *,
     color: tuple[int, int, int, int] | None = None,
 ) -> surface.Surface:
-    """Return cached dot hatch tile surface (Bayer-ordered, optionally chunky)."""
+    """Return cached dot hatch cell surface (Bayer-ordered, optionally chunky)."""
     cache = fog_data.setdefault("hatch_patterns", {})
     key = (thickness, color)
     if key in cache:

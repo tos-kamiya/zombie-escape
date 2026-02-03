@@ -26,7 +26,7 @@ from ..gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     DEFAULT_SHOES_SPAWN_COUNT,
 )
-from ..level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS, DEFAULT_TILE_SIZE
+from ..level_constants import DEFAULT_CELL_SIZE, DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from ..models import DustRing, FallingZombie, GameData, Stage
 from ..render_constants import (
     FLASHLIGHT_FOG_SCALE_ONE,
@@ -212,7 +212,7 @@ def _schedule_falling_zombie(
     zombie_group = game_data.groups.zombie_group
     if len(zombie_group) + len(state.falling_zombies) >= MAX_ZOMBIES:
         return "blocked"
-    min_distance = game_data.stage.tile_size * 0.5
+    min_distance = game_data.stage.cell_size * 0.5
     tracker, wall_hugging = _pick_zombie_variant(game_data.stage)
 
     def _candidate_clear(pos: tuple[int, int]) -> bool:
@@ -290,15 +290,15 @@ def _create_zombie(
         )
         aging_duration_frames = max(1.0, aging_duration_frames * ratio)
     if start_pos is None:
-        tile_size = stage.tile_size if stage else DEFAULT_TILE_SIZE
+        cell_size = stage.cell_size if stage else DEFAULT_CELL_SIZE
         if stage is None:
             grid_cols = DEFAULT_GRID_COLS
             grid_rows = DEFAULT_GRID_ROWS
         else:
             grid_cols = stage.grid_cols
             grid_rows = stage.grid_rows
-        level_width = grid_cols * tile_size
-        level_height = grid_rows * tile_size
+        level_width = grid_cols * cell_size
+        level_height = grid_rows * cell_size
         if hint_pos is not None:
             points = [random_position_outside_building(level_width, level_height) for _ in range(5)]
             points.sort(key=lambda p: (p[0] - hint_pos[0]) ** 2 + (p[1] - hint_pos[1]) ** 2)
@@ -677,10 +677,10 @@ def spawn_initial_zombies(
     zombie_group = game_data.groups.zombie_group
     all_sprites = game_data.groups.all_sprites
 
+    cell_size = game_data.cell_size
     spawn_cells = layout_data["walkable_cells"]
     if not spawn_cells:
         return
-    cell_size = game_data.cell_size
 
     if game_data.stage.id == "debug_tracker":
         player_pos = player.rect.center

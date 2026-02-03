@@ -160,7 +160,7 @@ class Stage:
     intro_key: str | None = None
 
     # Map layout
-    tile_size: int = 50
+    cell_size: int = 50
     grid_cols: int = DEFAULT_GRID_COLS
     grid_rows: int = DEFAULT_GRID_ROWS
     wall_algorithm: str = "default"
@@ -184,7 +184,7 @@ class Stage:
     waiting_car_target_count: int = 1
 
     # Zombie spawning/aging
-    # - initial_interior_spawn_rate: fraction of interior floor tiles to seed.
+    # - initial_interior_spawn_rate: fraction of interior floor cells to seed.
     # - spawn weights: pick area by weight (normalized).
     # - zombie ratios: pick variant by weight (normalized).
     spawn_interval_ms: int = ZOMBIE_SPAWN_DELAY_MS

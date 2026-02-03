@@ -59,7 +59,7 @@ def _build_stage18_pitfall_zones(
         pitfall_cells.discard((x, 2))
         pitfall_cells.discard((x, grid_rows - 3))
 
-    # Jagged room edges: every 2 tiles, let the room "bite" into pitfall bands.
+    # Jagged room edges: every 2 cells, let the room "bite" into pitfall bands.
     for row in range(rooms_per_side):
         for col in range(rooms_per_side):
             start_x = 3 + col * (room_size + gap_width)
@@ -173,7 +173,7 @@ STAGES: list[Stage] = [
         name_key="stages.stage8.name",
         description_key="stages.stage8.description",
         available=True,
-        tile_size=35,
+        cell_size=35,
         wall_algorithm="grid_wire",
         requires_fuel=True,
         initial_interior_spawn_rate=0.01,
@@ -189,7 +189,7 @@ STAGES: list[Stage] = [
         name_key="stages.stage9.name",
         description_key="stages.stage9.description",
         available=True,
-        tile_size=35,
+        cell_size=35,
         requires_fuel=True,
         rescue_stage=True,
         waiting_car_target_count=1,
@@ -208,7 +208,7 @@ STAGES: list[Stage] = [
         description_key="stages.stage10.description",
         intro_key="stages.stage10.intro",
         available=True,
-        tile_size=40,
+        cell_size=40,
         wall_algorithm="sparse_moore.10%",
         rescue_stage=True,
         waiting_car_target_count=1,
@@ -303,7 +303,7 @@ STAGES: list[Stage] = [
         description_key="stages.stage15.description",
         intro_key="stages.stage15.intro",
         available=True,
-        tile_size=35,
+        cell_size=35,
         grid_cols=64,
         grid_rows=24,
         wall_algorithm="grid_wire",
@@ -327,7 +327,7 @@ STAGES: list[Stage] = [
         name_key="stages.stage16.name",
         description_key="stages.stage16.description",
         available=True,
-        tile_size=60,
+        cell_size=60,
         grid_cols=40,
         grid_rows=25,
         wall_algorithm="sparse_moore.25%",
@@ -391,7 +391,7 @@ STAGES: list[Stage] = [
         available=True,
         grid_cols=35,
         grid_rows=35,
-        tile_size=35,
+        cell_size=35,
         wall_algorithm="grid_wire.170%",
         fall_spawn_floor_ratio=0.02,
         pitfall_density=0.008,

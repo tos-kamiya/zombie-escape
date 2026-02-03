@@ -274,7 +274,7 @@ def _draw_time_accel_indicator(
         return
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(12))
+        font = load_font(font_settings.resource, font_settings.scaled_size(11))
         if state.time_accel_active:
             text = tr("hud.time_accel")
             color = YELLOW
@@ -332,7 +332,7 @@ def _draw_intro_message(
         return
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(13))
+        font = load_font(font_settings.resource, font_settings.scaled_size(11))
         text_surface = font.render(message, False, LIGHT_GRAY)
         if player:
             player_rect = camera.apply_rect(player.rect)

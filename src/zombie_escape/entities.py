@@ -98,7 +98,7 @@ from .render_assets import (
 from .render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR
 from .rng import get_rng
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
-from .world_grid import WallIndex, apply_tile_edge_nudge, walls_for_radius
+from .world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
 
 RNG = get_rng()
 
@@ -930,7 +930,7 @@ class Survivor(pygame.sprite.Sprite):
             move_y = (dy / dist) * BUDDY_FOLLOW_SPEED
 
             if cell_size is not None and wall_cells is not None and grid_cols is not None and grid_rows is not None:
-                move_x, move_y = apply_tile_edge_nudge(
+                move_x, move_y = apply_cell_edge_nudge(
                     self.x,
                     self.y,
                     move_x,
@@ -1081,7 +1081,7 @@ class Survivor(pygame.sprite.Sprite):
         )
 
         if cell_size is not None and wall_cells is not None and grid_cols is not None and grid_rows is not None:
-            move_x, move_y = apply_tile_edge_nudge(
+            move_x, move_y = apply_cell_edge_nudge(
                 self.x,
                 self.y,
                 move_x,
@@ -1951,7 +1951,7 @@ class Zombie(pygame.sprite.Sprite):
         if dist_to_player_sq <= avoid_radius_sq or self.wall_hugging:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
         if wall_cells is not None:
-            move_x, move_y = apply_tile_edge_nudge(
+            move_x, move_y = apply_cell_edge_nudge(
                 self.x,
                 self.y,
                 move_x,

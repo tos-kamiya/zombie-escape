@@ -19,7 +19,7 @@ from .entities_constants import (
     SURVIVOR_MIN_SPEED_FACTOR,
 )
 from .gameplay import calculate_car_speed_for_passengers
-from .level_constants import DEFAULT_TILE_SIZE
+from .level_constants import DEFAULT_CELL_SIZE
 from .localization import set_language
 from .models import Stage
 from .render_constants import RenderAssets, build_render_assets
@@ -119,7 +119,7 @@ def main() -> None:
         from .export_images import export_images
 
         output_dir = Path.cwd() / "imgs" / "exports"
-        saved = export_images(output_dir, cell_size=DEFAULT_TILE_SIZE)
+        saved = export_images(output_dir, cell_size=DEFAULT_CELL_SIZE)
         print(f"Exported {len(saved)} images to {output_dir}")
         pygame.quit()
         return
@@ -215,7 +215,7 @@ def main() -> None:
                 transition = ScreenTransition(ScreenID.TITLE)
             else:
                 last_stage_id = stage.id
-                render_assets = build_render_assets(stage.tile_size)
+                render_assets = build_render_assets(stage.cell_size)
                 try:
                     gs = _profiled_gameplay_screen if args.profile else gameplay_screen
                     transition = gs(
@@ -246,9 +246,9 @@ def main() -> None:
             if game_data is not None:
                 render_assets = build_render_assets(game_data.cell_size)
             elif stage is not None:
-                render_assets = build_render_assets(stage.tile_size)
+                render_assets = build_render_assets(stage.cell_size)
             else:
-                render_assets = build_render_assets(DEFAULT_TILE_SIZE)
+                render_assets = build_render_assets(DEFAULT_CELL_SIZE)
             transition = game_over_screen(
                 screen,
                 clock,

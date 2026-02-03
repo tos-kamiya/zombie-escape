@@ -18,7 +18,7 @@ BUDDY_MERGE_DISTANCE = 40
 HUMANOID_WALL_BUMP_FRAMES = 7
 
 # --- Jump settings ---
-PLAYER_JUMP_RANGE = 15  # px (enough to clear one 50px tile)
+PLAYER_JUMP_RANGE = 15  # px (enough to clear one 50px cell)
 SURVIVOR_JUMP_RANGE = int(PLAYER_JUMP_RANGE * 0.7)  # px
 JUMP_DURATION_MS = 200
 JUMP_SCALE_MAX = 0.15
