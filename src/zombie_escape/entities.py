@@ -336,9 +336,7 @@ MovementStrategy = Callable[
         Iterable["Zombie"],
         list[Footprint],
         int,
-        int,
-        int,
-        set[tuple[int, int]] | None,
+        "LevelLayout",
     ],
     tuple[float, float],
 ]
@@ -1198,10 +1196,7 @@ def _zombie_tracker_movement(
     nearby_zombies: Iterable[Zombie],
     footprints: list[Footprint],
     cell_size: int,
-    grid_cols: int,
-    grid_rows: int,
-    outer_wall_cells: set[tuple[int, int]] | None,
-    pitfall_cells: set[tuple[int, int]] | None,
+    layout: LevelLayout,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if not is_in_sight:
@@ -1211,51 +1206,22 @@ def _zombie_tracker_movement(
                 last_target_time = pygame.time.get_ticks()
             zombie.tracker_relock_after_time = last_target_time + ZOMBIE_TRACKER_RELOCK_DELAY_MS
             zombie.tracker_target_pos = None
-            return _zombie_wander_move(
+            return _zombie_wander_movement(
                 zombie,
                 walls,
                 cell_size=cell_size,
-                grid_cols=grid_cols,
-                grid_rows=grid_rows,
-                outer_wall_cells=outer_wall_cells,
-                pitfall_cells=pitfall_cells,
+                layout=layout,
             )
         _zombie_update_tracker_target(zombie, footprints, walls)
         if zombie.tracker_target_pos is not None:
             return _zombie_move_toward(zombie, zombie.tracker_target_pos)
-        return _zombie_wander_move(
+        return _zombie_wander_movement(
             zombie,
             walls,
             cell_size=cell_size,
-            grid_cols=grid_cols,
-            grid_rows=grid_rows,
-            outer_wall_cells=outer_wall_cells,
-            pitfall_cells=pitfall_cells,
+            layout=layout,
         )
     return _zombie_move_toward(zombie, player_center)
-
-
-def _zombie_wander_movement(
-    zombie: Zombie,
-    _player_center: tuple[int, int],
-    walls: list[Wall],
-    _nearby_zombies: Iterable[Zombie],
-    _footprints: list[Footprint],
-    cell_size: int,
-    grid_cols: int,
-    grid_rows: int,
-    outer_wall_cells: set[tuple[int, int]] | None,
-    pitfall_cells: set[tuple[int, int]] | None,
-) -> tuple[float, float]:
-    return _zombie_wander_move(
-        zombie,
-        walls,
-        cell_size=cell_size,
-        grid_cols=grid_cols,
-        grid_rows=grid_rows,
-        outer_wall_cells=outer_wall_cells,
-        pitfall_cells=pitfall_cells,
-    )
 
 
 def _zombie_wall_hug_has_wall(
@@ -1307,10 +1273,7 @@ def _zombie_wall_hug_movement(
     _nearby_zombies: Iterable[Zombie],
     _footprints: list[Footprint],
     cell_size: int,
-    grid_cols: int,
-    grid_rows: int,
-    outer_wall_cells: set[tuple[int, int]] | None,
-    pitfall_cells: set[tuple[int, int]] | None,
+    layout: LevelLayout,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if zombie.wall_hug_angle is None:
@@ -1341,14 +1304,11 @@ def _zombie_wall_hug_movement(
         else:
             if is_in_sight:
                 return _zombie_move_toward(zombie, player_center)
-            return _zombie_wander_move(
+            return _zombie_wander_movement(
                 zombie,
                 walls,
                 cell_size=cell_size,
-                grid_cols=grid_cols,
-                grid_rows=grid_rows,
-                outer_wall_cells=outer_wall_cells,
-                pitfall_cells=pitfall_cells,
+                layout=layout,
             )
 
     sensor_distance = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius
@@ -1404,21 +1364,15 @@ def _zombie_normal_movement(
     _nearby_zombies: Iterable[Zombie],
     _footprints: list[Footprint],
     cell_size: int,
-    grid_cols: int,
-    grid_rows: int,
-    outer_wall_cells: set[tuple[int, int]] | None,
-    pitfall_cells: set[tuple[int, int]] | None,
+    layout: LevelLayout,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_SIGHT_RANGE)
     if not is_in_sight:
-        return _zombie_wander_move(
+        return _zombie_wander_movement(
             zombie,
             walls,
             cell_size=cell_size,
-            grid_cols=grid_cols,
-            grid_rows=grid_rows,
-            outer_wall_cells=outer_wall_cells,
-            pitfall_cells=pitfall_cells,
+            layout=layout,
         )
     return _zombie_move_toward(zombie, player_center)
 
@@ -1511,16 +1465,17 @@ def _zombie_update_tracker_target(
     return
 
 
-def _zombie_wander_move(
+def _zombie_wander_movement(
     zombie: Zombie,
     walls: list[Wall],
     *,
     cell_size: int,
-    grid_cols: int,
-    grid_rows: int,
-    outer_wall_cells: set[tuple[int, int]] | None,
-    pitfall_cells: set[tuple[int, int]] | None,
+    layout: LevelLayout,
 ) -> tuple[float, float]:
+    grid_cols = layout.grid_cols
+    grid_rows = layout.grid_rows
+    outer_wall_cells = layout.outer_wall_cells
+    pitfall_cells = layout.pitfall_cells
     now = pygame.time.get_ticks()
     changed_angle = False
     if now - zombie.last_wander_change_time > zombie.wander_change_interval:
@@ -1862,12 +1817,8 @@ class Zombie(pygame.sprite.Sprite):
     ) -> None:
         if self.carbonized:
             return
-        outer_wall_cells = layout.outer_wall_cells
-        grid_cols = layout.grid_cols
-        grid_rows = layout.grid_rows
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
-        pitfall_cells = layout.pitfall_cells
         self._apply_wall_contact_damage(walls)
         self._apply_aging()
         dx_player = player_center[0] - self.x
@@ -1882,10 +1833,7 @@ class Zombie(pygame.sprite.Sprite):
             nearby_zombies,
             footprints or [],
             cell_size,
-            grid_cols,
-            grid_rows,
-            outer_wall_cells,
-            pitfall_cells,
+            layout,
         )
         if dist_to_player_sq <= avoid_radius_sq or self.wall_hugging:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
