@@ -264,6 +264,8 @@ STAGES: list[Stage] = [
         name_key="stages.stage13.name",
         description_key="stages.stage13.description",
         available=True,
+        grid_cols=46,
+        grid_rows=30,
         wall_algorithm="grid_wire",
         fall_spawn_zones=[
             (x, y, 2, 2) for y in range(2, DEFAULT_GRID_ROWS - 2, 4) for x in range(2, DEFAULT_GRID_COLS - 2, 4)
