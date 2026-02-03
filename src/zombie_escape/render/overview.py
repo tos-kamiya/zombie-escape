@@ -3,10 +3,13 @@ from __future__ import annotations
 import pygame
 from pygame import sprite, surface
 
-from ..colors import BLACK, BLUE, FOOTPRINT_COLOR, WHITE, YELLOW, get_environment_palette
+from ..colors import BLACK, BLUE, FOOTPRINT_COLOR, YELLOW, WHITE, get_environment_palette
 from ..entities import Car, Flashlight, FuelCan, Player, Shoes, SteelBeam, Survivor, Wall
+from ..font_utils import load_font
+from ..localization import get_font_settings
 from ..models import Footprint, GameData
 from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
+from .hud import _get_fog_scale
 
 
 def compute_floor_cells(
@@ -22,6 +25,31 @@ def compute_floor_cells(
     # those cells here makes the minimap treat destroyed walls as floor.
     blocked = wall_cells | outer_wall_cells | pitfall_cells
     return {(x, y) for y in range(rows) for x in range(cols) if (x, y) not in blocked}
+
+
+def _draw_overview_tag(
+    surface: surface.Surface,
+    font: pygame.font.Font,
+    text: str,
+    item_rect: pygame.Rect,
+    *,
+    fg: tuple[int, int, int] = YELLOW,
+    padding: tuple[int, int] = (4, 2),
+) -> None:
+    label = font.render(text, False, fg)
+    label_rect = label.get_rect()
+    padded = label_rect.inflate(padding[0] * 2, padding[1] * 2)
+    top_left = (item_rect.left, item_rect.top)
+    bottom_left = (item_rect.left, item_rect.bottom - padded.height)
+    if top_left[1] < 0 or top_left[1] + padded.height > surface.get_height():
+        x, y = bottom_left
+    else:
+        x, y = top_left
+    x = max(0, min(surface.get_width() - padded.width, x))
+    y = max(0, min(surface.get_height() - padded.height, y))
+    padded.topleft = (x, y)
+    label_rect.center = padded.center
+    surface.blit(label, label_rect)
 
 
 def draw_level_overview(
@@ -206,6 +234,21 @@ def draw_debug_overview(
                 zombie.rect.center,
                 zombie_radius,
             )
+    fov_target = None
+    if game_data.player and game_data.player.in_car and game_data.car and game_data.car.alive():
+        fov_target = game_data.car
+    elif game_data.player:
+        fov_target = game_data.player
+    if fov_target:
+        fov_scale = _get_fog_scale(assets, game_data.state.flashlight_count)
+        fov_radius = max(1, int(assets.fov_radius * fov_scale))
+        pygame.draw.circle(
+            overview_surface,
+            (255, 255, 120),
+            fov_target.rect.center,
+            fov_radius,
+            width=2,
+        )
     cam_offset = game_data.camera.camera
     camera_rect = pygame.Rect(
         -cam_offset.x,
@@ -227,7 +270,40 @@ def draw_debug_overview(
     scaled_h = max(1, scaled_h)
     scaled_overview = pygame.transform.smoothscale(overview_surface, (scaled_w, scaled_h))
     screen.fill(BLACK)
+    scaled_rect = scaled_overview.get_rect(center=(screen_width // 2, screen_height // 2))
     screen.blit(
         scaled_overview,
-        scaled_overview.get_rect(center=(screen_width // 2, screen_height // 2)),
+        scaled_rect,
     )
+    try:
+        font_settings = get_font_settings()
+        label_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+    except pygame.error as e:
+        print(f"Error loading overview font: {e}")
+        return
+    scale_x = scaled_w / max(1, level_rect.width)
+    scale_y = scaled_h / max(1, level_rect.height)
+
+    def _scaled_rect(rect: pygame.Rect) -> pygame.Rect:
+        return pygame.Rect(
+            int(scaled_rect.left + rect.left * scale_x),
+            int(scaled_rect.top + rect.top * scale_y),
+            max(1, int(rect.width * scale_x)),
+            max(1, int(rect.height * scale_y)),
+        )
+
+    if game_data.car and game_data.car.alive():
+        _draw_overview_tag(screen, label_font, "C", _scaled_rect(game_data.car.rect))
+    for parked in game_data.waiting_cars:
+        if parked.alive():
+            _draw_overview_tag(screen, label_font, "C", _scaled_rect(parked.rect))
+    if game_data.fuel and game_data.fuel.alive():
+        _draw_overview_tag(screen, label_font, "F", _scaled_rect(game_data.fuel.rect))
+    if game_data.flashlights:
+        for flashlight in game_data.flashlights:
+            if flashlight.alive():
+                _draw_overview_tag(screen, label_font, "L", _scaled_rect(flashlight.rect))
+    if game_data.shoes:
+        for item in game_data.shoes:
+            if item.alive():
+                _draw_overview_tag(screen, label_font, "S", _scaled_rect(item.rect))

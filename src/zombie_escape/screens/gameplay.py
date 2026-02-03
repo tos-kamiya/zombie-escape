@@ -309,13 +309,24 @@ def gameplay_screen(
 
         paused = paused_manual or paused_focus
         if paused:
-            draw(
-                render_assets,
-                screen,
-                game_data,
-                config=config,
-                fps=current_fps,
-            )
+            if debug_overview:
+                draw_debug_overview(
+                    render_assets,
+                    screen,
+                    overview_surface,
+                    game_data,
+                    config,
+                    screen_width=screen_width,
+                    screen_height=screen_height,
+                )
+            else:
+                draw(
+                    render_assets,
+                    screen,
+                    game_data,
+                    config=config,
+                    fps=current_fps,
+                )
             if show_pause_overlay:
                 draw_pause_overlay(screen)
             present(screen)
