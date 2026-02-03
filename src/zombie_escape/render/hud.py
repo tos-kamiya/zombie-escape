@@ -32,6 +32,7 @@ from ..render_constants import FLASHLIGHT_FOG_SCALE_ONE, FLASHLIGHT_FOG_SCALE_TW
 _HUD_ICON_CACHE: dict[str, surface.Surface] = {}
 
 HUD_ICON_SIZE = 12
+GAMEPLAY_FONT_SIZE = 11
 
 
 def _scale_icon_to_box(icon: surface.Surface, size: int) -> surface.Surface:
@@ -133,7 +134,7 @@ def _draw_status_bar(
 
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(11))
+        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
         text_surface = font.render(status_text, False, color)
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)
@@ -154,7 +155,7 @@ def _draw_status_bar(
 def _draw_objective(lines: list[str], *, screen: surface.Surface) -> None:
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(11))
+        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
         y = 8
         for line in lines:
             text_surface = font.render(line, False, YELLOW)
@@ -245,7 +246,7 @@ def _draw_endurance_timer(
     timer_text = tr("hud.endurance_timer_label", time=display_label)
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(12))
+        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
         text_surface = font.render(timer_text, False, LIGHT_GRAY)
         text_rect = text_surface.get_rect(left=bar_rect.left, bottom=text_bottom)
         screen.blit(text_surface, text_rect)
@@ -274,7 +275,7 @@ def _draw_time_accel_indicator(
         return
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(11))
+        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
         if state.time_accel_active:
             text = tr("hud.time_accel")
             color = YELLOW
@@ -301,7 +302,7 @@ def _draw_survivor_messages(
         return
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(14))
+        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
         base_y = assets.screen_height // 2 - 70
         for idx, message in enumerate(survivor_messages[:3]):
             text = message.get("text", "")
@@ -332,7 +333,7 @@ def _draw_intro_message(
         return
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(11))
+        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
         text_surface = font.render(message, False, LIGHT_GRAY)
         if player:
             player_rect = camera.apply_rect(player.rect)

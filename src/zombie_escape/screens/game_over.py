@@ -114,7 +114,7 @@ def game_over_screen(
                 show_message(
                     screen,
                     tr("game_over.win"),
-                    22,
+                    11,
                     GREEN,
                     (screen_width // 2, screen_height // 2 - 26),
                 )
@@ -122,18 +122,10 @@ def game_over_screen(
                 show_message(
                     screen,
                     tr("game_over.lose"),
-                    22,
+                    11,
                     RED,
                     (screen_width // 2, screen_height // 2 - 26),
                 )
-                if state.game_over_message:
-                    show_message(
-                        screen,
-                        state.game_over_message,
-                        18,
-                        LIGHT_GRAY,
-                        (screen_width // 2, screen_height // 2 + 6),
-                    )
             summary_y = screen_height // 2 + 70
             if stage and (stage.rescue_stage or stage.buddy_required_count > 0):
                 total_rescued = state.survivors_rescued + state.buddy_rescued
@@ -141,7 +133,7 @@ def game_over_screen(
                 show_message(
                     screen,
                     msg,
-                    18,
+                    11,
                     LIGHT_GRAY,
                     (screen_width // 2, summary_y),
                 )
@@ -158,7 +150,7 @@ def game_over_screen(
                 show_message(
                     screen,
                     msg,
-                    18,
+                    11,
                     LIGHT_GRAY,
                     (screen_width // 2, summary_y),
                 )
@@ -166,7 +158,7 @@ def game_over_screen(
         show_message(
             screen,
             tr("game_over.prompt"),
-            18,
+            11,
             WHITE,
             (screen_width // 2, screen_height // 2 + 24),
         )
