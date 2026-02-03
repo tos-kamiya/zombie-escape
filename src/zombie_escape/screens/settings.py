@@ -41,7 +41,7 @@ from ..screens import (
     TITLE_HEADER_Y,
     TITLE_SECTION_TOP,
     nudge_window_scale,
-    present_direct,
+    present,
     sync_window_size,
     toggle_fullscreen,
 )
@@ -216,8 +216,6 @@ def settings_screen(
                 return config
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event)
-                screen = pygame.display.get_surface() or screen
-                screen_width, screen_height = screen.get_size()
                 continue
             if event.type == pygame.JOYDEVICEADDED or (
                 CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
@@ -237,16 +235,13 @@ def settings_screen(
                 return _exit_settings()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
-                    screen = nudge_window_scale(0.5) or screen
-                    screen_width, screen_height = screen.get_size()
+                    nudge_window_scale(0.5)
                     continue
                 if event.key == pygame.K_RIGHTBRACKET:
-                    screen = nudge_window_scale(2.0) or screen
-                    screen_width, screen_height = screen.get_size()
+                    nudge_window_scale(2.0)
                     continue
                 if event.key == pygame.K_f:
-                    screen = toggle_fullscreen() or screen
-                    screen_width, screen_height = screen.get_size()
+                    toggle_fullscreen()
                     continue
                 if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
                     return _exit_settings()
@@ -492,5 +487,5 @@ def settings_screen(
         except pygame.error as e:
             print(f"Error rendering settings: {e}")
 
-        present_direct(screen)
+        present(screen)
         clock.tick(fps)
