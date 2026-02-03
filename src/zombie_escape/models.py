@@ -20,6 +20,7 @@ from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from .entities import Camera, Car, Flashlight, FuelCan, Player, Shoes
+    from .level_blueprints import Blueprint
 
 
 @dataclass
@@ -141,6 +142,7 @@ class GameData:
     cell_size: int
     level_width: int
     level_height: int
+    blueprint: Blueprint | None = None
     fuel: FuelCan | None = None
     flashlights: list[Flashlight] | None = None
     shoes: list[Shoes] | None = None

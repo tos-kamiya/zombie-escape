@@ -141,6 +141,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         cell_size=cell_size,
         level_width=level_width,
         level_height=level_height,
+        blueprint=None,
         fuel=None,
         flashlights=[],
         shoes=[],

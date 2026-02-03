@@ -70,17 +70,12 @@ def generate_level_from_blueprint(game_data: GameData, config: dict[str, Any]) -
         pitfall_zones=stage.pitfall_zones,
         base_seed=game_data.state.seed,
     )
-    if isinstance(blueprint_data, dict):
-        blueprint = blueprint_data.get("grid", [])
-        steel_cells_raw = blueprint_data.get("steel_cells", set())
-        car_reachable_cells = blueprint_data.get("car_reachable_cells", set())
-    else:
-        blueprint = blueprint_data
-        steel_cells_raw = set()
-        car_reachable_cells = set()
+    game_data.blueprint = blueprint_data
+    blueprint = blueprint_data.grid
+    steel_cells_raw = blueprint_data.steel_cells
+    car_reachable_cells = blueprint_data.car_reachable_cells
 
     steel_cells = {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
-    game_data.layout.car_walkable_cells = car_reachable_cells
     cell_size = game_data.cell_size
     outer_wall_cells = {(x, y) for y, row in enumerate(blueprint) for x, ch in enumerate(row) if ch == "B"}
     wall_cells = {(x, y) for y, row in enumerate(blueprint) for x, ch in enumerate(row) if ch in {"B", "1"}}
@@ -257,6 +252,7 @@ def generate_level_from_blueprint(game_data: GameData, config: dict[str, Any]) -
     game_data.layout.outer_wall_cells = outer_wall_cells
     game_data.layout.wall_cells = wall_cells
     game_data.layout.pitfall_cells = pitfall_cells
+    game_data.layout.car_walkable_cells = car_reachable_cells
     fall_spawn_cells = _expand_zone_cells(
         stage.fall_spawn_zones,
         grid_cols=stage.grid_cols,

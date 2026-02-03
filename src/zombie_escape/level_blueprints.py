@@ -1,6 +1,7 @@
 # Blueprint generator for randomized layouts.
 
 from collections import deque
+from dataclasses import dataclass, field
 
 from .level_constants import (
     DEFAULT_GRID_WIRE_WALL_LINES,
@@ -22,6 +23,13 @@ class MapGenerationError(Exception):
     """Raised when a valid map cannot be generated after several attempts."""
 
 
+@dataclass
+class Blueprint:
+    grid: list[str]
+    steel_cells: set[tuple[int, int]] = field(default_factory=set)
+    car_reachable_cells: set[tuple[int, int]] = field(default_factory=set)
+
+
 def validate_car_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
     """Check if the Car can reach at least one exit (4-way BFS).
     Returns the set of reachable cells if valid, otherwise None.
@@ -38,7 +46,7 @@ def validate_car_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
             ch = grid[y][x]
             if ch == "C":
                 start_pos = (x, y)
-            if ch not in ("x", "B"):
+            if ch not in ("x", "B", "O"):
                 passable_cells.add((x, y))
                 if ch == "E":
                     exit_cells.add((x, y))
@@ -467,7 +475,7 @@ def _generate_random_blueprint(
     wall_algo: str = "default",
     pitfall_density: float = 0.0,
     pitfall_zones: list[tuple[int, int, int, int]] | None = None,
-) -> dict:
+) -> Blueprint:
     grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE)
 
@@ -587,7 +595,7 @@ def _generate_random_blueprint(
     steel_beams = _place_steel_beams(grid, chance=steel_chance, forbidden_cells=reserved_cells)
 
     blueprint_rows = ["".join(row) for row in grid]
-    return {"grid": blueprint_rows, "steel_cells": steel_beams}
+    return Blueprint(grid=blueprint_rows, steel_cells=steel_beams)
 
 
 def choose_blueprint(
@@ -599,7 +607,7 @@ def choose_blueprint(
     pitfall_density: float = 0.0,
     pitfall_zones: list[tuple[int, int, int, int]] | None = None,
     base_seed: int | None = None,
-) -> dict:
+) -> Blueprint:
     # Currently only random generation; hook for future variants.
     steel_conf = config.get("steel_beams", {})
     try:
@@ -620,9 +628,9 @@ def choose_blueprint(
             pitfall_zones=pitfall_zones,
         )
 
-        car_reachable = validate_connectivity(blueprint["grid"])
+        car_reachable = validate_connectivity(blueprint.grid)
         if car_reachable is not None:
-            blueprint["car_reachable_cells"] = car_reachable
+            blueprint.car_reachable_cells = car_reachable
             return blueprint
 
     raise MapGenerationError("Connectivity validation failed after 20 attempts")
