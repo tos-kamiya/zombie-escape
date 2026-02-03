@@ -196,6 +196,7 @@
         "menu": "Menu",
         "localization": "Localization",
         "player_support": "Player support",
+        "visual": "Visual",
         "tougher_enemies": "Tougher enemies"
       },
       "rows": {
@@ -203,6 +204,7 @@
         "language": "Language",
         "footprints": "Footprints",
         "car_hint": "Car hint",
+        "shadows": "Shadows",
         "fast_zombies": "Fast zombies",
         "steel_beams": "Steel beams"
       },

@@ -178,6 +178,18 @@ def settings_screen(
                     },
                 ],
             },
+            {
+                "label": tr("settings.sections.visual"),
+                "rows": [
+                    {
+                        "label": tr("settings.rows.shadows"),
+                        "path": ("visual", "shadows", "enabled"),
+                        "easy_value": True,
+                        "left_label": tr("common.on"),
+                        "right_label": tr("common.off"),
+                    },
+                ],
+            },
         ]
 
     def rebuild_rows() -> tuple[list[dict], list[dict], list[str]]:
@@ -347,7 +359,7 @@ def settings_screen(
             row_height = _scale_height(20)
             start_y = _scale_height(TITLE_SECTION_TOP)
 
-            segment_width = 30
+            segment_width = int(round(30 * 1.5))
             segment_height = _scale_height(18)
             segment_gap = 10
             segment_total_width = segment_width * 2 + segment_gap

@@ -196,6 +196,7 @@
         "menu": "メニュー",
         "localization": "言語設定",
         "player_support": "サポート",
+        "visual": "視覚",
         "tougher_enemies": "強敵"
       },
       "rows": {
@@ -203,6 +204,7 @@
         "language": "テキスト言語",
         "footprints": "足跡",
         "car_hint": "車のヒント",
+        "shadows": "影の表示",
         "fast_zombies": "高速ゾンビ",
         "steel_beams": "鉄筋"
       },

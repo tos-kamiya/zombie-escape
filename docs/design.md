@@ -376,6 +376,7 @@
 - `config.py`
   - `DEFAULT_CONFIG` を基準に `load_config()` でユーザ設定を統合。
   - 保存先: `platformdirs.user_config_dir(APP_NAME, APP_NAME)`
+  - 視覚設定: `visual.shadows.enabled` で壁影/エンティティ影の描画を切替。
 
 - `progress.py`
   - ステージクリア回数を `user_data_dir()` 配下へ保存。

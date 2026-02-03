@@ -861,54 +861,58 @@ def draw(
         game_data.layout.fall_spawn_cells,
         game_data.layout.pitfall_cells,
     )
-    shadow_layer = _get_shadow_layer(screen.get_size())
-    shadow_layer.fill((0, 0, 0, 0))
-    drew_shadow = _draw_wall_shadows(
-        shadow_layer,
-        camera,
-        wall_cells=game_data.layout.wall_cells,
-        wall_group=game_data.groups.wall_group,
-        outer_wall_cells=game_data.layout.outer_wall_cells,
-        cell_size=game_data.cell_size,
-        light_source_pos=(None if (stage and stage.endurance_stage and state.dawn_ready) else fov_target.rect.center)
-        if fov_target
-        else None,
-    )
-    drew_shadow |= _draw_entity_shadows(
-        shadow_layer,
-        camera,
-        all_sprites,
-        light_source_pos=fov_target.rect.center if fov_target else None,
-        exclude_car=active_car if player.in_car else None,
-        outside_cells=outside_cells,
-        cell_size=game_data.cell_size,
-    )
-    player_shadow_alpha = max(1, int(ENTITY_SHADOW_ALPHA * PLAYER_SHADOW_ALPHA_MULT))
-    player_shadow_radius = int(ZOMBIE_RADIUS * PLAYER_SHADOW_RADIUS_MULT)
-    if player.in_car:
-        drew_shadow |= _draw_single_entity_shadow(
+    shadows_enabled = config.get("visual", {}).get("shadows", {}).get("enabled", True)
+    if shadows_enabled:
+        shadow_layer = _get_shadow_layer(screen.get_size())
+        shadow_layer.fill((0, 0, 0, 0))
+        drew_shadow = _draw_wall_shadows(
             shadow_layer,
             camera,
-            entity=active_car,
-            light_source_pos=fov_target.rect.center if fov_target else None,
-            outside_cells=outside_cells,
+            wall_cells=game_data.layout.wall_cells,
+            wall_group=game_data.groups.wall_group,
+            outer_wall_cells=game_data.layout.outer_wall_cells,
             cell_size=game_data.cell_size,
-            shadow_radius=player_shadow_radius,
-            alpha=player_shadow_alpha,
+            light_source_pos=(
+                None if (stage and stage.endurance_stage and state.dawn_ready) else fov_target.rect.center
+            )
+            if fov_target
+            else None,
         )
-    else:
-        drew_shadow |= _draw_single_entity_shadow(
+        drew_shadow |= _draw_entity_shadows(
             shadow_layer,
             camera,
-            entity=player,
+            all_sprites,
             light_source_pos=fov_target.rect.center if fov_target else None,
+            exclude_car=active_car if player.in_car else None,
             outside_cells=outside_cells,
             cell_size=game_data.cell_size,
-            shadow_radius=player_shadow_radius,
-            alpha=player_shadow_alpha,
         )
-    if drew_shadow:
-        screen.blit(shadow_layer, (0, 0))
+        player_shadow_alpha = max(1, int(ENTITY_SHADOW_ALPHA * PLAYER_SHADOW_ALPHA_MULT))
+        player_shadow_radius = int(ZOMBIE_RADIUS * PLAYER_SHADOW_RADIUS_MULT)
+        if player.in_car:
+            drew_shadow |= _draw_single_entity_shadow(
+                shadow_layer,
+                camera,
+                entity=active_car,
+                light_source_pos=fov_target.rect.center if fov_target else None,
+                outside_cells=outside_cells,
+                cell_size=game_data.cell_size,
+                shadow_radius=player_shadow_radius,
+                alpha=player_shadow_alpha,
+            )
+        else:
+            drew_shadow |= _draw_single_entity_shadow(
+                shadow_layer,
+                camera,
+                entity=player,
+                light_source_pos=fov_target.rect.center if fov_target else None,
+                outside_cells=outside_cells,
+                cell_size=game_data.cell_size,
+                shadow_radius=player_shadow_radius,
+                alpha=player_shadow_alpha,
+            )
+        if drew_shadow:
+            screen.blit(shadow_layer, (0, 0))
     _draw_footprints(
         screen,
         camera,

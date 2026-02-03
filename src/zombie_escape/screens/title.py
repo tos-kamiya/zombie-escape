@@ -335,9 +335,10 @@ def title_screen(
             screen.blit(stage_header, stage_header_pos)
             stage_rows_start = stage_header_pos[1] + stage_header.get_height() + _scale_height(6)
             action_header = section_font.render(tr("menu.sections.resources"), False, LIGHT_GRAY)
+            resource_offset = row_height
             action_header_pos = (
                 list_column_x,
-                stage_rows_start + stage_count * row_height + _scale_height(14),
+                stage_rows_start + stage_count * row_height + _scale_height(14) + resource_offset,
             )
             screen.blit(action_header, action_header_pos)
             action_rows_start = action_header_pos[1] + action_header.get_height() + _scale_height(6)
@@ -459,7 +460,7 @@ def title_screen(
             version_font = load_font(font_settings.resource, font_settings.scaled_size(15 * TITLE_FONT_SCALE))
             version_surface = version_font.render(f"v{__version__}", False, LIGHT_GRAY)
             version_rect = version_surface.get_rect(
-                topleft=(title_rect.right + _scale_height(4), title_rect.bottom - _scale_height(4))
+                bottomleft=(title_rect.right + _scale_height(4), title_rect.bottom)
             )
             screen.blit(version_surface, version_rect)
 

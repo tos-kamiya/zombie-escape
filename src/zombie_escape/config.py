@@ -11,6 +11,7 @@ APP_NAME = "ZombieEscape"
 DEFAULT_CONFIG: dict[str, Any] = {
     "language": "en",
     "footprints": {"enabled": True},
+    "visual": {"shadows": {"enabled": True}},
     "fast_zombies": {"enabled": False, "ratio": 0.1},
     "car_hint": {"enabled": True, "delay_ms": 180_000},
     "steel_beams": {"enabled": False, "chance": 0.05},
