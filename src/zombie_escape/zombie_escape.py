@@ -106,7 +106,7 @@ def main() -> None:
 
     apply_window_scale(DEFAULT_WINDOW_SCALE)
     pygame.mouse.set_visible(True)
-    screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)).convert_alpha()
+    logical_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)).convert_alpha()
     clock = pygame.time.Clock()
 
     debug_mode = bool(args.debug)
@@ -182,15 +182,16 @@ def main() -> None:
         transition = None
 
         if next_screen == ScreenID.TITLE:
+            window_surface = pygame.display.get_surface() or logical_screen
             seed_input = None if title_seed_is_auto else title_seed_text
             transition = title_screen(
-                screen,
+                window_surface,
                 clock,
                 config,
                 FPS,
                 stages=STAGES,
                 default_stage_id=last_stage_id or DEFAULT_STAGE_ID,
-                screen_size=(SCREEN_WIDTH, SCREEN_HEIGHT),
+                screen_size=window_surface.get_size(),
                 seed_text=seed_input,
                 seed_is_auto=title_seed_is_auto,
             )
@@ -198,13 +199,14 @@ def main() -> None:
                 title_seed_text = transition.seed_text
                 title_seed_is_auto = transition.seed_is_auto
         elif next_screen == ScreenID.SETTINGS:
+            window_surface = pygame.display.get_surface() or logical_screen
             config = settings_screen(
-                screen,
+                window_surface,
                 clock,
                 config,
                 FPS,
                 config_path=config_path,
-                screen_size=(SCREEN_WIDTH, SCREEN_HEIGHT),
+                screen_size=window_surface.get_size(),
             )
             set_language(config.get("language"))
             transition = ScreenTransition(ScreenID.TITLE)
@@ -219,7 +221,7 @@ def main() -> None:
                 try:
                     gs = _profiled_gameplay_screen if args.profile else gameplay_screen
                     transition = gs(
-                        screen,
+                        logical_screen,
                         clock,
                         config,
                         FPS,
@@ -250,7 +252,7 @@ def main() -> None:
             else:
                 render_assets = build_render_assets(DEFAULT_CELL_SIZE)
             transition = game_over_screen(
-                screen,
+                logical_screen,
                 clock,
                 config_payload,
                 FPS,

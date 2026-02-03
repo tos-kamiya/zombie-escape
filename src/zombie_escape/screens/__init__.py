@@ -64,12 +64,22 @@ last_logged_window_size = current_window_size
 __all__ = [
     "ScreenID",
     "ScreenTransition",
+    "TITLE_FONT_SCALE",
+    "TITLE_LINE_HEIGHT_SCALE",
+    "TITLE_HEADER_Y",
+    "TITLE_SECTION_TOP",
     "present",
+    "present_direct",
     "apply_window_scale",
     "nudge_window_scale",
     "toggle_fullscreen",
     "sync_window_size",
 ]
+
+TITLE_FONT_SCALE = 2
+TITLE_LINE_HEIGHT_SCALE = 1.5
+TITLE_HEADER_Y = 40
+TITLE_SECTION_TOP = 70
 
 
 def present(logical_surface: surface.Surface) -> None:
@@ -97,6 +107,16 @@ def present(logical_surface: surface.Surface) -> None:
         offset_x = (window_size[0] - scaled_width) // 2
         offset_y = (window_size[1] - scaled_height) // 2
         window.blit(scaled_surface, (offset_x, offset_y))
+    pygame.display.flip()
+
+
+def present_direct(screen: surface.Surface) -> None:
+    """Flip the display without scaling; intended for direct window rendering."""
+    window = pygame.display.get_surface()
+    if window is None:
+        return
+    if window is not screen:
+        window.blit(screen, (0, 0))
     pygame.display.flip()
 
 

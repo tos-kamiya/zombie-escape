@@ -29,8 +29,12 @@ from ..input_utils import (
 from ..screens import (
     ScreenID,
     ScreenTransition,
+    TITLE_FONT_SCALE,
+    TITLE_LINE_HEIGHT_SCALE,
+    TITLE_HEADER_Y,
+    TITLE_SECTION_TOP,
     nudge_window_scale,
-    present,
+    present_direct,
     sync_window_size,
     toggle_fullscreen,
 )
@@ -86,7 +90,9 @@ def title_screen(
 ) -> ScreenTransition:
     """Display the title menu and return the selected transition."""
 
-    width, height = screen_size
+    width, height = screen.get_size()
+    if width <= 0 or height <= 0:
+        width, height = screen_size
     stage_options_all: list[dict] = [
         {"type": "stage", "stage": stage, "available": stage.available} for stage in stages if stage.available
     ]
@@ -142,6 +148,8 @@ def title_screen(
                 )
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event)
+                screen = pygame.display.get_surface() or screen
+                width, height = screen.get_size()
                 continue
             if event.type == pygame.JOYDEVICEADDED or (
                 CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
@@ -170,13 +178,16 @@ def title_screen(
                         current_seed_text += event.unicode
                     continue
                 if event.key == pygame.K_LEFTBRACKET:
-                    nudge_window_scale(0.5)
+                    screen = nudge_window_scale(0.5) or screen
+                    width, height = screen.get_size()
                     continue
                 if event.key == pygame.K_RIGHTBRACKET:
-                    nudge_window_scale(2.0)
+                    screen = nudge_window_scale(2.0) or screen
+                    width, height = screen.get_size()
                     continue
                 if event.key == pygame.K_f:
-                    toggle_fullscreen()
+                    screen = toggle_fullscreen() or screen
+                    width, height = screen.get_size()
                     continue
                 if event.key == pygame.K_LEFT:
                     if current_page > 0:
@@ -281,24 +292,33 @@ def title_screen(
                         options, stage_options = _build_options(current_page)
                         selected = 0
 
+        def _scale_height(value: int) -> int:
+            return max(1, int(round(value * TITLE_LINE_HEIGHT_SCALE)))
+
         screen.fill(BLACK)
         title_text = tr("game.title")
-        show_message(screen, title_text, 32, LIGHT_GRAY, (width // 2, 40))
+        show_message(
+            screen,
+            title_text,
+            32 * TITLE_FONT_SCALE,
+            LIGHT_GRAY,
+            (width // 2, _scale_height(TITLE_HEADER_Y)),
+        )
 
         try:
             font_settings = get_font_settings()
-            title_font = load_font(font_settings.resource, font_settings.scaled_size(32))
-            option_font = load_font(font_settings.resource, font_settings.scaled_size(14))
-            desc_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            section_font = load_font(font_settings.resource, font_settings.scaled_size(13))
-            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+            title_font = load_font(font_settings.resource, font_settings.scaled_size(32 * TITLE_FONT_SCALE))
+            option_font = load_font(font_settings.resource, font_settings.scaled_size(14 * TITLE_FONT_SCALE))
+            desc_font = load_font(font_settings.resource, font_settings.scaled_size(11 * TITLE_FONT_SCALE))
+            section_font = load_font(font_settings.resource, font_settings.scaled_size(13 * TITLE_FONT_SCALE))
+            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11 * TITLE_FONT_SCALE))
 
-            row_height = 20
+            row_height = _scale_height(20)
             list_column_x = 24
             list_column_width = width // 2 - 36
             info_column_x = width // 2 + 12
             info_column_width = width - info_column_x - 24
-            section_top = 70
+            section_top = _scale_height(TITLE_SECTION_TOP)
             highlight_color = (70, 70, 70)
 
             stage_count = len(stage_options)
@@ -313,14 +333,14 @@ def title_screen(
             stage_header = section_font.render(stage_header_text, False, LIGHT_GRAY)
             stage_header_pos = (list_column_x, section_top)
             screen.blit(stage_header, stage_header_pos)
-            stage_rows_start = stage_header_pos[1] + stage_header.get_height() + 6
+            stage_rows_start = stage_header_pos[1] + stage_header.get_height() + _scale_height(6)
             action_header = section_font.render(tr("menu.sections.resources"), False, LIGHT_GRAY)
             action_header_pos = (
                 list_column_x,
-                stage_rows_start + stage_count * row_height + 14,
+                stage_rows_start + stage_count * row_height + _scale_height(14),
             )
             screen.blit(action_header, action_header_pos)
-            action_rows_start = action_header_pos[1] + action_header.get_height() + 6
+            action_rows_start = action_header_pos[1] + action_header.get_height() + _scale_height(6)
 
             for idx, option in enumerate(stage_options):
                 row_top = stage_rows_start + idx * row_height
@@ -408,22 +428,23 @@ def title_screen(
             hint_line_height = hint_font.get_linesize()
             # hint_block_height = len(hint_lines) * hint_line_height
             hint_start_y = action_header_pos[1]
+            hint_step = _scale_height(hint_line_height)
             for offset, line in enumerate(hint_lines):
                 hint_surface = hint_font.render(line, False, WHITE)
-                hint_rect = hint_surface.get_rect(topleft=(info_column_x, hint_start_y + offset * hint_line_height))
+                hint_rect = hint_surface.get_rect(topleft=(info_column_x, hint_start_y + offset * hint_step))
                 screen.blit(hint_surface, hint_rect)
 
             seed_value_display = current_seed_text if current_seed_text else tr("menu.seed_empty")
             seed_label = tr("menu.seed_label", value=seed_value_display)
             seed_surface = hint_font.render(seed_label, False, LIGHT_GRAY)
-            seed_offset_y = hint_line_height
-            seed_rect = seed_surface.get_rect(bottomleft=(info_column_x, height - 30 + seed_offset_y))
+            seed_offset_y = hint_step
+            seed_rect = seed_surface.get_rect(bottomleft=(info_column_x, height - _scale_height(30) + seed_offset_y))
             screen.blit(seed_surface, seed_rect)
 
             seed_hint = tr("menu.seed_hint")
             seed_hint_lines = wrap_text(seed_hint, hint_font, info_column_width)
             seed_hint_height = len(seed_hint_lines) * hint_line_height
-            seed_hint_top = seed_rect.top - 4 - seed_hint_height
+            seed_hint_top = seed_rect.top - _scale_height(4) - seed_hint_height
             blit_wrapped_text(
                 screen,
                 seed_hint,
@@ -434,14 +455,16 @@ def title_screen(
             )
 
             title_surface = title_font.render(title_text, False, LIGHT_GRAY)
-            title_rect = title_surface.get_rect(center=(width // 2, 40))
-            version_font = load_font(font_settings.resource, font_settings.scaled_size(15))
+            title_rect = title_surface.get_rect(center=(width // 2, _scale_height(TITLE_HEADER_Y)))
+            version_font = load_font(font_settings.resource, font_settings.scaled_size(15 * TITLE_FONT_SCALE))
             version_surface = version_font.render(f"v{__version__}", False, LIGHT_GRAY)
-            version_rect = version_surface.get_rect(topleft=(title_rect.right + 4, title_rect.bottom - 4))
+            version_rect = version_surface.get_rect(
+                topleft=(title_rect.right + _scale_height(4), title_rect.bottom - _scale_height(4))
+            )
             screen.blit(version_surface, version_rect)
 
         except pygame.error as e:
             print(f"Error rendering title screen: {e}")
 
-        present(screen)
+        present_direct(screen)
         clock.tick(fps)

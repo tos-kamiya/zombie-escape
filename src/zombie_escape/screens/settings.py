@@ -36,8 +36,12 @@ from ..localization import (
 from ..render import show_message, wrap_text
 from ..progress import user_progress_path
 from ..screens import (
+    TITLE_FONT_SCALE,
+    TITLE_LINE_HEIGHT_SCALE,
+    TITLE_HEADER_Y,
+    TITLE_SECTION_TOP,
     nudge_window_scale,
-    present,
+    present_direct,
     sync_window_size,
     toggle_fullscreen,
 )
@@ -54,7 +58,11 @@ def settings_screen(
 ) -> dict[str, Any]:
     """Settings menu shown from the title screen."""
 
-    screen_width, screen_height = screen_size
+    settings_font_scale = TITLE_FONT_SCALE
+    line_height_scale = TITLE_LINE_HEIGHT_SCALE
+    screen_width, screen_height = screen.get_size()
+    if screen_width <= 0 or screen_height <= 0:
+        screen_width, screen_height = screen_size
     working = copy.deepcopy(config)
     set_language(working.get("language"))
     selected = 0
@@ -196,6 +204,8 @@ def settings_screen(
                 return config
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event)
+                screen = pygame.display.get_surface() or screen
+                screen_width, screen_height = screen.get_size()
                 continue
             if event.type == pygame.JOYDEVICEADDED or (
                 CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
@@ -215,13 +225,16 @@ def settings_screen(
                 return _exit_settings()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
-                    nudge_window_scale(0.5)
+                    screen = nudge_window_scale(0.5) or screen
+                    screen_width, screen_height = screen.get_size()
                     continue
                 if event.key == pygame.K_RIGHTBRACKET:
-                    nudge_window_scale(2.0)
+                    screen = nudge_window_scale(2.0) or screen
+                    screen_width, screen_height = screen.get_size()
                     continue
                 if event.key == pygame.K_f:
-                    toggle_fullscreen()
+                    screen = toggle_fullscreen() or screen
+                    screen_width, screen_height = screen.get_size()
                     continue
                 if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
                     return _exit_settings()
@@ -313,32 +326,35 @@ def settings_screen(
             last_language = current_language
 
         screen.fill(BLACK)
+        def _scale_height(value: int) -> int:
+            return max(1, int(round(value * line_height_scale)))
+
         show_message(
             screen,
             tr("settings.title"),
-            26,
+            26 * settings_font_scale,
             LIGHT_GRAY,
-            (screen_width // 2, 20),
+            (screen_width // 2, _scale_height(TITLE_HEADER_Y)),
         )
 
         try:
             font_settings = get_font_settings()
-            label_font = load_font(font_settings.resource, font_settings.scaled_size(12))
-            value_font = load_font(font_settings.resource, font_settings.scaled_size(12))
-            section_font = load_font(font_settings.resource, font_settings.scaled_size(13))
+            label_font = load_font(font_settings.resource, font_settings.scaled_size(12 * settings_font_scale))
+            value_font = load_font(font_settings.resource, font_settings.scaled_size(12 * settings_font_scale))
+            section_font = load_font(font_settings.resource, font_settings.scaled_size(13 * settings_font_scale))
             highlight_color = (70, 70, 70)
 
-            row_height = 20
-            start_y = 46
+            row_height = _scale_height(20)
+            start_y = _scale_height(TITLE_SECTION_TOP)
 
             segment_width = 30
-            segment_height = 18
+            segment_height = _scale_height(18)
             segment_gap = 10
             segment_total_width = segment_width * 2 + segment_gap
 
             column_margin = 24
             column_width = screen_width // 2 - column_margin * 2
-            section_spacing = 4
+            section_spacing = _scale_height(4)
             row_indent = 12
             value_padding = 20
 
@@ -347,7 +363,7 @@ def settings_screen(
             for section in sections:
                 header_surface = section_font.render(section["label"], False, LIGHT_GRAY)
                 section_states[section["label"]] = {
-                    "next_y": y_cursor + header_surface.get_height() + 4,
+                    "next_y": y_cursor + header_surface.get_height() + _scale_height(4),
                     "header_surface": header_surface,
                     "header_pos": (column_margin, y_cursor),
                 }
@@ -424,7 +440,7 @@ def settings_screen(
 
             hint_start_y = start_y
             hint_start_x = screen_width // 2 + 16
-            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11 * settings_font_scale))
             hint_lines = [
                 tr("settings.hints.navigate"),
                 tr("settings.hints.adjust"),
@@ -432,7 +448,7 @@ def settings_screen(
                 tr("settings.hints.reset"),
                 tr("settings.hints.exit"),
             ]
-            hint_line_height = hint_font.get_linesize()
+            hint_line_height = _scale_height(hint_font.get_linesize())
             hint_max_width = screen_width - hint_start_x - 16
             y_cursor = hint_start_y
             for line in hint_lines:
@@ -441,7 +457,7 @@ def settings_screen(
                 screen.blit(hint_surface, hint_rect)
                 y_cursor += hint_line_height
 
-            y_cursor += 26
+            y_cursor += _scale_height(26)
             window_hint = tr("menu.window_hint")
             for line in wrap_text(window_hint, hint_font, hint_max_width):
                 hint_surface = hint_font.render(line, False, WHITE)
@@ -449,18 +465,20 @@ def settings_screen(
                 screen.blit(hint_surface, hint_rect)
                 y_cursor += hint_line_height
 
-            path_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+            path_font = load_font(font_settings.resource, font_settings.scaled_size(11 * settings_font_scale))
             config_text = tr("settings.config_path", path=str(config_path))
             progress_text = tr("settings.progress_path", path=str(user_progress_path()))
             line_height = path_font.get_linesize()
             config_surface = path_font.render(config_text, False, LIGHT_GRAY)
             progress_surface = path_font.render(progress_text, False, LIGHT_GRAY)
-            config_rect = config_surface.get_rect(midtop=(screen_width // 2, screen_height - 32 - line_height))
-            progress_rect = progress_surface.get_rect(midtop=(screen_width // 2, screen_height - 32))
+            config_rect = config_surface.get_rect(
+                midtop=(screen_width // 2, screen_height - _scale_height(32) - line_height)
+            )
+            progress_rect = progress_surface.get_rect(midtop=(screen_width // 2, screen_height - _scale_height(32)))
             screen.blit(config_surface, config_rect)
             screen.blit(progress_surface, progress_rect)
         except pygame.error as e:
             print(f"Error rendering settings: {e}")
 
-        present(screen)
+        present_direct(screen)
         clock.tick(fps)
