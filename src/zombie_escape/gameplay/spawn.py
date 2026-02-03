@@ -609,12 +609,13 @@ def setup_player_and_cars(
     all_sprites = game_data.groups.all_sprites
     walkable_cells: list[tuple[int, int]] = layout_data["walkable_cells"]
     cell_size = game_data.cell_size
+    level_rect = game_data.layout.field_rect
 
     def _pick_center(cells: list[tuple[int, int]]) -> tuple[int, int]:
         return (
             _cell_center(RNG.choice(cells), cell_size)
             if cells
-            else (game_data.level_width // 2, game_data.level_height // 2)
+            else level_rect.center
         )
 
     player_pos = _pick_center(layout_data["player_cells"] or walkable_cells)
@@ -844,9 +845,10 @@ def spawn_exterior_zombie(
         return None
     zombie_group = game_data.groups.zombie_group
     all_sprites = game_data.groups.all_sprites
+    level_rect = game_data.layout.field_rect
     spawn_pos = find_exterior_spawn_position(
-        game_data.level_width,
-        game_data.level_height,
+        level_rect.width,
+        level_rect.height,
         hint_pos=(player.x, player.y),
     )
     new_zombie = _create_zombie(

@@ -5,6 +5,7 @@ from typing import Iterable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .entities import Wall
+    from .models import LevelLayout
 
 
 WallIndex = dict[tuple[int, int], list["Wall"]]
@@ -60,17 +61,18 @@ def apply_cell_edge_nudge(
     dx: float,
     dy: float,
     *,
+    layout: LevelLayout,
     cell_size: int,
-    wall_cells: set[tuple[int, int]] | None,
-    bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] | None = None,
-    grid_cols: int,
-    grid_rows: int,
     strength: float = 0.03,
     edge_margin_ratio: float = 0.15,
     min_margin: float = 2.0,
 ) -> tuple[float, float]:
     if dx == 0 and dy == 0:
         return dx, dy
+    wall_cells = layout.wall_cells
+    bevel_corners = layout.bevel_corners
+    grid_cols = layout.grid_cols
+    grid_rows = layout.grid_rows
     if cell_size <= 0 or not wall_cells:
         return dx, dy
     cell_x = int(x // cell_size)

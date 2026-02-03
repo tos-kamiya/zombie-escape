@@ -205,7 +205,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                         new_cell = RNG.choice(walkable_cells)
                         buddy.teleport(_cell_center(new_cell))
                     else:
-                        buddy.teleport((game_data.level_width // 2, game_data.level_height // 2))
+                        buddy.teleport(game_data.layout.field_rect.center)
                     buddy.following = False
 
     if stage.buddy_required_count > 0:

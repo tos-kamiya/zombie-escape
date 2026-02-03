@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Callable, Iterable, Sequence, cast
+from typing import TYPE_CHECKING, Callable, Iterable, Sequence, cast
 
 try:
     from typing import Self
@@ -12,6 +12,9 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
 
 import pygame
 from pygame import rect
+
+if TYPE_CHECKING:
+    from .models import LevelLayout
 
 from .entities_constants import (
     BUDDY_FOLLOW_SPEED,
@@ -667,16 +670,15 @@ class Player(pygame.sprite.Sprite):
         *,
         wall_index: WallIndex | None = None,
         cell_size: int | None = None,
-        level_width: int | None = None,
-        level_height: int | None = None,
-        pitfall_cells: set[tuple[int, int]] | None = None,
-        walkable_cells: list[tuple[int, int]] | None = None,
+        layout: LevelLayout,
     ) -> None:
         if self.in_car:
             return
 
-        if level_width is None or level_height is None:
-            raise ValueError("level_width/level_height are required for movement")
+        pitfall_cells = layout.pitfall_cells
+        walkable_cells = layout.walkable_cells
+        level_width = layout.field_rect.width
+        level_height = layout.field_rect.height
 
         now = pygame.time.get_ticks()
         if self.is_jumping:
@@ -880,18 +882,13 @@ class Survivor(pygame.sprite.Sprite):
         *,
         wall_index: WallIndex | None = None,
         cell_size: int | None = None,
-        wall_cells: set[tuple[int, int]] | None = None,
-        pitfall_cells: set[tuple[int, int]] | None = None,
-        walkable_cells: list[tuple[int, int]] | None = None,
-        bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] | None = None,
-        grid_cols: int | None = None,
-        grid_rows: int | None = None,
-        level_width: int | None = None,
-        level_height: int | None = None,
+        layout: LevelLayout,
         wall_target_cell: tuple[int, int] | None = None,
     ) -> None:
-        if level_width is None or level_height is None:
-            raise ValueError("level_width/level_height are required for movement")
+        pitfall_cells = layout.pitfall_cells
+        walkable_cells = layout.walkable_cells
+        level_width = layout.field_rect.width
+        level_height = layout.field_rect.height
 
         now = pygame.time.get_ticks()
         if self.is_jumping:
@@ -926,17 +923,14 @@ class Survivor(pygame.sprite.Sprite):
             move_x = (dx / dist) * BUDDY_FOLLOW_SPEED
             move_y = (dy / dist) * BUDDY_FOLLOW_SPEED
 
-            if cell_size is not None and wall_cells is not None and grid_cols is not None and grid_rows is not None:
+            if cell_size is not None:
                 move_x, move_y = apply_cell_edge_nudge(
                     self.x,
                     self.y,
                     move_x,
                     move_y,
+                    layout=layout,
                     cell_size=cell_size,
-                    wall_cells=wall_cells,
-                    bevel_corners=bevel_corners,
-                    grid_cols=grid_cols,
-                    grid_rows=grid_rows,
                 )
 
             self._update_input_facing(move_x, move_y)
@@ -1077,17 +1071,14 @@ class Survivor(pygame.sprite.Sprite):
             )
         )
 
-        if cell_size is not None and wall_cells is not None and grid_cols is not None and grid_rows is not None:
+        if cell_size is not None:
             move_x, move_y = apply_cell_edge_nudge(
                 self.x,
                 self.y,
                 move_x,
                 move_y,
+                layout=layout,
                 cell_size=cell_size,
-                wall_cells=wall_cells,
-                bevel_corners=bevel_corners,
-                grid_cols=grid_cols,
-                grid_rows=grid_rows,
             )
 
         if move_x:
@@ -1867,17 +1858,16 @@ class Zombie(pygame.sprite.Sprite):
         footprints: list[Footprint] | None = None,
         *,
         cell_size: int,
-        grid_cols: int,
-        grid_rows: int,
-        level_width: int,
-        level_height: int,
-        outer_wall_cells: set[tuple[int, int]] | None = None,
-        wall_cells: set[tuple[int, int]] | None = None,
-        pitfall_cells: set[tuple[int, int]] | None = None,
-        bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] | None = None,
+        layout: LevelLayout,
     ) -> None:
         if self.carbonized:
             return
+        outer_wall_cells = layout.outer_wall_cells
+        grid_cols = layout.grid_cols
+        grid_rows = layout.grid_rows
+        level_width = layout.field_rect.width
+        level_height = layout.field_rect.height
+        pitfall_cells = layout.pitfall_cells
         self._apply_wall_contact_damage(walls)
         self._apply_aging()
         dx_player = player_center[0] - self.x
@@ -1899,18 +1889,14 @@ class Zombie(pygame.sprite.Sprite):
         )
         if dist_to_player_sq <= avoid_radius_sq or self.wall_hugging:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
-        if wall_cells is not None:
-            move_x, move_y = apply_cell_edge_nudge(
-                self.x,
-                self.y,
-                move_x,
-                move_y,
-                cell_size=cell_size,
-                wall_cells=wall_cells,
-                bevel_corners=bevel_corners,
-                grid_cols=grid_cols,
-                grid_rows=grid_rows,
-            )
+        move_x, move_y = apply_cell_edge_nudge(
+            self.x,
+            self.y,
+            move_x,
+            move_y,
+            layout=layout,
+            cell_size=cell_size,
+        )
         self._update_facing_from_movement(move_x, move_y)
         self._apply_render_overlays()
         self.last_move_dx = move_x

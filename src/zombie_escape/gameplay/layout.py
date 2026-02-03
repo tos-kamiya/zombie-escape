@@ -244,9 +244,11 @@ def generate_level_from_blueprint(game_data: GameData, config: dict[str, Any]) -
     game_data.layout.field_rect = pygame.Rect(
         0,
         0,
-        game_data.level_width,
-        game_data.level_height,
+        stage.grid_cols * game_data.cell_size,
+        stage.grid_rows * game_data.cell_size,
     )
+    game_data.layout.grid_cols = stage.grid_cols
+    game_data.layout.grid_rows = stage.grid_rows
     game_data.layout.outside_cells = outside_cells
     game_data.layout.walkable_cells = walkable_cells
     game_data.layout.outer_wall_cells = outer_wall_cells

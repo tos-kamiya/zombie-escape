@@ -131,11 +131,8 @@ def update_entities(
     camera = game_data.camera
     stage = game_data.stage
     active_car = car if car and car.alive() else None
-    wall_cells = game_data.layout.wall_cells
     pitfall_cells = game_data.layout.pitfall_cells
     field_rect = game_data.layout.field_rect
-    walkable_cells = game_data.layout.walkable_cells
-    bevel_corners = game_data.layout.bevel_corners
 
     all_walls = list(wall_group) if wall_index is None else None
 
@@ -147,8 +144,8 @@ def update_entities(
             center,
             radius,
             cell_size=game_data.cell_size,
-            grid_cols=stage.grid_cols,
-            grid_rows=stage.grid_rows,
+            grid_cols=game_data.layout.grid_cols,
+            grid_rows=game_data.layout.grid_rows,
         )
 
     # Update player/car movement
@@ -158,11 +155,8 @@ def update_entities(
             active_car.y,
             car_dx,
             car_dy,
+            layout=game_data.layout,
             cell_size=game_data.cell_size,
-            wall_cells=wall_cells,
-            bevel_corners=bevel_corners,
-            grid_cols=stage.grid_cols,
-            grid_rows=stage.grid_rows,
         )
         car_walls = _walls_near((active_car.x, active_car.y), 150.0)
         active_car.move(
@@ -191,11 +185,8 @@ def update_entities(
             player.y,
             player_dx,
             player_dy,
+            layout=game_data.layout,
             cell_size=game_data.cell_size,
-            wall_cells=wall_cells,
-            bevel_corners=bevel_corners,
-            grid_cols=stage.grid_cols,
-            grid_rows=stage.grid_rows,
         )
         player.move(
             player_dx,
@@ -203,10 +194,7 @@ def update_entities(
             wall_group,
             wall_index=wall_index,
             cell_size=game_data.cell_size,
-            level_width=game_data.level_width,
-            level_height=game_data.level_height,
-            pitfall_cells=pitfall_cells,
-            walkable_cells=walkable_cells,
+            layout=game_data.layout,
         )
     else:
         # Player flagged as in-car but car is gone; drop them back to foot control
@@ -338,14 +326,7 @@ def update_entities(
             nearby_candidates,
             footprints=game_data.state.footprints,
             cell_size=game_data.cell_size,
-            grid_cols=stage.grid_cols,
-            grid_rows=stage.grid_rows,
-            level_width=game_data.level_width,
-            level_height=game_data.level_height,
-            outer_wall_cells=game_data.layout.outer_wall_cells,
-            wall_cells=game_data.layout.wall_cells,
-            pitfall_cells=game_data.layout.pitfall_cells,
-            bevel_corners=game_data.layout.bevel_corners,
+            layout=game_data.layout,
         )
 
         # Check zombie pitfall

@@ -28,6 +28,8 @@ class LevelLayout:
     """Container for level layout rectangles and cell sets."""
 
     field_rect: pygame.Rect
+    grid_cols: int
+    grid_rows: int
     outside_cells: set[tuple[int, int]]
     walkable_cells: list[tuple[int, int]]
     outer_wall_cells: set[tuple[int, int]]
@@ -140,8 +142,6 @@ class GameData:
     fog: dict
     stage: Stage
     cell_size: int
-    level_width: int
-    level_height: int
     blueprint: Blueprint | None = None
     fuel: FuelCan | None = None
     flashlights: list[Flashlight] | None = None

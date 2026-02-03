@@ -124,6 +124,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         camera=camera,
         layout=LevelLayout(
             field_rect=field_rect,
+            grid_cols=stage.grid_cols,
+            grid_rows=stage.grid_rows,
             outside_cells=set(),
             walkable_cells=[],
             outer_wall_cells=set(),
@@ -139,8 +141,6 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         },
         stage=stage,
         cell_size=cell_size,
-        level_width=level_width,
-        level_height=level_height,
         blueprint=None,
         fuel=None,
         flashlights=[],
