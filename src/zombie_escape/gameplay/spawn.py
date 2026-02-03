@@ -17,7 +17,6 @@ from ..entities import (
 )
 from ..entities_constants import (
     FAST_ZOMBIE_BASE_SPEED,
-    FOV_RADIUS,
     PLAYER_SPEED,
     ZOMBIE_AGING_DURATION_FRAMES,
     ZOMBIE_SPEED,
@@ -28,11 +27,6 @@ from ..gameplay_constants import (
 )
 from ..level_constants import DEFAULT_CELL_SIZE, DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from ..models import DustRing, FallingZombie, GameData, Stage
-from ..render_constants import (
-    FLASHLIGHT_FOG_SCALE_ONE,
-    FLASHLIGHT_FOG_SCALE_TWO,
-    FOG_RADIUS_SCALE,
-)
 from ..rng import get_rng
 from .constants import (
     FALLING_ZOMBIE_DUST_DURATION_MS,
@@ -43,6 +37,7 @@ from .constants import (
     ZOMBIE_TRACKER_AGING_DURATION_FRAMES,
 )
 from .utils import (
+    fov_radius_for_flashlights,
     find_exterior_spawn_position,
     find_interior_spawn_positions,
     find_nearby_offscreen_spawn_position,
@@ -111,17 +106,6 @@ def _pick_zombie_variant(stage: Stage | None) -> tuple[bool, bool]:
     return False, True
 
 
-def _fov_radius_for_flashlights(flashlight_count: int) -> float:
-    count = max(0, int(flashlight_count))
-    if count <= 0:
-        scale = FOG_RADIUS_SCALE
-    elif count == 1:
-        scale = FLASHLIGHT_FOG_SCALE_ONE
-    else:
-        scale = FLASHLIGHT_FOG_SCALE_TWO
-    return FOV_RADIUS * scale
-
-
 def _is_spawn_position_clear(
     game_data: GameData,
     candidate: Zombie,
@@ -168,7 +152,7 @@ def _pick_fall_spawn_position(
     target_sprite = car if player.in_car and car and car.alive() else player
     target_center = target_sprite.rect.center
     cell_size = game_data.cell_size
-    fov_radius = _fov_radius_for_flashlights(game_data.state.flashlight_count)
+    fov_radius = fov_radius_for_flashlights(game_data.state.flashlight_count)
     min_dist_sq = min_distance * min_distance
     max_dist_sq = fov_radius * fov_radius
     wall_cells = game_data.layout.wall_cells

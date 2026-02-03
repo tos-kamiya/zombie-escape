@@ -4,6 +4,12 @@ import pygame
 
 from ..entities import Camera, Player, random_position_outside_building
 from ..rng import get_rng
+from ..render_constants import (
+    FLASHLIGHT_FOG_SCALE_ONE,
+    FLASHLIGHT_FOG_SCALE_TWO,
+    FOG_RADIUS_SCALE,
+    FOV_RADIUS,
+)
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
 LOGICAL_SCREEN_RECT = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -12,6 +18,7 @@ RNG = get_rng()
 __all__ = [
     "LOGICAL_SCREEN_RECT",
     "rect_visible_on_screen",
+    "fov_radius_for_flashlights",
     "find_interior_spawn_positions",
     "find_nearby_offscreen_spawn_position",
     "find_exterior_spawn_position",
@@ -22,6 +29,17 @@ def rect_visible_on_screen(camera: Camera | None, rect: pygame.Rect) -> bool:
     if camera is None:
         return False
     return camera.apply_rect(rect).colliderect(LOGICAL_SCREEN_RECT)
+
+
+def fov_radius_for_flashlights(flashlight_count: int) -> float:
+    count = max(0, int(flashlight_count))
+    if count <= 0:
+        scale = FOG_RADIUS_SCALE
+    elif count == 1:
+        scale = FLASHLIGHT_FOG_SCALE_ONE
+    else:
+        scale = FLASHLIGHT_FOG_SCALE_TWO
+    return FOV_RADIUS * scale
 
 
 def _scatter_positions_on_walkable(

@@ -38,7 +38,7 @@ from .survivors import (
     increase_survivor_capacity,
     respawn_buddies_near_player,
 )
-from .utils import rect_visible_on_screen
+from .utils import fov_radius_for_flashlights, rect_visible_on_screen
 from .ambient import sync_ambient_palette_with_flashlights
 from .constants import SCREAM_MESSAGE_DISPLAY_FRAMES
 from .state import schedule_timed_message
@@ -180,7 +180,18 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     continue
 
             if buddy.alive() and pygame.sprite.spritecollide(buddy, zombie_group, False, pygame.sprite.collide_circle):
-                if buddy_on_screen:
+                fov_target = None
+                if player.in_car and active_car:
+                    fov_target = active_car
+                else:
+                    fov_target = player
+                buddy_in_fov = False
+                if fov_target:
+                    fov_radius = fov_radius_for_flashlights(state.flashlight_count)
+                    dx = buddy.rect.centerx - fov_target.rect.centerx
+                    dy = buddy.rect.centery - fov_target.rect.centery
+                    buddy_in_fov = (dx * dx + dy * dy) <= fov_radius * fov_radius
+                if buddy_on_screen and buddy_in_fov:
                     schedule_timed_message(
                         state,
                         tr("game_over.scream"),
