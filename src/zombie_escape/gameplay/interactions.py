@@ -40,6 +40,8 @@ from .survivors import (
 )
 from .utils import rect_visible_on_screen
 from .ambient import sync_ambient_palette_with_flashlights
+from .constants import SCREAM_MESSAGE_DISPLAY_FRAMES
+from .state import schedule_timed_message
 
 
 def _interaction_radius(width: float, height: float) -> float:
@@ -179,7 +181,12 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
 
             if buddy.alive() and pygame.sprite.spritecollide(buddy, zombie_group, False, pygame.sprite.collide_circle):
                 if buddy_on_screen:
-                    state.game_over_message = tr("game_over.scream")
+                    schedule_timed_message(
+                        state,
+                        tr("game_over.scream"),
+                        duration_frames=SCREAM_MESSAGE_DISPLAY_FRAMES,
+                        clear_on_input=False,
+                    )
                     state.game_over = True
                     state.game_over_at = state.game_over_at or pygame.time.get_ticks()
                 else:
@@ -325,7 +332,12 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             if not state.game_over:
                 state.game_over = True
                 state.game_over_at = pygame.time.get_ticks()
-                state.game_over_message = tr("game_over.scream")
+                schedule_timed_message(
+                    state,
+                    tr("game_over.scream"),
+                    duration_frames=SCREAM_MESSAGE_DISPLAY_FRAMES,
+                    clear_on_input=False,
+                )
 
     # Player escaping on foot after dawn (Stage 5)
     if (

@@ -315,7 +315,7 @@ def _draw_survivor_messages(
         print(f"Error rendering survivor message: {e}")
 
 
-def _draw_intro_message(
+def _draw_timed_message(
     screen: surface.Surface,
     assets: RenderAssets,
     *,
@@ -353,7 +353,7 @@ def _draw_intro_message(
         screen.blit(band_surface, band_rect.topleft)
         screen.blit(text_surface, text_rect)
     except pygame.error as e:
-        print(f"Error rendering intro message: {e}")
+        print(f"Error rendering timed message: {e}")
 
 
 def _build_objective_lines(

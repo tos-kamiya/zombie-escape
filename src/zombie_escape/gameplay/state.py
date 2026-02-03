@@ -8,9 +8,34 @@ from ..colors import DAWN_AMBIENT_PALETTE_KEY, ambient_palette_key_for_flashligh
 from ..entities_constants import SURVIVOR_MAX_SAFE_PASSENGERS
 from ..localization import translate as tr
 from ..models import GameData, Groups, LevelLayout, ProgressState, Stage
+from ..screen_constants import FPS
 from ..entities import Camera
 from .ambient import _set_ambient_palette
-from .constants import INTRO_MESSAGE_DISPLAY_MS
+from .constants import INTRO_MESSAGE_DISPLAY_FRAMES
+
+
+def _frames_to_ms(frames: int) -> int:
+    if frames <= 0:
+        return 0
+    return max(1, int(round((1000 / max(1, FPS)) * frames)))
+
+
+def schedule_timed_message(
+    state: ProgressState,
+    text: str | None,
+    *,
+    duration_frames: int,
+    clear_on_input: bool = False,
+) -> None:
+    if not text:
+        state.timed_message = None
+        state.timed_message_until = 0
+        state.timed_message_clear_on_input = False
+        return
+    duration_ms = _frames_to_ms(duration_frames)
+    state.timed_message = text
+    state.timed_message_until = state.elapsed_play_ms + duration_ms
+    state.timed_message_clear_on_input = clear_on_input
 
 
 def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
@@ -22,11 +47,12 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     initial_flashlights = 1 if starts_with_flashlight else 0
     initial_palette_key = ambient_palette_key_for_flashlights(initial_flashlights)
     intro_message = tr(stage.intro_key) if stage.intro_key else None
-    intro_message_until = INTRO_MESSAGE_DISPLAY_MS if intro_message else 0
     game_state = ProgressState(
         game_over=False,
         game_won=False,
-        game_over_message=None,
+        timed_message=None,
+        timed_message_until=0,
+        timed_message_clear_on_input=False,
         game_over_at=None,
         scaled_overview=None,
         overview_created=False,
@@ -44,8 +70,6 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         buddy_rescued=0,
         buddy_onboard=0,
         buddy_merged_count=0,
-        intro_message=intro_message,
-        intro_message_until=intro_message_until,
         survivors_onboard=0,
         survivors_rescued=0,
         survivor_messages=[],
@@ -66,6 +90,13 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         player_wall_target_cell=None,
         player_wall_target_ttl=0,
     )
+    if intro_message:
+        schedule_timed_message(
+            game_state,
+            intro_message,
+            duration_frames=INTRO_MESSAGE_DISPLAY_FRAMES,
+            clear_on_input=True,
+        )
 
     # Create sprite groups
     all_sprites = pygame.sprite.LayeredUpdates()

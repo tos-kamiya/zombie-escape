@@ -57,7 +57,7 @@
 - 進行演出: `footprints`, `last_footprint_pos`, `footprint_visible_toggle`, `elapsed_play_ms`
 - アイテム状態: `has_fuel`, `flashlight_count`, `shoes_count`
 - ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`,
-  `intro_message`, `intro_message_until`
+  `timed_message`, `timed_message_until`, `timed_message_clear_on_input`
 - ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
 - 相棒の壁ターゲット: `player_wall_target_cell`, `player_wall_target_ttl`（壁接触後7フレームで失効）
 - サバイバル用: `endurance_elapsed_ms`, `endurance_goal_ms`, `dawn_ready`, `dawn_prompt_at`, `dawn_carbonized`
@@ -270,7 +270,7 @@
   - 懐中電灯数に合わせて環境パレットを同期。
  - ステージ導入セリフ
    - `Stage.intro_key` にローカライズキーを設定。
-   - `initialize_game_state()` で `intro_message` / `intro_message_until` を初期化（文字数×表示速度でタイマー計算）。
+   - `initialize_game_state()` で導入セリフを timed_message として設定。
    - `screens/gameplay.py` で移動入力があれば導入セリフを即スキップ。
 
 ### 速度/容量補助
@@ -304,7 +304,7 @@
 
 - `_draw_status_bar()`
   - 設定フラグやステージ番号、シード値を表示。
-- 導入セリフ (`_draw_intro_message` in `render/hud.py`)
+- 導入セリフ/短時間メッセージ (`_draw_timed_message` in `render/hud.py`)
   - 画面上部のプレイヤー位置付近に、タイプライター表示（1文字ずつ）。
   - 半透明帯の上に LIGHT_GRAY で描画。
 

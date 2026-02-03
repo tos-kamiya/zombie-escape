@@ -77,7 +77,9 @@ class ProgressState:
 
     game_over: bool
     game_won: bool
-    game_over_message: str | None
+    timed_message: str | None
+    timed_message_until: int
+    timed_message_clear_on_input: bool
     game_over_at: int | None
     scaled_overview: surface.Surface | None
     overview_created: bool
@@ -95,8 +97,6 @@ class ProgressState:
     buddy_rescued: int
     buddy_onboard: int
     buddy_merged_count: int
-    intro_message: str | None
-    intro_message_until: int
     survivors_onboard: int
     survivors_rescued: int
     survivor_messages: list

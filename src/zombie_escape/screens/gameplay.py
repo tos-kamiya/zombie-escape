@@ -47,7 +47,7 @@ from ..gameplay.spawn import _alive_waiting_cars
 from ..world_grid import build_wall_index
 from ..localization import translate as tr
 from ..models import Stage
-from ..render import draw, draw_debug_overview, draw_pause_overlay, prewarm_fog_overlays, show_message, show_message_wrapped
+from ..render import draw, draw_debug_overview, draw_pause_overlay, prewarm_fog_overlays, show_message_wrapped
 from ..rng import generate_seed, seed_rng
 from ..progress import record_stage_clear
 from ..screens import (
@@ -216,14 +216,6 @@ def gameplay_screen(
                         hint_color=None,
                         fps=current_fps,
                     )
-                    if game_data.state.game_over_message:
-                        show_message(
-                            screen,
-                            game_data.state.game_over_message,
-                            18,
-                            RED,
-                            (screen_width // 2, screen_height // 2 - 24),
-                        )
                     present(screen)
                     continue
             return _finalize(
@@ -349,9 +341,14 @@ def gameplay_screen(
                 shoes_count=game_data.state.shoes_count,
                 pad_input=pad_vector,
             )
-            if game_data.state.intro_message and (player_dx or player_dy or car_dx or car_dy):
-                game_data.state.intro_message = None
-                game_data.state.intro_message_until = 0
+            if (
+                game_data.state.timed_message
+                and game_data.state.timed_message_clear_on_input
+                and (player_dx or player_dy or car_dx or car_dy)
+            ):
+                game_data.state.timed_message = None
+                game_data.state.timed_message_until = 0
+                game_data.state.timed_message_clear_on_input = False
             update_entities(
                 game_data,
                 player_dx,
