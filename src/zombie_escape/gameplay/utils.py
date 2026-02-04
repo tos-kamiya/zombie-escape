@@ -19,6 +19,7 @@ __all__ = [
     "LOGICAL_SCREEN_RECT",
     "rect_visible_on_screen",
     "fov_radius_for_flashlights",
+    "is_entity_in_fov",
     "find_interior_spawn_positions",
     "find_nearby_offscreen_spawn_position",
     "find_exterior_spawn_position",
@@ -40,6 +41,20 @@ def fov_radius_for_flashlights(flashlight_count: int) -> float:
     else:
         scale = FLASHLIGHT_FOG_SCALE_TWO
     return FOV_RADIUS * scale
+
+
+def is_entity_in_fov(
+    entity_rect: pygame.Rect,
+    *,
+    fov_target: pygame.sprite.Sprite | None,
+    flashlight_count: int,
+) -> bool:
+    if fov_target is None:
+        return False
+    fov_radius = fov_radius_for_flashlights(flashlight_count)
+    dx = entity_rect.centerx - fov_target.rect.centerx
+    dy = entity_rect.centery - fov_target.rect.centery
+    return (dx * dx + dy * dy) <= fov_radius * fov_radius
 
 
 def _scatter_positions_on_walkable(

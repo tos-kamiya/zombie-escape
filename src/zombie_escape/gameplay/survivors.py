@@ -23,7 +23,7 @@ from ..rng import get_rng
 from ..entities import Survivor, Zombie, spritecollideany_walls
 from ..world_grid import WallIndex
 from .spawn import _create_zombie
-from .utils import find_nearby_offscreen_spawn_position, rect_visible_on_screen
+from .utils import find_nearby_offscreen_spawn_position, is_entity_in_fov, rect_visible_on_screen
 
 RNG = get_rng()
 
@@ -38,6 +38,7 @@ def update_survivors(
     survivor_group = game_data.groups.survivor_group
     wall_group = game_data.groups.wall_group
     player = game_data.player
+    assert player is not None
     car = game_data.car
     if not player:
         return
@@ -280,6 +281,10 @@ def handle_survivor_zombie_collisions(game_data: GameData, config: dict[str, Any
     camera = game_data.camera
     walkable_cells = game_data.layout.walkable_cells
     cell_size = game_data.cell_size
+    player = game_data.player
+    car = game_data.car
+    active_car = car if car and car.alive() else None
+    fov_target = active_car if player and player.in_car and active_car else player
 
     for survivor in list(survivor_group):
         if not survivor.alive():
@@ -309,7 +314,13 @@ def handle_survivor_zombie_collisions(game_data: GameData, config: dict[str, Any
 
         if collided_zombie is None:
             continue
-        if not rect_visible_on_screen(camera, survivor.rect):
+        survivor_on_screen = rect_visible_on_screen(camera, survivor.rect)
+        survivor_in_fov = is_entity_in_fov(
+            survivor.rect,
+            fov_target=fov_target,
+            flashlight_count=game_data.state.flashlight_count,
+        )
+        if not (survivor_on_screen and survivor_in_fov):
             spawn_pos = find_nearby_offscreen_spawn_position(
                 walkable_cells,
                 cell_size,
