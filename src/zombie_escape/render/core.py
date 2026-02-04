@@ -31,6 +31,7 @@ from ..render_constants import (
     FALLING_DUST_COLOR,
     FALLING_WHIRLWIND_COLOR,
     FALLING_ZOMBIE_COLOR,
+    GAMEPLAY_FONT_SIZE,
     PITFALL_ABYSS_COLOR,
     PITFALL_EDGE_DEPTH_OFFSET,
     PITFALL_EDGE_METAL_COLOR,
@@ -224,14 +225,14 @@ def draw_pause_overlay(screen: pygame.Surface) -> None:
     show_message(
         screen,
         tr("hud.paused"),
-        18,
+        GAMEPLAY_FONT_SIZE,
         WHITE,
         (screen_width // 2, 28),
     )
     show_message(
         screen,
         tr("hud.pause_hint"),
-        16,
+        GAMEPLAY_FONT_SIZE,
         LIGHT_GRAY,
         (screen_width // 2, screen_height // 2 + 70),
     )

@@ -27,12 +27,15 @@ from ..render_assets import (
     build_fuel_can_surface,
     build_shoes_surface,
 )
-from ..render_constants import FLASHLIGHT_FOG_SCALE_ONE, FLASHLIGHT_FOG_SCALE_TWO
+from ..render_constants import (
+    FLASHLIGHT_FOG_SCALE_ONE,
+    FLASHLIGHT_FOG_SCALE_TWO,
+    GAMEPLAY_FONT_SIZE,
+    HUD_ICON_SIZE,
+)
 
 _HUD_ICON_CACHE: dict[str, surface.Surface] = {}
 
-HUD_ICON_SIZE = 12
-GAMEPLAY_FONT_SIZE = 11
 
 
 def _scale_icon_to_box(icon: surface.Surface, size: int) -> surface.Surface:
