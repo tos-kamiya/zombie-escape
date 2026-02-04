@@ -1676,6 +1676,7 @@ class Zombie(pygame.sprite.Sprite):
         zombies: Iterable[Zombie],
     ) -> tuple[float, float]:
         """If another zombie is too close, steer directly away from the closest one."""
+        orig_move_x, orig_move_y = move_x, move_y
         next_x = self.x + move_x
         next_y = self.y + move_y
 
@@ -1719,6 +1720,16 @@ class Zombie(pygame.sprite.Sprite):
 
         move_x = (away_dx / away_dist) * self.speed
         move_y = (away_dy / away_dist) * self.speed
+        if self.wall_hugging:
+            if orig_move_x or orig_move_y:
+                orig_angle = math.atan2(orig_move_y, orig_move_x)
+                new_angle = math.atan2(move_y, move_x)
+                diff = (new_angle - orig_angle + math.pi) % math.tau - math.pi
+                if abs(diff) > math.pi / 2.0:
+                    clamped = math.copysign(math.pi / 2.0, diff)
+                    new_angle = orig_angle + clamped
+                    move_x = math.cos(new_angle) * self.speed
+                    move_y = math.sin(new_angle) * self.speed
         return move_x, move_y
 
     def _apply_aging(self: Self) -> None:
