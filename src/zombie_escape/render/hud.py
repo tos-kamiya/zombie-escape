@@ -322,6 +322,7 @@ def _draw_timed_message(
     player: Player | None,
     camera: Camera,
     message: str | None,
+    message_color: tuple[int, int, int] | None,
     elapsed_play_ms: int,
     expires_at_ms: int,
 ) -> None:
@@ -334,7 +335,8 @@ def _draw_timed_message(
     try:
         font_settings = get_font_settings()
         font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
-        text_surface = font.render(message, False, LIGHT_GRAY)
+        text_color = message_color or LIGHT_GRAY
+        text_surface = font.render(message, False, text_color)
         if player:
             player_rect = camera.apply_rect(player.rect)
             text_rect = text_surface.get_rect(

@@ -24,9 +24,12 @@ from .constants import (
     FUEL_HINT_DURATION_MS,
     SURVIVOR_OVERLOAD_DAMAGE_RATIO,
 )
+from ..colors import BLUE, YELLOW
 from ..localization import translate as tr
 from ..models import GameData
 from ..rng import get_rng
+from ..render_constants import BUDDY_COLOR
+from ..screen_constants import FPS
 from ..entities import Car
 from .footprints import get_shrunk_sprite
 from .spawn import maintain_waiting_car_supply
@@ -49,6 +52,12 @@ def _interaction_radius(width: float, height: float) -> float:
     return HUMANOID_RADIUS + (width + height) / 4
 
 
+def _ms_to_frames(ms: int) -> int:
+    if ms <= 0:
+        return 0
+    return max(1, int(round(ms / (1000 / max(1, FPS)))))
+
+
 RNG = get_rng()
 
 
@@ -69,6 +78,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     camera = game_data.camera
     stage = game_data.stage
     cell_size = game_data.cell_size
+    need_fuel_text = tr("hud.need_fuel")
     maintain_waiting_car_supply(game_data)
     active_car = car if car and car.alive() else None
     waiting_cars = game_data.waiting_cars
@@ -105,7 +115,8 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     if fuel and fuel.alive() and not state.has_fuel and not player.in_car:
         if _player_near_point(fuel.rect.center, fuel_interaction_radius):
             state.has_fuel = True
-            state.fuel_message_until = 0
+            if state.timed_message == need_fuel_text:
+                schedule_timed_message(state, None, duration_frames=0)
             state.hint_expires_at = 0
             state.hint_target_type = None
             fuel.kill()
@@ -197,6 +208,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                         tr("game_over.scream"),
                         duration_frames=SCREAM_MESSAGE_DISPLAY_FRAMES,
                         clear_on_input=False,
+                        color=BUDDY_COLOR,
                     )
                     state.game_over = True
                     state.game_over_at = state.game_over_at or pygame.time.get_ticks()
@@ -232,8 +244,13 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             print("Player entered car!")
         else:
             if not stage.endurance_stage:
-                now_ms = state.elapsed_play_ms
-                state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
+                schedule_timed_message(
+                    state,
+                    need_fuel_text,
+                    duration_frames=_ms_to_frames(FUEL_HINT_DURATION_MS),
+                    clear_on_input=False,
+                    color=YELLOW,
+                )
                 state.hint_target_type = "fuel"
 
     # Claim a waiting/parked car when the player finally reaches it
@@ -260,8 +277,13 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 print("Player claimed a waiting car!")
             else:
                 if not stage.endurance_stage:
-                    now_ms = state.elapsed_play_ms
-                    state.fuel_message_until = now_ms + FUEL_HINT_DURATION_MS
+                    schedule_timed_message(
+                        state,
+                        need_fuel_text,
+                        duration_frames=_ms_to_frames(FUEL_HINT_DURATION_MS),
+                        clear_on_input=False,
+                        color=YELLOW,
+                    )
                     state.hint_target_type = "fuel"
 
     # Bonus: collide a parked car while driving to repair/extend capabilities
@@ -348,6 +370,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     tr("game_over.scream"),
                     duration_frames=SCREAM_MESSAGE_DISPLAY_FRAMES,
                     clear_on_input=False,
+                    color=BLUE,
                 )
 
     # Player escaping on foot after dawn (Stage 5)

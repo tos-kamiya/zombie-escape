@@ -4,7 +4,7 @@ from typing import Any
 
 import pygame
 
-from ..colors import DAWN_AMBIENT_PALETTE_KEY, ambient_palette_key_for_flashlights
+from ..colors import DAWN_AMBIENT_PALETTE_KEY, WHITE, ambient_palette_key_for_flashlights
 from ..entities_constants import SURVIVOR_MAX_SAFE_PASSENGERS
 from ..localization import translate as tr
 from ..models import GameData, Groups, LevelLayout, ProgressState, Stage
@@ -26,16 +26,19 @@ def schedule_timed_message(
     *,
     duration_frames: int,
     clear_on_input: bool = False,
+    color: tuple[int, int, int] | None = None,
 ) -> None:
     if not text:
         state.timed_message = None
         state.timed_message_until = 0
         state.timed_message_clear_on_input = False
+        state.timed_message_color = None
         return
     duration_ms = _frames_to_ms(duration_frames)
     state.timed_message = text
     state.timed_message_until = state.elapsed_play_ms + duration_ms
     state.timed_message_clear_on_input = clear_on_input
+    state.timed_message_color = color
 
 
 def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
@@ -53,6 +56,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         timed_message=None,
         timed_message_until=0,
         timed_message_clear_on_input=False,
+        timed_message_color=None,
         game_over_at=None,
         scaled_overview=None,
         overview_created=False,
@@ -66,7 +70,6 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         ambient_palette_key=initial_palette_key,
         hint_expires_at=0,
         hint_target_type=None,
-        fuel_message_until=0,
         buddy_rescued=0,
         buddy_onboard=0,
         buddy_merged_count=0,
@@ -96,6 +99,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             intro_message,
             duration_frames=INTRO_MESSAGE_DISPLAY_FRAMES,
             clear_on_input=True,
+            color=WHITE,
         )
 
     # Create sprite groups

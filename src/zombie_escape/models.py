@@ -83,6 +83,7 @@ class ProgressState:
     timed_message: str | None
     timed_message_until: int
     timed_message_clear_on_input: bool
+    timed_message_color: tuple[int, int, int] | None
     game_over_at: int | None
     scaled_overview: surface.Surface | None
     overview_created: bool
@@ -96,7 +97,6 @@ class ProgressState:
     ambient_palette_key: str
     hint_expires_at: int
     hint_target_type: str | None
-    fuel_message_until: int
     buddy_rescued: int
     buddy_onboard: int
     buddy_merged_count: int

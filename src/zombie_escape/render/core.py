@@ -11,7 +11,6 @@ from pygame import sprite, surface
 from ..colors import (
     FOOTPRINT_COLOR,
     LIGHT_GRAY,
-    ORANGE,
     WHITE,
     YELLOW,
     get_environment_palette,
@@ -801,25 +800,6 @@ def _draw_fog_of_war(
     )
 
 
-def _draw_need_fuel_message(
-    screen: surface.Surface,
-    assets: RenderAssets,
-    *,
-    has_fuel: bool,
-    fuel_message_until: int,
-    elapsed_play_ms: int,
-) -> None:
-    if has_fuel or fuel_message_until <= elapsed_play_ms:
-        return
-    show_message(
-        screen,
-        tr("hud.need_fuel"),
-        18,
-        ORANGE,
-        (assets.screen_width // 2, assets.screen_height // 2),
-    )
-
-
 def draw(
     assets: RenderAssets,
     screen: surface.Surface,
@@ -958,14 +938,6 @@ def draw(
         flashlight_count=flashlight_count,
         dawn_ready=state.dawn_ready,
     )
-    if not (stage and stage.endurance_stage):
-        _draw_need_fuel_message(
-            screen,
-            assets,
-            has_fuel=has_fuel,
-            fuel_message_until=state.fuel_message_until,
-            elapsed_play_ms=state.elapsed_play_ms,
-        )
 
     objective_lines = _build_objective_lines(
         stage=stage,
@@ -985,6 +957,7 @@ def draw(
         player=player,
         camera=camera,
         message=state.timed_message,
+        message_color=state.timed_message_color,
         elapsed_play_ms=state.elapsed_play_ms,
         expires_at_ms=state.timed_message_until,
     )
