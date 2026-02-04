@@ -40,12 +40,14 @@ from ..screens import (
     TITLE_LINE_HEIGHT_SCALE,
     TITLE_HEADER_Y,
     TITLE_SECTION_TOP,
-    nudge_window_scale,
+)
+from ..windowing import (
+    adjust_menu_logical_size,
+    nudge_menu_window_scale,
     present,
     sync_window_size,
     toggle_fullscreen,
 )
-
 
 def settings_screen(
     screen: surface.Surface,
@@ -216,6 +218,7 @@ def settings_screen(
                 return config
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event)
+                adjust_menu_logical_size()
                 continue
             if event.type == pygame.JOYDEVICEADDED or (
                 CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
@@ -235,13 +238,14 @@ def settings_screen(
                 return _exit_settings()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
-                    nudge_window_scale(0.5)
+                    nudge_menu_window_scale(0.5)
                     continue
                 if event.key == pygame.K_RIGHTBRACKET:
-                    nudge_window_scale(2.0)
+                    nudge_menu_window_scale(2.0)
                     continue
                 if event.key == pygame.K_f:
                     toggle_fullscreen()
+                    adjust_menu_logical_size()
                     continue
                 if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
                     return _exit_settings()

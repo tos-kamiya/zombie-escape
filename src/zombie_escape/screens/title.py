@@ -33,12 +33,14 @@ from ..screens import (
     TITLE_LINE_HEIGHT_SCALE,
     TITLE_HEADER_Y,
     TITLE_SECTION_TOP,
-    nudge_window_scale,
+)
+from ..windowing import (
+    adjust_menu_logical_size,
+    nudge_menu_window_scale,
     present,
     sync_window_size,
     toggle_fullscreen,
 )
-
 try:  # pragma: no cover - version fallback not critical for tests
     from ..__about__ import __version__
 except Exception:  # pragma: no cover - fallback version
@@ -148,6 +150,7 @@ def title_screen(
                 )
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event)
+                adjust_menu_logical_size()
                 continue
             if event.type == pygame.JOYDEVICEADDED or (
                 CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
@@ -176,13 +179,14 @@ def title_screen(
                         current_seed_text += event.unicode
                     continue
                 if event.key == pygame.K_LEFTBRACKET:
-                    nudge_window_scale(0.5)
+                    nudge_menu_window_scale(0.5)
                     continue
                 if event.key == pygame.K_RIGHTBRACKET:
-                    nudge_window_scale(2.0)
+                    nudge_menu_window_scale(2.0)
                     continue
                 if event.key == pygame.K_f:
                     toggle_fullscreen()
+                    adjust_menu_logical_size()
                     continue
                 if event.key == pygame.K_LEFT:
                     if current_page > 0:

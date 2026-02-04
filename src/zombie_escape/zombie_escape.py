@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import traceback  # For error reporting
 from pathlib import Path
@@ -29,7 +30,13 @@ from .screen_constants import (
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
 )
-from .screens import ScreenID, ScreenTransition, apply_window_scale
+from .screens import ScreenID, ScreenTransition
+from .windowing import (
+    adjust_menu_logical_size,
+    apply_window_scale,
+    prime_scaled_logical_size,
+    set_scaled_logical_size,
+)
 from .screens.game_over import game_over_screen
 from .screens.settings import settings_screen
 from .screens.title import MAX_SEED_DIGITS, title_screen
@@ -92,6 +99,7 @@ def main() -> None:
     args, remaining = _parse_cli_args(sys.argv[1:])
     sys.argv = [sys.argv[0]] + remaining
 
+    os.environ.setdefault("SDL_RENDER_SCALE_QUALITY", "0")
     pygame.init()
     pygame.joystick.init()
     if hasattr(pygame, "controller"):
@@ -104,6 +112,7 @@ def main() -> None:
 
     from .screens.gameplay import gameplay_screen
 
+    prime_scaled_logical_size((SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2))
     apply_window_scale(DEFAULT_WINDOW_SCALE)
     pygame.mouse.set_visible(True)
     logical_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)).convert_alpha()
@@ -183,6 +192,7 @@ def main() -> None:
         transition = None
 
         if next_screen == ScreenID.TITLE:
+            adjust_menu_logical_size()
             seed_input = None if title_seed_is_auto else title_seed_text
             transition = title_screen(
                 menu_screen,
@@ -199,6 +209,7 @@ def main() -> None:
                 title_seed_text = transition.seed_text
                 title_seed_is_auto = transition.seed_is_auto
         elif next_screen == ScreenID.SETTINGS:
+            adjust_menu_logical_size()
             config = settings_screen(
                 menu_screen,
                 clock,
@@ -210,6 +221,7 @@ def main() -> None:
             set_language(config.get("language"))
             transition = ScreenTransition(ScreenID.TITLE)
         elif next_screen == ScreenID.GAMEPLAY:
+            set_scaled_logical_size((SCREEN_WIDTH, SCREEN_HEIGHT))
             stage = incoming.stage
             seed_value = incoming.seed
             if stage is None:

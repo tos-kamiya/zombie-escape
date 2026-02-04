@@ -50,14 +50,8 @@ from ..models import Stage
 from ..render import draw, draw_debug_overview, draw_pause_overlay, prewarm_fog_overlays, show_message_wrapped
 from ..rng import generate_seed, seed_rng
 from ..progress import record_stage_clear
-from ..screens import (
-    ScreenID,
-    ScreenTransition,
-    nudge_window_scale,
-    present,
-    sync_window_size,
-    toggle_fullscreen,
-)
+from ..screens import ScreenID, ScreenTransition
+from ..windowing import nudge_window_scale, present, sync_window_size, toggle_fullscreen
 
 if TYPE_CHECKING:
     from ..render import RenderAssets
