@@ -9,14 +9,15 @@
     "fonts": {
       "primary": {
         "resource": "assets/fonts/Silkscreen-Regular.ttf",
-        "scale": 0.75
+        "scale": 0.75,
+        "line_height_scale": 1.0
       }
     },
     "menu": {
       "settings": "Settings",
       "quit": "Quit",
       "locked_suffix": "[Locked]",
-      "window_hint": "Resize window: [ to shrink, ] to enlarge.\nF: toggle fullscreen.",
+      "window_hint": "Resize window: [ to shrink by one step (400x300), ] to enlarge by one step.\nF: toggle fullscreen.",
       "seed_label": "Seed: %{value}",
       "seed_hint": "Type 0-9 to set a custom seed, Backspace clears",
       "seed_empty": "(auto)",

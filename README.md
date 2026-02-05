@@ -28,7 +28,7 @@ This game is a simple 2D top-down action game where the player aims to escape by
 -   **Pause:** `P`/Start or `ESC`/Select
 -   **Quit Game:** `ESC`/Select (from pause)
 -   **Restart:** `R` key (on Game Over/Clear screen)
--   **Window/Fullscreen:** `[` to shrink, `]` to enlarge, `F` to toggle fullscreen
+-   **Window/Fullscreen:** `[` to shrink by one step (400x300), `]` to enlarge by one step, `F` to toggle fullscreen
 -   **FPS Overlay:** Launch with `--show-fps` (implied by `--debug`)
 -   **Time Acceleration:** Hold either `Shift` key or `R1` to run the entire world 4x faster; release to return to normal speed.
 

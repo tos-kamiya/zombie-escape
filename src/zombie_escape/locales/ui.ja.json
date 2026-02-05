@@ -9,14 +9,15 @@
     "fonts": {
       "primary": {
         "resource": "assets/fonts/misaki_gothic.ttf",
-        "scale": 0.7
+        "scale": 0.7,
+        "line_height_scale": 1.4
       }
     },
     "menu": {
       "settings": "設定",
       "quit": "終了",
       "locked_suffix": "[Locked]",
-      "window_hint": "[キーでウィンドウを小さく、]キーで大きく。\nF: フルスクリーン切替。",
+      "window_hint": "[キーで1段階縮小（400x300）、]キーで1段階拡大。\nF: フルスクリーン切替。",
       "seed_label": "シード: %{value}",
       "seed_hint": "数字キーで入力、BSでクリア",
       "seed_empty": "(自動)",

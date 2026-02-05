@@ -57,7 +57,7 @@
 - 進行演出: `footprints`, `last_footprint_pos`, `footprint_visible_toggle`, `elapsed_play_ms`
 - アイテム状態: `has_fuel`, `flashlight_count`, `shoes_count`
 - ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`,
-  `timed_message`, `timed_message_until`, `timed_message_clear_on_input`
+  `timed_message`（`TimedMessage` の内容を保持）
 - ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
 - 相棒の壁ターゲット: `player_wall_target_cell`, `player_wall_target_ttl`（壁接触後7フレームで失効）
 - サバイバル用: `endurance_elapsed_ms`, `endurance_goal_ms`, `dawn_ready`, `dawn_prompt_at`, `dawn_carbonized`
@@ -305,8 +305,9 @@
 - `_draw_status_bar()`
   - 設定フラグやステージ番号、シード値を表示。
 - 導入セリフ/短時間メッセージ (`_draw_timed_message` in `render/hud.py`)
-  - 画面上部のプレイヤー位置付近に、タイプライター表示（1文字ずつ）。
-  - 半透明帯の上に LIGHT_GRAY で描画。
+  - `TimedMessage` の `align` に応じて左寄せ/中央寄せで描画。
+  - 1.2倍の行間で描画し、半透明帯の上に表示する。
+  - 暗転フェード中でも `timed_message` はフェード後に描画するため、常に明るく表示される。
 
 - `draw_level_overview()` (`render/overview.py`)
   - `game_over` 画面用のレベル縮小図（落下ゾンビ床も表示）。
@@ -319,11 +320,11 @@
 - フルスクリーン切替: SDL2 Window 経由で現在ウィンドウ位置からディスプレイ番号を推定し、取得できない場合は `get_display_index()`、それも失敗すれば `set_mode(FULLSCREEN)` へフォールバックする。
 - ウィンドウ復帰: 解除時は直前のウィンドウ位置へ戻す（Wayland 等では位置指定が無視される場合がある）。
 - 論理解像度の基本: 400x300 を基準に OS のウィンドウサイズへ拡大描画する。
-- 画面別論理解像度: ゲームプレイ/ゲームオーバーは 400x300 のサーフェイス、タイトル/設定は 800x600 のサーフェイスを生成し、ウィンドウへ拡大・縮小して表示する。
+- 画面別論理解像度: すべて 400x300 のサーフェイスを生成し、ウィンドウへ拡大・縮小して表示する。
 - ウィンドウ再作成の理由: `pygame.display.set_mode()` で OS ウィンドウのサイズ・フルスクリーン状態・`pygame.SCALED` の論理解像度を反映するため。
-- 論理解像度の切替: `set_scaled_logical_size()` が 400x300 ⇄ 800x600 を切り替え、ウィンドウサイズを維持したい場合は `preserve_window_size=True` で復元する。
+- 論理解像度の切替: `set_scaled_logical_size()` は 400x300 固定（ウィンドウサイズのみ変更）。
 - 再作成が発生する操作: フルスクリーン切替、ウィンドウ倍率変更（`apply_window_scale` / `nudge_menu_window_scale`）、論理解像度変更時に `set_mode()` が呼ばれる。
-- サーフェイス切替: 起動時に 400x300 (`logical_screen`) と 800x600 (`menu_screen`) を生成し、画面遷移で使い分ける。
+- サーフェイス切替: 起動時に 400x300 の `logical_screen` と `menu_screen` を生成し、画面遷移で使い分ける。
 - 表示パス: `set_scaled_logical_size()` / `adjust_menu_logical_size()` で論理解像度を整えたうえで、`present()` が現在のウィンドウへスケーリング描画する。
 - `pygame.SCALED` の扱い: 利用可能な環境ではウィンドウ側で拡大し、利用できない場合は `present()` がアスペクト比を保つレターボックス描画を行う。
 

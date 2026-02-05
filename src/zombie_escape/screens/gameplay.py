@@ -99,7 +99,7 @@ def gameplay_screen(
             font_settings = get_font_settings()
             font_size = font_settings.scaled_size(GAMEPLAY_FONT_SIZE * 2)
             font = load_font(font_settings.resource, font_size)
-            line_height = int(round(font.get_linesize() * 1.2))
+            line_height = int(round(font.get_linesize() * font_settings.line_height_scale))
             x = TIMED_MESSAGE_LEFT_X
             y = TIMED_MESSAGE_TOP_Y
             for line in intro_text.splitlines():

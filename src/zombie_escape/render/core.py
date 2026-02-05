@@ -168,11 +168,12 @@ def blit_wrapped_text(
     resource: str | None = None,
     size: int | None = None,
     scale_factor: int = 1,
+    line_height_scale: float = 1.0,
 ) -> None:
     """Render text with simple wrapping constrained to max_width."""
 
     x, y = topleft
-    line_height = font.get_linesize()
+    line_height = int(round(font.get_linesize() * line_height_scale))
     for line in wrap_text(text, font, max_width):
         if not line:
             y += line_height

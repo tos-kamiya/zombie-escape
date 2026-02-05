@@ -478,7 +478,7 @@ def settings_screen(
                 tr("settings.hints.reset"),
                 tr("settings.hints.exit"),
             ]
-            hint_line_height = hint_font.get_linesize()
+            hint_line_height = int(round(hint_font.get_linesize() * font_settings.line_height_scale))
             hint_max_width = screen_width - hint_start_x - 16
             y_cursor = hint_start_y
             for line in hint_lines:

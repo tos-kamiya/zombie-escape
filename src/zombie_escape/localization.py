@@ -27,6 +27,7 @@ class LanguageOption:
 class FontSettings:
     resource: str | None
     scale: float = 1.0
+    line_height_scale: float = 1.0
 
     def scaled_size(self, base_size: int) -> int:
         return max(1, round(base_size * self.scale))
@@ -122,11 +123,16 @@ def get_font_settings(*, name: str = "primary") -> FontSettings:
     data = fonts.get(name, {}) if isinstance(fonts, dict) else {}
     resource = data.get("resource") or DEFAULT_FONT_RESOURCE
     scale_raw = data.get("scale", DEFAULT_FONT_SCALE)
+    line_height_raw = data.get("line_height_scale", 1.0)
     try:
         scale = float(scale_raw)
     except (TypeError, ValueError):
         scale = DEFAULT_FONT_SCALE
-    return FontSettings(resource=resource, scale=scale)
+    try:
+        line_height_scale = float(line_height_raw)
+    except (TypeError, ValueError):
+        line_height_scale = 1.0
+    return FontSettings(resource=resource, scale=scale, line_height_scale=line_height_scale)
 
 
 def _qualify_key(key: str) -> str:

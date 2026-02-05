@@ -312,7 +312,7 @@ def _draw_survivor_messages(
         font = load_font(font_settings.resource, font_size)
         line_height = int(round(font.get_linesize() * 2))
         base_y = assets.screen_height // 2 - (line_height * 2)
-        for idx, message in enumerate(survivor_messages[:3]):
+        for idx, message in enumerate(survivor_messages[:5]):
             text = message.get("text", "")
             if not text:
                 continue
@@ -341,7 +341,7 @@ def _draw_timed_message(
         font_size = font_settings.scaled_size(GAMEPLAY_FONT_SIZE * 2)
         font = load_font(font_settings.resource, font_size)
         text_color = message.color or LIGHT_GRAY
-        line_height = int(round(font.get_linesize() * 1.2))
+        line_height = int(round(font.get_linesize() * font_settings.line_height_scale))
         lines = message.text.splitlines() or [message.text]
         rendered_lines = [font.render(line, False, text_color) for line in lines]
         max_width = max(surface.get_width() for surface in rendered_lines)

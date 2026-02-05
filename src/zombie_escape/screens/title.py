@@ -425,6 +425,7 @@ def title_screen(
                     resource=font_settings.resource,
                     size=desc_size,
                     scale_factor=TITLE_FONT_SCALE,
+                    line_height_scale=font_settings.line_height_scale,
                 )
 
             option_help_top = desc_area_top
@@ -448,13 +449,14 @@ def title_screen(
                     resource=font_settings.resource,
                     size=desc_size,
                     scale_factor=TITLE_FONT_SCALE,
+                    line_height_scale=font_settings.line_height_scale,
                 )
 
             hint_lines = [tr("menu.hints.navigate")]
             if len(stage_pages) > 1 and _page_available(1):
                 hint_lines.append(tr("menu.hints.page_switch"))
             hint_lines.append(tr("menu.hints.confirm"))
-            hint_line_height = hint_font.get_linesize()
+            hint_line_height = int(round(hint_font.get_linesize() * font_settings.line_height_scale))
             # hint_block_height = len(hint_lines) * hint_line_height
             hint_start_y = action_header_pos[1]
             hint_step = hint_line_height
@@ -496,6 +498,7 @@ def title_screen(
                 resource=font_settings.resource,
                 size=hint_size,
                 scale_factor=TITLE_FONT_SCALE,
+                line_height_scale=font_settings.line_height_scale,
             )
 
             title_rect = blit_text_scaled(
