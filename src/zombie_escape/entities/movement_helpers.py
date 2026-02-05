@@ -31,6 +31,28 @@ def pitfall_target(
     return int(x), int(y)
 
 
+def update_directional_image_scale(sprite: pygame.sprite.Sprite, scale: float) -> None:
+    """Scale current directional image, preserving center."""
+    base_img = sprite.directional_images[sprite.facing_bin]  # type: ignore[attr-defined]
+    if scale == 1.0:
+        sprite.image = base_img
+    else:
+        w, h = base_img.get_size()
+        sprite.image = pygame.transform.scale(base_img, (int(w * scale), int(h * scale)))
+    old_center = sprite.rect.center
+    sprite.rect = sprite.image.get_rect(center=old_center)
+
+
+def set_facing_bin(sprite: pygame.sprite.Sprite, new_bin: int) -> None:
+    """Update facing bin and image, preserving center."""
+    if new_bin == sprite.facing_bin:  # type: ignore[attr-defined]
+        return
+    center = sprite.rect.center
+    sprite.facing_bin = new_bin  # type: ignore[attr-defined]
+    sprite.image = sprite.directional_images[sprite.facing_bin]  # type: ignore[attr-defined]
+    sprite.rect = sprite.image.get_rect(center=center)
+
+
 def move_axis_with_pitfall(
     *,
     sprite: pygame.sprite.Sprite,

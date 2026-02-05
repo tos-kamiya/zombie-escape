@@ -3,7 +3,8 @@ import math
 import pygame
 
 from src.zombie_escape.level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
-from zombie_escape.entities import Wall, Zombie, _zombie_wall_hug_movement
+from zombie_escape.entities import Wall, Zombie
+from zombie_escape.entities.movement import _zombie_wall_hug_movement
 from zombie_escape.level_constants import DEFAULT_CELL_SIZE
 from zombie_escape.models import LevelLayout
 

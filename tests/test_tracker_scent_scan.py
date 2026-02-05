@@ -1,4 +1,5 @@
-from zombie_escape.entities import Wall, Zombie, _zombie_update_tracker_target
+from zombie_escape.entities import Wall, Zombie
+from zombie_escape.entities.movement import _zombie_update_tracker_target
 from zombie_escape.models import Footprint
 
 

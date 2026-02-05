@@ -1,6 +1,7 @@
 import pygame
 
-from zombie_escape.entities import Wall, _build_beveled_polygon
+from zombie_escape.entities import Wall
+from zombie_escape.entities.walls import _build_beveled_polygon
 
 
 def _init_pygame() -> None:

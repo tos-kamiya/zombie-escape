@@ -1,10 +1,10 @@
 import pygame
 
-from zombie_escape.entities import (
-    _build_beveled_polygon,
+from zombie_escape.entities.movement import (
     _circle_polygon_collision,
     _rect_polygon_collision,
 )
+from zombie_escape.entities.walls import _build_beveled_polygon
 
 
 def test_beveled_polygon_top_left_cut() -> None:
