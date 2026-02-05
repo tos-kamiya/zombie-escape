@@ -33,19 +33,6 @@ from .render_constants import (
 )
 
 
-def _draw_outlined_circle(
-    surface: pygame.Surface,
-    center: tuple[int, int],
-    radius: int,
-    fill_color: tuple[int, int, int],
-    outline_color: tuple[int, int, int],
-    outline_width: int,
-) -> None:
-    pygame.draw.circle(surface, fill_color, center, radius)
-    if outline_width > 0:
-        pygame.draw.circle(surface, outline_color, center, radius, width=outline_width)
-
-
 def _brighten_color(color: tuple[int, int, int], *, factor: float = 1.25) -> tuple[int, int, int]:
     return tuple(min(255, int(c * factor + 0.5)) for c in color)
 

@@ -79,16 +79,6 @@ def present(logical_surface: surface.Surface) -> None:
     pygame.display.flip()
 
 
-def _present_direct(screen: surface.Surface) -> None:
-    """Flip the display without scaling; intended for direct window rendering."""
-    window = pygame.display.get_surface()
-    if window is None:
-        return
-    if window is not screen:
-        window.blit(screen, (0, 0))
-    pygame.display.flip()
-
-
 def apply_window_scale(scale: float, *, game_data: "GameData | None" = None) -> surface.Surface:
     """Resize the OS window; logical render surface stays constant."""
     global current_window_scale, current_maximized, last_window_scale
@@ -475,21 +465,6 @@ def _update_window_size(size: tuple[int, int], *, source: str) -> None:
 
 def _update_window_caption() -> None:
     pygame.display.set_caption("Zombie Escape")
-
-
-def _maximize_window() -> None:
-    try:
-        from pygame import _sdl2 as sdl2  # type: ignore[import-not-found]
-    except Exception:
-        return
-    try:
-        window = sdl2.Window.from_display_module()
-    except Exception:
-        return
-    try:
-        window.maximize()
-    except Exception:
-        return
 
 
 def _restore_window() -> None:

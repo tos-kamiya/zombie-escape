@@ -152,13 +152,6 @@ def ambient_palette_key_for_flashlights(count: int) -> str:
 
 
 # World colors (default palette versions preserved for backwards compatibility).
-_INTERNAL_WALL_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.inner_wall
-_INTERNAL_WALL_BORDER_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border
-_OUTER_WALL_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outer_wall
-_OUTER_WALL_BORDER_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border
-_FLOOR_COLOR_PRIMARY: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.floor_primary
-_FLOOR_COLOR_SECONDARY: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.floor_secondary
-_FLOOR_COLOR_OUTSIDE: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outside
 FOOTPRINT_COLOR: tuple[int, int, int] = (110, 200, 255)
 STEEL_BEAM_COLOR: tuple[int, int, int] = (110, 50, 50)
 STEEL_BEAM_LINE_COLOR: tuple[int, int, int] = (180, 90, 90)

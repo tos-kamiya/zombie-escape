@@ -1224,20 +1224,6 @@ def _zombie_tracker_movement(
     return _zombie_move_toward(zombie, player_center)
 
 
-def _zombie_wall_hug_has_wall(
-    zombie: Zombie,
-    walls: list[Wall],
-    angle: float,
-    distance: float,
-) -> bool:
-    check_x = zombie.x + math.cos(angle) * distance
-    check_y = zombie.y + math.sin(angle) * distance
-    candidates = [
-        wall for wall in walls if abs(wall.rect.centerx - check_x) < 120 and abs(wall.rect.centery - check_y) < 120
-    ]
-    return any(_circle_wall_collision((check_x, check_y), zombie.radius, wall) for wall in candidates)
-
-
 def _zombie_wall_hug_wall_distance(
     zombie: Zombie,
     walls: list[Wall],
