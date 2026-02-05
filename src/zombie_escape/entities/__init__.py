@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from math import copysign
+
 try:
     from typing import Self
 except ImportError:  # pragma: no cover - Python 3.10 fallback
@@ -47,12 +49,25 @@ class Camera:
     def apply_rect(self: Self, rect: rect.Rect) -> rect.Rect:
         return rect.move(self.camera.topleft)
 
-    def update(self: Self, target: pygame.sprite.Sprite) -> None:
+    def update(self: Self, target: pygame.sprite.Sprite, *, deadzone: int = 0) -> None:
         x = -target.rect.centerx + int(SCREEN_WIDTH / 2)
         y = -target.rect.centery + int(SCREEN_HEIGHT / 2)
-        x = max(-(self.width - SCREEN_WIDTH), min(0, x))
-        y = max(-(self.height - SCREEN_HEIGHT), min(0, y))
-        self.camera = pygame.Rect(x, y, self.width, self.height)
+        min_x = -(self.width - SCREEN_WIDTH)
+        min_y = -(self.height - SCREEN_HEIGHT)
+        clamped_x = max(min_x, min(0, x))
+        clamped_y = max(min_y, min(0, y))
+        if deadzone > 0:
+            dx = clamped_x - self.camera.x
+            dy = clamped_y - self.camera.y
+            if abs(dx) <= deadzone:
+                clamped_x = self.camera.x
+            else:
+                clamped_x = clamped_x - copysign(deadzone, dx)
+            if abs(dy) <= deadzone:
+                clamped_y = self.camera.y
+            else:
+                clamped_y = clamped_y - copysign(deadzone, dy)
+        self.camera = pygame.Rect(int(clamped_x), int(clamped_y), self.width, self.height)
 
 
 def random_position_outside_building(level_width: int, level_height: int) -> tuple[int, int]:

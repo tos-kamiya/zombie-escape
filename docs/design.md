@@ -149,7 +149,7 @@
 - `Wall`: 内壁。体力を持ち、破壊時に `on_destroy` を発火。
 - `RubbleWall`: 内壁と同じ当たり判定/耐久を持ち、見た目だけを瓦礫風に差し替えた壁。
 - `SteelBeam`: 簡易な強化障害物。
-- `Camera`: 画面スクロール用の矩形管理。
+- `Camera`: 画面スクロール用の矩形管理（小さな揺れを抑える deadzone 付き）。
 - `Player`, `Zombie`, `Car`, `Survivor`（`is_buddy` フラグで相棒を表現）
 - `FuelCan`, `Flashlight`, `Shoes`（収集アイテム）
 

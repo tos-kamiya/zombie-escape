@@ -183,7 +183,7 @@ def update_entities(
 
     # Update camera
     target_for_camera = active_car if player.in_car and active_car else player
-    camera.update(target_for_camera)
+    camera.update(target_for_camera, deadzone=4)
 
     if player.inner_wall_hit and player.inner_wall_cell is not None:
         game_data.state.player_wall_target_cell = player.inner_wall_cell
