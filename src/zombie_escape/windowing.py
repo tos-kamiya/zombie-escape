@@ -127,18 +127,16 @@ def prime_scaled_logical_size(size: tuple[int, int]) -> None:
 
 def nudge_window_scale(multiplier: float, *, game_data: "GameData | None" = None) -> surface.Surface:
     """Scale the window relative to the current zoom level."""
-    target_scale = current_window_scale * multiplier
+    delta = 1.0 if multiplier >= 1.0 else -1.0
+    target_scale = current_window_scale + delta
     return apply_window_scale(target_scale, game_data=game_data)
 
 
 def nudge_menu_window_scale(multiplier: float, *, game_data: "GameData | None" = None) -> surface.Surface:
     """Scale the window and update menu logical size consistently."""
-    target_scale = current_window_scale * multiplier
-    if target_scale >= DEFAULT_WINDOW_SCALE:
-        target_logical = (SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2)
-    else:
-        target_logical = (SCREEN_WIDTH, SCREEN_HEIGHT)
-    set_scaled_logical_size(target_logical, preserve_window_size=False, game_data=game_data)
+    delta = 1.0 if multiplier >= 1.0 else -1.0
+    target_scale = current_window_scale + delta
+    set_scaled_logical_size((SCREEN_WIDTH, SCREEN_HEIGHT), preserve_window_size=False, game_data=game_data)
     return apply_window_scale(target_scale, game_data=game_data)
 
 
@@ -244,11 +242,7 @@ def set_scaled_logical_size(
 
 def adjust_menu_logical_size(*, game_data: "GameData | None" = None) -> None:
     """Match menu render size to the current window scale."""
-    if current_window_scale >= DEFAULT_WINDOW_SCALE:
-        target = (SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2)
-    else:
-        target = (SCREEN_WIDTH, SCREEN_HEIGHT)
-    set_scaled_logical_size(target, game_data=game_data)
+    set_scaled_logical_size((SCREEN_WIDTH, SCREEN_HEIGHT), game_data=game_data)
 
 
 def _fetch_window_size(window: surface.Surface | None) -> tuple[int, int]:

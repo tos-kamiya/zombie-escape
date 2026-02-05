@@ -112,11 +112,11 @@ def main() -> None:
 
     from .screens.gameplay import gameplay_screen
 
-    prime_scaled_logical_size((SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2))
+    prime_scaled_logical_size((SCREEN_WIDTH, SCREEN_HEIGHT))
     apply_window_scale(DEFAULT_WINDOW_SCALE)
     pygame.mouse.set_visible(True)
     logical_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)).convert_alpha()
-    menu_screen = pygame.Surface((SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2)).convert_alpha()
+    menu_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)).convert_alpha()
     clock = pygame.time.Clock()
 
     debug_mode = bool(args.debug)

@@ -37,7 +37,6 @@ from ..render import show_message, wrap_text
 from ..progress import user_progress_path
 from ..screens import (
     TITLE_FONT_SCALE,
-    TITLE_LINE_HEIGHT_SCALE,
     TITLE_HEADER_Y,
     TITLE_SECTION_TOP,
 )
@@ -61,7 +60,6 @@ def settings_screen(
     """Settings menu shown from the title screen."""
 
     settings_font_scale = TITLE_FONT_SCALE
-    line_height_scale = TITLE_LINE_HEIGHT_SCALE
     screen_width, screen_height = screen.get_size()
     if screen_width <= 0 or screen_height <= 0:
         screen_width, screen_height = screen_size
@@ -337,37 +335,34 @@ def settings_screen(
             last_language = current_language
 
         screen.fill(BLACK)
-        def _scale_height(value: int) -> int:
-            return max(1, int(round(value * line_height_scale)))
-
         show_message(
             screen,
             tr("settings.title"),
             26 * settings_font_scale,
             LIGHT_GRAY,
-            (screen_width // 2, _scale_height(TITLE_HEADER_Y)),
+            (screen_width // 2, TITLE_HEADER_Y),
             scale_factor=settings_font_scale,
         )
 
         try:
             font_settings = get_font_settings()
-            label_size = font_settings.scaled_size(12 * settings_font_scale)
-            value_size = font_settings.scaled_size(12 * settings_font_scale)
-            section_size = font_settings.scaled_size(13 * settings_font_scale)
+            label_size = font_settings.scaled_size(11 * settings_font_scale)
+            value_size = font_settings.scaled_size(11 * settings_font_scale)
+            section_size = font_settings.scaled_size(12 * settings_font_scale)
             label_font = load_font(font_settings.resource, label_size)
             highlight_color = (70, 70, 70)
 
-            row_height = _scale_height(20)
-            start_y = _scale_height(TITLE_SECTION_TOP)
+            row_height = 16
+            start_y = TITLE_SECTION_TOP
 
-            segment_width = int(round(30 * 1.5))
-            segment_height = _scale_height(18)
+            segment_width = int(round(30 * 1.5 * 0.8))
+            segment_height = int(round(18 * 0.8))
             segment_gap = 10
             segment_total_width = segment_width * 2 + segment_gap
 
             column_margin = 24
             column_width = screen_width // 2 - column_margin * 2
-            section_spacing = _scale_height(4)
+            section_spacing = 4
             row_indent = 12
             value_padding = 20
 
@@ -382,7 +377,7 @@ def settings_screen(
                     scale_factor=settings_font_scale,
                 )
                 section_states[section["label"]] = {
-                    "next_y": y_cursor + header_surface.get_height() + _scale_height(4),
+                    "next_y": y_cursor + header_surface.get_height() + 4,
                     "header_surface": header_surface,
                     "header_pos": (column_margin, y_cursor),
                 }
@@ -483,7 +478,7 @@ def settings_screen(
                 tr("settings.hints.reset"),
                 tr("settings.hints.exit"),
             ]
-            hint_line_height = _scale_height(hint_font.get_linesize())
+            hint_line_height = hint_font.get_linesize()
             hint_max_width = screen_width - hint_start_x - 16
             y_cursor = hint_start_y
             for line in hint_lines:
@@ -498,7 +493,7 @@ def settings_screen(
                 )
                 y_cursor += hint_line_height
 
-            y_cursor += _scale_height(26)
+            y_cursor += 26
             window_hint = tr("menu.window_hint")
             for line in wrap_text(window_hint, hint_font, hint_max_width):
                 blit_text_scaled(
@@ -524,7 +519,7 @@ def settings_screen(
                 config_text,
                 LIGHT_GRAY,
                 scale_factor=settings_font_scale,
-                midtop=(screen_width // 2, screen_height - _scale_height(32) - line_height),
+                midtop=(screen_width // 2, screen_height - 32 - line_height),
             )
             blit_text_scaled(
                 screen,
@@ -533,7 +528,7 @@ def settings_screen(
                 progress_text,
                 LIGHT_GRAY,
                 scale_factor=settings_font_scale,
-                midtop=(screen_width // 2, screen_height - _scale_height(32)),
+                midtop=(screen_width // 2, screen_height - 32),
             )
         except pygame.error as e:
             print(f"Error rendering settings: {e}")
