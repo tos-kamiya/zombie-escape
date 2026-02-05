@@ -305,14 +305,16 @@ def _draw_survivor_messages(
         return
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
-        base_y = assets.screen_height // 2 - 70
+        font_size = font_settings.scaled_size(GAMEPLAY_FONT_SIZE * 2)
+        font = load_font(font_settings.resource, font_size)
+        line_height = font.get_linesize()
+        base_y = assets.screen_height // 2 - (line_height * 2)
         for idx, message in enumerate(survivor_messages[:3]):
             text = message.get("text", "")
             if not text:
                 continue
             msg_surface = font.render(text, False, ORANGE)
-            msg_rect = msg_surface.get_rect(center=(assets.screen_width // 2, base_y + idx * 18))
+            msg_rect = msg_surface.get_rect(center=(assets.screen_width // 2, base_y + idx * line_height))
             screen.blit(msg_surface, msg_rect)
     except pygame.error as e:
         print(f"Error rendering survivor message: {e}")
@@ -337,7 +339,8 @@ def _draw_timed_message(
         return
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
+        font_size = font_settings.scaled_size(GAMEPLAY_FONT_SIZE * 2)
+        font = load_font(font_settings.resource, font_size)
         text_color = message_color or LIGHT_GRAY
         text_surface = font.render(message, False, text_color)
         if player:
@@ -345,13 +348,13 @@ def _draw_timed_message(
             text_rect = text_surface.get_rect(
                 center=(
                     player_rect.centerx,
-                    max(16, player_rect.top - 16),
+                    max(32, player_rect.top - 32),
                 )
             )
         else:
-            text_rect = text_surface.get_rect(center=(assets.screen_width // 2, 32))
-        padding_x = 8
-        padding_y = 4
+            text_rect = text_surface.get_rect(center=(assets.screen_width // 2, 40))
+        padding_x = 16
+        padding_y = 8
         band_rect = text_rect.inflate(padding_x * 2, padding_y * 2)
         band_surface = pygame.Surface(band_rect.size, pygame.SRCALPHA)
         band_surface.fill((0, 0, 0, 140))
