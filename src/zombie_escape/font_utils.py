@@ -63,5 +63,30 @@ def render_text_scaled(
     return pygame.transform.scale(high_surface, (target_width, target_height))
 
 
+def blit_text_scaled(
+    target: pygame.Surface,
+    resource: str | None,
+    size: int,
+    text: str,
+    color: tuple[int, int, int],
+    *,
+    scale_factor: int = 1,
+    antialias: bool = False,
+    **rect_kwargs: int | tuple[int, int],
+) -> pygame.Rect:
+    """Render scaled text and blit it to target using rect kwargs."""
+    surface = render_text_scaled(
+        resource,
+        size,
+        text,
+        color,
+        scale_factor=scale_factor,
+        antialias=antialias,
+    )
+    rect = surface.get_rect(**rect_kwargs)
+    target.blit(surface, rect)
+    return rect
+
+
 def clear_font_cache() -> None:
     _FONT_CACHE.clear()
