@@ -9,7 +9,7 @@ from pygame import surface, time
 
 from ..colors import BLACK, GREEN, LIGHT_GRAY, WHITE
 from ..config import DEFAULT_CONFIG, save_config
-from ..font_utils import load_font
+from ..font_utils import load_font, render_text_scaled
 from ..input_utils import (
     CONTROLLER_BUTTON_DOWN,
     CONTROLLER_BUTTON_DPAD_DOWN,
@@ -346,13 +346,17 @@ def settings_screen(
             26 * settings_font_scale,
             LIGHT_GRAY,
             (screen_width // 2, _scale_height(TITLE_HEADER_Y)),
+            scale_factor=settings_font_scale,
         )
 
         try:
             font_settings = get_font_settings()
-            label_font = load_font(font_settings.resource, font_settings.scaled_size(12 * settings_font_scale))
-            value_font = load_font(font_settings.resource, font_settings.scaled_size(12 * settings_font_scale))
-            section_font = load_font(font_settings.resource, font_settings.scaled_size(13 * settings_font_scale))
+            label_size = font_settings.scaled_size(12 * settings_font_scale)
+            value_size = font_settings.scaled_size(12 * settings_font_scale)
+            section_size = font_settings.scaled_size(13 * settings_font_scale)
+            label_font = load_font(font_settings.resource, label_size)
+            value_font = load_font(font_settings.resource, value_size)
+            section_font = load_font(font_settings.resource, section_size)
             highlight_color = (70, 70, 70)
 
             row_height = _scale_height(20)
@@ -372,7 +376,13 @@ def settings_screen(
             section_states: dict[str, dict] = {}
             y_cursor = start_y
             for section in sections:
-                header_surface = section_font.render(section["label"], False, LIGHT_GRAY)
+                header_surface = render_text_scaled(
+                    font_settings.resource,
+                    section_size,
+                    section["label"],
+                    LIGHT_GRAY,
+                    scale_factor=settings_font_scale,
+                )
                 section_states[section["label"]] = {
                     "next_y": y_cursor + header_surface.get_height() + _scale_height(4),
                     "header_surface": header_surface,
@@ -403,7 +413,13 @@ def settings_screen(
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
-                label_surface = label_font.render(row["label"], False, WHITE)
+                label_surface = render_text_scaled(
+                    font_settings.resource,
+                    label_size,
+                    row["label"],
+                    WHITE,
+                    scale_factor=settings_font_scale,
+                )
                 label_rect = label_surface.get_rect(
                     topleft=(
                         col_x,
@@ -414,7 +430,13 @@ def settings_screen(
                 if row_type == "choice":
                     display_fn = row.get("get_display")
                     display_text = display_fn(value) if display_fn and value is not None else str(value)
-                    value_surface = value_font.render(display_text, False, WHITE)
+                    value_surface = render_text_scaled(
+                        font_settings.resource,
+                        value_size,
+                        display_text,
+                        WHITE,
+                        scale_factor=settings_font_scale,
+                    )
                     value_rect = value_surface.get_rect(
                         midright=(
                             col_x + row_width,
@@ -442,7 +464,13 @@ def settings_screen(
                         outline_color = GREEN if active else LIGHT_GRAY
                         pygame.draw.rect(screen, active_color, rect)
                         pygame.draw.rect(screen, outline_color, rect, width=2)
-                        text_surface = value_font.render(text, False, WHITE)
+                        text_surface = render_text_scaled(
+                            font_settings.resource,
+                            value_size,
+                            text,
+                            WHITE,
+                            scale_factor=settings_font_scale,
+                        )
                         text_rect = text_surface.get_rect(center=rect.center)
                         screen.blit(text_surface, text_rect)
 
@@ -451,7 +479,8 @@ def settings_screen(
 
             hint_start_y = start_y
             hint_start_x = screen_width // 2 + 16
-            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11 * settings_font_scale))
+            hint_size = font_settings.scaled_size(11 * settings_font_scale)
+            hint_font = load_font(font_settings.resource, hint_size)
             hint_lines = [
                 tr("settings.hints.navigate"),
                 tr("settings.hints.adjust"),
@@ -463,7 +492,13 @@ def settings_screen(
             hint_max_width = screen_width - hint_start_x - 16
             y_cursor = hint_start_y
             for line in hint_lines:
-                hint_surface = hint_font.render(line, False, WHITE)
+                hint_surface = render_text_scaled(
+                    font_settings.resource,
+                    hint_size,
+                    line,
+                    WHITE,
+                    scale_factor=settings_font_scale,
+                )
                 hint_rect = hint_surface.get_rect(topleft=(hint_start_x, y_cursor))
                 screen.blit(hint_surface, hint_rect)
                 y_cursor += hint_line_height
@@ -471,17 +506,36 @@ def settings_screen(
             y_cursor += _scale_height(26)
             window_hint = tr("menu.window_hint")
             for line in wrap_text(window_hint, hint_font, hint_max_width):
-                hint_surface = hint_font.render(line, False, WHITE)
+                hint_surface = render_text_scaled(
+                    font_settings.resource,
+                    hint_size,
+                    line,
+                    WHITE,
+                    scale_factor=settings_font_scale,
+                )
                 hint_rect = hint_surface.get_rect(topleft=(hint_start_x, y_cursor))
                 screen.blit(hint_surface, hint_rect)
                 y_cursor += hint_line_height
 
-            path_font = load_font(font_settings.resource, font_settings.scaled_size(11 * settings_font_scale))
+            path_size = font_settings.scaled_size(11 * settings_font_scale)
+            path_font = load_font(font_settings.resource, path_size)
             config_text = tr("settings.config_path", path=str(config_path))
             progress_text = tr("settings.progress_path", path=str(user_progress_path()))
             line_height = path_font.get_linesize()
-            config_surface = path_font.render(config_text, False, LIGHT_GRAY)
-            progress_surface = path_font.render(progress_text, False, LIGHT_GRAY)
+            config_surface = render_text_scaled(
+                font_settings.resource,
+                path_size,
+                config_text,
+                LIGHT_GRAY,
+                scale_factor=settings_font_scale,
+            )
+            progress_surface = render_text_scaled(
+                font_settings.resource,
+                path_size,
+                progress_text,
+                LIGHT_GRAY,
+                scale_factor=settings_font_scale,
+            )
             config_rect = config_surface.get_rect(
                 midtop=(screen_width // 2, screen_height - _scale_height(32) - line_height)
             )

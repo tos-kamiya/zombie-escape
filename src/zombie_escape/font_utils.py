@@ -41,5 +41,27 @@ def load_font(resource: str | None, size: int) -> pygame.font.Font:
     return font
 
 
+def render_text_scaled(
+    resource: str | None,
+    size: int,
+    text: str,
+    color: tuple[int, int, int],
+    *,
+    scale_factor: int = 1,
+    antialias: bool = False,
+) -> pygame.Surface:
+    """Render text, optionally supersampling then downscaling."""
+    normalized_size = max(1, int(size))
+    if scale_factor <= 1:
+        font = load_font(resource, normalized_size)
+        return font.render(text, antialias, color)
+    high_size = max(1, int(round(normalized_size * scale_factor)))
+    font_high = load_font(resource, high_size)
+    high_surface = font_high.render(text, antialias, color)
+    target_width = max(1, int(round(high_surface.get_width() / scale_factor)))
+    target_height = max(1, int(round(high_surface.get_height() / scale_factor)))
+    return pygame.transform.scale(high_surface, (target_width, target_height))
+
+
 def clear_font_cache() -> None:
     _FONT_CACHE.clear()

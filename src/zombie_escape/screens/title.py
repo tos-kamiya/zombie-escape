@@ -7,7 +7,7 @@ import pygame
 from pygame import surface, time
 
 from ..colors import BLACK, GRAY, LIGHT_GRAY, WHITE
-from ..font_utils import load_font
+from ..font_utils import load_font, render_text_scaled
 from ..localization import get_font_settings, get_language
 from ..localization import translate as tr
 from ..models import Stage
@@ -302,15 +302,21 @@ def title_screen(
             32 * TITLE_FONT_SCALE,
             LIGHT_GRAY,
             (width // 2, _scale_height(TITLE_HEADER_Y)),
+            scale_factor=TITLE_FONT_SCALE,
         )
 
         try:
             font_settings = get_font_settings()
-            title_font = load_font(font_settings.resource, font_settings.scaled_size(32 * TITLE_FONT_SCALE))
-            option_font = load_font(font_settings.resource, font_settings.scaled_size(14 * TITLE_FONT_SCALE))
-            desc_font = load_font(font_settings.resource, font_settings.scaled_size(11 * TITLE_FONT_SCALE))
-            section_font = load_font(font_settings.resource, font_settings.scaled_size(13 * TITLE_FONT_SCALE))
-            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11 * TITLE_FONT_SCALE))
+            title_size = font_settings.scaled_size(32 * TITLE_FONT_SCALE)
+            option_size = font_settings.scaled_size(14 * TITLE_FONT_SCALE)
+            desc_size = font_settings.scaled_size(11 * TITLE_FONT_SCALE)
+            section_size = font_settings.scaled_size(13 * TITLE_FONT_SCALE)
+            hint_size = font_settings.scaled_size(11 * TITLE_FONT_SCALE)
+            title_font = load_font(font_settings.resource, title_size)
+            option_font = load_font(font_settings.resource, option_size)
+            desc_font = load_font(font_settings.resource, desc_size)
+            section_font = load_font(font_settings.resource, section_size)
+            hint_font = load_font(font_settings.resource, hint_size)
 
             row_height = _scale_height(20)
             list_column_x = 24
@@ -329,11 +335,23 @@ def title_screen(
                 left_arrow = "<- " if current_page > 0 else ""
                 right_arrow = " ->" if current_page < len(stage_pages) - 1 and _page_available(current_page + 1) else ""
                 stage_header_text = f"{left_arrow}{stage_header_text}{right_arrow}"
-            stage_header = section_font.render(stage_header_text, False, LIGHT_GRAY)
+            stage_header = render_text_scaled(
+                font_settings.resource,
+                section_size,
+                stage_header_text,
+                LIGHT_GRAY,
+                scale_factor=TITLE_FONT_SCALE,
+            )
             stage_header_pos = (list_column_x, section_top)
             screen.blit(stage_header, stage_header_pos)
             stage_rows_start = stage_header_pos[1] + stage_header.get_height() + _scale_height(6)
-            action_header = section_font.render(tr("menu.sections.resources"), False, LIGHT_GRAY)
+            action_header = render_text_scaled(
+                font_settings.resource,
+                section_size,
+                tr("menu.sections.resources"),
+                LIGHT_GRAY,
+                scale_factor=TITLE_FONT_SCALE,
+            )
             resource_offset = row_height
             action_header_pos = (
                 list_column_x,
@@ -355,7 +373,13 @@ def title_screen(
                     locked_suffix = tr("menu.locked_suffix")
                     label = f"{label} {locked_suffix}"
                     color = GRAY
-                text_surface = option_font.render(label, False, color)
+                text_surface = render_text_scaled(
+                    font_settings.resource,
+                    option_size,
+                    label,
+                    color,
+                    scale_factor=TITLE_FONT_SCALE,
+                )
                 text_rect = text_surface.get_rect(
                     topleft=(
                         list_column_x + 8,
@@ -379,7 +403,13 @@ def title_screen(
                 else:
                     label = tr("menu.quit")
                 color = WHITE
-                text_surface = option_font.render(label, False, color)
+                text_surface = render_text_scaled(
+                    font_settings.resource,
+                    option_size,
+                    label,
+                    color,
+                    scale_factor=TITLE_FONT_SCALE,
+                )
                 text_rect = text_surface.get_rect(
                     topleft=(
                         list_column_x + 8,
@@ -399,6 +429,9 @@ def title_screen(
                     desc_color,
                     (info_column_x, desc_area_top),
                     info_column_width,
+                    resource=font_settings.resource,
+                    size=desc_size,
+                    scale_factor=TITLE_FONT_SCALE,
                 )
 
             option_help_top = desc_area_top
@@ -419,6 +452,9 @@ def title_screen(
                     WHITE,
                     (info_column_x, option_help_top),
                     info_column_width,
+                    resource=font_settings.resource,
+                    size=desc_size,
+                    scale_factor=TITLE_FONT_SCALE,
                 )
 
             hint_lines = [tr("menu.hints.navigate")]
@@ -430,13 +466,25 @@ def title_screen(
             hint_start_y = action_header_pos[1]
             hint_step = _scale_height(hint_line_height)
             for offset, line in enumerate(hint_lines):
-                hint_surface = hint_font.render(line, False, WHITE)
+                hint_surface = render_text_scaled(
+                    font_settings.resource,
+                    hint_size,
+                    line,
+                    WHITE,
+                    scale_factor=TITLE_FONT_SCALE,
+                )
                 hint_rect = hint_surface.get_rect(topleft=(info_column_x, hint_start_y + offset * hint_step))
                 screen.blit(hint_surface, hint_rect)
 
             seed_value_display = current_seed_text if current_seed_text else tr("menu.seed_empty")
             seed_label = tr("menu.seed_label", value=seed_value_display)
-            seed_surface = hint_font.render(seed_label, False, LIGHT_GRAY)
+            seed_surface = render_text_scaled(
+                font_settings.resource,
+                hint_size,
+                seed_label,
+                LIGHT_GRAY,
+                scale_factor=TITLE_FONT_SCALE,
+            )
             seed_offset_y = hint_step
             seed_rect = seed_surface.get_rect(bottomleft=(info_column_x, height - _scale_height(30) + seed_offset_y))
             screen.blit(seed_surface, seed_rect)
@@ -452,12 +500,28 @@ def title_screen(
                 LIGHT_GRAY,
                 (info_column_x, seed_hint_top),
                 info_column_width,
+                resource=font_settings.resource,
+                size=hint_size,
+                scale_factor=TITLE_FONT_SCALE,
             )
 
-            title_surface = title_font.render(title_text, False, LIGHT_GRAY)
+            title_surface = render_text_scaled(
+                font_settings.resource,
+                title_size,
+                title_text,
+                LIGHT_GRAY,
+                scale_factor=TITLE_FONT_SCALE,
+            )
             title_rect = title_surface.get_rect(center=(width // 2, _scale_height(TITLE_HEADER_Y)))
-            version_font = load_font(font_settings.resource, font_settings.scaled_size(15 * TITLE_FONT_SCALE))
-            version_surface = version_font.render(f"v{__version__}", False, LIGHT_GRAY)
+            version_size = font_settings.scaled_size(15 * TITLE_FONT_SCALE)
+            version_font = load_font(font_settings.resource, version_size)
+            version_surface = render_text_scaled(
+                font_settings.resource,
+                version_size,
+                f"v{__version__}",
+                LIGHT_GRAY,
+                scale_factor=TITLE_FONT_SCALE,
+            )
             version_rect = version_surface.get_rect(
                 bottomleft=(title_rect.right + _scale_height(4), title_rect.bottom)
             )

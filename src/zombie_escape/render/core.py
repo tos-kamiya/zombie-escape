@@ -20,7 +20,7 @@ from ..entities import (
     Player,
 )
 from ..entities_constants import INTERNAL_WALL_BEVEL_DEPTH, ZOMBIE_RADIUS
-from ..font_utils import load_font
+from ..font_utils import load_font, render_text_scaled
 from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
 from ..localization import get_font_settings
 from ..localization import translate as tr
@@ -66,11 +66,19 @@ def show_message(
     size: int,
     color: tuple[int, int, int],
     position: tuple[int, int],
+    *,
+    scale_factor: int = 1,
 ) -> None:
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(size))
-        text_surface = font.render(text, False, color)
+        scaled_size = font_settings.scaled_size(size)
+        text_surface = render_text_scaled(
+            font_settings.resource,
+            scaled_size,
+            text,
+            color,
+            scale_factor=scale_factor,
+        )
         text_rect = text_surface.get_rect(center=position)
 
         # Add a semi-transparent background rectangle for better visibility
@@ -138,6 +146,10 @@ def blit_wrapped_text(
     color: tuple[int, int, int],
     topleft: tuple[int, int],
     max_width: int,
+    *,
+    resource: str | None = None,
+    size: int | None = None,
+    scale_factor: int = 1,
 ) -> None:
     """Render text with simple wrapping constrained to max_width."""
 
@@ -147,7 +159,16 @@ def blit_wrapped_text(
         if not line:
             y += line_height
             continue
-        rendered = font.render(line, False, color)
+        if resource is not None and size is not None:
+            rendered = render_text_scaled(
+                resource,
+                size,
+                line,
+                color,
+                scale_factor=scale_factor,
+            )
+        else:
+            rendered = font.render(line, False, color)
         target.blit(rendered, (x, y))
         y += line_height
 
