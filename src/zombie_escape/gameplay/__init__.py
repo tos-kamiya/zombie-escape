@@ -4,9 +4,9 @@
 
 from .ambient import sync_ambient_palette_with_flashlights
 from .footprints import get_shrunk_sprite, update_footprints
-from .interactions import check_interactions
+from .entity_interactions import check_interactions
 from .layout import MapGenerationError, generate_level_from_blueprint
-from .movement import process_player_input, update_entities
+from .entity_updates import process_player_input, update_entities
 from .spawn import (
     maintain_waiting_car_supply,
     nearest_waiting_car,

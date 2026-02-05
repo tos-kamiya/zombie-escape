@@ -26,7 +26,7 @@ from ..gameplay_constants import (
 )
 from ..models import FallingZombie, GameData
 from ..rng import get_rng
-from ..movement_helpers import pitfall_target
+from ..entities.movement_helpers import pitfall_target
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
 from .constants import MAX_ZOMBIES
 from .spawn import spawn_weighted_zombie, update_falling_zombies
