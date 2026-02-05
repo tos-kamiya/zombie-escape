@@ -51,8 +51,8 @@ def _adjust_color(
     return mix(r), mix(g), mix(b)
 
 
-DEFAULT_AMBIENT_PALETTE_KEY = "default"
-NO_FLASHLIGHT_PALETTE_KEY = "no_flashlight"
+_DEFAULT_AMBIENT_PALETTE_KEY = "default"
+_NO_FLASHLIGHT_PALETTE_KEY = "no_flashlight"
 DAWN_AMBIENT_PALETTE_KEY = "dawn"
 
 
@@ -130,9 +130,9 @@ _DAWN_ENVIRONMENT_PALETTE = EnvironmentPalette(
     outer_wall_border=(147, 146, 138),
 )
 
-ENVIRONMENT_PALETTES: dict[str, EnvironmentPalette] = {
-    DEFAULT_AMBIENT_PALETTE_KEY: _DEFAULT_ENVIRONMENT_PALETTE,
-    NO_FLASHLIGHT_PALETTE_KEY: _GLOOM_ENVIRONMENT_PALETTE,
+_ENVIRONMENT_PALETTES: dict[str, EnvironmentPalette] = {
+    _DEFAULT_AMBIENT_PALETTE_KEY: _DEFAULT_ENVIRONMENT_PALETTE,
+    _NO_FLASHLIGHT_PALETTE_KEY: _GLOOM_ENVIRONMENT_PALETTE,
     DAWN_AMBIENT_PALETTE_KEY: _DAWN_ENVIRONMENT_PALETTE,
 }
 
@@ -141,24 +141,24 @@ def get_environment_palette(key: str | None) -> EnvironmentPalette:
     """Return the color palette for the provided key (falls back to default)."""
 
     if not key:
-        return ENVIRONMENT_PALETTES[DEFAULT_AMBIENT_PALETTE_KEY]
-    return ENVIRONMENT_PALETTES.get(key, ENVIRONMENT_PALETTES[DEFAULT_AMBIENT_PALETTE_KEY])
+        return _ENVIRONMENT_PALETTES[_DEFAULT_AMBIENT_PALETTE_KEY]
+    return _ENVIRONMENT_PALETTES.get(key, _ENVIRONMENT_PALETTES[_DEFAULT_AMBIENT_PALETTE_KEY])
 
 
 def ambient_palette_key_for_flashlights(count: int) -> str:
     """Return the palette key for the provided flashlight inventory count."""
 
-    return DEFAULT_AMBIENT_PALETTE_KEY if max(0, count) > 0 else NO_FLASHLIGHT_PALETTE_KEY
+    return _DEFAULT_AMBIENT_PALETTE_KEY if max(0, count) > 0 else _NO_FLASHLIGHT_PALETTE_KEY
 
 
 # World colors (default palette versions preserved for backwards compatibility).
-INTERNAL_WALL_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.inner_wall
-INTERNAL_WALL_BORDER_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border
-OUTER_WALL_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outer_wall
-OUTER_WALL_BORDER_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border
-FLOOR_COLOR_PRIMARY: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.floor_primary
-FLOOR_COLOR_SECONDARY: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.floor_secondary
-FLOOR_COLOR_OUTSIDE: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outside
+_INTERNAL_WALL_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.inner_wall
+_INTERNAL_WALL_BORDER_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border
+_OUTER_WALL_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outer_wall
+_OUTER_WALL_BORDER_COLOR: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border
+_FLOOR_COLOR_PRIMARY: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.floor_primary
+_FLOOR_COLOR_SECONDARY: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.floor_secondary
+_FLOOR_COLOR_OUTSIDE: tuple[int, int, int] = _DEFAULT_ENVIRONMENT_PALETTE.outside
 FOOTPRINT_COLOR: tuple[int, int, int] = (110, 200, 255)
 STEEL_BEAM_COLOR: tuple[int, int, int] = (110, 50, 50)
 STEEL_BEAM_LINE_COLOR: tuple[int, int, int] = (180, 90, 90)
@@ -178,22 +178,12 @@ __all__ = [
     "ORANGE",
     "DARK_RED",
     "DAWN_AMBIENT_PALETTE_KEY",
-    "INTERNAL_WALL_COLOR",
-    "INTERNAL_WALL_BORDER_COLOR",
-    "OUTER_WALL_COLOR",
-    "OUTER_WALL_BORDER_COLOR",
-    "FLOOR_COLOR_PRIMARY",
-    "FLOOR_COLOR_SECONDARY",
-    "FLOOR_COLOR_OUTSIDE",
     "FOOTPRINT_COLOR",
     "STEEL_BEAM_COLOR",
     "STEEL_BEAM_LINE_COLOR",
     "FALL_ZONE_FLOOR_PRIMARY",
     "FALL_ZONE_FLOOR_SECONDARY",
     "EnvironmentPalette",
-    "DEFAULT_AMBIENT_PALETTE_KEY",
-    "NO_FLASHLIGHT_PALETTE_KEY",
-    "ENVIRONMENT_PALETTES",
     "get_environment_palette",
     "ambient_palette_key_for_flashlights",
 ]

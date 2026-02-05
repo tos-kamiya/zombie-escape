@@ -111,7 +111,7 @@ def _draw_fade_in_overlay(screen: surface.Surface, state: GameData | Any) -> Non
     screen.blit(overlay, (0, 0))
 
 
-def wrap_long_segment(segment: str, font: pygame.font.Font, max_width: int) -> list[str]:
+def _wrap_long_segment(segment: str, font: pygame.font.Font, max_width: int) -> list[str]:
     lines: list[str] = []
     current = ""
     for char in segment:
@@ -137,7 +137,7 @@ def wrap_text(text: str, font: pygame.font.Font, max_width: int) -> list[str]:
             continue
         words = paragraph.split(" ")
         if len(words) == 1:
-            lines.extend(wrap_long_segment(paragraph, font, max_width))
+            lines.extend(_wrap_long_segment(paragraph, font, max_width))
             continue
         current = ""
         for word in words:
@@ -150,7 +150,7 @@ def wrap_text(text: str, font: pygame.font.Font, max_width: int) -> list[str]:
             if font.size(word)[0] <= max_width:
                 current = word
             else:
-                lines.extend(wrap_long_segment(word, font, max_width))
+                lines.extend(_wrap_long_segment(word, font, max_width))
                 current = ""
         if current:
             lines.append(current)
@@ -285,7 +285,7 @@ def _max_flashlight_pickups() -> int:
     return max(1, DEFAULT_FLASHLIGHT_SPAWN_COUNT)
 
 
-class FogProfile(Enum):
+class _FogProfile(Enum):
     DARK0 = (0, (0, 0, 0, 255))
     DARK1 = (1, (0, 0, 0, 255))
     DARK2 = (2, (0, 0, 0, 255))
@@ -300,13 +300,13 @@ class FogProfile(Enum):
         return _get_fog_scale(assets, count)
 
     @staticmethod
-    def _from_flashlight_count(count: int) -> "FogProfile":
+    def _from_flashlight_count(count: int) -> "_FogProfile":
         safe_count = max(0, count)
         if safe_count >= 2:
-            return FogProfile.DARK2
+            return _FogProfile.DARK2
         if safe_count == 1:
-            return FogProfile.DARK1
-        return FogProfile.DARK0
+            return _FogProfile.DARK1
+        return _FogProfile.DARK0
 
 
 def prewarm_fog_overlays(
@@ -317,7 +317,7 @@ def prewarm_fog_overlays(
 ) -> None:
     """Populate fog overlay cache for each reachable flashlight count."""
 
-    for profile in FogProfile:
+    for profile in _FogProfile:
         _get_fog_overlay_surfaces(
             fog_data,
             assets,
@@ -380,7 +380,7 @@ def _get_hatch_pattern(
 def _get_fog_overlay_surfaces(
     fog_data: dict[str, Any],
     assets: RenderAssets,
-    profile: FogProfile,
+    profile: _FogProfile,
     *,
     stage: Stage | None = None,
 ) -> dict[str, Any]:
@@ -825,9 +825,9 @@ def _draw_fog_of_war(
         fov_center_on_screen[1] = assets.screen_height // 2
     fov_center_tuple = (int(fov_center_on_screen[0]), int(fov_center_on_screen[1]))
     if dawn_ready:
-        profile = FogProfile.DAWN
+        profile = _FogProfile.DAWN
     else:
-        profile = FogProfile._from_flashlight_count(flashlight_count)
+        profile = _FogProfile._from_flashlight_count(flashlight_count)
     overlay = _get_fog_overlay_surfaces(
         fog_surfaces,
         assets,

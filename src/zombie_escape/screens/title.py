@@ -7,7 +7,7 @@ import pygame
 from pygame import surface, time
 
 from ..colors import BLACK, GRAY, LIGHT_GRAY, WHITE
-from ..font_utils import blit_text_scaled, load_font, render_text_scaled
+from ..font_utils import blit_text_scaled, load_font
 from ..localization import get_font_settings, get_language
 from ..localization import translate as tr
 from ..models import Stage
@@ -46,15 +46,15 @@ except Exception:  # pragma: no cover - fallback version
     __version__ = "0.0.0-unknown"
 
 MAX_SEED_DIGITS = 19
-README_URLS: dict[str, str] = {
+_README_URLS: dict[str, str] = {
     "en": "https://github.com/tos-kamiya/zombie-escape/blob/main/README.md",
     "ja": "https://github.com/tos-kamiya/zombie-escape/blob/main/README-ja_JP.md",
 }
-STAGE6_URLS: dict[str, str] = {
+_STAGE6_URLS: dict[str, str] = {
     "en": "https://github.com/tos-kamiya/zombie-escape/blob/main/docs/stages-6plus.md",
     "ja": "https://github.com/tos-kamiya/zombie-escape/blob/main/docs/stages-6plus-ja_JP.md",
 }
-UNCLEARED_STAGE_COLOR: tuple[int, int, int] = (220, 80, 80)
+_UNCLEARED_STAGE_COLOR: tuple[int, int, int] = (220, 80, 80)
 
 
 def _open_readme_link(*, use_stage6: bool = False) -> None:
@@ -62,9 +62,9 @@ def _open_readme_link(*, use_stage6: bool = False) -> None:
 
     language = get_language()
     if use_stage6:
-        url = STAGE6_URLS.get(language, STAGE6_URLS["en"])
+        url = _STAGE6_URLS.get(language, _STAGE6_URLS["en"])
     else:
-        url = README_URLS.get(language, README_URLS["en"])
+        url = _README_URLS.get(language, _README_URLS["en"])
     try:
         webbrowser.open(url, new=0, autoraise=True)
     except Exception as exc:  # pragma: no cover - best effort only
@@ -359,7 +359,7 @@ def title_screen(
                 row_top = stage_rows_start + idx * row_height
                 highlight_rect = pygame.Rect(list_column_x, row_top - 2, list_column_width, row_height)
                 cleared = stage_progress.get(option["stage"].id, 0) > 0
-                base_color = WHITE if cleared else UNCLEARED_STAGE_COLOR
+                base_color = WHITE if cleared else _UNCLEARED_STAGE_COLOR
                 color = base_color
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)

@@ -14,16 +14,26 @@
   - ゲームロジックの分割モジュール。初期化、スポーン、移動、当たり判定、勝敗条件など。
 - `src/zombie_escape/entities.py`, `src/zombie_escape/world_grid.py`
   - `pygame.sprite.Sprite` を使ったゲーム内エンティティ定義と衝突判定補助（pygame-ce を利用）。
+- `src/zombie_escape/entities_constants.py`
+  - エンティティ関連の定数（サイズ、速度、当たり判定など）。
 - `src/zombie_escape/models.py`
   - 進行状態やステージ情報のデータ構造（`dataclass`）。
 - `src/zombie_escape/stage_constants.py`
   - ステージ構成とデフォルト設定の一覧。
+- `src/zombie_escape/windowing.py`
+  - ウィンドウ生成・リサイズ・フルスクリーン切替などの画面制御補助。
+- `src/zombie_escape/input_utils.py`
+  - 入力/キー処理の補助ユーティリティ。
 - `src/zombie_escape/render/`
   - 描画パイプラインの分割モジュール群。
   - `render/core.py`: 床/壁/霧/足跡/HUD呼び出し/ヒント矢印などの中心描画。
   - `render/hud.py`: HUD描画（目的/アイコン/ステータスバー/タイマー/ヒント矢印など）。
   - `render/shadows.py`: 壁影/エンティティ影の生成と描画。
   - `render/overview.py`: ゲームオーバー用縮小図、デバッグ用全体表示。
+- `src/zombie_escape/font_utils.py`
+  - フォント読み込み/描画の補助。
+- `src/zombie_escape/export_images.py`
+  - 画像生成・書き出し関連の開発用ユーティリティ。
 - `src/zombie_escape/level_blueprints.py`
   - マップのセル配置生成（外周・出口・内部壁・スポーン候補）。
 - `src/zombie_escape/config.py`
@@ -34,10 +44,16 @@
   - 再現性のある乱数生成（MT19937）。
 - `src/zombie_escape/colors.py`
   - 環境パレットと基本色定義。
+- `src/zombie_escape/localization.py`, `src/zombie_escape/locales/ui.*.json`
+  - ローカライズとUI文字列の管理。
 - `src/zombie_escape/render_assets.py`, `render_constants.py`
   - 描画系アセットと定数の集約（`render_constants.py` にレンダリング用定数/データ構造、`render_assets.py` に描画関数）。
 - `src/zombie_escape/level_constants.py`, `screen_constants.py`, `gameplay_constants.py`
   - マップ・画面・ゲームプレイの各種パラメータ。
+- `src/zombie_escape/gameplay/constants.py`, `src/zombie_escape/gameplay/utils.py`
+  - gameplay 配下の共通定数・補助関数。
+- `src/zombie_escape/__main__.py`
+  - `python -m zombie_escape` 用のエントリポイント。
 
 ## 2. 画面遷移とゲームループ
 

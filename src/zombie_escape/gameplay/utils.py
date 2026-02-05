@@ -12,11 +12,10 @@ from ..render_constants import (
 )
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
-LOGICAL_SCREEN_RECT = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+_LOGICAL_SCREEN_RECT = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
 RNG = get_rng()
 
 __all__ = [
-    "LOGICAL_SCREEN_RECT",
     "rect_visible_on_screen",
     "fov_radius_for_flashlights",
     "is_entity_in_fov",
@@ -29,7 +28,7 @@ __all__ = [
 def rect_visible_on_screen(camera: Camera | None, rect: pygame.Rect) -> bool:
     if camera is None:
         return False
-    return camera.apply_rect(rect).colliderect(LOGICAL_SCREEN_RECT)
+    return camera.apply_rect(rect).colliderect(_LOGICAL_SCREEN_RECT)
 
 
 def fov_radius_for_flashlights(flashlight_count: int) -> float:

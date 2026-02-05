@@ -31,7 +31,6 @@ _scaled_logical_size = (SCREEN_WIDTH, SCREEN_HEIGHT)
 
 __all__ = [
     "present",
-    "present_direct",
     "apply_window_scale",
     "prime_scaled_logical_size",
     "nudge_window_scale",
@@ -80,7 +79,7 @@ def present(logical_surface: surface.Surface) -> None:
     pygame.display.flip()
 
 
-def present_direct(screen: surface.Surface) -> None:
+def _present_direct(screen: surface.Surface) -> None:
     """Flip the display without scaling; intended for direct window rendering."""
     window = pygame.display.get_surface()
     if window is None:

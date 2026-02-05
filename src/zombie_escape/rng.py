@@ -13,7 +13,7 @@ def generate_seed() -> int:
     return secrets.randbits(63) or 1
 
 
-class DeterministicRNG:
+class _DeterministicRNG:
     """Mersenne Twister MT19937 implementation for deterministic runs."""
 
     _N = 624
@@ -107,10 +107,10 @@ class DeterministicRNG:
         self._index = 0
 
 
-_GLOBAL_RNG = DeterministicRNG()
+_GLOBAL_RNG = _DeterministicRNG()
 
 
-def get_rng() -> DeterministicRNG:
+def get_rng() -> _DeterministicRNG:
     return _GLOBAL_RNG
 
 
@@ -121,7 +121,6 @@ def seed_rng(seed: int | None) -> int:
 
 
 __all__ = [
-    "DeterministicRNG",
     "generate_seed",
     "get_rng",
     "seed_rng",

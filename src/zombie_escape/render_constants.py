@@ -55,7 +55,7 @@ FOG_RADIUS_SCALE = 1.2
 
 FLASHLIGHT_FOG_SCALE_ONE = FOG_RADIUS_SCALE + 0.3
 FLASHLIGHT_FOG_SCALE_TWO = FOG_RADIUS_SCALE + 0.6
-FLASHLIGHT_HATCH_EXTRA_SCALE = 0.12
+_FLASHLIGHT_HATCH_EXTRA_SCALE = 0.12
 
 FOOTPRINT_RADIUS = 2
 FOOTPRINT_OVERVIEW_RADIUS = 3
@@ -105,7 +105,7 @@ def build_render_assets(cell_size: int) -> RenderAssets:
         footprint_lifetime_ms=FOOTPRINT_LIFETIME_MS,
         footprint_min_fade=FOOTPRINT_MIN_FADE,
         internal_wall_grid_snap=cell_size,
-        flashlight_hatch_extra_scale=FLASHLIGHT_HATCH_EXTRA_SCALE,
+        flashlight_hatch_extra_scale=_FLASHLIGHT_HATCH_EXTRA_SCALE,
     )
 
 
@@ -149,6 +149,5 @@ __all__ = [
     "PITFALL_EDGE_STRIPE_COLOR",
     "PITFALL_EDGE_STRIPE_SPACING",
     "PITFALL_EDGE_DEPTH_OFFSET",
-    "FLASHLIGHT_HATCH_EXTRA_SCALE",
     "build_render_assets",
 ]

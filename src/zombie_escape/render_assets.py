@@ -343,7 +343,7 @@ def resolve_wall_colors(
     return fill_color, border_color
 
 
-CAR_COLOR_SCHEMES: dict[str, dict[str, tuple[int, int, int]]] = {
+_CAR_COLOR_SCHEMES: dict[str, dict[str, tuple[int, int, int]]] = {
     "default": {
         "healthy": YELLOW,
         "damaged": ORANGE,
@@ -363,7 +363,7 @@ def resolve_car_color(
     appearance: str,
     palette: EnvironmentPalette | None = None,
 ) -> tuple[int, int, int]:
-    palette = CAR_COLOR_SCHEMES.get(appearance, CAR_COLOR_SCHEMES["default"])
+    palette = _CAR_COLOR_SCHEMES.get(appearance, _CAR_COLOR_SCHEMES["default"])
     color = palette["healthy"]
     if health_ratio < 0.6:
         color = palette["damaged"]
@@ -384,7 +384,7 @@ def build_player_directional_surfaces(radius: int, *, bins: int = ANGLE_BINS) ->
     cache_key = (radius, bins)
     if cache_key in _PLAYER_DIRECTIONAL_CACHE:
         return _PLAYER_DIRECTIONAL_CACHE[cache_key]
-    surfaces = build_humanoid_directional_surfaces(
+    surfaces = _build_humanoid_directional_surfaces(
         radius,
         base_color=BLUE,
         cap_color=_brighten_color(BLUE),
@@ -395,7 +395,7 @@ def build_player_directional_surfaces(radius: int, *, bins: int = ANGLE_BINS) ->
     return surfaces
 
 
-def build_humanoid_directional_surfaces(
+def _build_humanoid_directional_surfaces(
     radius: int,
     *,
     base_color: tuple[int, int, int],
@@ -486,7 +486,7 @@ def build_survivor_directional_surfaces(
     if cache_key in _SURVIVOR_DIRECTIONAL_CACHE:
         return _SURVIVOR_DIRECTIONAL_CACHE[cache_key]
     fill_color = BUDDY_COLOR if is_buddy else SURVIVOR_COLOR
-    surfaces = build_humanoid_directional_surfaces(
+    surfaces = _build_humanoid_directional_surfaces(
         radius,
         base_color=fill_color,
         cap_color=_brighten_color(fill_color),
@@ -507,7 +507,7 @@ def build_zombie_directional_surfaces(
     cache_key = (radius, draw_hands, bins)
     if cache_key in _ZOMBIE_DIRECTIONAL_CACHE:
         return _ZOMBIE_DIRECTIONAL_CACHE[cache_key]
-    surfaces = build_humanoid_directional_surfaces(
+    surfaces = _build_humanoid_directional_surfaces(
         radius,
         base_color=ZOMBIE_BODY_COLOR,
         cap_color=_brighten_color(ZOMBIE_BODY_COLOR),
@@ -846,9 +846,7 @@ __all__ = [
     "resolve_wall_colors",
     "resolve_car_color",
     "resolve_steel_beam_colors",
-    "CAR_COLOR_SCHEMES",
     "build_player_directional_surfaces",
-    "build_humanoid_directional_surfaces",
     "draw_humanoid_hand",
     "draw_humanoid_nose",
     "build_survivor_directional_surfaces",

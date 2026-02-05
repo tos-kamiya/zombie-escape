@@ -7,7 +7,7 @@ import pygame
 from pygame import sprite, surface
 
 from ..colors import LIGHT_GRAY, ORANGE, YELLOW
-from ..entities import Car, Player
+from ..entities import Camera, Car, Player
 from ..entities_constants import (
     FLASHLIGHT_HEIGHT,
     FLASHLIGHT_WIDTH,
