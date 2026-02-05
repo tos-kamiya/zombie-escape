@@ -11,9 +11,19 @@
   - `title`, `settings`, `gameplay`, `game_over` の各画面。
   - `screens/__init__.py` に画面遷移と表示ユーティリティ。
 - `src/zombie_escape/gameplay/*.py`
-  - ゲームロジックの分割モジュール。初期化、スポーン、移動、当たり判定、勝敗条件など。
-- `src/zombie_escape/entities.py`, `src/zombie_escape/world_grid.py`
+  - ゲームロジックの分割モジュール。初期化、スポーン、更新、当たり判定、勝敗条件など。
+  - `entity_updates.py`: エンティティ全体の更新・移動・入力処理。
+  - `entity_interactions.py`: エンティティ間の相互作用（接触、救助、ダメージなど）。
+  - 責務の目安: 個別エンティティの“行動”は `entities/` に置き、複数エンティティの相互作用や
+    進行状態の更新は `gameplay/` に集約する。
+- `src/zombie_escape/entities/`, `src/zombie_escape/world_grid.py`
   - `pygame.sprite.Sprite` を使ったゲーム内エンティティ定義と衝突判定補助（pygame-ce を利用）。
+  - `entities/__init__.py`: 公開APIの集約。
+  - `entities/player.py`, `entities/zombie.py`, `entities/survivor.py`, `entities/car.py`: 主要エンティティ。
+  - `entities/walls.py`: 壁・瓦礫・鋼材と衝突形状。
+  - `entities/movement.py`: エンティティ単体の移動補助・衝突計算。
+  - `entities/movement_helpers.py`: 移動/方向の共通ヘルパー。
+  - `entities/collisions.py`: 壁衝突の共通処理。
 - `src/zombie_escape/entities_constants.py`
   - エンティティ関連の定数（サイズ、速度、当たり判定など）。
 - `src/zombie_escape/models.py`
@@ -134,7 +144,7 @@
 
 - `all_sprites` (`LayeredUpdates`) と `wall_group`, `zombie_group`, `survivor_group` を保持。
 
-### 3.6 エンティティ (entities.py)
+### 3.6 エンティティ (entities/)
 
 - `Wall`: 内壁。体力を持ち、破壊時に `on_destroy` を発火。
 - `RubbleWall`: 内壁と同じ当たり判定/耐久を持ち、見た目だけを瓦礫風に差し替えた壁。
