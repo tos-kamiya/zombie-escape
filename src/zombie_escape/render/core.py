@@ -976,10 +976,9 @@ def draw(
     _draw_timed_message(
         screen,
         assets,
-        player=player,
-        camera=camera,
         message=state.timed_message,
         message_color=state.timed_message_color,
+        align=state.timed_message_align,
         elapsed_play_ms=state.elapsed_play_ms,
         expires_at_ms=state.timed_message_until,
     )

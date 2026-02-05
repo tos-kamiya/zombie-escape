@@ -355,6 +355,7 @@ def gameplay_screen(
                 game_data.state.timed_message_until = 0
                 game_data.state.timed_message_clear_on_input = False
                 game_data.state.timed_message_color = None
+                game_data.state.timed_message_align = "center"
             update_entities(
                 game_data,
                 player_dx,

@@ -7,7 +7,7 @@ import pygame
 from pygame import sprite, surface
 
 from ..colors import LIGHT_GRAY, ORANGE, YELLOW
-from ..entities import Camera, Car, Player
+from ..entities import Car, Player
 from ..entities_constants import (
     FLASHLIGHT_HEIGHT,
     FLASHLIGHT_WIDTH,
@@ -307,7 +307,7 @@ def _draw_survivor_messages(
         font_settings = get_font_settings()
         font_size = font_settings.scaled_size(GAMEPLAY_FONT_SIZE * 2)
         font = load_font(font_settings.resource, font_size)
-        line_height = font.get_linesize()
+        line_height = int(round(font.get_linesize() * 2))
         base_y = assets.screen_height // 2 - (line_height * 2)
         for idx, message in enumerate(survivor_messages[:3]):
             text = message.get("text", "")
@@ -324,10 +324,9 @@ def _draw_timed_message(
     screen: surface.Surface,
     assets: RenderAssets,
     *,
-    player: Player | None,
-    camera: Camera,
     message: str | None,
     message_color: tuple[int, int, int] | None,
+    align: str = "center",
     elapsed_play_ms: int,
     expires_at_ms: int,
 ) -> None:
@@ -342,24 +341,34 @@ def _draw_timed_message(
         font_size = font_settings.scaled_size(GAMEPLAY_FONT_SIZE * 2)
         font = load_font(font_settings.resource, font_size)
         text_color = message_color or LIGHT_GRAY
-        text_surface = font.render(message, False, text_color)
-        if player:
-            player_rect = camera.apply_rect(player.rect)
-            text_rect = text_surface.get_rect(
-                center=(
-                    player_rect.centerx,
-                    max(32, player_rect.top - 32),
-                )
-            )
+        line_height = int(round(font.get_linesize() * 1.2))
+        lines = message.splitlines() or [message]
+        rendered_lines = [font.render(line, False, text_color) for line in lines]
+        max_width = max(surface.get_width() for surface in rendered_lines)
+        total_height = line_height * len(rendered_lines)
+        if align == "left":
+            left_x = 20
+            top_y = 48
+            text_rect = pygame.Rect(left_x, top_y, max_width, total_height)
         else:
-            text_rect = text_surface.get_rect(center=(assets.screen_width // 2, 40))
+            center_x = assets.screen_width // 2
+            center_y = assets.screen_height // 2
+            text_rect = pygame.Rect(0, 0, max_width, total_height)
+            text_rect.center = (center_x, center_y)
         padding_x = 16
-        padding_y = 8
+        padding_y = max(8, int(round(line_height * 0.35)))
         band_rect = text_rect.inflate(padding_x * 2, padding_y * 2)
         band_surface = pygame.Surface(band_rect.size, pygame.SRCALPHA)
         band_surface.fill((0, 0, 0, 140))
         screen.blit(band_surface, band_rect.topleft)
-        screen.blit(text_surface, text_rect)
+        y = text_rect.top
+        for surface in rendered_lines:
+            if align == "left":
+                line_rect = surface.get_rect(topleft=(text_rect.left, y))
+            else:
+                line_rect = surface.get_rect(centerx=text_rect.centerx, y=y)
+            screen.blit(surface, line_rect)
+            y += line_height
     except pygame.error as e:
         print(f"Error rendering timed message: {e}")
 

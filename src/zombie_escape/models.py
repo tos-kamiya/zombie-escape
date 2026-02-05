@@ -84,6 +84,7 @@ class ProgressState:
     timed_message_until: int
     timed_message_clear_on_input: bool
     timed_message_color: tuple[int, int, int] | None
+    timed_message_align: str
     game_over_at: int | None
     scaled_overview: surface.Surface | None
     overview_created: bool

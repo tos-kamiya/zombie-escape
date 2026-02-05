@@ -27,18 +27,21 @@ def schedule_timed_message(
     duration_frames: int,
     clear_on_input: bool = False,
     color: tuple[int, int, int] | None = None,
+    align: str = "center",
 ) -> None:
     if not text:
         state.timed_message = None
         state.timed_message_until = 0
         state.timed_message_clear_on_input = False
         state.timed_message_color = None
+        state.timed_message_align = "center"
         return
     duration_ms = _frames_to_ms(duration_frames)
     state.timed_message = text
     state.timed_message_until = state.elapsed_play_ms + duration_ms
     state.timed_message_clear_on_input = clear_on_input
     state.timed_message_color = color
+    state.timed_message_align = align
 
 
 def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
@@ -57,6 +60,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         timed_message_until=0,
         timed_message_clear_on_input=False,
         timed_message_color=None,
+        timed_message_align="center",
         game_over_at=None,
         scaled_overview=None,
         overview_created=False,
@@ -100,6 +104,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             duration_frames=INTRO_MESSAGE_DISPLAY_FRAMES,
             clear_on_input=True,
             color=WHITE,
+            align="left",
         )
 
     # Create sprite groups

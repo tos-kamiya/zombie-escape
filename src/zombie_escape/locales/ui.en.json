@@ -68,7 +68,7 @@
       "stage5": {
         "name": "#5 Survive Until Dawn",
         "description": "No fuel—endure 20 minutes, then walk out when dawn arrives.",
-        "intro": "(No fuel inside, it seems...\nGuess I'll have to survive until dawn.)"
+        "intro": "(No fuel inside, it seems...\nGuess I'll have to\nsurvive until dawn.)"
       },
       "stage6": {
         "name": "#6 Tracker Run",
@@ -95,7 +95,7 @@
       "stage10": {
         "name": "#10 Outbreak",
         "description": "Zombies have infiltrated a building where survivors took shelter.",
-        "intro": "(A large open floor, packed with survivors...\nI have a bad feeling about this.)",
+        "intro": "(A large open floor,\npacked with survivors...\nI have a bad feeling about this.)",
         "survivor_conversion_messages": [
           "It hurts!",
           "I can't hold on!",
