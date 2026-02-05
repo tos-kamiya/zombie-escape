@@ -98,6 +98,7 @@ from .render_assets import (
 from .render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR
 from .rng import get_rng
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
+from .movement_helpers import move_axis_with_pitfall
 from .world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
 
 RNG = get_rng()
@@ -699,83 +700,55 @@ class Player(pygame.sprite.Sprite):
         inner_wall_hit = False
         inner_wall_cell: tuple[int, int] | None = None
 
-        if dx != 0:
-            self.x += dx
-            self.x = min(level_width, max(0, self.x))
-            self.rect.centerx = int(self.x)
-            hit_list_x = _spritecollide_walls(
+        def _on_player_wall_hit(hit_list: list[Wall]) -> None:
+            nonlocal inner_wall_hit, inner_wall_cell
+            damage = max(1, PLAYER_WALL_DAMAGE)
+            for wall in hit_list:
+                if wall.alive():
+                    wall._take_damage(amount=damage)
+                    if _is_inner_wall(wall):
+                        inner_wall_hit = True
+                        if inner_wall_cell is None and cell_size:
+                            inner_wall_cell = (
+                                int(wall.rect.centerx // cell_size),
+                                int(wall.rect.centery // cell_size),
+                            )
+
+        def _collide_player() -> list[Wall]:
+            return _spritecollide_walls(
                 self,
                 walls,
                 wall_index=wall_index,
                 cell_size=cell_size,
             )
-            blocked_by_pitfall = False
-            if not self.is_jumping and pitfall_cells and cell_size:
-                cx, cy = (
-                    int(self.rect.centerx // cell_size),
-                    int(self.rect.centery // cell_size),
-                )
-                if (cx, cy) in pitfall_cells:
-                    if can_jump_now:
-                        self.is_jumping = True
-                        self.jump_start_at = now
-                    else:
-                        blocked_by_pitfall = True
 
-            if hit_list_x or blocked_by_pitfall:
-                if hit_list_x:
-                    damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_x))
-                    for wall in hit_list_x:
-                        if wall.alive():
-                            wall._take_damage(amount=damage)
-                            if _is_inner_wall(wall):
-                                inner_wall_hit = True
-                                if inner_wall_cell is None and cell_size:
-                                    inner_wall_cell = (
-                                        int(wall.rect.centerx // cell_size),
-                                        int(wall.rect.centery // cell_size),
-                                    )
-                self.x -= dx * 1.5
-                self.rect.centerx = int(self.x)
+        move_axis_with_pitfall(
+            sprite=self,
+            axis="x",
+            delta=dx,
+            collide=_collide_player,
+            cell_size=cell_size,
+            pitfall_cells=pitfall_cells,
+            can_jump_now=bool(can_jump_now),
+            now=now,
+            rollback_factor=1.5,
+            clamp_range=(0.0, level_width),
+            on_wall_hit=_on_player_wall_hit,
+        )
 
-        if dy != 0:
-            self.y += dy
-            self.y = min(level_height, max(0, self.y))
-            self.rect.centery = int(self.y)
-            hit_list_y = _spritecollide_walls(
-                self,
-                walls,
-                wall_index=wall_index,
-                cell_size=cell_size,
-            )
-            blocked_by_pitfall = False
-            if not self.is_jumping and pitfall_cells and cell_size:
-                cx, cy = (
-                    int(self.rect.centerx // cell_size),
-                    int(self.rect.centery // cell_size),
-                )
-                if (cx, cy) in pitfall_cells:
-                    if can_jump_now:
-                        self.is_jumping = True
-                        self.jump_start_at = now
-                    else:
-                        blocked_by_pitfall = True
-
-            if hit_list_y or blocked_by_pitfall:
-                if hit_list_y:
-                    damage = max(1, PLAYER_WALL_DAMAGE // len(hit_list_y))
-                    for wall in hit_list_y:
-                        if wall.alive():
-                            wall._take_damage(amount=damage)
-                            if _is_inner_wall(wall):
-                                inner_wall_hit = True
-                                if inner_wall_cell is None and cell_size:
-                                    inner_wall_cell = (
-                                        int(wall.rect.centerx // cell_size),
-                                        int(wall.rect.centery // cell_size),
-                                    )
-                self.y -= dy * 1.5
-                self.rect.centery = int(self.y)
+        move_axis_with_pitfall(
+            sprite=self,
+            axis="y",
+            delta=dy,
+            collide=_collide_player,
+            cell_size=cell_size,
+            pitfall_cells=pitfall_cells,
+            can_jump_now=bool(can_jump_now),
+            now=now,
+            rollback_factor=1.5,
+            clamp_range=(0.0, level_height),
+            on_wall_hit=_on_player_wall_hit,
+        )
 
         self.rect.center = (int(self.x), int(self.y))
         self.inner_wall_hit = inner_wall_hit
@@ -951,77 +924,49 @@ class Survivor(pygame.sprite.Sprite):
                 )
             )
 
-            if move_x:
-                self.x += move_x
-                self.rect.centerx = int(self.x)
-                hit_wall = spritecollideany_walls(
+            def _on_buddy_wall_hit(hit_wall: Wall) -> None:
+                nonlocal inner_wall_hit
+                if hit_wall.alive():
+                    dx_to_player = player_pos[0] - self.x
+                    dy_to_player = player_pos[1] - self.y
+                    if dx_to_player * dx_to_player + dy_to_player * dy_to_player <= (
+                        BUDDY_WALL_DAMAGE_RANGE * BUDDY_WALL_DAMAGE_RANGE
+                    ):
+                        hit_wall._take_damage(amount=max(1, BUDDY_WALL_DAMAGE))
+                if _is_inner_wall(hit_wall):
+                    inner_wall_hit = True
+
+            def _collide_buddy() -> Wall | None:
+                return spritecollideany_walls(
                     self,
                     walls,
                     wall_index=wall_index,
                     cell_size=cell_size,
                 )
-                blocked_by_pitfall = False
-                if not self.is_jumping and pitfall_cells and cell_size:
-                    cx, cy = (
-                        int(self.rect.centerx // cell_size),
-                        int(self.rect.centery // cell_size),
-                    )
-                    if (cx, cy) in pitfall_cells:
-                        if can_jump_now:
-                            self.is_jumping = True
-                            self.jump_start_at = now
-                        else:
-                            blocked_by_pitfall = True
 
-                if hit_wall or blocked_by_pitfall:
-                    if hit_wall:
-                        if hit_wall.alive():
-                            dx_to_player = player_pos[0] - self.x
-                            dy_to_player = player_pos[1] - self.y
-                            if dx_to_player * dx_to_player + dy_to_player * dy_to_player <= (
-                                BUDDY_WALL_DAMAGE_RANGE * BUDDY_WALL_DAMAGE_RANGE
-                            ):
-                                hit_wall._take_damage(amount=max(1, BUDDY_WALL_DAMAGE))
-                        if _is_inner_wall(hit_wall):
-                            inner_wall_hit = True
-                    self.x -= move_x
-                    self.rect.centerx = int(self.x)
+            move_axis_with_pitfall(
+                sprite=self,
+                axis="x",
+                delta=move_x,
+                collide=_collide_buddy,
+                cell_size=cell_size,
+                pitfall_cells=pitfall_cells,
+                can_jump_now=bool(can_jump_now),
+                now=now,
+                on_wall_hit=_on_buddy_wall_hit,
+            )
 
-            if move_y:
-                self.y += move_y
-                self.rect.centery = int(self.y)
-                hit_wall = spritecollideany_walls(
-                    self,
-                    walls,
-                    wall_index=wall_index,
-                    cell_size=cell_size,
-                )
-                blocked_by_pitfall = False
-                if not self.is_jumping and pitfall_cells and cell_size:
-                    cx, cy = (
-                        int(self.rect.centerx // cell_size),
-                        int(self.rect.centery // cell_size),
-                    )
-                    if (cx, cy) in pitfall_cells:
-                        if can_jump_now:
-                            self.is_jumping = True
-                            self.jump_start_at = now
-                        else:
-                            blocked_by_pitfall = True
-
-                if hit_wall or blocked_by_pitfall:
-                    if hit_wall:
-                        if hit_wall.alive():
-                            dx_to_player = player_pos[0] - self.x
-                            dy_to_player = player_pos[1] - self.y
-                            if dx_to_player * dx_to_player + dy_to_player * dy_to_player <= (
-                                BUDDY_WALL_DAMAGE_RANGE * BUDDY_WALL_DAMAGE_RANGE
-                            ):
-                                hit_wall._take_damage(amount=max(1, BUDDY_WALL_DAMAGE))
-                        if _is_inner_wall(hit_wall):
-                            inner_wall_hit = True
-                    self.y -= move_y
-                    self.rect.centery = int(self.y)
+            move_axis_with_pitfall(
+                sprite=self,
+                axis="y",
+                delta=move_y,
+                collide=_collide_buddy,
+                cell_size=cell_size,
+                pitfall_cells=pitfall_cells,
+                can_jump_now=bool(can_jump_now),
+                now=now,
+                on_wall_hit=_on_buddy_wall_hit,
+            )
 
             overlap_radius = (self.radius + PLAYER_RADIUS) * 1.05
             dx_after = target_pos[0] - self.x
@@ -1079,56 +1024,34 @@ class Survivor(pygame.sprite.Sprite):
                 cell_size=cell_size,
             )
 
-        if move_x:
-            self.x += move_x
-            self.rect.centerx = int(self.x)
-            hit_by_wall = spritecollideany_walls(
+        def _collide_survivor() -> Wall | None:
+            return spritecollideany_walls(
                 self,
                 walls,
                 wall_index=wall_index,
                 cell_size=cell_size,
             )
-            blocked_by_pitfall = False
-            if not self.is_jumping and pitfall_cells and cell_size:
-                cx, cy = (
-                    int(self.rect.centerx // cell_size),
-                    int(self.rect.centery // cell_size),
-                )
-                if (cx, cy) in pitfall_cells:
-                    if can_jump_now:
-                        self.is_jumping = True
-                        self.jump_start_at = now
-                    else:
-                        blocked_by_pitfall = True
 
-            if hit_by_wall or blocked_by_pitfall:
-                self.x -= move_x
-                self.rect.centerx = int(self.x)
-        if move_y:
-            self.y += move_y
-            self.rect.centery = int(self.y)
-            hit_by_wall = spritecollideany_walls(
-                self,
-                walls,
-                wall_index=wall_index,
-                cell_size=cell_size,
-            )
-            blocked_by_pitfall = False
-            if not self.is_jumping and pitfall_cells and cell_size:
-                cx, cy = (
-                    int(self.rect.centerx // cell_size),
-                    int(self.rect.centery // cell_size),
-                )
-                if (cx, cy) in pitfall_cells:
-                    if can_jump_now:
-                        self.is_jumping = True
-                        self.jump_start_at = now
-                    else:
-                        blocked_by_pitfall = True
-
-            if hit_by_wall or blocked_by_pitfall:
-                self.y -= move_y
-                self.rect.centery = int(self.y)
+        move_axis_with_pitfall(
+            sprite=self,
+            axis="x",
+            delta=move_x,
+            collide=_collide_survivor,
+            cell_size=cell_size,
+            pitfall_cells=pitfall_cells,
+            can_jump_now=bool(can_jump_now),
+            now=now,
+        )
+        move_axis_with_pitfall(
+            sprite=self,
+            axis="y",
+            delta=move_y,
+            collide=_collide_survivor,
+            cell_size=cell_size,
+            pitfall_cells=pitfall_cells,
+            can_jump_now=bool(can_jump_now),
+            now=now,
+        )
 
         self.rect.center = (int(self.x), int(self.y))
         self._update_facing_for_bump(False)
@@ -1623,13 +1546,6 @@ class Zombie(pygame.sprite.Sprite):
         self.was_in_sight = is_in_sight
         return is_in_sight
 
-    def _apply_wall_contact_damage(self: Self, walls: list[Wall]) -> None:
-        possible_walls = [w for w in walls if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100]
-        for wall in possible_walls:
-            if _circle_wall_collision((self.x, self.y), self.radius, wall):
-                if wall.alive():
-                    wall._take_damage(amount=ZOMBIE_WALL_DAMAGE)
-
     def _handle_wall_collision(self: Self, next_x: float, next_y: float, walls: list[Wall]) -> tuple[float, float]:
         final_x, final_y = next_x, next_y
 
@@ -1816,7 +1732,6 @@ class Zombie(pygame.sprite.Sprite):
             return
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
-        self._apply_wall_contact_damage(walls)
         self._apply_aging()
         dx_player = player_center[0] - self.x
         dy_player = player_center[1] - self.y

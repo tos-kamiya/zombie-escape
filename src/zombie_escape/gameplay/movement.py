@@ -26,6 +26,7 @@ from ..gameplay_constants import (
 )
 from ..models import FallingZombie, GameData
 from ..rng import get_rng
+from ..movement_helpers import pitfall_target
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
 from .constants import MAX_ZOMBIES
 from .spawn import spawn_weighted_zombie, update_falling_zombies
@@ -89,26 +90,6 @@ def _shoes_speed_multiplier(shoes_count: int) -> float:
     return 1.0
 
 
-def _handle_pitfall_detection(
-    x: float,
-    y: float,
-    cell_size: int,
-    pitfall_cells: set[tuple[int, int]],
-    pull_distance: float,
-) -> tuple[int, int] | None:
-    """Check if position is in pitfall and return pulled target coordinates if so."""
-    cx, cy = int(x // cell_size), int(y // cell_size)
-    if (cx, cy) not in pitfall_cells:
-        return None
-
-    cell_center_x = (cx * cell_size) + (cell_size // 2)
-    cell_center_y = (cy * cell_size) + (cell_size // 2)
-    dx, dy = cell_center_x - x, cell_center_y - y
-    dist = math.hypot(dx, dy)
-    if dist > 0:
-        move_factor = min(1.0, pull_distance / dist)
-        return int(x + dx * move_factor), int(y + dy * move_factor)
-    return int(x), int(y)
 
 
 def update_entities(
@@ -331,18 +312,18 @@ def update_entities(
 
         # Check zombie pitfall
         pull_dist = zombie.radius * 0.5
-        pitfall_target = _handle_pitfall_detection(
-            zombie.x,
-            zombie.y,
-            game_data.cell_size,
-            pitfall_cells,
-            pull_dist,
+        pitfall_target_pos = pitfall_target(
+            x=zombie.x,
+            y=zombie.y,
+            cell_size=game_data.cell_size,
+            pitfall_cells=pitfall_cells,
+            pull_distance=pull_dist,
         )
-        if pitfall_target is not None:
+        if pitfall_target_pos is not None:
             zombie.kill()
             fall = FallingZombie(
                 start_pos=(int(zombie.x), int(zombie.y)),
-                target_pos=pitfall_target,
+                target_pos=pitfall_target_pos,
                 started_at_ms=game_data.state.elapsed_play_ms,
                 pre_fx_ms=0,
                 fall_duration_ms=500,
