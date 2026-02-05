@@ -162,8 +162,7 @@
       "fast": "高速ゾ",
       "car_hint": "車ヒント",
       "steel": "鉄筋",
-      "seed": "シード %{value}",
-      "debug": "デバッグ"
+      "seed": "シード %{value}"
     },
     "hud": {
       "need_fuel": "燃料が必要です！",
@@ -184,12 +183,8 @@
       "escape": "建物から脱出する",
       "merge_buddy_single": "相棒と合流する",
       "merge_buddy_multi": "同僚と合流する（合流済: %{count}/%{limit}人）",
-      "pickup_buddy": "相棒を救出する",
-      "board_buddy": "相棒を車に乗せる",
-      "buddy_onboard": "相棒乗車中: %{count}",
       "escape_with_survivors": "生存者を車に乗せて脱出する",
-      "survivors_onboard": "乗車中: %{count}/%{limit}",
-      "survivors_rescued": "避難させた人数: %{count}"
+      "survivors_onboard": "乗車中: %{count}/%{limit}"
     },
     "settings": {
       "title": "設定",
@@ -214,8 +209,7 @@
         "adjust": "左右: 値の設定",
         "toggle": "Space/Enter/South: 値のトグル",
         "reset": "R: デフォルト設定に戻す",
-        "exit": "Esc/BS/Select: セーブして戻る",
-        "fullscreen": "F: フルスクリーン切替"
+        "exit": "Esc/BS/Select: セーブして戻る"
       },
       "config_path": "設定ファイル: %{path}",
       "progress_path": "クリア状況: %{path}"
@@ -227,7 +221,6 @@
     "game_over": {
       "win": "脱出成功！",
       "lose": "ゲームオーバー",
-      "fell_into_abyss": "奈落の底へ落ちてしまった...",
       "prompt": "ESC/Space/Select/South: タイトルへ  R: 再挑戦",
       "scream": "ぎゃあーーー!!",
       "survivors_summary": "救出人数: %{count}",

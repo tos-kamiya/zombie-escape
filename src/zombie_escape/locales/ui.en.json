@@ -162,8 +162,7 @@
       "fast": "FastZ",
       "car_hint": "CarHint",
       "steel": "Steel",
-      "seed": "Seed %{value}",
-      "debug": "Debug"
+      "seed": "Seed %{value}"
     },
     "hud": {
       "need_fuel": "Need fuel to drive!",
@@ -184,12 +183,8 @@
       "escape": "Escape the building",
       "merge_buddy_single": "Meet up with your buddy",
       "merge_buddy_multi": "Meet up with your crew (Joined: %{count}/%{limit})",
-      "pickup_buddy": "Pick up your buddy",
-      "board_buddy": "Get your buddy in the car",
-      "buddy_onboard": "Buddy onboard: %{count}",
       "escape_with_survivors": "Escape with the survivors aboard",
-      "survivors_onboard": "Survivors aboard: %{count}/%{limit}",
-      "survivors_rescued": "Evacuated: %{count}"
+      "survivors_onboard": "Survivors aboard: %{count}/%{limit}"
     },
     "settings": {
       "title": "Settings",
@@ -214,8 +209,7 @@
         "adjust": "Left/Right: set value",
         "toggle": "Space/Enter/South: toggle value",
         "reset": "R: reset to defaults",
-        "exit": "Esc/BS/Select: save and return",
-        "fullscreen": "F: toggle fullscreen"
+        "exit": "Esc/BS/Select: save and return"
       },
       "config_path": "Config: %{path}",
       "progress_path": "Progress: %{path}"
@@ -227,7 +221,6 @@
     "game_over": {
       "win": "YOU ESCAPED!",
       "lose": "GAME OVER",
-      "fell_into_abyss": "You fell into the abyss...",
       "prompt": "ESC/SPACE/Select/South: Title · R: Retry",
       "scream": "AAAAHHH!!",
       "survivors_summary": "Evacuated: %{count}",
