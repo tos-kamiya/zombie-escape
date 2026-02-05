@@ -7,17 +7,23 @@ import pygame
 from ..colors import DAWN_AMBIENT_PALETTE_KEY, WHITE, ambient_palette_key_for_flashlights
 from ..entities_constants import SURVIVOR_MAX_SAFE_PASSENGERS
 from ..localization import translate as tr
-from ..models import GameData, Groups, LevelLayout, ProgressState, Stage
+from ..models import GameData, Groups, LevelLayout, ProgressState, Stage, TimedMessage
 from ..screen_constants import FPS
 from ..entities import Camera
 from .ambient import _set_ambient_palette
 from .constants import INTRO_MESSAGE_DISPLAY_FRAMES
 
 
-def _frames_to_ms(frames: int) -> int:
+def frames_to_ms(frames: int) -> int:
     if frames <= 0:
         return 0
     return max(1, int(round((1000 / max(1, FPS)) * frames)))
+
+
+def ms_to_frames(ms: int) -> int:
+    if ms <= 0:
+        return 0
+    return max(1, int(round((max(1, FPS) / 1000) * ms)))
 
 
 def schedule_timed_message(
@@ -28,20 +34,21 @@ def schedule_timed_message(
     clear_on_input: bool = False,
     color: tuple[int, int, int] | None = None,
     align: str = "center",
+    now_ms: int | None = None,
 ) -> None:
     if not text:
         state.timed_message = None
-        state.timed_message_until = 0
-        state.timed_message_clear_on_input = False
-        state.timed_message_color = None
-        state.timed_message_align = "center"
         return
-    duration_ms = _frames_to_ms(duration_frames)
-    state.timed_message = text
-    state.timed_message_until = state.elapsed_play_ms + duration_ms
-    state.timed_message_clear_on_input = clear_on_input
-    state.timed_message_color = color
-    state.timed_message_align = align
+    duration_ms = frames_to_ms(duration_frames)
+    if now_ms is None:
+        now_ms = state.elapsed_play_ms
+    state.timed_message = TimedMessage(
+        text=text,
+        expires_at_ms=now_ms + duration_ms,
+        clear_on_input=clear_on_input,
+        color=color,
+        align=align,
+    )
 
 
 def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
@@ -57,10 +64,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         game_over=False,
         game_won=False,
         timed_message=None,
-        timed_message_until=0,
-        timed_message_clear_on_input=False,
-        timed_message_color=None,
-        timed_message_align="center",
+        fade_in_started_at_ms=None,
         game_over_at=None,
         scaled_overview=None,
         overview_created=False,
@@ -106,6 +110,9 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             color=WHITE,
             align="left",
         )
+
+    # Start fade-in from black when gameplay begins.
+    game_state.fade_in_started_at_ms = game_state.elapsed_play_ms
 
     # Create sprite groups
     all_sprites = pygame.sprite.LayeredUpdates()

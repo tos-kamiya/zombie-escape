@@ -39,6 +39,7 @@ from ..render_constants import (
     PITFALL_EDGE_STRIPE_SPACING,
     PLAYER_SHADOW_ALPHA_MULT,
     PLAYER_SHADOW_RADIUS_MULT,
+    FADE_IN_DURATION_MS,
 )
 from .hud import (
     _build_objective_lines,
@@ -91,6 +92,23 @@ def show_message(
         screen.blit(text_surface, text_rect)
     except pygame.error as e:
         print(f"Error rendering font or surface: {e}")
+
+
+def _draw_fade_in_overlay(screen: surface.Surface, state: GameData | Any) -> None:
+    started_at = getattr(state, "fade_in_started_at_ms", None)
+    if started_at is None:
+        return
+    elapsed = max(0, int(state.elapsed_play_ms) - int(started_at))
+    if elapsed <= 0:
+        alpha = 255
+    else:
+        alpha = int(255 * max(0.0, 1.0 - (elapsed / FADE_IN_DURATION_MS)))
+    if alpha <= 0:
+        return
+    overlay = pygame.Surface(screen.get_size())
+    overlay.fill((0, 0, 0))
+    overlay.set_alpha(alpha)
+    screen.blit(overlay, (0, 0))
 
 
 def wrap_long_segment(segment: str, font: pygame.font.Font, max_width: int) -> list[str]:
@@ -973,15 +991,6 @@ def draw(
     )
     if objective_lines:
         _draw_objective(objective_lines, screen=screen)
-    _draw_timed_message(
-        screen,
-        assets,
-        message=state.timed_message,
-        message_color=state.timed_message_color,
-        align=state.timed_message_align,
-        elapsed_play_ms=state.elapsed_play_ms,
-        expires_at_ms=state.timed_message_until,
-    )
     _draw_inventory_icons(
         screen,
         assets,
@@ -1003,4 +1012,12 @@ def draw(
         falling_spawn_carry=state.falling_spawn_carry,
         show_fps=state.show_fps,
         fps=fps,
+    )
+
+    _draw_fade_in_overlay(screen, state)
+    _draw_timed_message(
+        screen,
+        assets,
+        message=state.timed_message,
+        elapsed_play_ms=state.elapsed_play_ms,
     )

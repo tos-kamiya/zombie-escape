@@ -80,11 +80,8 @@ class ProgressState:
 
     game_over: bool
     game_won: bool
-    timed_message: str | None
-    timed_message_until: int
-    timed_message_clear_on_input: bool
-    timed_message_color: tuple[int, int, int] | None
-    timed_message_align: str
+    timed_message: "TimedMessage | None"
+    fade_in_started_at_ms: int | None
     game_over_at: int | None
     scaled_overview: surface.Surface | None
     overview_created: bool
@@ -120,6 +117,17 @@ class ProgressState:
     dust_rings: list[DustRing]
     player_wall_target_cell: tuple[int, int] | None
     player_wall_target_ttl: int
+
+
+@dataclass(frozen=True)
+class TimedMessage:
+    """Timed HUD message with styling and behavior."""
+
+    text: str
+    expires_at_ms: int
+    clear_on_input: bool
+    color: tuple[int, int, int] | None
+    align: str
 
 
 @dataclass

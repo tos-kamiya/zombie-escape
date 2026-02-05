@@ -20,7 +20,7 @@ from ..font_utils import load_font
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 from ..localization import get_font_settings
 from ..localization import translate as tr
-from ..models import Stage
+from ..models import Stage, TimedMessage
 from ..render_assets import (
     RenderAssets,
     build_flashlight_surface,
@@ -32,6 +32,9 @@ from ..render_constants import (
     FLASHLIGHT_FOG_SCALE_TWO,
     GAMEPLAY_FONT_SIZE,
     HUD_ICON_SIZE,
+    TIMED_MESSAGE_BAND_ALPHA,
+    TIMED_MESSAGE_LEFT_X,
+    TIMED_MESSAGE_TOP_Y,
 )
 
 _HUD_ICON_CACHE: dict[str, surface.Surface] = {}
@@ -324,32 +327,27 @@ def _draw_timed_message(
     screen: surface.Surface,
     assets: RenderAssets,
     *,
-    message: str | None,
-    message_color: tuple[int, int, int] | None,
-    align: str = "center",
+    message: TimedMessage | None,
     elapsed_play_ms: int,
-    expires_at_ms: int,
 ) -> None:
     if not message:
         return
-    if expires_at_ms <= 0:
+    if message.expires_at_ms <= 0:
         return
-    if elapsed_play_ms > expires_at_ms:
+    if elapsed_play_ms > message.expires_at_ms:
         return
     try:
         font_settings = get_font_settings()
         font_size = font_settings.scaled_size(GAMEPLAY_FONT_SIZE * 2)
         font = load_font(font_settings.resource, font_size)
-        text_color = message_color or LIGHT_GRAY
+        text_color = message.color or LIGHT_GRAY
         line_height = int(round(font.get_linesize() * 1.2))
-        lines = message.splitlines() or [message]
+        lines = message.text.splitlines() or [message.text]
         rendered_lines = [font.render(line, False, text_color) for line in lines]
         max_width = max(surface.get_width() for surface in rendered_lines)
         total_height = line_height * len(rendered_lines)
-        if align == "left":
-            left_x = 20
-            top_y = 48
-            text_rect = pygame.Rect(left_x, top_y, max_width, total_height)
+        if message.align == "left":
+            text_rect = pygame.Rect(TIMED_MESSAGE_LEFT_X, TIMED_MESSAGE_TOP_Y, max_width, total_height)
         else:
             center_x = assets.screen_width // 2
             center_y = assets.screen_height // 2
@@ -359,11 +357,11 @@ def _draw_timed_message(
         padding_y = max(8, int(round(line_height * 0.35)))
         band_rect = text_rect.inflate(padding_x * 2, padding_y * 2)
         band_surface = pygame.Surface(band_rect.size, pygame.SRCALPHA)
-        band_surface.fill((0, 0, 0, 140))
+        band_surface.fill((0, 0, 0, TIMED_MESSAGE_BAND_ALPHA))
         screen.blit(band_surface, band_rect.topleft)
         y = text_rect.top
         for surface in rendered_lines:
-            if align == "left":
+            if message.align == "left":
                 line_rect = surface.get_rect(topleft=(text_rect.left, y))
             else:
                 line_rect = surface.get_rect(centerx=text_rect.centerx, y=y)

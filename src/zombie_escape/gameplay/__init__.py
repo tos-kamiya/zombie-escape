@@ -22,7 +22,7 @@ from .spawn import (
     spawn_waiting_car,
     spawn_weighted_zombie,
 )
-from .state import carbonize_outdoor_zombies, initialize_game_state, update_endurance_timer
+from .state import carbonize_outdoor_zombies, initialize_game_state, schedule_timed_message, update_endurance_timer
 from .survivors import (
     add_survivor_message,
     apply_passenger_speed_penalty,
@@ -72,6 +72,7 @@ __all__ = [
     "get_shrunk_sprite",
     "update_footprints",
     "initialize_game_state",
+    "schedule_timed_message",
     "setup_player_and_cars",
     "spawn_initial_zombies",
     "update_endurance_timer",

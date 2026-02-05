@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING, Any
 import pygame
 from pygame import surface, time
 
-from ..colors import RED, YELLOW
+from ..colors import LIGHT_GRAY, RED, WHITE, YELLOW
+from ..font_utils import load_font
 from ..gameplay_constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
     SURVIVAL_TIME_ACCEL_SUBSTEPS,
@@ -20,6 +21,7 @@ from ..gameplay import (
     initialize_game_state,
     maintain_waiting_car_supply,
     nearest_waiting_car,
+    schedule_timed_message,
     place_flashlights,
     place_fuel_can,
     place_shoes,
@@ -32,6 +34,8 @@ from ..gameplay import (
     update_footprints,
     update_endurance_timer,
 )
+from ..gameplay.state import frames_to_ms, ms_to_frames
+from ..gameplay.constants import INTRO_MESSAGE_DISPLAY_FRAMES
 from ..input_utils import (
     CONTROLLER_BUTTON_DOWN,
     CONTROLLER_DEVICE_ADDED,
@@ -45,9 +49,10 @@ from ..input_utils import (
 )
 from ..gameplay.spawn import _alive_waiting_cars
 from ..world_grid import build_wall_index
-from ..localization import translate as tr
+from ..localization import get_font_settings, translate as tr
 from ..models import Stage
 from ..render import draw, draw_debug_overview, draw_pause_overlay, prewarm_fog_overlays, show_message_wrapped
+from ..render_constants import GAMEPLAY_FONT_SIZE, TIMED_MESSAGE_LEFT_X, TIMED_MESSAGE_TOP_Y
 from ..rng import generate_seed, seed_rng
 from ..progress import record_stage_clear
 from ..screens import ScreenID, ScreenTransition
@@ -87,8 +92,31 @@ def gameplay_screen(
         _set_mouse_hidden(False)
         return transition
 
+    def _show_loading_still() -> None:
+        screen.fill((0, 0, 0))
+        if stage.intro_key:
+            intro_text = tr(stage.intro_key)
+            font_settings = get_font_settings()
+            font_size = font_settings.scaled_size(GAMEPLAY_FONT_SIZE * 2)
+            font = load_font(font_settings.resource, font_size)
+            line_height = int(round(font.get_linesize() * 1.2))
+            x = TIMED_MESSAGE_LEFT_X
+            y = TIMED_MESSAGE_TOP_Y
+            for line in intro_text.splitlines():
+                if not line:
+                    y += line_height
+                    continue
+                surface = font.render(line, False, WHITE)
+                screen.blit(surface, (x, y))
+                y += line_height
+        present(screen)
+        pygame.event.pump()
+
     seed_value = seed if seed is not None else generate_seed()
     applied_seed = seed_rng(seed_value)
+
+    loading_started_ms = pygame.time.get_ticks()
+    _show_loading_still()
 
     game_data = initialize_game_state(config, stage)
     game_data.state.seed = applied_seed
@@ -107,6 +135,18 @@ def gameplay_screen(
         render_assets,
         stage=stage,
     )
+    if stage.intro_key and game_data.state.timed_message:
+        loading_elapsed_ms = max(0, pygame.time.get_ticks() - loading_started_ms)
+        remaining_ms = max(0, frames_to_ms(INTRO_MESSAGE_DISPLAY_FRAMES) - loading_elapsed_ms)
+        schedule_timed_message(
+            game_data.state,
+            tr(stage.intro_key),
+            duration_frames=max(0, ms_to_frames(remaining_ms)),
+            clear_on_input=True,
+            color=LIGHT_GRAY,
+            align="left",
+            now_ms=game_data.state.elapsed_play_ms,
+        )
     paused_manual = False
     paused_focus = False
     ignore_focus_loss_until = 0
@@ -348,14 +388,10 @@ def gameplay_screen(
             )
             if (
                 game_data.state.timed_message
-                and game_data.state.timed_message_clear_on_input
+                and game_data.state.timed_message.clear_on_input
                 and (player_dx or player_dy or car_dx or car_dy)
             ):
                 game_data.state.timed_message = None
-                game_data.state.timed_message_until = 0
-                game_data.state.timed_message_clear_on_input = False
-                game_data.state.timed_message_color = None
-                game_data.state.timed_message_align = "center"
             update_entities(
                 game_data,
                 player_dx,
