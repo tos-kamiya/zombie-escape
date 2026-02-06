@@ -28,7 +28,6 @@ from .render_constants import (
     SURVIVOR_COLOR,
     ZOMBIE_BODY_COLOR,
     ZOMBIE_OUTLINE_COLOR,
-    FogRing,
     RenderAssets,
 )
 
@@ -847,7 +846,6 @@ def build_shoes_surface(width: int, height: int) -> pygame.Surface:
 __all__ = [
     "angle_bin_from_vector",
     "EnvironmentPalette",
-    "FogRing",
     "RenderAssets",
     "build_beveled_polygon",
     "resolve_wall_colors",

@@ -307,27 +307,34 @@ def prewarm_fog_overlays(
         )
 
 
-def _get_hatch_pattern(
-    fog_data: dict[str, Any],
-    thickness: int,
-    *,
-    color: tuple[int, int, int, int] | None = None,
+def _soften_surface(
+    source: surface.Surface,
+    scale: float,
 ) -> surface.Surface:
-    """Return cached dot hatch cell surface (Bayer-ordered, optionally chunky)."""
-    cache = fog_data.setdefault("hatch_patterns", {})
-    key = (thickness, color)
-    if key in cache:
-        return cache[key]
+    """Return a softened copy of a surface using smoothscale down/up."""
+    safe_scale = max(0.5, min(1.0, scale))
+    if safe_scale >= 0.999:
+        return source
+    width, height = source.get_size()
+    softened_size = (max(1, int(width * safe_scale)), max(1, int(height * safe_scale)))
+    softened = pygame.transform.smoothscale(source, softened_size)
+    return pygame.transform.smoothscale(softened, (width, height))
 
-    spacing = 4
-    oversample = 3
-    density = max(1, min(thickness, 16))
-    pattern_size = spacing * 8
-    hi_spacing = spacing * oversample
-    hi_pattern_size = pattern_size * oversample
-    pattern = pygame.Surface((hi_pattern_size, hi_pattern_size), pygame.SRCALPHA)
 
-    # 8x8 Bayer matrix values 0..63 for ordered dithering
+def _build_continuous_hatch_surface(
+    size: tuple[int, int],
+    center: tuple[int, int],
+    base_color: tuple[int, int, int, int],
+    max_radius: float,
+    start_ratio: float,
+    max_density: float,
+    *,
+    spacing: int = 4,
+) -> surface.Surface:
+    width, height = size
+    hatch = pygame.Surface((width, height), pygame.SRCALPHA)
+    hatch.fill((base_color[0], base_color[1], base_color[2], 0))
+
     bayer = [
         [0, 32, 8, 40, 2, 34, 10, 42],
         [48, 16, 56, 24, 50, 18, 58, 26],
@@ -338,24 +345,59 @@ def _get_hatch_pattern(
         [15, 47, 7, 39, 13, 45, 5, 37],
         [63, 31, 55, 23, 61, 29, 53, 21],
     ]
-    threshold = int((density / 16) * 64)
-    dot_radius = max(
-        1,
-        min(hi_spacing, int(math.ceil((density / 16) * hi_spacing))),
-    )
-    dot_color = color or (0, 0, 0, 255)
-    for grid_y in range(8):
-        for grid_x in range(8):
-            if bayer[grid_y][grid_x] < threshold:
-                cx = grid_x * hi_spacing + hi_spacing // 2
-                cy = grid_y * hi_spacing + hi_spacing // 2
-                pygame.draw.circle(pattern, dot_color, (cx, cy), dot_radius)
+    max_density = max(0.0, min(1.0, max_density))
+    start_ratio = max(0.0, min(1.0, start_ratio))
+    start_radius = max(0.0, max_radius * start_ratio)
+    fade_range = max(1.0, max_radius - start_radius)
+    base_alpha = base_color[3]
+    cell_center = (spacing - 1) / 2.0
 
-    if oversample > 1:
-        pattern = pygame.transform.smoothscale(pattern, (pattern_size, pattern_size))
+    alpha_view = None
+    if pg_surfarray is not None:
+        alpha_view = pg_surfarray.pixels_alpha(hatch)
+    else:  # pragma: no cover - numpy-less fallback
+        hatch.lock()
 
-    cache[key] = pattern
-    return pattern
+    cx, cy = center
+    for y in range(height):
+        dy = y - cy
+        for x in range(width):
+            dx = x - cx
+            radius = math.hypot(dx, dy)
+            if radius <= start_radius:
+                density = 0.0
+            else:
+                progress = min(1.0, (radius - start_radius) / fade_range)
+                density = max_density * progress
+            if density <= 0.0:
+                continue
+            density = max(0.0, min(1.0, density))
+            threshold = int(density * 64)
+            if threshold <= 0:
+                continue
+
+            grid_x = (x // spacing) % 8
+            grid_y = (y // spacing) % 8
+            if bayer[grid_y][grid_x] >= threshold:
+                continue
+
+            dot_radius = max(1.0, density * spacing)
+            local_x = (x % spacing) - cell_center
+            local_y = (y % spacing) - cell_center
+            if (local_x * local_x + local_y * local_y) > (dot_radius * dot_radius):
+                continue
+
+            if alpha_view is not None:
+                alpha_view[x, y] = base_alpha
+            else:
+                hatch.set_at((x, y), (base_color[0], base_color[1], base_color[2], base_alpha))
+
+    if alpha_view is not None:
+        del alpha_view
+    else:  # pragma: no cover
+        hatch.unlock()
+
+    return hatch
 
 
 def _get_fog_overlay_surfaces(
@@ -388,24 +430,22 @@ def _get_fog_overlay_surfaces(
     pygame.draw.circle(hard_surface, (0, 0, 0, 0), center, max_radius)
 
     ring_surfaces: list[surface.Surface] = []
-    for ring in assets.fog_rings:
-        ring_surface = pygame.Surface((width, height), pygame.SRCALPHA)
-        pattern = _get_hatch_pattern(
-            fog_data,
-            ring.thickness,
-            color=base_color,
-        )
-        p_w, p_h = pattern.get_size()
-        for y in range(0, height, p_h):
-            for x in range(0, width, p_w):
-                ring_surface.blit(pattern, (x, y))
-        radius = int(assets.fov_radius * ring.radius_factor * ring_scale)
-        pygame.draw.circle(ring_surface, (0, 0, 0, 0), center, radius)
-        ring_surfaces.append(ring_surface)
 
     combined_surface = hard_surface.copy()
-    for ring_surface in ring_surfaces:
-        combined_surface.blit(ring_surface, (0, 0))
+    hatch_surface = _build_continuous_hatch_surface(
+        (width, height),
+        center,
+        base_color,
+        max_radius,
+        assets.fog_hatch_linear_start_ratio,
+        assets.fog_hatch_density_scale,
+    )
+    if assets.fog_hatch_soften_scale < 1.0:
+        hatch_surface = _soften_surface(
+            hatch_surface,
+            assets.fog_hatch_soften_scale,
+        )
+    combined_surface.blit(hatch_surface, (0, 0))
 
     visible_fade_surface = _build_flashlight_fade_surface(
         (width, height), center, max_radius

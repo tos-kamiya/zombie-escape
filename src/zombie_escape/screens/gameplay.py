@@ -72,6 +72,9 @@ if TYPE_CHECKING:
     from ..render import RenderAssets
 
 
+_SHARED_FOG_CACHE: dict[str, Any] | None = None
+
+
 def gameplay_screen(
     screen: surface.Surface,
     clock: time.Clock,
@@ -142,11 +145,16 @@ def gameplay_screen(
             game_data.state.dawn_ready = False
             game_data.state.dawn_prompt_at = None
             game_data.state.dawn_carbonized = False
-    prewarm_fog_overlays(
-        game_data.fog,
-        render_assets,
-        stage=stage,
-    )
+    global _SHARED_FOG_CACHE
+    if _SHARED_FOG_CACHE is None:
+        prewarm_fog_overlays(
+            game_data.fog,
+            render_assets,
+            stage=stage,
+        )
+        _SHARED_FOG_CACHE = game_data.fog
+    else:
+        game_data.fog = _SHARED_FOG_CACHE
     if stage.intro_key and game_data.state.timed_message:
         loading_elapsed_ms = max(0, pygame.time.get_ticks() - loading_started_ms)
         remaining_ms = max(

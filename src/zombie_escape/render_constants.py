@@ -29,12 +29,6 @@ TIMED_MESSAGE_BAND_ALPHA = 80
 
 
 @dataclass(frozen=True)
-class FogRing:
-    radius_factor: float
-    thickness: int
-
-
-@dataclass(frozen=True)
 class RenderAssets:
     screen_width: int
     screen_height: int
@@ -42,13 +36,15 @@ class RenderAssets:
     player_radius: int
     fov_radius: int
     fog_radius_scale: float
-    fog_rings: list[FogRing]
     footprint_radius: int
     footprint_overview_radius: int
     footprint_lifetime_ms: int
     footprint_min_fade: float
     internal_wall_grid_snap: int
     flashlight_hatch_extra_scale: float
+    fog_hatch_soften_scale: float
+    fog_hatch_density_scale: float
+    fog_hatch_linear_start_ratio: float
 
 
 FOG_RADIUS_SCALE = 1.2
@@ -56,6 +52,9 @@ FOG_RADIUS_SCALE = 1.2
 FLASHLIGHT_FOG_SCALE_ONE = FOG_RADIUS_SCALE + 0.3
 FLASHLIGHT_FOG_SCALE_TWO = FOG_RADIUS_SCALE + 0.6
 _FLASHLIGHT_HATCH_EXTRA_SCALE = 0.12
+FOG_HATCH_SOFTEN_SCALE = 0.8
+FOG_HATCH_DENSITY_SCALE = 0.5
+FOG_HATCH_LINEAR_START_RATIO = 0.5
 
 FOOTPRINT_RADIUS = 2
 FOOTPRINT_OVERVIEW_RADIUS = 3
@@ -82,15 +81,6 @@ PITFALL_EDGE_STRIPE_COLOR = (75, 75, 80)
 PITFALL_EDGE_STRIPE_SPACING = 6
 PITFALL_EDGE_DEPTH_OFFSET = 3
 
-FOG_RINGS = [
-    FogRing(radius_factor=0.536, thickness=2),
-    FogRing(radius_factor=0.645, thickness=3),
-    FogRing(radius_factor=0.754, thickness=5),
-    FogRing(radius_factor=0.863, thickness=8),
-    FogRing(radius_factor=0.972, thickness=12),
-]
-
-
 def build_render_assets(cell_size: int) -> RenderAssets:
     return RenderAssets(
         screen_width=SCREEN_WIDTH,
@@ -99,13 +89,15 @@ def build_render_assets(cell_size: int) -> RenderAssets:
         player_radius=PLAYER_RADIUS,
         fov_radius=FOV_RADIUS,
         fog_radius_scale=FOG_RADIUS_SCALE,
-        fog_rings=FOG_RINGS,
         footprint_radius=FOOTPRINT_RADIUS,
         footprint_overview_radius=FOOTPRINT_OVERVIEW_RADIUS,
         footprint_lifetime_ms=FOOTPRINT_LIFETIME_MS,
         footprint_min_fade=FOOTPRINT_MIN_FADE,
         internal_wall_grid_snap=cell_size,
         flashlight_hatch_extra_scale=_FLASHLIGHT_HATCH_EXTRA_SCALE,
+        fog_hatch_soften_scale=FOG_HATCH_SOFTEN_SCALE,
+        fog_hatch_density_scale=FOG_HATCH_DENSITY_SCALE,
+        fog_hatch_linear_start_ratio=FOG_HATCH_LINEAR_START_RATIO,
     )
 
 
@@ -128,11 +120,13 @@ __all__ = [
     "HUMANOID_OUTLINE_COLOR",
     "HUMANOID_OUTLINE_WIDTH",
     "SURVIVOR_COLOR",
-    "FogRing",
     "RenderAssets",
     "FOG_RADIUS_SCALE",
     "FLASHLIGHT_FOG_SCALE_ONE",
     "FLASHLIGHT_FOG_SCALE_TWO",
+    "FOG_HATCH_SOFTEN_SCALE",
+    "FOG_HATCH_DENSITY_SCALE",
+    "FOG_HATCH_LINEAR_START_RATIO",
     "SHADOW_OVERSAMPLE",
     "SHADOW_STEPS",
     "SHADOW_MIN_RATIO",
