@@ -297,7 +297,11 @@ def title_screen(
             def _get_font(size: int) -> pygame.font.Font:
                 return load_font(font_settings.resource, size)
 
-            row_height = 16
+            base_stage_size = font_settings.scaled_size(16)
+            selected_stage_size = font_settings.scaled_size(19)
+            line_height_scale = font_settings.line_height_scale
+            base_row_height = int(round(_get_font(base_stage_size).get_linesize() * line_height_scale)) + 2
+            selected_row_height = int(round(_get_font(selected_stage_size).get_linesize() * line_height_scale)) + 2
             list_column_x = 24
             list_column_width = width // 2 - 36
             info_column_x = width // 2 + 12
@@ -324,10 +328,15 @@ def title_screen(
                 topleft=(list_column_x, section_top),
             )
             stage_rows_start = stage_header_rect.bottom + 6
-            resource_offset = row_height
+            resource_row_height = base_row_height
+            resource_offset = resource_row_height
+            stage_row_heights = [
+                (selected_row_height if idx == selected else base_row_height) for idx in range(stage_count)
+            ]
+            fixed_stage_block_height = base_row_height * 4 + selected_row_height
             action_header_pos = (
                 list_column_x,
-                stage_rows_start + stage_count * row_height + 14 + resource_offset,
+                stage_rows_start + fixed_stage_block_height + 14 + resource_offset,
             )
             action_header_rect = blit_text_scaled_font(
                 screen,
@@ -338,21 +347,23 @@ def title_screen(
             )
             action_rows_start = action_header_rect.bottom + 6
 
-            stage_option_size = font_settings.scaled_size(16)
-            stage_option_font = _get_font(stage_option_size)
+            row_top = stage_rows_start
             for idx, option in enumerate(stage_options):
-                row_top = stage_rows_start + idx * row_height
+                row_height = stage_row_heights[idx]
                 highlight_rect = pygame.Rect(list_column_x, row_top - 2, list_column_width, row_height)
                 cleared = stage_progress.get(option["stage"].id, 0) > 0
                 base_color = WHITE if cleared else _UNCLEARED_STAGE_COLOR
                 color = base_color
-                if idx == selected:
+                is_selected = idx == selected
+                if is_selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
                 label = option["stage"].name
                 if not option.get("available"):
                     locked_suffix = tr("menu.locked_suffix")
                     label = f"{label} {locked_suffix}"
                     color = GRAY
+                stage_option_size = selected_stage_size if is_selected else base_stage_size
+                stage_option_font = _get_font(stage_option_size)
                 text_height = stage_option_font.get_linesize()
                 blit_text_scaled_font(
                     screen,
@@ -364,13 +375,14 @@ def title_screen(
                         row_top + (row_height - text_height) // 2,
                     ),
                 )
+                row_top += row_height
 
             resource_option_size = font_settings.scaled_size(11)
             resource_option_font = _get_font(resource_option_size)
             for idx, option in enumerate(resource_options):
                 option_idx = stage_count + idx
-                row_top = action_rows_start + idx * row_height
-                highlight_rect = pygame.Rect(list_column_x, row_top - 2, list_column_width, row_height)
+                row_top = action_rows_start + idx * resource_row_height
+                highlight_rect = pygame.Rect(list_column_x, row_top - 2, list_column_width, resource_row_height)
                 is_selected = option_idx == selected
                 if is_selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
@@ -390,7 +402,7 @@ def title_screen(
                     color,
                     topleft=(
                         list_column_x + 8,
-                        row_top + (row_height - text_height) // 2,
+                        row_top + (resource_row_height - text_height) // 2,
                     ),
                 )
 
@@ -400,6 +412,19 @@ def title_screen(
                 desc_size = font_settings.scaled_size(11)
                 desc_font = _get_font(desc_size)
                 desc_color = WHITE if current.get("available") else GRAY
+                desc_lines = wrap_text(current["stage"].description, desc_font, info_column_width)
+                desc_line_height = int(round(desc_font.get_linesize() * font_settings.line_height_scale))
+                desc_height = max(1, len(desc_lines)) * desc_line_height
+                desc_panel_padding = 6
+                desc_panel_rect = pygame.Rect(
+                    info_column_x - desc_panel_padding,
+                    desc_area_top - desc_panel_padding,
+                    info_column_width + desc_panel_padding * 2,
+                    desc_height + desc_panel_padding * 2,
+                )
+                desc_panel = pygame.Surface((desc_panel_rect.width, desc_panel_rect.height), pygame.SRCALPHA)
+                desc_panel.fill((0, 0, 0, 140))
+                screen.blit(desc_panel, desc_panel_rect.topleft)
                 blit_wrapped_text(
                     screen,
                     current["stage"].description,

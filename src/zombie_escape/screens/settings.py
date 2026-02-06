@@ -342,7 +342,11 @@ def settings_screen(
             font_settings = get_font_settings()
             highlight_color = (70, 70, 70)
 
-            row_height = 16
+            row_height = (
+                int(round(load_font(font_settings.resource, font_settings.scaled_size(11)).get_linesize()
+                          * font_settings.line_height_scale))
+                + 2
+            )
             start_y = TITLE_SECTION_TOP
 
             segment_width = int(round(30 * 1.5 * 0.8))

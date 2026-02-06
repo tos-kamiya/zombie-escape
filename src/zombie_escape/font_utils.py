@@ -9,8 +9,9 @@ import pygame
 
 _FONT_CACHE: dict[tuple[str | None, int], pygame.font.Font] = {}
 _FONT_META: dict[int, tuple[str | None, int]] = {}
-_TEXT_RENDER_SCALE = 3
-_TEXT_BLUR_OFFSET = 2
+_TEXT_RENDER_SCALE = 7
+_TEXT_BLUR_OFFSET = 1
+_TEXT_BLUR_ALPHA = 122
 
 
 @contextmanager
@@ -59,8 +60,8 @@ def render_text_scaled_font(
     font_high = load_font(resource, high_size)
     high_surface = font_high.render(text, True, color).convert_alpha()
     crisp_surface = font_high.render(text, True, color).convert_alpha()
-    crisp_surface.set_alpha(80)
-    high_surface.blit(crisp_surface, (_TEXT_BLUR_OFFSET, 0))
+    crisp_surface.set_alpha(_TEXT_BLUR_ALPHA)
+    high_surface.blit(crisp_surface, (_TEXT_BLUR_OFFSET, _TEXT_BLUR_OFFSET))
     target_width = max(1, int(round(high_surface.get_width() / _TEXT_RENDER_SCALE)))
     target_height = max(1, int(round(high_surface.get_height() / _TEXT_RENDER_SCALE)))
     return pygame.transform.smoothscale(high_surface, (target_width, target_height))
