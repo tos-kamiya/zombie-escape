@@ -3,8 +3,24 @@ from __future__ import annotations
 import pygame
 from pygame import sprite, surface
 
-from ..colors import BLACK, BLUE, FOOTPRINT_COLOR, YELLOW, WHITE, get_environment_palette
-from ..entities import Car, Flashlight, FuelCan, Player, Shoes, SteelBeam, Survivor, Wall
+from ..colors import (
+    BLACK,
+    BLUE,
+    FOOTPRINT_COLOR,
+    YELLOW,
+    WHITE,
+    get_environment_palette,
+)
+from ..entities import (
+    Car,
+    Flashlight,
+    FuelCan,
+    Player,
+    Shoes,
+    SteelBeam,
+    Survivor,
+    Wall,
+)
 from ..font_utils import load_font, render_text_unscaled
 from ..localization import get_font_settings
 from ..models import Footprint, GameData
@@ -74,7 +90,9 @@ def draw_level_overview(
     base_floor = palette.floor_primary
     dark_floor = tuple(max(0, int(channel * 0.35)) for channel in base_floor)
     floor_color = tuple(max(0, int(channel * 0.65)) for channel in base_floor)
-    fall_floor = tuple(max(0, int(channel * 0.55)) for channel in palette.fall_zone_primary)
+    fall_floor = tuple(
+        max(0, int(channel * 0.55)) for channel in palette.fall_zone_primary
+    )
     surface.fill(dark_floor)
     cell_size = assets.internal_wall_grid_snap
     if cell_size > 0:
@@ -147,7 +165,9 @@ def draw_level_overview(
         for flashlight in flashlights:
             if flashlight.alive():
                 pygame.draw.rect(surface, YELLOW, flashlight.rect, border_radius=2)
-                pygame.draw.rect(surface, BLACK, flashlight.rect, width=2, border_radius=2)
+                pygame.draw.rect(
+                    surface, BLACK, flashlight.rect, width=2, border_radius=2
+                )
     if shoes:
         for item in shoes:
             if item.alive():
@@ -167,7 +187,9 @@ def draw_level_overview(
         buddy_color = (0, 200, 70)
         for buddy in buddies:
             if buddy.alive() and not buddy.rescued:
-                pygame.draw.circle(surface, buddy_color, buddy.rect.center, assets.player_radius * 2)
+                pygame.draw.circle(
+                    surface, buddy_color, buddy.rect.center, assets.player_radius * 2
+                )
     drawn_cars: list[Car] = []
     if car and car.alive():
         car_rect = car.image.get_rect(center=car.rect.center)
@@ -235,7 +257,12 @@ def draw_debug_overview(
                 zombie_radius,
             )
     fov_target = None
-    if game_data.player and game_data.player.in_car and game_data.car and game_data.car.alive():
+    if (
+        game_data.player
+        and game_data.player.in_car
+        and game_data.car
+        and game_data.car.alive()
+    ):
         fov_target = game_data.car
     elif game_data.player:
         fov_target = game_data.player
@@ -268,9 +295,13 @@ def draw_debug_overview(
         scaled_w = int(scaled_h * level_aspect)
     scaled_w = max(1, scaled_w)
     scaled_h = max(1, scaled_h)
-    scaled_overview = pygame.transform.smoothscale(overview_surface, (scaled_w, scaled_h))
+    scaled_overview = pygame.transform.smoothscale(
+        overview_surface, (scaled_w, scaled_h)
+    )
     screen.fill(BLACK)
-    scaled_rect = scaled_overview.get_rect(center=(screen_width // 2, screen_height // 2))
+    scaled_rect = scaled_overview.get_rect(
+        center=(screen_width // 2, screen_height // 2)
+    )
     screen.blit(
         scaled_overview,
         scaled_rect,
@@ -302,7 +333,9 @@ def draw_debug_overview(
     if game_data.flashlights:
         for flashlight in game_data.flashlights:
             if flashlight.alive():
-                _draw_overview_tag(screen, label_font, "L", _scaled_rect(flashlight.rect))
+                _draw_overview_tag(
+                    screen, label_font, "L", _scaled_rect(flashlight.rect)
+                )
     if game_data.shoes:
         for item in game_data.shoes:
             if item.alive():

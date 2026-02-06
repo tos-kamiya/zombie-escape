@@ -43,7 +43,9 @@ def _build_stage18_pitfall_zones(
             pitfall_cells.add((x, y))
 
     # Corridor openings (width 1) through the gap bands.
-    room_centers = [inner_start + (room_size // 2) + idx * step for idx in range(rooms_per_side)]
+    room_centers = [
+        inner_start + (room_size // 2) + idx * step for idx in range(rooms_per_side)
+    ]
     for y in room_centers:
         for x in gap_cols:
             pitfall_cells.discard((x, y))
@@ -268,7 +270,9 @@ STAGES: list[Stage] = [
         grid_rows=30,
         wall_algorithm="grid_wire",
         fall_spawn_zones=[
-            (x, y, 2, 2) for y in range(2, DEFAULT_GRID_ROWS - 2, 4) for x in range(2, DEFAULT_GRID_COLS - 2, 4)
+            (x, y, 2, 2)
+            for y in range(2, DEFAULT_GRID_ROWS - 2, 4)
+            for x in range(2, DEFAULT_GRID_COLS - 2, 4)
         ],
         requires_fuel=True,
         buddy_required_count=1,

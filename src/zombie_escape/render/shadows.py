@@ -273,7 +273,9 @@ def _draw_entity_shadows(
         if getattr(entity, "is_jumping", False):
             jump_dy = JUMP_SHADOW_OFFSET
 
-        shadow_rect = shadow_surface.get_rect(center=(int(cx + offset_x), int(cy + offset_y + jump_dy)))
+        shadow_rect = shadow_surface.get_rect(
+            center=(int(cx + offset_x), int(cy + offset_y + jump_dy))
+        )
         shadow_screen_rect = camera.apply_rect(shadow_rect)
         if not shadow_screen_rect.colliderect(screen_rect):
             continue
@@ -298,7 +300,12 @@ def _draw_single_entity_shadow(
     alpha: int,
     edge_softness: float = ENTITY_SHADOW_EDGE_SOFTNESS,
 ) -> bool:
-    if entity is None or not entity.alive() or light_source_pos is None or shadow_radius <= 0:
+    if (
+        entity is None
+        or not entity.alive()
+        or light_source_pos is None
+        or shadow_radius <= 0
+    ):
         return False
     if outside_cells and cell_size > 0:
         cell = (
@@ -331,7 +338,9 @@ def _draw_single_entity_shadow(
     if getattr(entity, "is_jumping", False):
         jump_dy = JUMP_SHADOW_OFFSET
 
-    shadow_rect = shadow_surface.get_rect(center=(int(cx + offset_x), int(cy + offset_y + jump_dy)))
+    shadow_rect = shadow_surface.get_rect(
+        center=(int(cx + offset_x), int(cy + offset_y + jump_dy))
+    )
     shadow_screen_rect = camera.apply_rect(shadow_rect)
     if not shadow_screen_rect.colliderect(screen_rect):
         return False

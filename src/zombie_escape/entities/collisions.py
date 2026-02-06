@@ -39,7 +39,9 @@ def _walls_for_sprite(
     )
 
 
-def _collide_sprite_wall(sprite: pygame.sprite.Sprite, wall: pygame.sprite.Sprite) -> bool:
+def _collide_sprite_wall(
+    sprite: pygame.sprite.Sprite, wall: pygame.sprite.Sprite
+) -> bool:
     if hasattr(sprite, "radius"):
         center = sprite.rect.center
         radius = float(sprite.radius)
@@ -64,7 +66,9 @@ def _spritecollide_walls(
     if wall_index is None:
         return cast(
             list[Wall],
-            pygame.sprite.spritecollide(sprite, walls, dokill, collided=_collide_sprite_wall),
+            pygame.sprite.spritecollide(
+                sprite, walls, dokill, collided=_collide_sprite_wall
+            ),
         )
     if cell_size is None:
         raise ValueError("cell_size is required when using wall_index")
@@ -96,7 +100,9 @@ def spritecollideany_walls(
     if wall_index is None:
         return cast(
             Wall | None,
-            pygame.sprite.spritecollideany(sprite, walls, collided=_collide_sprite_wall),
+            pygame.sprite.spritecollideany(
+                sprite, walls, collided=_collide_sprite_wall
+            ),
         )
     if cell_size is None:
         raise ValueError("cell_size is required when using wall_index")

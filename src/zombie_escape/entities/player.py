@@ -28,7 +28,11 @@ from ..render_constants import ANGLE_BINS
 from ..world_grid import WallIndex
 from .collisions import _spritecollide_walls
 from .movement import _can_humanoid_jump, _get_jump_scale
-from .movement_helpers import move_axis_with_pitfall, set_facing_bin, update_directional_image_scale
+from .movement_helpers import (
+    move_axis_with_pitfall,
+    set_facing_bin,
+    update_directional_image_scale,
+)
 from .walls import Wall, _is_inner_wall
 
 
@@ -82,7 +86,9 @@ class Player(pygame.sprite.Sprite):
                 self.is_jumping = False
                 self._update_image_scale(1.0)
             else:
-                self._update_image_scale(_get_jump_scale(elapsed, self.jump_duration, JUMP_SCALE_MAX))
+                self._update_image_scale(
+                    _get_jump_scale(elapsed, self.jump_duration, JUMP_SCALE_MAX)
+                )
 
         # Pre-calculate jump possibility based on actual movement vector
         can_jump_now = (
@@ -90,7 +96,9 @@ class Player(pygame.sprite.Sprite):
             and pitfall_cells
             and cell_size
             and walkable_cells
-            and _can_humanoid_jump(self.x, self.y, dx, dy, PLAYER_JUMP_RANGE, cell_size, walkable_cells)
+            and _can_humanoid_jump(
+                self.x, self.y, dx, dy, PLAYER_JUMP_RANGE, cell_size, walkable_cells
+            )
         )
 
         inner_wall_hit = False

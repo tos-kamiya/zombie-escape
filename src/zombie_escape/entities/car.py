@@ -107,7 +107,10 @@ class Car(pygame.sprite.Sprite):
             possible_walls = list(walls)
         else:
             possible_walls = [
-                w for w in walls if abs(w.rect.centery - self.y) < 100 and abs(w.rect.centerx - new_x) < 100
+                w
+                for w in walls
+                if abs(w.rect.centery - self.y) < 100
+                and abs(w.rect.centerx - new_x) < 100
             ]
         car_center = (new_x, new_y)
         for wall in possible_walls:
@@ -123,7 +126,11 @@ class Car(pygame.sprite.Sprite):
         if hit_walls or in_pitfall:
             if hit_walls:
                 self._take_damage(CAR_WALL_DAMAGE)
-                hit_walls.sort(key=lambda w: (w.rect.centery - self.y) ** 2 + (w.rect.centerx - self.x) ** 2)
+                hit_walls.sort(
+                    key=lambda w: (
+                        (w.rect.centery - self.y) ** 2 + (w.rect.centerx - self.x) ** 2
+                    )
+                )
                 nearest_wall = hit_walls[0]
                 new_x += (self.x - nearest_wall.rect.centerx) * 1.2
                 new_y += (self.y - nearest_wall.rect.centery) * 1.2

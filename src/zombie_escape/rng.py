@@ -99,7 +99,9 @@ class _DeterministicRNG:
 
     def _twist(self) -> None:
         for i in range(self._N):
-            x = (self._state[i] & self._UPPER_MASK) + (self._state[(i + 1) % self._N] & self._LOWER_MASK)
+            x = (self._state[i] & self._UPPER_MASK) + (
+                self._state[(i + 1) % self._N] & self._LOWER_MASK
+            )
             xA = x >> 1
             if x & 1:
                 xA ^= self._MATRIX_A

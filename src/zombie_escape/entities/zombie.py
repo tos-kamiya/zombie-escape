@@ -111,13 +111,19 @@ class Zombie(pygame.sprite.Sprite):
         self.wall_hug_last_side_has_wall = False
         self.wall_hug_stuck_flag = False
         self.wander_angle = RNG.uniform(0, math.tau)
-        self.wander_interval_ms = ZOMBIE_TRACKER_WANDER_INTERVAL_MS if tracker else ZOMBIE_WANDER_INTERVAL_MS
+        self.wander_interval_ms = (
+            ZOMBIE_TRACKER_WANDER_INTERVAL_MS if tracker else ZOMBIE_WANDER_INTERVAL_MS
+        )
         self.last_wander_change_time = pygame.time.get_ticks()
-        self.wander_change_interval = max(0, self.wander_interval_ms + RNG.randint(-500, 500))
+        self.wander_change_interval = max(
+            0, self.wander_interval_ms + RNG.randint(-500, 500)
+        )
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
 
-    def _update_mode(self: Self, player_center: tuple[int, int], sight_range: float) -> bool:
+    def _update_mode(
+        self: Self, player_center: tuple[int, int], sight_range: float
+    ) -> bool:
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
         dist_to_player_sq = dx_target * dx_target + dy_target * dy_target
@@ -125,10 +131,16 @@ class Zombie(pygame.sprite.Sprite):
         self.was_in_sight = is_in_sight
         return is_in_sight
 
-    def _handle_wall_collision(self: Self, next_x: float, next_y: float, walls: list[Wall]) -> tuple[float, float]:
+    def _handle_wall_collision(
+        self: Self, next_x: float, next_y: float, walls: list[Wall]
+    ) -> tuple[float, float]:
         final_x, final_y = next_x, next_y
 
-        possible_walls = [w for w in walls if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100]
+        possible_walls = [
+            w
+            for w in walls
+            if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100
+        ]
 
         for wall in possible_walls:
             collides = _circle_wall_collision((next_x, self.y), self.radius, wall)
@@ -168,7 +180,10 @@ class Zombie(pygame.sprite.Sprite):
                 continue
             dx = other.x - next_x
             dy = other.y - next_y
-            if abs(dx) > ZOMBIE_SEPARATION_DISTANCE or abs(dy) > ZOMBIE_SEPARATION_DISTANCE:
+            if (
+                abs(dx) > ZOMBIE_SEPARATION_DISTANCE
+                or abs(dy) > ZOMBIE_SEPARATION_DISTANCE
+            ):
                 continue
             dist_sq = dx * dx + dy * dy
             if dist_sq < closest_dist_sq:
@@ -240,7 +255,9 @@ class Zombie(pygame.sprite.Sprite):
     def _apply_render_overlays(self: Self) -> None:
         base_surface = self.directional_images[self.facing_bin]
         needs_overlay = self.tracker or (
-            self.wall_hugging and self.wall_hug_side != 0 and self.wall_hug_last_side_has_wall
+            self.wall_hugging
+            and self.wall_hug_side != 0
+            and self.wall_hug_last_side_has_wall
         )
         if not needs_overlay:
             self.image = base_surface
@@ -254,7 +271,11 @@ class Zombie(pygame.sprite.Sprite):
                 angle_rad=angle_rad,
                 color=ZOMBIE_NOSE_COLOR,
             )
-        if self.wall_hugging and self.wall_hug_side != 0 and self.wall_hug_last_side_has_wall:
+        if (
+            self.wall_hugging
+            and self.wall_hug_side != 0
+            and self.wall_hug_last_side_has_wall
+        ):
             side_sign = 1.0 if self.wall_hug_side > 0 else -1.0
             hand_angle = angle_rad + side_sign * (math.pi / 2.0)
             draw_humanoid_hand(
@@ -340,7 +361,11 @@ class Zombie(pygame.sprite.Sprite):
         self._apply_render_overlays()
         self.last_move_dx = move_x
         self.last_move_dy = move_y
-        possible_walls = [w for w in walls if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100]
+        possible_walls = [
+            w
+            for w in walls
+            if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100
+        ]
         final_x = self.x
         final_y = self.y
         if move_x:

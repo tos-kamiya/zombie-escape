@@ -63,7 +63,10 @@ def is_confirm_event(event: pygame.event.Event) -> bool:
 
 def is_start_event(event: pygame.event.Event) -> bool:
     if CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN:
-        return CONTROLLER_BUTTON_START is not None and event.button == CONTROLLER_BUTTON_START
+        return (
+            CONTROLLER_BUTTON_START is not None
+            and event.button == CONTROLLER_BUTTON_START
+        )
     if event.type == pygame.JOYBUTTONDOWN:
         return event.button == JOY_BUTTON_START
     return False
@@ -71,7 +74,10 @@ def is_start_event(event: pygame.event.Event) -> bool:
 
 def is_select_event(event: pygame.event.Event) -> bool:
     if CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN:
-        return CONTROLLER_BUTTON_BACK is not None and event.button == CONTROLLER_BUTTON_BACK
+        return (
+            CONTROLLER_BUTTON_BACK is not None
+            and event.button == CONTROLLER_BUTTON_BACK
+        )
     if event.type == pygame.JOYBUTTONDOWN:
         return event.button == JOY_BUTTON_BACK
     return False
@@ -94,13 +100,21 @@ def read_gamepad_move(
             x = 0.0
         if abs(y) < deadzone:
             y = 0.0
-        if CONTROLLER_BUTTON_DPAD_LEFT is not None and controller.get_button(CONTROLLER_BUTTON_DPAD_LEFT):
+        if CONTROLLER_BUTTON_DPAD_LEFT is not None and controller.get_button(
+            CONTROLLER_BUTTON_DPAD_LEFT
+        ):
             x = -1.0
-        elif CONTROLLER_BUTTON_DPAD_RIGHT is not None and controller.get_button(CONTROLLER_BUTTON_DPAD_RIGHT):
+        elif CONTROLLER_BUTTON_DPAD_RIGHT is not None and controller.get_button(
+            CONTROLLER_BUTTON_DPAD_RIGHT
+        ):
             x = 1.0
-        if CONTROLLER_BUTTON_DPAD_UP is not None and controller.get_button(CONTROLLER_BUTTON_DPAD_UP):
+        if CONTROLLER_BUTTON_DPAD_UP is not None and controller.get_button(
+            CONTROLLER_BUTTON_DPAD_UP
+        ):
             y = -1.0
-        elif CONTROLLER_BUTTON_DPAD_DOWN is not None and controller.get_button(CONTROLLER_BUTTON_DPAD_DOWN):
+        elif CONTROLLER_BUTTON_DPAD_DOWN is not None and controller.get_button(
+            CONTROLLER_BUTTON_DPAD_DOWN
+        ):
             y = 1.0
         return x, y
 
@@ -129,7 +143,9 @@ def is_accel_active(
     if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
         return True
     if controller and controller.get_init():
-        if CONTROLLER_BUTTON_RB is not None and controller.get_button(CONTROLLER_BUTTON_RB):
+        if CONTROLLER_BUTTON_RB is not None and controller.get_button(
+            CONTROLLER_BUTTON_RB
+        ):
             return True
         if CONTROLLER_AXIS_TRIGGERRIGHT is not None:
             if controller.get_axis(CONTROLLER_AXIS_TRIGGERRIGHT) > DEADZONE:

@@ -16,14 +16,21 @@ from ..entities_constants import (
     SURVIVOR_RADIUS,
     ZOMBIE_RADIUS,
 )
-from .constants import SURVIVOR_MESSAGE_DURATION_MS, SURVIVOR_SPEED_PENALTY_PER_PASSENGER
+from .constants import (
+    SURVIVOR_MESSAGE_DURATION_MS,
+    SURVIVOR_SPEED_PENALTY_PER_PASSENGER,
+)
 from ..localization import translate_dict, translate_list
 from ..models import GameData, ProgressState
 from ..rng import get_rng
 from ..entities import Survivor, Zombie, spritecollideany_walls
 from ..world_grid import WallIndex
 from .spawn import _create_zombie
-from .utils import find_nearby_offscreen_spawn_position, is_entity_in_fov, rect_visible_on_screen
+from .utils import (
+    find_nearby_offscreen_spawn_position,
+    is_entity_in_fov,
+    rect_visible_on_screen,
+)
 
 RNG = get_rng()
 
@@ -57,7 +64,9 @@ def update_survivors(
         )
 
     # Gently prevent survivors from overlapping the player or each other
-    def _separate_from_point(survivor: Survivor, point: tuple[float, float], min_dist: float) -> None:
+    def _separate_from_point(
+        survivor: Survivor, point: tuple[float, float], min_dist: float
+    ) -> None:
         dx = point[0] - survivor.x
         dy = point[1] - survivor.y
         dist = math.hypot(dx, dy)
@@ -122,7 +131,9 @@ def update_survivors(
             survivor.y = float(cy)
             survivor.rect.center = (int(survivor.x), int(survivor.y))
 
-    survivors_with_x = sorted(((survivor.x, survivor) for survivor in survivors), key=lambda item: item[0])
+    survivors_with_x = sorted(
+        ((survivor.x, survivor) for survivor in survivors), key=lambda item: item[0]
+    )
     for i, (base_x, survivor) in enumerate(survivors_with_x):
         for other_base_x, other in survivors_with_x[i + 1 :]:
             if other_base_x - base_x > survivor_overlap:
@@ -149,7 +160,9 @@ def update_survivors(
         _resolve_wall_overlap(survivor)
 
 
-def calculate_car_speed_for_passengers(passengers: int, *, capacity: int = SURVIVOR_MAX_SAFE_PASSENGERS) -> float:
+def calculate_car_speed_for_passengers(
+    passengers: int, *, capacity: int = SURVIVOR_MAX_SAFE_PASSENGERS
+) -> float:
     cap = max(1, capacity)
     load_ratio = max(0.0, passengers / cap)
     penalty = SURVIVOR_SPEED_PENALTY_PER_PASSENGER * load_ratio
@@ -230,7 +243,9 @@ def random_survivor_conversion_line(stage_id: str) -> str:
 
 def cleanup_survivor_messages(state: ProgressState) -> None:
     now = pygame.time.get_ticks()
-    state.survivor_messages = [msg for msg in state.survivor_messages if msg.get("expires_at", 0) > now]
+    state.survivor_messages = [
+        msg for msg in state.survivor_messages if msg.get("expires_at", 0) > now
+    ]
 
 
 def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> None:
@@ -266,7 +281,9 @@ def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> Non
     apply_passenger_speed_penalty(game_data)
 
 
-def handle_survivor_zombie_collisions(game_data: GameData, config: dict[str, Any]) -> None:
+def handle_survivor_zombie_collisions(
+    game_data: GameData, config: dict[str, Any]
+) -> None:
     if not game_data.stage.rescue_stage:
         return
     survivor_group = game_data.groups.survivor_group

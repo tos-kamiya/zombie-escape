@@ -38,7 +38,9 @@ def update_directional_image_scale(sprite: pygame.sprite.Sprite, scale: float) -
         sprite.image = base_img
     else:
         w, h = base_img.get_size()
-        sprite.image = pygame.transform.scale(base_img, (int(w * scale), int(h * scale)))
+        sprite.image = pygame.transform.scale(
+            base_img, (int(w * scale), int(h * scale))
+        )
     old_center = sprite.rect.center
     sprite.rect = sprite.image.get_rect(center=old_center)
 

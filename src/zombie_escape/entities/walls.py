@@ -10,7 +10,11 @@ try:
 except ImportError:  # pragma: no cover - Python 3.10 fallback
     from typing_extensions import Self
 
-from ..entities_constants import INTERNAL_WALL_BEVEL_DEPTH, INTERNAL_WALL_HEALTH, STEEL_BEAM_HEALTH
+from ..entities_constants import (
+    INTERNAL_WALL_BEVEL_DEPTH,
+    INTERNAL_WALL_HEALTH,
+    STEEL_BEAM_HEALTH,
+)
 from ..render_assets import (
     EnvironmentPalette,
     build_beveled_polygon,
@@ -22,7 +26,11 @@ from ..render_assets import (
     rubble_offset_for_size,
     RUBBLE_ROTATION_DEG,
 )
-from .movement import _circle_polygon_collision, _circle_rect_collision, _rect_polygon_collision
+from .movement import (
+    _circle_polygon_collision,
+    _circle_rect_collision,
+    _rect_polygon_collision,
+)
 
 
 class Wall(pygame.sprite.Sprite):
@@ -57,7 +65,9 @@ class Wall(pygame.sprite.Sprite):
         self.draw_bottom_side = draw_bottom_side
         self.bottom_side_ratio = max(0.0, bottom_side_ratio)
         self.side_shade_ratio = max(0.0, min(1.0, side_shade_ratio))
-        self._local_polygon = _build_beveled_polygon(safe_width, safe_height, self.bevel_depth, self.bevel_mask)
+        self._local_polygon = _build_beveled_polygon(
+            safe_width, safe_height, self.bevel_depth, self.bevel_mask
+        )
         self._update_color()
         self.rect = self.image.get_rect(topleft=(x, y))
         # Keep collision rectangular even when beveled visually.
@@ -101,14 +111,18 @@ class Wall(pygame.sprite.Sprite):
             return self.rect.colliderect(rect_obj)
         return _rect_polygon_collision(rect_obj, self._collision_polygon)
 
-    def _collides_circle(self: Self, center: tuple[float, float], radius: float) -> bool:
+    def _collides_circle(
+        self: Self, center: tuple[float, float], radius: float
+    ) -> bool:
         if not _circle_rect_collision(center, radius, self.rect):
             return False
         if self._collision_polygon is None:
             return True
         return _circle_polygon_collision(center, radius, self._collision_polygon)
 
-    def set_palette(self: Self, palette: EnvironmentPalette | None, *, force: bool = False) -> None:
+    def set_palette(
+        self: Self, palette: EnvironmentPalette | None, *, force: bool = False
+    ) -> None:
         """Update the wall's palette to match the current ambient palette."""
 
         if not force and self.palette is palette:
@@ -133,9 +147,15 @@ class RubbleWall(Wall):
         rubble_offset_px: int | None = None,
         on_destroy: Callable[[Self], None] | None = None,
     ) -> None:
-        self._rubble_rotation_deg = RUBBLE_ROTATION_DEG if rubble_rotation_deg is None else rubble_rotation_deg
+        self._rubble_rotation_deg = (
+            RUBBLE_ROTATION_DEG if rubble_rotation_deg is None else rubble_rotation_deg
+        )
         base_size = max(1, min(width, height))
-        self._rubble_offset_px = rubble_offset_for_size(base_size) if rubble_offset_px is None else rubble_offset_px
+        self._rubble_offset_px = (
+            rubble_offset_for_size(base_size)
+            if rubble_offset_px is None
+            else rubble_offset_px
+        )
         super().__init__(
             x,
             y,
@@ -208,7 +228,9 @@ class SteelBeam(pygame.sprite.Sprite):
         if self.health <= 0:
             return
         health_ratio = max(0.0, self.health / self.max_health)
-        base_color, line_color = resolve_steel_beam_colors(health_ratio=health_ratio, palette=self.palette)
+        base_color, line_color = resolve_steel_beam_colors(
+            health_ratio=health_ratio, palette=self.palette
+        )
         paint_steel_beam_surface(
             self.image,
             base_color=base_color,

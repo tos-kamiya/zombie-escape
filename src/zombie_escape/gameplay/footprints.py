@@ -48,10 +48,16 @@ def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
         last_pos = state.last_footprint_pos
         step_distance = FOOTPRINT_STEP_DISTANCE * 0.5
         step_distance_sq = step_distance * step_distance
-        dist_sq = (player.x - last_pos[0]) ** 2 + (player.y - last_pos[1]) ** 2 if last_pos else None
+        dist_sq = (
+            (player.x - last_pos[0]) ** 2 + (player.y - last_pos[1]) ** 2
+            if last_pos
+            else None
+        )
         if last_pos is None or (dist_sq is not None and dist_sq >= step_distance_sq):
             pos = (int(player.x), int(player.y))
-            footprints.append(Footprint(pos=pos, time=now, visible=state.footprint_visible_toggle))
+            footprints.append(
+                Footprint(pos=pos, time=now, visible=state.footprint_visible_toggle)
+            )
             state.footprint_visible_toggle = not state.footprint_visible_toggle
             state.last_footprint_pos = pos
 

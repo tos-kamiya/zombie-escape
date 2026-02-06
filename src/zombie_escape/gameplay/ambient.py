@@ -20,7 +20,9 @@ def _set_ambient_palette(game_data: GameData, key: str, *, force: bool = False) 
     _apply_palette_to_walls(game_data, palette, force=True)
 
 
-def sync_ambient_palette_with_flashlights(game_data: GameData, *, force: bool = False) -> None:
+def sync_ambient_palette_with_flashlights(
+    game_data: GameData, *, force: bool = False
+) -> None:
     """Sync the ambient palette with the player's flashlight inventory."""
 
     state = game_data.state

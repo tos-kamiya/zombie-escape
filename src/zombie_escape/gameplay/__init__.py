@@ -22,7 +22,12 @@ from .spawn import (
     spawn_waiting_car,
     spawn_weighted_zombie,
 )
-from .state import carbonize_outdoor_zombies, initialize_game_state, schedule_timed_message, update_endurance_timer
+from .state import (
+    carbonize_outdoor_zombies,
+    initialize_game_state,
+    schedule_timed_message,
+    update_endurance_timer,
+)
 from .survivors import (
     add_survivor_message,
     apply_passenger_speed_penalty,

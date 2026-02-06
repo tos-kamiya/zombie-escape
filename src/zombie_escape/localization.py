@@ -118,7 +118,9 @@ def translate_list(key: str) -> list[Any]:
 
 def get_font_settings(*, name: str = "primary") -> _FontSettings:
     _get_language_options()  # ensure locale data is loaded
-    locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(_DEFAULT_LANGUAGE, {})
+    locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(
+        _DEFAULT_LANGUAGE, {}
+    )
     fonts = locale_data.get("fonts", {}) if isinstance(locale_data, dict) else {}
     data = fonts.get(name, {}) if isinstance(fonts, dict) else {}
     resource = data.get("resource") or DEFAULT_FONT_RESOURCE
@@ -132,7 +134,9 @@ def get_font_settings(*, name: str = "primary") -> _FontSettings:
         line_height_scale = float(line_height_raw)
     except (TypeError, ValueError):
         line_height_scale = 1.0
-    return _FontSettings(resource=resource, scale=scale, line_height_scale=line_height_scale)
+    return _FontSettings(
+        resource=resource, scale=scale, line_height_scale=line_height_scale
+    )
 
 
 def _qualify_key(key: str) -> str:
@@ -140,7 +144,9 @@ def _qualify_key(key: str) -> str:
 
 
 def _lookup_locale_value(key: str) -> Any:
-    locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(_DEFAULT_LANGUAGE, {})
+    locale_data = _LOCALE_DATA.get(_CURRENT_LANGUAGE) or _LOCALE_DATA.get(
+        _DEFAULT_LANGUAGE, {}
+    )
     if not isinstance(locale_data, dict):
         return None
     qualified = _qualify_key(key)
@@ -186,7 +192,11 @@ def _get_language_options() -> tuple[_LanguageOption, ...]:
             data = {}
         locale_data = data.get(code, {}) if isinstance(data, dict) else {}
         _LOCALE_DATA[code] = locale_data if isinstance(locale_data, dict) else {}
-        lang_name = locale_data.get("meta", {}).get("language_name") if isinstance(locale_data, dict) else None
+        lang_name = (
+            locale_data.get("meta", {}).get("language_name")
+            if isinstance(locale_data, dict)
+            else None
+        )
         options.append(_LanguageOption(code=code, name=lang_name or code))
 
     if not options:

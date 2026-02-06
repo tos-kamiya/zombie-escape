@@ -427,6 +427,7 @@ def settings_screen(
 
         present(screen)
         clock.tick(fps)
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:

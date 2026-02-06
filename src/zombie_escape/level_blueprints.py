@@ -94,7 +94,16 @@ def validate_humanoid_connectivity(grid: list[str]) -> bool:
     queue = deque([start_pos])
     while queue:
         x, y = queue.popleft()
-        for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)):
+        for dx, dy in (
+            (0, 1),
+            (0, -1),
+            (1, 0),
+            (-1, 0),
+            (1, 1),
+            (1, -1),
+            (-1, 1),
+            (-1, -1),
+        ):
             nx, ny = x + dx, y + dy
             if (nx, ny) in passable_cells and (nx, ny) not in reachable:
                 reachable.add((nx, ny))
@@ -370,7 +379,12 @@ def _place_walls_sparse_ortho(
                 continue
             if RNG.random() >= density:
                 continue
-            if grid[y - 1][x] == "1" or grid[y + 1][x] == "1" or grid[y][x - 1] == "1" or grid[y][x + 1] == "1":
+            if (
+                grid[y - 1][x] == "1"
+                or grid[y + 1][x] == "1"
+                or grid[y][x - 1] == "1"
+                or grid[y][x + 1] == "1"
+            ):
                 continue
             grid[y][x] = "1"
 
@@ -512,7 +526,9 @@ def _generate_random_blueprint(
         print("WARNING: 'sparse' is deprecated. Use 'sparse_moore' instead.")
         wall_algo = "sparse_moore"
     elif wall_algo.startswith("sparse."):
-        print("WARNING: 'sparse.<int>%' is deprecated. Use 'sparse_moore.<int>%' instead.")
+        print(
+            "WARNING: 'sparse.<int>%' is deprecated. Use 'sparse_moore.<int>%' instead."
+        )
         suffix = wall_algo[len("sparse.") :]
         wall_algo = "sparse_moore"
         if suffix.endswith("%") and suffix[:-1].isdigit():
@@ -532,7 +548,9 @@ def _generate_random_blueprint(
             )
     if wall_algo.startswith("default.") or wall_algo.startswith("grid_wire."):
         base, suffix = wall_algo.split(".", 1)
-        base_line_count = DEFAULT_WALL_LINES if base == "default" else DEFAULT_GRID_WIRE_WALL_LINES
+        base_line_count = (
+            DEFAULT_WALL_LINES if base == "default" else DEFAULT_GRID_WIRE_WALL_LINES
+        )
         if suffix.endswith("%") and suffix[:-1].isdigit():
             percent = int(suffix[:-1])
             if 0 <= percent <= 200:
@@ -573,7 +591,9 @@ def _generate_random_blueprint(
             wall_algo = base
 
     if wall_algo not in WALL_ALGORITHMS:
-        print(f"WARNING: Unknown wall algorithm '{wall_algo}'. Falling back to 'default'.")
+        print(
+            f"WARNING: Unknown wall algorithm '{wall_algo}'. Falling back to 'default'."
+        )
         wall_algo = "default"
 
     # Place pitfalls BEFORE walls so walls avoid them (consistent with spawn reservation)
@@ -592,7 +612,9 @@ def _generate_random_blueprint(
     else:
         algo_func(grid, forbidden_cells=reserved_cells)
 
-    steel_beams = _place_steel_beams(grid, chance=steel_chance, forbidden_cells=reserved_cells)
+    steel_beams = _place_steel_beams(
+        grid, chance=steel_chance, forbidden_cells=reserved_cells
+    )
 
     blueprint_rows = ["".join(row) for row in grid]
     return Blueprint(grid=blueprint_rows, steel_cells=steel_beams)

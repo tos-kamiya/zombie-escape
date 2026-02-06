@@ -55,7 +55,9 @@ def _get_jump_scale(elapsed_ms: int, duration_ms: int, scale_max: float) -> floa
     return 1.0 + scale_max * (4 * t * (1 - t))
 
 
-def _circle_rect_collision(center: tuple[float, float], radius: float, rect_obj: rect.Rect) -> bool:
+def _circle_rect_collision(
+    center: tuple[float, float], radius: float, rect_obj: rect.Rect
+) -> bool:
     """Return True if a circle overlaps the provided rectangle."""
     closest_x = max(rect_obj.left, min(center[0], rect_obj.right))
     closest_y = max(rect_obj.top, min(center[1], rect_obj.bottom))
@@ -64,7 +66,9 @@ def _circle_rect_collision(center: tuple[float, float], radius: float, rect_obj:
     return dx * dx + dy * dy <= radius * radius
 
 
-def _point_in_polygon(point: tuple[float, float], polygon: Sequence[tuple[float, float]]) -> bool:
+def _point_in_polygon(
+    point: tuple[float, float], polygon: Sequence[tuple[float, float]]
+) -> bool:
     x, y = point
     inside = False
     j = len(polygon) - 1
@@ -82,11 +86,17 @@ def _segments_intersect(
     b1: tuple[float, float],
     b2: tuple[float, float],
 ) -> bool:
-    def orient(p: tuple[float, float], q: tuple[float, float], r: tuple[float, float]) -> float:
+    def orient(
+        p: tuple[float, float], q: tuple[float, float], r: tuple[float, float]
+    ) -> float:
         return (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
 
-    def on_segment(p: tuple[float, float], q: tuple[float, float], r: tuple[float, float]) -> bool:
-        return min(p[0], r[0]) <= q[0] <= max(p[0], r[0]) and min(p[1], r[1]) <= q[1] <= max(p[1], r[1])
+    def on_segment(
+        p: tuple[float, float], q: tuple[float, float], r: tuple[float, float]
+    ) -> bool:
+        return min(p[0], r[0]) <= q[0] <= max(p[0], r[0]) and min(p[1], r[1]) <= q[
+            1
+        ] <= max(p[1], r[1])
 
     o1 = orient(a1, a2, b1)
     o2 = orient(a1, a2, b2)
@@ -125,12 +135,16 @@ def _point_segment_distance_sq(
     return (px - nearest_x) ** 2 + (py - nearest_y) ** 2
 
 
-def _rect_polygon_collision(rect_obj: rect.Rect, polygon: Sequence[tuple[float, float]]) -> bool:
+def _rect_polygon_collision(
+    rect_obj: rect.Rect, polygon: Sequence[tuple[float, float]]
+) -> bool:
     min_x = min(p[0] for p in polygon)
     max_x = max(p[0] for p in polygon)
     min_y = min(p[1] for p in polygon)
     max_y = max(p[1] for p in polygon)
-    if not rect_obj.colliderect(pygame.Rect(min_x, min_y, max_x - min_x, max_y - min_y)):
+    if not rect_obj.colliderect(
+        pygame.Rect(min_x, min_y, max_x - min_x, max_y - min_y)
+    ):
         return False
 
     rect_points = [
@@ -150,7 +164,9 @@ def _rect_polygon_collision(rect_obj: rect.Rect, polygon: Sequence[tuple[float, 
         (rect_points[2], rect_points[3]),
         (rect_points[3], rect_points[0]),
     ]
-    poly_edges = [(polygon[i], polygon[(i + 1) % len(polygon)]) for i in range(len(polygon))]
+    poly_edges = [
+        (polygon[i], polygon[(i + 1) % len(polygon)]) for i in range(len(polygon))
+    ]
     for edge_a in rect_edges:
         for edge_b in poly_edges:
             if _segments_intersect(edge_a[0], edge_a[1], edge_b[0], edge_b[1]):
@@ -224,7 +240,9 @@ def _zombie_tracker_movement(
             last_target_time = zombie.tracker_target_time
             if last_target_time is None:
                 last_target_time = pygame.time.get_ticks()
-            zombie.tracker_relock_after_time = last_target_time + ZOMBIE_TRACKER_RELOCK_DELAY_MS
+            zombie.tracker_relock_after_time = (
+                last_target_time + ZOMBIE_TRACKER_RELOCK_DELAY_MS
+            )
             zombie.tracker_target_pos = None
             return _zombie_wander_movement(
                 zombie,
@@ -258,7 +276,8 @@ def _zombie_wall_hug_wall_distance(
     candidates = [
         wall
         for wall in walls
-        if abs(wall.rect.centerx - zombie.x) < max_search and abs(wall.rect.centery - zombie.y) < max_search
+        if abs(wall.rect.centerx - zombie.x) < max_search
+        and abs(wall.rect.centery - zombie.y) < max_search
     ]
     if not candidates:
         return max_distance
@@ -266,7 +285,10 @@ def _zombie_wall_hug_wall_distance(
     while distance <= max_distance:
         check_x = zombie.x + direction_x * distance
         check_y = zombie.y + direction_y * distance
-        if any(_circle_wall_collision((check_x, check_y), zombie.radius, wall) for wall in candidates):
+        if any(
+            _circle_wall_collision((check_x, check_y), zombie.radius, wall)
+            for wall in candidates
+        ):
             return distance
         distance += step
     return max_distance
@@ -290,9 +312,15 @@ def _zombie_wall_hug_movement(
         probe_offset = math.radians(ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG)
         left_angle = forward_angle + probe_offset
         right_angle = forward_angle - probe_offset
-        left_dist = _zombie_wall_hug_wall_distance(zombie, walls, left_angle, sensor_distance)
-        right_dist = _zombie_wall_hug_wall_distance(zombie, walls, right_angle, sensor_distance)
-        forward_dist = _zombie_wall_hug_wall_distance(zombie, walls, forward_angle, sensor_distance)
+        left_dist = _zombie_wall_hug_wall_distance(
+            zombie, walls, left_angle, sensor_distance
+        )
+        right_dist = _zombie_wall_hug_wall_distance(
+            zombie, walls, right_angle, sensor_distance
+        )
+        forward_dist = _zombie_wall_hug_wall_distance(
+            zombie, walls, forward_angle, sensor_distance
+        )
         left_wall = left_dist < sensor_distance
         right_wall = right_dist < sensor_distance
         forward_wall = forward_dist < sensor_distance
@@ -320,8 +348,12 @@ def _zombie_wall_hug_movement(
     sensor_distance = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius
     probe_offset = math.radians(ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG)
     side_angle = zombie.wall_hug_angle + zombie.wall_hug_side * probe_offset
-    side_dist = _zombie_wall_hug_wall_distance(zombie, walls, side_angle, sensor_distance)
-    forward_dist = _zombie_wall_hug_wall_distance(zombie, walls, zombie.wall_hug_angle, sensor_distance)
+    side_dist = _zombie_wall_hug_wall_distance(
+        zombie, walls, side_angle, sensor_distance
+    )
+    forward_dist = _zombie_wall_hug_wall_distance(
+        zombie, walls, zombie.wall_hug_angle, sensor_distance
+    )
     side_has_wall = side_dist < sensor_distance
     forward_has_wall = forward_dist < sensor_distance
     now = pygame.time.get_ticks()
@@ -410,9 +442,12 @@ def _zombie_update_tracker_target(
         return
     latest_fp_time = far_candidates[-1][1].time
     use_far_scan = last_target_time is None or (
-        latest_fp_time is not None and latest_fp_time - last_target_time >= ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS
+        latest_fp_time is not None
+        and latest_fp_time - last_target_time >= ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS
     )
-    scan_radius = ZOMBIE_TRACKER_FAR_SCENT_RADIUS if use_far_scan else ZOMBIE_TRACKER_SCENT_RADIUS
+    scan_radius = (
+        ZOMBIE_TRACKER_FAR_SCENT_RADIUS if use_far_scan else ZOMBIE_TRACKER_SCENT_RADIUS
+    )
     scent_radius_sq = scan_radius * scan_radius
     min_target_dist_sq = (FOOTPRINT_STEP_DISTANCE * 0.5) ** 2
 
@@ -455,7 +490,8 @@ def _zombie_update_tracker_target(
 
     if (
         zombie.tracker_target_pos is not None
-        and (zombie.x - zombie.tracker_target_pos[0]) ** 2 + (zombie.y - zombie.tracker_target_pos[1]) ** 2
+        and (zombie.x - zombie.tracker_target_pos[0]) ** 2
+        + (zombie.y - zombie.tracker_target_pos[1]) ** 2
         > min_target_dist_sq
     ):
         return
@@ -528,9 +564,13 @@ def _zombie_wander_movement(
                 nearby_walls = [
                     wall
                     for wall in walls
-                    if abs(wall.rect.centerx - next_x) < 120 and abs(wall.rect.centery - next_y) < 120
+                    if abs(wall.rect.centerx - next_x) < 120
+                    and abs(wall.rect.centery - next_y) < 120
                 ]
-                return not any(_circle_wall_collision((next_x, next_y), zombie.radius, wall) for wall in nearby_walls)
+                return not any(
+                    _circle_wall_collision((next_x, next_y), zombie.radius, wall)
+                    for wall in nearby_walls
+                )
 
             if at_x_edge:
                 inward_dx = zombie.speed if cell_x == 0 else -zombie.speed
@@ -566,7 +606,9 @@ def _zombie_wander_movement(
     return move_x, move_y
 
 
-def _zombie_move_toward(zombie: "Zombie", target: tuple[float, float]) -> tuple[float, float]:
+def _zombie_move_toward(
+    zombie: "Zombie", target: tuple[float, float]
+) -> tuple[float, float]:
     dx = target[0] - zombie.x
     dy = target[1] - zombie.y
     dist = math.hypot(dx, dy)

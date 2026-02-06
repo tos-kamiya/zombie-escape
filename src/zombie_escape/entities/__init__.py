@@ -67,10 +67,14 @@ class Camera:
                 clamped_y = self.camera.y
             else:
                 clamped_y = clamped_y - copysign(deadzone, dy)
-        self.camera = pygame.Rect(int(clamped_x), int(clamped_y), self.width, self.height)
+        self.camera = pygame.Rect(
+            int(clamped_x), int(clamped_y), self.width, self.height
+        )
 
 
-def random_position_outside_building(level_width: int, level_height: int) -> tuple[int, int]:
+def random_position_outside_building(
+    level_width: int, level_height: int
+) -> tuple[int, int]:
     side = RNG.choice(["top", "bottom", "left", "right"])
     margin = 0
     if side == "top":

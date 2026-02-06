@@ -21,7 +21,12 @@ def test_wall_hug_turns_away_when_too_close() -> None:
     zombie.wall_hug_angle = 0.0
     wall = Wall(105, 105, 8, 8)
     layout = LevelLayout(
-        field_rect=pygame.Rect(0, 0, DEFAULT_GRID_COLS * DEFAULT_CELL_SIZE, DEFAULT_GRID_ROWS * DEFAULT_CELL_SIZE),
+        field_rect=pygame.Rect(
+            0,
+            0,
+            DEFAULT_GRID_COLS * DEFAULT_CELL_SIZE,
+            DEFAULT_GRID_ROWS * DEFAULT_CELL_SIZE,
+        ),
         grid_cols=DEFAULT_GRID_COLS,
         grid_rows=DEFAULT_GRID_ROWS,
         outside_cells=set(),

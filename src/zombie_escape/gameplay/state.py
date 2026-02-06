@@ -4,7 +4,11 @@ from typing import Any
 
 import pygame
 
-from ..colors import DAWN_AMBIENT_PALETTE_KEY, WHITE, ambient_palette_key_for_flashlights
+from ..colors import (
+    DAWN_AMBIENT_PALETTE_KEY,
+    WHITE,
+    ambient_palette_key_for_flashlights,
+)
 from ..entities_constants import SURVIVOR_MAX_SAFE_PASSENGERS
 from ..localization import translate as tr
 from ..models import GameData, Groups, LevelLayout, ProgressState, Stage, TimedMessage

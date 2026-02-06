@@ -40,7 +40,6 @@ from ..render_constants import (
 _HUD_ICON_CACHE: dict[str, surface.Surface] = {}
 
 
-
 def _scale_icon_to_box(icon: surface.Surface, size: int) -> surface.Surface:
     target_size = max(1, size)
     width = max(1, icon.get_width())
@@ -140,14 +139,18 @@ def _draw_status_bar(
 
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
+        font = load_font(
+            font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
+        )
         text_surface = render_text_unscaled(font, status_text, color)
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)
         if seed is not None:
             seed_text = tr("status.seed", value=str(seed))
             seed_surface = render_text_unscaled(font, seed_text, LIGHT_GRAY)
-            seed_rect = seed_surface.get_rect(right=bar_rect.right - 12, centery=bar_rect.centery)
+            seed_rect = seed_surface.get_rect(
+                right=bar_rect.right - 12, centery=bar_rect.centery
+            )
             screen.blit(seed_surface, seed_rect)
         if show_fps and fps is not None:
             fps_text = f"FPS:{fps:.1f}"
@@ -161,7 +164,9 @@ def _draw_status_bar(
 def _draw_objective(lines: list[str], *, screen: surface.Surface) -> None:
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
+        font = load_font(
+            font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
+        )
         y = 8
         for line in lines:
             text_surface = render_text_unscaled(font, line, YELLOW)
@@ -241,7 +246,9 @@ def _draw_endurance_timer(
             progress_width,
             bar_rect.height,
         )
-        fill_surface = pygame.Surface((progress_width, bar_rect.height), pygame.SRCALPHA)
+        fill_surface = pygame.Surface(
+            (progress_width, bar_rect.height), pygame.SRCALPHA
+        )
         fill_surface.fill(fill_color)
         screen.blit(fill_surface, fill_rect.topleft)
     display_ms = int(remaining_ms * SURVIVAL_FAKE_CLOCK_RATIO)
@@ -252,14 +259,18 @@ def _draw_endurance_timer(
     timer_text = tr("hud.endurance_timer_label", time=display_label)
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
+        font = load_font(
+            font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
+        )
         text_surface = render_text_unscaled(font, timer_text, LIGHT_GRAY)
         text_rect = text_surface.get_rect(left=bar_rect.left, bottom=text_bottom)
         screen.blit(text_surface, text_rect)
         if state.time_accel_active:
             accel_text = tr("hud.time_accel")
             accel_surface = render_text_unscaled(font, accel_text, YELLOW)
-            accel_rect = accel_surface.get_rect(right=bar_rect.right, bottom=text_bottom)
+            accel_rect = accel_surface.get_rect(
+                right=bar_rect.right, bottom=text_bottom
+            )
             screen.blit(accel_surface, accel_rect)
         else:
             hint_text = tr("hud.time_accel_hint")
@@ -281,7 +292,9 @@ def _draw_time_accel_indicator(
         return
     try:
         font_settings = get_font_settings()
-        font = load_font(font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE))
+        font = load_font(
+            font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
+        )
         if state.time_accel_active:
             text = tr("hud.time_accel")
             color = YELLOW
@@ -317,7 +330,9 @@ def _draw_survivor_messages(
             if not text:
                 continue
             msg_surface = render_text_unscaled(font, text, ORANGE)
-            msg_rect = msg_surface.get_rect(center=(assets.screen_width // 2, base_y + idx * line_height))
+            msg_rect = msg_surface.get_rect(
+                center=(assets.screen_width // 2, base_y + idx * line_height)
+            )
             screen.blit(msg_surface, msg_rect)
     except pygame.error as e:
         print(f"Error rendering survivor message: {e}")
@@ -343,11 +358,15 @@ def _draw_timed_message(
         text_color = message.color or LIGHT_GRAY
         line_height = int(round(font.get_linesize() * font_settings.line_height_scale))
         lines = message.text.splitlines() or [message.text]
-        rendered_lines = [render_text_unscaled(font, line, text_color) for line in lines]
+        rendered_lines = [
+            render_text_unscaled(font, line, text_color) for line in lines
+        ]
         max_width = max(surface.get_width() for surface in rendered_lines)
         total_height = line_height * len(rendered_lines)
         if message.align == "left":
-            text_rect = pygame.Rect(TIMED_MESSAGE_LEFT_X, TIMED_MESSAGE_TOP_Y, max_width, total_height)
+            text_rect = pygame.Rect(
+                TIMED_MESSAGE_LEFT_X, TIMED_MESSAGE_TOP_Y, max_width, total_height
+            )
         else:
             center_x = assets.screen_width // 2
             center_y = assets.screen_height // 2
@@ -395,7 +414,11 @@ def _build_objective_lines(
                     objective_lines.append(tr("objectives.merge_buddy_single"))
                 else:
                     objective_lines.append(
-                        tr("objectives.merge_buddy_multi", count=buddy_merged_count, limit=buddy_required)
+                        tr(
+                            "objectives.merge_buddy_multi",
+                            count=buddy_merged_count,
+                            limit=buddy_required,
+                        )
                     )
         return objective_lines
 
@@ -406,7 +429,11 @@ def _build_objective_lines(
                 objective_lines.append(tr("objectives.merge_buddy_single"))
             else:
                 objective_lines.append(
-                    tr("objectives.merge_buddy_multi", count=buddy_merged_count, limit=buddy_required)
+                    tr(
+                        "objectives.merge_buddy_multi",
+                        count=buddy_merged_count,
+                        limit=buddy_required,
+                    )
                 )
         if not stage.endurance_stage:
             if not active_car:
@@ -433,7 +460,9 @@ def _build_objective_lines(
 
     if stage and stage.rescue_stage and (survivors_onboard is not None):
         limit = state.survivor_capacity
-        objective_lines.append(tr("objectives.survivors_onboard", count=survivors_onboard, limit=limit))
+        objective_lines.append(
+            tr("objectives.survivors_onboard", count=survivors_onboard, limit=limit)
+        )
     return objective_lines
 
 
@@ -473,7 +502,11 @@ def _draw_hint_arrow(
         return
     dir_x = dx / dist
     dir_y = dy / dist
-    ring_radius = ring_radius if ring_radius is not None else assets.fov_radius * 0.5 * assets.fog_radius_scale
+    ring_radius = (
+        ring_radius
+        if ring_radius is not None
+        else assets.fov_radius * 0.5 * assets.fog_radius_scale
+    )
     center_x = player_screen[0] + dir_x * ring_radius
     center_y = player_screen[1] + dir_y * ring_radius
     arrow_len = 6

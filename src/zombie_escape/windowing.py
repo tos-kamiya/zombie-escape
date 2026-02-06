@@ -54,7 +54,10 @@ def present(logical_surface: surface.Surface) -> None:
         target_size = window.get_size()
         if logical_size == target_size:
             scaled_surface = logical_surface
-        elif logical_size[0] * 2 == target_size[0] and logical_size[1] * 2 == target_size[1]:
+        elif (
+            logical_size[0] * 2 == target_size[0]
+            and logical_size[1] * 2 == target_size[1]
+        ):
             scaled_surface = pygame.transform.scale2x(logical_surface)
         else:
             scaled_surface = pygame.transform.scale(logical_surface, target_size)
@@ -72,14 +75,18 @@ def present(logical_surface: surface.Surface) -> None:
         if (scaled_width, scaled_height) == logical_size:
             scaled_surface = logical_surface
         else:
-            scaled_surface = pygame.transform.scale(logical_surface, (scaled_width, scaled_height))
+            scaled_surface = pygame.transform.scale(
+                logical_surface, (scaled_width, scaled_height)
+            )
         offset_x = (window_size[0] - scaled_width) // 2
         offset_y = (window_size[1] - scaled_height) // 2
         window.blit(scaled_surface, (offset_x, offset_y))
     pygame.display.flip()
 
 
-def apply_window_scale(scale: float, *, game_data: "GameData | None" = None) -> surface.Surface:
+def apply_window_scale(
+    scale: float, *, game_data: "GameData | None" = None
+) -> surface.Surface:
     """Resize the OS window; logical render surface stays constant."""
     global current_window_scale, current_maximized, last_window_scale
 
@@ -114,18 +121,24 @@ def prime_scaled_logical_size(size: tuple[int, int]) -> None:
     _scaled_logical_size = target
 
 
-def nudge_window_scale(multiplier: float, *, game_data: "GameData | None" = None) -> surface.Surface:
+def nudge_window_scale(
+    multiplier: float, *, game_data: "GameData | None" = None
+) -> surface.Surface:
     """Scale the window relative to the current zoom level."""
     delta = 1.0 if multiplier >= 1.0 else -1.0
     target_scale = current_window_scale + delta
     return apply_window_scale(target_scale, game_data=game_data)
 
 
-def nudge_menu_window_scale(multiplier: float, *, game_data: "GameData | None" = None) -> surface.Surface:
+def nudge_menu_window_scale(
+    multiplier: float, *, game_data: "GameData | None" = None
+) -> surface.Surface:
     """Scale the window and update menu logical size consistently."""
     delta = 1.0 if multiplier >= 1.0 else -1.0
     target_scale = current_window_scale + delta
-    set_scaled_logical_size((SCREEN_WIDTH, SCREEN_HEIGHT), preserve_window_size=False, game_data=game_data)
+    set_scaled_logical_size(
+        (SCREEN_WIDTH, SCREEN_HEIGHT), preserve_window_size=False, game_data=game_data
+    )
     return apply_window_scale(target_scale, game_data=game_data)
 
 
@@ -166,7 +179,9 @@ def toggle_fullscreen(*, game_data: "GameData | None" = None) -> surface.Surface
             if display_index is None:
                 window = pygame.display.set_mode(render_size, flags)
             else:
-                window = pygame.display.set_mode(render_size, flags, display=display_index)
+                window = pygame.display.set_mode(
+                    render_size, flags, display=display_index
+                )
         window_width, window_height = _fetch_window_size(window)
         _update_window_caption()
         _update_window_size((window_width, window_height), source="toggle_fullscreen")
@@ -176,7 +191,9 @@ def toggle_fullscreen(*, game_data: "GameData | None" = None) -> surface.Surface
     return window
 
 
-def sync_window_size(event: pygame.event.Event, *, game_data: "GameData | None" = None) -> None:
+def sync_window_size(
+    event: pygame.event.Event, *, game_data: "GameData | None" = None
+) -> None:
     """Synchronize tracked window size with SDL window events."""
     global current_window_scale, last_window_scale
     size = getattr(event, "size", None)
@@ -368,7 +385,9 @@ def _infer_display_index_from_position(window: object, sdl2: object) -> int | No
     return None
 
 
-def _window_center_from_position(window: object, position: tuple[int, int]) -> tuple[int, int]:
+def _window_center_from_position(
+    window: object, position: tuple[int, int]
+) -> tuple[int, int]:
     x, y = position
     try:
         width, height = window.size  # type: ignore[attr-defined]
@@ -380,7 +399,9 @@ def _window_center_from_position(window: object, position: tuple[int, int]) -> t
 def _get_display_count(sdl2: object) -> int | None:
     candidate = getattr(sdl2, "get_num_video_displays", None)
     if candidate is None:
-        candidate = getattr(getattr(sdl2, "video", None), "get_num_video_displays", None)
+        candidate = getattr(
+            getattr(sdl2, "video", None), "get_num_video_displays", None
+        )
     if candidate is None:
         return None
     try:
@@ -389,7 +410,9 @@ def _get_display_count(sdl2: object) -> int | None:
         return None
 
 
-def _get_display_bounds(sdl2: object, display_index: int) -> tuple[int, int, int, int] | None:
+def _get_display_bounds(
+    sdl2: object, display_index: int
+) -> tuple[int, int, int, int] | None:
     candidate = getattr(sdl2, "get_display_bounds", None)
     if candidate is None:
         candidate = getattr(getattr(sdl2, "video", None), "get_display_bounds", None)
@@ -443,7 +466,11 @@ def _set_sdl2_fullscreen(enable: bool, display_index: int | None) -> bool:
         pass
 
     if enable:
-        for attr_name in ("WINDOW_FULLSCREEN_DESKTOP", "FULLSCREEN_DESKTOP", "WINDOW_FULLSCREEN"):
+        for attr_name in (
+            "WINDOW_FULLSCREEN_DESKTOP",
+            "FULLSCREEN_DESKTOP",
+            "WINDOW_FULLSCREEN",
+        ):
             mode = getattr(sdl2, attr_name, None)
             if mode is None:
                 continue
