@@ -30,7 +30,7 @@
       "hints": {
         "navigate": "Up/Down: choose an option",
         "page_switch": "Left/Right: switch stage groups",
-        "confirm": "Enter/Space/South: activate selection"
+        "confirm": "Enter/Space/South:\n  activate selection"
       },
       "option_help": {
         "settings": "Open Settings to adjust assists and localization.",

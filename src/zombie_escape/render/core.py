@@ -20,7 +20,7 @@ from ..entities import (
     Player,
 )
 from ..entities_constants import INTERNAL_WALL_BEVEL_DEPTH, ZOMBIE_RADIUS
-from ..font_utils import load_font, render_text_scaled
+from ..font_utils import load_font, render_text_unscaled
 from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
 from ..localization import get_font_settings
 from ..localization import translate as tr
@@ -67,19 +67,12 @@ def show_message(
     size: int,
     color: tuple[int, int, int],
     position: tuple[int, int],
-    *,
-    scale_factor: int = 1,
 ) -> None:
     try:
         font_settings = get_font_settings()
         scaled_size = font_settings.scaled_size(size)
-        text_surface = render_text_scaled(
-            font_settings.resource,
-            scaled_size,
-            text,
-            color,
-            scale_factor=scale_factor,
-        )
+        font = load_font(font_settings.resource, scaled_size)
+        text_surface = render_text_unscaled(font, text, color)
         text_rect = text_surface.get_rect(center=position)
 
         # Add a semi-transparent background rectangle for better visibility
@@ -165,9 +158,6 @@ def blit_wrapped_text(
     topleft: tuple[int, int],
     max_width: int,
     *,
-    resource: str | None = None,
-    size: int | None = None,
-    scale_factor: int = 1,
     line_height_scale: float = 1.0,
 ) -> None:
     """Render text with simple wrapping constrained to max_width."""
@@ -178,16 +168,7 @@ def blit_wrapped_text(
         if not line:
             y += line_height
             continue
-        if resource is not None and size is not None:
-            rendered = render_text_scaled(
-                resource,
-                size,
-                line,
-                color,
-                scale_factor=scale_factor,
-            )
-        else:
-            rendered = font.render(line, False, color)
+        rendered = render_text_unscaled(font, line, color)
         target.blit(rendered, (x, y))
         y += line_height
 
@@ -208,7 +189,7 @@ def show_message_wrapped(
         lines = wrap_text(text, font, max_width)
         if not lines:
             return
-        rendered = [font.render(line, False, color) for line in lines]
+        rendered = [render_text_unscaled(font, line, color) for line in lines]
         max_line_width = max(surface.get_width() for surface in rendered)
         line_height = font.get_linesize()
         total_height = line_height * len(rendered) + line_spacing * (len(rendered) - 1)

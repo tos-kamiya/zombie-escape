@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib.resources import Anchor
 import webbrowser
 from typing import Any, Sequence
 
@@ -7,7 +8,7 @@ import pygame
 from pygame import surface, time
 
 from ..colors import BLACK, GRAY, LIGHT_GRAY, WHITE
-from ..font_utils import blit_text_scaled, load_font
+from ..font_utils import blit_text_scaled_font, load_font
 from ..localization import get_font_settings, get_language
 from ..localization import translate as tr
 from ..models import Stage
@@ -29,7 +30,6 @@ from ..input_utils import (
 from ..screens import (
     ScreenID,
     ScreenTransition,
-    TITLE_FONT_SCALE,
     TITLE_HEADER_Y,
     TITLE_SECTION_TOP,
 )
@@ -99,7 +99,7 @@ def title_screen(
     ]
     page_size = 5
     stage_pages = [stage_options_all[i : i + page_size] for i in range(0, len(stage_options_all), page_size)]
-    action_options: list[dict[str, Any]] = [
+    resource_options: list[dict[str, Any]] = [
         {"type": "settings"},
         {"type": "readme"},
         {"type": "quit"},
@@ -127,7 +127,7 @@ def title_screen(
     def _build_options(page_index: int) -> tuple[list[dict], list[dict]]:
         page_index = max(0, min(page_index, len(stage_pages) - 1))
         stage_options = stage_pages[page_index] if stage_pages else []
-        options = list(stage_options) + action_options
+        options = list(stage_options) + resource_options
         return options, stage_options
 
     options, stage_options = _build_options(current_page)
@@ -292,25 +292,10 @@ def title_screen(
 
         screen.fill(BLACK)
         title_text = tr("game.title")
-        show_message(
-            screen,
-            title_text,
-            32 * TITLE_FONT_SCALE,
-            LIGHT_GRAY,
-            (width // 2, TITLE_HEADER_Y),
-            scale_factor=TITLE_FONT_SCALE,
-        )
-
         try:
             font_settings = get_font_settings()
-            title_size = font_settings.scaled_size(32 * TITLE_FONT_SCALE)
-            option_size = font_settings.scaled_size(12 * TITLE_FONT_SCALE)
-            desc_size = font_settings.scaled_size(11 * TITLE_FONT_SCALE)
-            section_size = font_settings.scaled_size(12 * TITLE_FONT_SCALE)
-            hint_size = font_settings.scaled_size(11 * TITLE_FONT_SCALE)
-            option_font = load_font(font_settings.resource, option_size)
-            desc_font = load_font(font_settings.resource, desc_size)
-            hint_font = load_font(font_settings.resource, hint_size)
+            def _get_font(size: int) -> pygame.font.Font:
+                return load_font(font_settings.resource, size)
 
             row_height = 16
             list_column_x = 24
@@ -329,13 +314,13 @@ def title_screen(
                 left_arrow = "<- " if current_page > 0 else ""
                 right_arrow = " ->" if current_page < len(stage_pages) - 1 and _page_available(current_page + 1) else ""
                 stage_header_text = f"{left_arrow}{stage_header_text}{right_arrow}"
-            stage_header_rect = blit_text_scaled(
+            section_size = font_settings.scaled_size(11)
+            section_font = _get_font(section_size)
+            stage_header_rect = blit_text_scaled_font(
                 screen,
-                font_settings.resource,
-                section_size,
+                section_font,
                 stage_header_text,
                 LIGHT_GRAY,
-                scale_factor=TITLE_FONT_SCALE,
                 topleft=(list_column_x, section_top),
             )
             stage_rows_start = stage_header_rect.bottom + 6
@@ -344,17 +329,17 @@ def title_screen(
                 list_column_x,
                 stage_rows_start + stage_count * row_height + 14 + resource_offset,
             )
-            action_header_rect = blit_text_scaled(
+            action_header_rect = blit_text_scaled_font(
                 screen,
-                font_settings.resource,
-                section_size,
+                section_font,
                 tr("menu.sections.resources"),
                 LIGHT_GRAY,
-                scale_factor=TITLE_FONT_SCALE,
                 topleft=action_header_pos,
             )
             action_rows_start = action_header_rect.bottom + 6
 
+            stage_option_size = font_settings.scaled_size(16)
+            stage_option_font = _get_font(stage_option_size)
             for idx, option in enumerate(stage_options):
                 row_top = stage_rows_start + idx * row_height
                 highlight_rect = pygame.Rect(list_column_x, row_top - 2, list_column_width, row_height)
@@ -368,21 +353,21 @@ def title_screen(
                     locked_suffix = tr("menu.locked_suffix")
                     label = f"{label} {locked_suffix}"
                     color = GRAY
-                text_height = option_font.get_linesize()
-                blit_text_scaled(
+                text_height = stage_option_font.get_linesize()
+                blit_text_scaled_font(
                     screen,
-                    font_settings.resource,
-                    option_size,
+                    stage_option_font,
                     label,
                     color,
-                    scale_factor=TITLE_FONT_SCALE,
                     topleft=(
                         list_column_x + 8,
                         row_top + (row_height - text_height) // 2,
                     ),
                 )
 
-            for idx, option in enumerate(action_options):
+            resource_option_size = font_settings.scaled_size(11)
+            resource_option_font = _get_font(resource_option_size)
+            for idx, option in enumerate(resource_options):
                 option_idx = stage_count + idx
                 row_top = action_rows_start + idx * row_height
                 highlight_rect = pygame.Rect(list_column_x, row_top - 2, list_column_width, row_height)
@@ -397,14 +382,12 @@ def title_screen(
                 else:
                     label = tr("menu.quit")
                 color = WHITE
-                text_height = option_font.get_linesize()
-                blit_text_scaled(
+                text_height = resource_option_font.get_linesize()
+                blit_text_scaled_font(
                     screen,
-                    font_settings.resource,
-                    option_size,
+                    resource_option_font,
                     label,
                     color,
-                    scale_factor=TITLE_FONT_SCALE,
                     topleft=(
                         list_column_x + 8,
                         row_top + (row_height - text_height) // 2,
@@ -414,6 +397,8 @@ def title_screen(
             current = options[selected]
             desc_area_top = section_top
             if current["type"] == "stage":
+                desc_size = font_settings.scaled_size(11)
+                desc_font = _get_font(desc_size)
                 desc_color = WHITE if current.get("available") else GRAY
                 blit_wrapped_text(
                     screen,
@@ -422,9 +407,6 @@ def title_screen(
                     desc_color,
                     (info_column_x, desc_area_top),
                     info_column_width,
-                    resource=font_settings.resource,
-                    size=desc_size,
-                    scale_factor=TITLE_FONT_SCALE,
                     line_height_scale=font_settings.line_height_scale,
                 )
 
@@ -439,6 +421,8 @@ def title_screen(
                 help_text = tr(help_key)
 
             if help_text:
+                desc_size = font_settings.scaled_size(11)
+                desc_font = _get_font(desc_size)
                 blit_wrapped_text(
                     screen,
                     help_text,
@@ -446,41 +430,36 @@ def title_screen(
                     WHITE,
                     (info_column_x, option_help_top),
                     info_column_width,
-                    resource=font_settings.resource,
-                    size=desc_size,
-                    scale_factor=TITLE_FONT_SCALE,
                     line_height_scale=font_settings.line_height_scale,
                 )
 
             hint_lines = [tr("menu.hints.navigate")]
             if len(stage_pages) > 1 and _page_available(1):
                 hint_lines.append(tr("menu.hints.page_switch"))
-            hint_lines.append(tr("menu.hints.confirm"))
+            hint_lines.extend(tr("menu.hints.confirm").splitlines())
+            hint_size = font_settings.scaled_size(11)
+            hint_font = _get_font(hint_size)
             hint_line_height = int(round(hint_font.get_linesize() * font_settings.line_height_scale))
             # hint_block_height = len(hint_lines) * hint_line_height
             hint_start_y = action_header_pos[1]
             hint_step = hint_line_height
             for offset, line in enumerate(hint_lines):
-                blit_text_scaled(
+                blit_text_scaled_font(
                     screen,
-                    font_settings.resource,
-                    hint_size,
+                    hint_font,
                     line,
                     WHITE,
-                    scale_factor=TITLE_FONT_SCALE,
                     topleft=(info_column_x, hint_start_y + offset * hint_step),
                 )
 
             seed_value_display = current_seed_text if current_seed_text else tr("menu.seed_empty")
             seed_label = tr("menu.seed_label", value=seed_value_display)
             seed_offset_y = hint_step
-            seed_rect = blit_text_scaled(
+            seed_rect = blit_text_scaled_font(
                 screen,
-                font_settings.resource,
-                hint_size,
+                hint_font,
                 seed_label,
                 LIGHT_GRAY,
-                scale_factor=TITLE_FONT_SCALE,
                 bottomleft=(info_column_x, height - 30 + seed_offset_y),
             )
 
@@ -495,29 +474,23 @@ def title_screen(
                 LIGHT_GRAY,
                 (info_column_x, seed_hint_top),
                 info_column_width,
-                resource=font_settings.resource,
-                size=hint_size,
-                scale_factor=TITLE_FONT_SCALE,
                 line_height_scale=font_settings.line_height_scale,
             )
 
-            title_rect = blit_text_scaled(
+            title_font = _get_font(font_settings.scaled_size(32))
+            title_rect = blit_text_scaled_font(
                 screen,
-                font_settings.resource,
-                title_size,
+                title_font,
                 title_text,
                 LIGHT_GRAY,
-                scale_factor=TITLE_FONT_SCALE,
                 center=(width // 2, TITLE_HEADER_Y),
             )
-            version_size = font_settings.scaled_size(15 * TITLE_FONT_SCALE)
-            blit_text_scaled(
+            version_font = _get_font(font_settings.scaled_size(11))
+            blit_text_scaled_font(
                 screen,
-                font_settings.resource,
-                version_size,
+                version_font,
                 f"v{__version__}",
                 LIGHT_GRAY,
-                scale_factor=TITLE_FONT_SCALE,
                 bottomleft=(title_rect.right + 4, title_rect.bottom),
             )
 

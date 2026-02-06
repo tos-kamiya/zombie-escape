@@ -44,11 +44,9 @@ class ScreenTransition:
 __all__ = [
     "ScreenID",
     "ScreenTransition",
-    "TITLE_FONT_SCALE",
     "TITLE_HEADER_Y",
     "TITLE_SECTION_TOP",
 ]
 
-TITLE_FONT_SCALE = 1
 TITLE_HEADER_Y = 20
 TITLE_SECTION_TOP = 45

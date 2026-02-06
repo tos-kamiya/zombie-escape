@@ -5,7 +5,7 @@ from pygame import sprite, surface
 
 from ..colors import BLACK, BLUE, FOOTPRINT_COLOR, YELLOW, WHITE, get_environment_palette
 from ..entities import Car, Flashlight, FuelCan, Player, Shoes, SteelBeam, Survivor, Wall
-from ..font_utils import load_font
+from ..font_utils import load_font, render_text_unscaled
 from ..localization import get_font_settings
 from ..models import Footprint, GameData
 from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
@@ -36,7 +36,7 @@ def _draw_overview_tag(
     fg: tuple[int, int, int] = YELLOW,
     padding: tuple[int, int] = (4, 2),
 ) -> None:
-    label = font.render(text, False, fg)
+    label = render_text_unscaled(font, text, fg)
     label_rect = label.get_rect()
     padded = label_rect.inflate(padding[0] * 2, padding[1] * 2)
     top_left = (item_rect.left, item_rect.top)

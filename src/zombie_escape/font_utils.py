@@ -8,6 +8,9 @@ from typing import Iterator
 import pygame
 
 _FONT_CACHE: dict[tuple[str | None, int], pygame.font.Font] = {}
+_FONT_META: dict[int, tuple[str | None, int]] = {}
+_TEXT_RENDER_SCALE = 3
+_TEXT_BLUR_OFFSET = 2
 
 
 @contextmanager
@@ -38,50 +41,52 @@ def load_font(resource: str | None, size: int) -> pygame.font.Font:
         font = pygame.font.Font(str(path) if path else None, normalized_size)
 
     _FONT_CACHE[cache_key] = font
+    _FONT_META[id(font)] = (resource, normalized_size)
     return font
 
 
-def render_text_scaled(
-    resource: str | None,
-    size: int,
+def render_text_scaled_font(
+    font: pygame.font.Font,
     text: str,
     color: tuple[int, int, int],
-    *,
-    scale_factor: int = 1,
-    antialias: bool = False,
 ) -> pygame.Surface:
-    """Render text, optionally supersampling then downscaling."""
-    normalized_size = max(1, int(size))
-    if scale_factor <= 1:
-        font = load_font(resource, normalized_size)
-        return font.render(text, antialias, color)
-    high_size = max(1, int(round(normalized_size * scale_factor)))
+    """Render text with a provided font, supersampling when possible."""
+    meta = _FONT_META.get(id(font))
+    if meta is None:
+        return font.render(text, True, color)
+    resource, size = meta
+    high_size = max(1, int(round(size * _TEXT_RENDER_SCALE)))
     font_high = load_font(resource, high_size)
-    high_surface = font_high.render(text, antialias, color)
-    target_width = max(1, int(round(high_surface.get_width() / scale_factor)))
-    target_height = max(1, int(round(high_surface.get_height() / scale_factor)))
-    return pygame.transform.scale(high_surface, (target_width, target_height))
+    high_surface = font_high.render(text, True, color).convert_alpha()
+    crisp_surface = font_high.render(text, True, color).convert_alpha()
+    crisp_surface.set_alpha(80)
+    high_surface.blit(crisp_surface, (_TEXT_BLUR_OFFSET, 0))
+    target_width = max(1, int(round(high_surface.get_width() / _TEXT_RENDER_SCALE)))
+    target_height = max(1, int(round(high_surface.get_height() / _TEXT_RENDER_SCALE)))
+    return pygame.transform.smoothscale(high_surface, (target_width, target_height))
 
 
-def blit_text_scaled(
-    target: pygame.Surface,
-    resource: str | None,
-    size: int,
+def render_text_unscaled(
+    font: pygame.font.Font,
     text: str,
     color: tuple[int, int, int],
-    *,
-    scale_factor: int = 1,
-    antialias: bool = False,
+) -> pygame.Surface:
+    """Render text without supersampling for realtime HUD use."""
+    return font.render(text, False, color)
+
+
+def blit_text_scaled_font(
+    target: pygame.Surface,
+    font: pygame.font.Font,
+    text: str,
+    color: tuple[int, int, int],
     **rect_kwargs: int | tuple[int, int],
 ) -> pygame.Rect:
-    """Render scaled text and blit it to target using rect kwargs."""
-    surface = render_text_scaled(
-        resource,
-        size,
+    """Render scaled text with a provided font and blit it to target."""
+    surface = render_text_scaled_font(
+        font,
         text,
         color,
-        scale_factor=scale_factor,
-        antialias=antialias,
     )
     rect = surface.get_rect(**rect_kwargs)
     target.blit(surface, rect)
@@ -90,3 +95,4 @@ def blit_text_scaled(
 
 def clear_font_cache() -> None:
     _FONT_CACHE.clear()
+    _FONT_META.clear()
