@@ -288,6 +288,66 @@ def _draw_entity_shadows(
     return drew
 
 
+def _draw_entity_drop_shadows(
+    shadow_layer: surface.Surface,
+    camera: Camera,
+    all_sprites: sprite.LayeredUpdates,
+    *,
+    exclude_car: Car | None,
+    outside_cells: set[tuple[int, int]] | None,
+    cell_size: int,
+    shadow_radius: int = int(ZOMBIE_RADIUS * ENTITY_SHADOW_RADIUS_MULT),
+    alpha: int = ENTITY_SHADOW_ALPHA,
+) -> bool:
+    if shadow_radius <= 0:
+        return False
+    if cell_size <= 0:
+        outside_cells = None
+    shadow_surface = _get_shadow_circle_surface(
+        shadow_radius,
+        alpha,
+        edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
+    )
+    screen_rect = shadow_layer.get_rect()
+    drew = False
+    for entity in all_sprites:
+        if not entity.alive():
+            continue
+        if isinstance(entity, Player):
+            continue
+        if isinstance(entity, Car):
+            if exclude_car is not None and entity is exclude_car:
+                continue
+        if not isinstance(entity, (Zombie, Survivor, Car)):
+            continue
+        if outside_cells:
+            cell = (
+                int(entity.rect.centerx // cell_size),
+                int(entity.rect.centery // cell_size),
+            )
+            if cell in outside_cells:
+                continue
+        cx, cy = entity.rect.center
+
+        jump_dy = 0.0
+        if getattr(entity, "is_jumping", False):
+            jump_dy = JUMP_SHADOW_OFFSET
+
+        shadow_rect = shadow_surface.get_rect(
+            center=(int(cx), int(cy + jump_dy))
+        )
+        shadow_screen_rect = camera.apply_rect(shadow_rect)
+        if not shadow_screen_rect.colliderect(screen_rect):
+            continue
+        shadow_layer.blit(
+            shadow_surface,
+            shadow_screen_rect.topleft,
+            special_flags=pygame.BLEND_RGBA_MAX,
+        )
+        drew = True
+    return drew
+
+
 def _draw_single_entity_shadow(
     shadow_layer: surface.Surface,
     camera: Camera,
@@ -341,6 +401,50 @@ def _draw_single_entity_shadow(
     shadow_rect = shadow_surface.get_rect(
         center=(int(cx + offset_x), int(cy + offset_y + jump_dy))
     )
+    shadow_screen_rect = camera.apply_rect(shadow_rect)
+    if not shadow_screen_rect.colliderect(screen_rect):
+        return False
+    shadow_layer.blit(
+        shadow_surface,
+        shadow_screen_rect.topleft,
+        special_flags=pygame.BLEND_RGBA_MAX,
+    )
+    return True
+
+
+def _draw_single_entity_drop_shadow(
+    shadow_layer: surface.Surface,
+    camera: Camera,
+    *,
+    entity: pygame.sprite.Sprite | None,
+    outside_cells: set[tuple[int, int]] | None,
+    cell_size: int,
+    shadow_radius: int,
+    alpha: int,
+    edge_softness: float = ENTITY_SHADOW_EDGE_SOFTNESS,
+) -> bool:
+    if entity is None or not entity.alive() or shadow_radius <= 0:
+        return False
+    if outside_cells and cell_size > 0:
+        cell = (
+            int(entity.rect.centerx // cell_size),
+            int(entity.rect.centery // cell_size),
+        )
+        if cell in outside_cells:
+            return False
+    shadow_surface = _get_shadow_circle_surface(
+        shadow_radius,
+        alpha,
+        edge_softness=edge_softness,
+    )
+    screen_rect = shadow_layer.get_rect()
+    cx, cy = entity.rect.center
+
+    jump_dy = 0.0
+    if getattr(entity, "is_jumping", False):
+        jump_dy = JUMP_SHADOW_OFFSET
+
+    shadow_rect = shadow_surface.get_rect(center=(int(cx), int(cy + jump_dy)))
     shadow_screen_rect = camera.apply_rect(shadow_rect)
     if not shadow_screen_rect.colliderect(screen_rect):
         return False

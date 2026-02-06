@@ -56,7 +56,9 @@ from .hud import (
 )
 from .shadows import (
     _draw_entity_shadows,
+    _draw_entity_drop_shadows,
     _draw_single_entity_shadow,
+    _draw_single_entity_drop_shadow,
     _draw_wall_shadows,
     _get_shadow_layer,
 )
@@ -271,7 +273,6 @@ class _FogProfile(Enum):
     DARK0 = (0, (0, 0, 0, 255))
     DARK1 = (1, (0, 0, 0, 255))
     DARK2 = (2, (0, 0, 0, 255))
-    DAWN = (2, (50, 50, 50, 230))
 
     def __init__(self, flashlight_count: int, color: tuple[int, int, int, int]) -> None:
         self.flashlight_count = flashlight_count
@@ -832,6 +833,8 @@ def _draw_fog_of_war(
 ) -> None:
     if fov_target is None:
         return
+    if stage and stage.endurance_stage and dawn_ready:
+        return
     fov_center_on_screen = list(camera.apply(fov_target).center)
     cam_rect = camera.camera
     horizontal_span = camera.width - assets.screen_width
@@ -841,10 +844,7 @@ def _draw_fog_of_war(
     if vertical_span <= 0 or (cam_rect.y != 0 and cam_rect.y != -vertical_span):
         fov_center_on_screen[1] = assets.screen_height // 2
     fov_center_tuple = (int(fov_center_on_screen[0]), int(fov_center_on_screen[1]))
-    if dawn_ready:
-        profile = _FogProfile.DAWN
-    else:
-        profile = _FogProfile._from_flashlight_count(flashlight_count)
+    profile = _FogProfile._from_flashlight_count(flashlight_count)
     overlay = _get_fog_overlay_surfaces(
         fog_surfaces,
         assets,
@@ -901,6 +901,10 @@ def draw(
     )
     shadows_enabled = config.get("visual", {}).get("shadows", {}).get("enabled", True)
     if shadows_enabled:
+        dawn_shadow_mode = bool(stage and stage.endurance_stage and state.dawn_ready)
+        light_source_pos = (
+            None if dawn_shadow_mode else (fov_target.rect.center if fov_target else None)
+        )
         shadow_layer = _get_shadow_layer(screen.get_size())
         shadow_layer.fill((0, 0, 0, 0))
         drew_shadow = _draw_wall_shadows(
@@ -910,49 +914,75 @@ def draw(
             wall_group=game_data.groups.wall_group,
             outer_wall_cells=game_data.layout.outer_wall_cells,
             cell_size=game_data.cell_size,
-            light_source_pos=(
-                None
-                if (stage and stage.endurance_stage and state.dawn_ready)
-                else fov_target.rect.center
+            light_source_pos=light_source_pos,
+        )
+        if dawn_shadow_mode:
+            drew_shadow |= _draw_entity_drop_shadows(
+                shadow_layer,
+                camera,
+                all_sprites,
+                exclude_car=active_car if player.in_car else None,
+                outside_cells=outside_cells,
+                cell_size=game_data.cell_size,
             )
-            if fov_target
-            else None,
-        )
-        drew_shadow |= _draw_entity_shadows(
-            shadow_layer,
-            camera,
-            all_sprites,
-            light_source_pos=fov_target.rect.center if fov_target else None,
-            exclude_car=active_car if player.in_car else None,
-            outside_cells=outside_cells,
-            cell_size=game_data.cell_size,
-        )
+        else:
+            drew_shadow |= _draw_entity_shadows(
+                shadow_layer,
+                camera,
+                all_sprites,
+                light_source_pos=light_source_pos,
+                exclude_car=active_car if player.in_car else None,
+                outside_cells=outside_cells,
+                cell_size=game_data.cell_size,
+            )
         player_shadow_alpha = max(
             1, int(ENTITY_SHADOW_ALPHA * PLAYER_SHADOW_ALPHA_MULT)
         )
         player_shadow_radius = int(ZOMBIE_RADIUS * PLAYER_SHADOW_RADIUS_MULT)
         if player.in_car:
-            drew_shadow |= _draw_single_entity_shadow(
-                shadow_layer,
-                camera,
-                entity=active_car,
-                light_source_pos=fov_target.rect.center if fov_target else None,
-                outside_cells=outside_cells,
-                cell_size=game_data.cell_size,
-                shadow_radius=player_shadow_radius,
-                alpha=player_shadow_alpha,
-            )
+            if dawn_shadow_mode:
+                drew_shadow |= _draw_single_entity_drop_shadow(
+                    shadow_layer,
+                    camera,
+                    entity=active_car,
+                    outside_cells=outside_cells,
+                    cell_size=game_data.cell_size,
+                    shadow_radius=player_shadow_radius,
+                    alpha=player_shadow_alpha,
+                )
+            else:
+                drew_shadow |= _draw_single_entity_shadow(
+                    shadow_layer,
+                    camera,
+                    entity=active_car,
+                    light_source_pos=light_source_pos,
+                    outside_cells=outside_cells,
+                    cell_size=game_data.cell_size,
+                    shadow_radius=player_shadow_radius,
+                    alpha=player_shadow_alpha,
+                )
         else:
-            drew_shadow |= _draw_single_entity_shadow(
-                shadow_layer,
-                camera,
-                entity=player,
-                light_source_pos=fov_target.rect.center if fov_target else None,
-                outside_cells=outside_cells,
-                cell_size=game_data.cell_size,
-                shadow_radius=player_shadow_radius,
-                alpha=player_shadow_alpha,
-            )
+            if dawn_shadow_mode:
+                drew_shadow |= _draw_single_entity_drop_shadow(
+                    shadow_layer,
+                    camera,
+                    entity=player,
+                    outside_cells=outside_cells,
+                    cell_size=game_data.cell_size,
+                    shadow_radius=player_shadow_radius,
+                    alpha=player_shadow_alpha,
+                )
+            else:
+                drew_shadow |= _draw_single_entity_shadow(
+                    shadow_layer,
+                    camera,
+                    entity=player,
+                    light_source_pos=light_source_pos,
+                    outside_cells=outside_cells,
+                    cell_size=game_data.cell_size,
+                    shadow_radius=player_shadow_radius,
+                    alpha=player_shadow_alpha,
+                )
         if drew_shadow:
             screen.blit(shadow_layer, (0, 0))
     _draw_footprints(
