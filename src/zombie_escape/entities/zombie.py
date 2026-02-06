@@ -12,8 +12,8 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
 
 from ..entities_constants import (
     FAST_ZOMBIE_BASE_SPEED,
-    ZOMBIE_AGING_DURATION_FRAMES,
-    ZOMBIE_AGING_MIN_SPEED_RATIO,
+    ZOMBIE_DECAY_DURATION_FRAMES,
+    ZOMBIE_DECAY_MIN_SPEED_RATIO,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SPEED,
@@ -67,7 +67,7 @@ class Zombie(pygame.sprite.Sprite):
         tracker: bool = False,
         wall_hugging: bool = False,
         movement_strategy: MovementStrategy | None = None,
-        aging_duration_frames: float = ZOMBIE_AGING_DURATION_FRAMES,
+        decay_duration_frames: float = ZOMBIE_DECAY_DURATION_FRAMES,
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
@@ -89,8 +89,9 @@ class Zombie(pygame.sprite.Sprite):
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
         self.was_in_sight = False
-        self.age_frames = 0.0
-        self.aging_duration_frames = aging_duration_frames
+        self.max_health = 1.0
+        self.health = self.max_health
+        self.decay_duration_frames = decay_duration_frames
         if movement_strategy is None:
             if tracker:
                 movement_strategy = _zombie_tracker_movement
@@ -228,15 +229,19 @@ class Zombie(pygame.sprite.Sprite):
                     move_y = math.sin(new_angle) * self.speed
         return move_x, move_y
 
-    def _apply_aging(self: Self) -> None:
-        """Slowly reduce zombie speed over time to simulate decay."""
-        if self.aging_duration_frames <= 0:
+    def _apply_decay(self: Self) -> None:
+        """Reduce zombie health over time and despawn when depleted."""
+        if self.decay_duration_frames <= 0:
             return
-        if self.age_frames < self.aging_duration_frames:
-            self.age_frames += 1
-        progress = min(1.0, self.age_frames / self.aging_duration_frames)
-        slowdown_ratio = 1.0 - progress * (1.0 - ZOMBIE_AGING_MIN_SPEED_RATIO)
-        self.speed = self.initial_speed * slowdown_ratio
+        self.health -= self.max_health / self.decay_duration_frames
+        health_ratio = 0.0 if self.max_health <= 0 else self.health / self.max_health
+        health_ratio = max(0.0, min(1.0, health_ratio))
+        speed_ratio = ZOMBIE_DECAY_MIN_SPEED_RATIO + (
+            1.0 - ZOMBIE_DECAY_MIN_SPEED_RATIO
+        ) * health_ratio
+        self.speed = self.initial_speed * speed_ratio
+        if self.health <= 0:
+            self.kill()
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
         if new_bin == self.facing_bin:
@@ -332,7 +337,9 @@ class Zombie(pygame.sprite.Sprite):
             return
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
-        self._apply_aging()
+        self._apply_decay()
+        if not self.alive():
+            return
         dx_player = player_center[0] - self.x
         dy_player = player_center[1] - self.y
         dist_to_player_sq = dx_player * dx_player + dy_player * dy_player

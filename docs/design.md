@@ -119,7 +119,7 @@
 - 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）
 - 変種移動ルーチン: `zombie_tracker_ratio`（足跡追跡型の出現率）
 - 変種移動ルーチン: `zombie_wall_hugging_ratio`（壁沿い巡回型の出現率）
-- エイジング速度: `zombie_aging_duration_frames`（値が大きいほど老化が遅い）
+- 耐久減衰速度: `zombie_decay_duration_frames`（値が大きいほど消滅が遅い）
 - 壁生成アルゴリズム: `wall_algorithm` ("default", "empty", "grid_wire")
 - 瓦礫壁の割合: `wall_rubble_ratio`（内部壁のうち、瓦礫外観に差し替える比率）
 - 落とし穴の出現率: `pitfall_density` (0.0〜1.0)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .entities_constants import ZOMBIE_AGING_DURATION_FRAMES
+from .entities_constants import ZOMBIE_DECAY_DURATION_FRAMES
 from .gameplay_constants import SURVIVOR_SPAWN_RATE
 from .level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from .models import Stage
@@ -152,7 +152,7 @@ STAGES: list[Stage] = [
         interior_spawn_weight=0.2,
         zombie_tracker_ratio=0.6,
         zombie_normal_ratio=0.4,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage7",
@@ -168,7 +168,7 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.3,
         zombie_wall_hugging_ratio=0.3,
         zombie_normal_ratio=0.4,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage8",
@@ -184,7 +184,7 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.3,
         zombie_wall_hugging_ratio=0.7,
         zombie_normal_ratio=0,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage9",
@@ -201,7 +201,7 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.3,
         zombie_wall_hugging_ratio=0.7,
         zombie_normal_ratio=0,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
         survivor_spawn_rate=SURVIVOR_SPAWN_RATE,
     ),
     Stage(
@@ -220,7 +220,7 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.4,
         zombie_wall_hugging_ratio=0.2,
         zombie_normal_ratio=0.4,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
         survivor_spawn_rate=0.35,
     ),
     Stage(
@@ -238,7 +238,7 @@ STAGES: list[Stage] = [
         interior_spawn_weight=0.7,
         zombie_tracker_ratio=0.5,
         zombie_normal_ratio=0.5,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage12",
@@ -259,7 +259,7 @@ STAGES: list[Stage] = [
         exterior_spawn_weight=0.5,
         interior_spawn_weight=0.2,
         interior_fall_spawn_weight=0.3,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage13",
@@ -284,7 +284,7 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.3,
         zombie_wall_hugging_ratio=0.3,
         zombie_normal_ratio=0.4,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage14",
@@ -301,7 +301,7 @@ STAGES: list[Stage] = [
         exterior_spawn_weight=0.2,
         interior_spawn_weight=0.1,
         interior_fall_spawn_weight=0.7,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage15",
@@ -326,7 +326,7 @@ STAGES: list[Stage] = [
         interior_fall_spawn_weight=0.7,
         zombie_wall_hugging_ratio=0.5,
         zombie_normal_ratio=0.5,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage16",
@@ -344,7 +344,7 @@ STAGES: list[Stage] = [
         initial_interior_spawn_rate=0.05,
         exterior_spawn_weight=0.7,
         interior_spawn_weight=0.3,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage17",
@@ -363,7 +363,7 @@ STAGES: list[Stage] = [
         exterior_spawn_weight=0.5,
         interior_spawn_weight=0.5,
         zombie_tracker_ratio=1.0,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage18",
@@ -388,7 +388,7 @@ STAGES: list[Stage] = [
         interior_spawn_weight=0.4,
         zombie_tracker_ratio=0.5,
         zombie_normal_ratio=0.5,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage19",
@@ -410,7 +410,7 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.5,
         zombie_wall_hugging_ratio=0.5,
         zombie_normal_ratio=0,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage20",
@@ -434,20 +434,20 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.4,
         zombie_wall_hugging_ratio=0.4,
         zombie_normal_ratio=0.2,
-        zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
         id="stage_dog_debug",
         name_key="stages.stage_dog_debug.name",
         description_key="stages.stage_dog_debug.description",
         available=True,
-        grid_cols=15,
+        grid_cols=30,
         grid_rows=15,
-        wall_algorithm="empty",
-        exterior_spawn_weight=0.2,
-        interior_spawn_weight=0.8,
-        zombie_dog_ratio=0.5,
-        zombie_normal_ratio=0.5,
+        wall_algorithm="sparse_ortho.140%",
+        exterior_spawn_weight=0.8,
+        interior_spawn_weight=0.2,
+        zombie_dog_ratio=0.0,
+        zombie_normal_ratio=0.1,
         zombie_tracker_ratio=0.0,
         zombie_wall_hugging_ratio=0.0,
     ),

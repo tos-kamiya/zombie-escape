@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import sprite, surface
 
-from .entities_constants import ZOMBIE_AGING_DURATION_FRAMES
+from .entities_constants import ZOMBIE_DECAY_DURATION_FRAMES
 from .gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     DEFAULT_SHOES_SPAWN_COUNT,
@@ -208,7 +208,7 @@ class Stage:
     zombie_wall_hugging_ratio: float = 0.0
     zombie_normal_ratio: float = 1.0
     zombie_dog_ratio: float = 0.0
-    zombie_aging_duration_frames: int = ZOMBIE_AGING_DURATION_FRAMES
+    zombie_decay_duration_frames: int = ZOMBIE_DECAY_DURATION_FRAMES
 
     # Survivor spawning
     survivor_spawn_rate: float = SURVIVOR_SPAWN_RATE

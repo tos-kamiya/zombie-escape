@@ -19,7 +19,7 @@ from ..entities import (
 from ..entities_constants import (
     FAST_ZOMBIE_BASE_SPEED,
     PLAYER_SPEED,
-    ZOMBIE_AGING_DURATION_FRAMES,
+    ZOMBIE_DECAY_DURATION_FRAMES,
     ZOMBIE_SPEED,
 )
 from ..gameplay_constants import (
@@ -35,7 +35,7 @@ from .constants import (
     FALLING_ZOMBIE_PRE_FX_MS,
     MAX_ZOMBIES,
     ZOMBIE_SPAWN_PLAYER_BUFFER,
-    ZOMBIE_TRACKER_AGING_DURATION_FRAMES,
+    ZOMBIE_TRACKER_DECAY_DURATION_FRAMES,
 )
 from .utils import (
     fov_radius_for_flashlights,
@@ -263,12 +263,12 @@ def _create_zombie(
         base_speed = ZOMBIE_SPEED
     base_speed = min(base_speed, PLAYER_SPEED - 0.05)
     if stage is not None:
-        aging_duration_frames = max(
+        decay_duration_frames = max(
             1.0,
-            float(stage.zombie_aging_duration_frames),
+            float(stage.zombie_decay_duration_frames),
         )
     else:
-        aging_duration_frames = ZOMBIE_AGING_DURATION_FRAMES
+        decay_duration_frames = ZOMBIE_DECAY_DURATION_FRAMES
     if variant is None and (tracker is None or wall_hugging is None):
         picked_variant, picked_tracker, picked_wall_hugging = _pick_zombie_variant(
             stage
@@ -294,11 +294,11 @@ def _create_zombie(
         wall_hugging = False
     if tracker:
         ratio = (
-            ZOMBIE_TRACKER_AGING_DURATION_FRAMES / ZOMBIE_AGING_DURATION_FRAMES
-            if ZOMBIE_AGING_DURATION_FRAMES > 0
+            ZOMBIE_TRACKER_DECAY_DURATION_FRAMES / ZOMBIE_DECAY_DURATION_FRAMES
+            if ZOMBIE_DECAY_DURATION_FRAMES > 0
             else 1.0
         )
-        aging_duration_frames = max(1.0, aging_duration_frames * ratio)
+        decay_duration_frames = max(1.0, decay_duration_frames * ratio)
     if start_pos is None:
         cell_size = stage.cell_size if stage else DEFAULT_CELL_SIZE
         if stage is None:
@@ -331,7 +331,7 @@ def _create_zombie(
         speed=base_speed,
         tracker=tracker,
         wall_hugging=wall_hugging,
-        aging_duration_frames=aging_duration_frames,
+        decay_duration_frames=decay_duration_frames,
     )
 
 
