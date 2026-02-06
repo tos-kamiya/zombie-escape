@@ -42,6 +42,7 @@
   - `render/overview.py`: ゲームオーバー用縮小図、デバッグ用全体表示。
 - `src/zombie_escape/font_utils.py`
   - フォント読み込み/描画の補助。
+  - メニュー系は `render_text_scaled_font`、ゲームプレイ系は `render_text_unscaled` を使用。
 - `src/zombie_escape/export_images.py`
   - 画像生成・書き出し関連の開発用ユーティリティ。
 - `src/zombie_escape/level_blueprints.py`
@@ -330,6 +331,7 @@
 
 - `_draw_status_bar()`
   - 設定フラグやステージ番号、シード値を表示。
+- HUD/ゲームプレイ画面のテキストは `render_text_unscaled` で非拡大描画する。
 - 導入セリフ/短時間メッセージ (`_draw_timed_message` in `render/hud.py`)
   - `TimedMessage` の `align` に応じて左寄せ/中央寄せで描画。
   - 1.2倍の行間で描画し、半透明帯の上に表示する。
@@ -435,6 +437,7 @@
 - `rng.py` で MT19937 を自前実装。
 - `seed_rng(seed)` で全体RNGを初期化。
 - `screens/title.py` でシード入力/自動生成を受け付け。
+- タイトル画面のステージ説明は半透明パネル上に表示する。
 
 ## 9. ローカライズ
 
