@@ -21,13 +21,7 @@ from ..entities_constants import (
     SHOES_WIDTH,
     SURVIVOR_MAX_SAFE_PASSENGERS,
 )
-from .constants import (
-    CAR_ZOMBIE_CONTACT_DAMAGE,
-    CAR_ZOMBIE_HIT_DAMAGE,
-    CAR_ZOMBIE_RAM_DAMAGE,
-    FUEL_HINT_DURATION_MS,
-    SURVIVOR_OVERLOAD_DAMAGE_RATIO,
-)
+from .constants import FUEL_HINT_DURATION_MS, SURVIVOR_OVERLOAD_DAMAGE_RATIO
 from ..colors import BLUE, YELLOW
 from ..localization import translate as tr
 from ..models import GameData
@@ -64,6 +58,11 @@ def _ms_to_frames(ms: int) -> int:
 
 
 RNG = get_rng()
+
+# --- Car vs zombie damage (interaction rules) ---
+CAR_ZOMBIE_RAM_DAMAGE = 5
+CAR_ZOMBIE_CONTACT_DAMAGE = 1
+CAR_ZOMBIE_HIT_DAMAGE = 20
 
 
 def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
