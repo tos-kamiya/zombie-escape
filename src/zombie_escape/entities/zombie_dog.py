@@ -12,6 +12,8 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
 
 from ..entities_constants import (
     ZOMBIE_DOG_ASSAULT_SPEED,
+    ZOMBIE_DOG_BITE_DAMAGE,
+    ZOMBIE_DOG_BITE_INTERVAL_FRAMES,
     ZOMBIE_DOG_HEAD_RADIUS_RATIO,
     ZOMBIE_DOG_LONG_AXIS_RATIO,
     ZOMBIE_DOG_PATROL_SPEED,
@@ -72,6 +74,7 @@ class ZombieDog(pygame.sprite.Sprite):
         self.y = float(self.rect.centery)
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
+        self.bite_frame_counter = 0
         self.max_health = 100
         self.health = self.max_health
 
@@ -136,6 +139,26 @@ class ZombieDog(pygame.sprite.Sprite):
             self.charge_direction = (0.0, 0.0)
             return
         self.charge_direction = (dx / dist, dy / dist)
+
+    def _apply_pack_damage(
+        self: Self,
+        nearby_zombies: list[pygame.sprite.Sprite],
+        *,
+        allow_bite: bool,
+    ) -> None:
+        if not allow_bite:
+            return
+        head_x, head_y = self._head_center()
+        for candidate in nearby_zombies:
+            if not isinstance(candidate, Zombie):
+                continue
+            if candidate is self or not candidate.alive():
+                continue
+            dx = candidate.x - head_x
+            dy = candidate.y - head_y
+            combined = self.head_radius + candidate.radius
+            if dx * dx + dy * dy <= combined * combined:
+                candidate.take_damage(ZOMBIE_DOG_BITE_DAMAGE)
 
     def _apply_wall_collision(
         self: Self,
@@ -293,6 +316,15 @@ class ZombieDog(pygame.sprite.Sprite):
         self.x = final_x
         self.y = final_y
         self.rect.center = (int(self.x), int(self.y))
+
+        if nearby_zombies:
+            self.bite_frame_counter = (
+                self.bite_frame_counter + 1
+            ) % ZOMBIE_DOG_BITE_INTERVAL_FRAMES
+            self._apply_pack_damage(
+                list(nearby_zombies),
+                allow_bite=self.bite_frame_counter == 0,
+            )
 
     def carbonize(self: Self) -> None:
         if self.carbonized:
