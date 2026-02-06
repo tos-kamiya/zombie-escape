@@ -6,6 +6,7 @@ from typing import Any
 
 import pygame
 import pygame.surfarray as pg_surfarray  # type: ignore
+import numpy as np  # type: ignore
 from pygame import sprite, surface
 
 from ..colors import (
@@ -352,50 +353,30 @@ def _build_continuous_hatch_surface(
     base_alpha = base_color[3]
     cell_center = (spacing - 1) / 2.0
 
-    alpha_view = None
-    if pg_surfarray is not None:
-        alpha_view = pg_surfarray.pixels_alpha(hatch)
-    else:  # pragma: no cover - numpy-less fallback
-        hatch.lock()
-
     cx, cy = center
-    for y in range(height):
-        dy = y - cy
-        for x in range(width):
-            dx = x - cx
-            radius = math.hypot(dx, dy)
-            if radius <= start_radius:
-                density = 0.0
-            else:
-                progress = min(1.0, (radius - start_radius) / fade_range)
-                density = max_density * progress
-            if density <= 0.0:
-                continue
-            density = max(0.0, min(1.0, density))
-            threshold = int(density * 64)
-            if threshold <= 0:
-                continue
+    alpha_view = pg_surfarray.pixels_alpha(hatch)
+    yy, xx = np.indices((height, width))
+    dx = xx - cx
+    dy = yy - cy
+    radius = np.hypot(dx, dy)
+    progress = (radius - start_radius) / fade_range
+    progress = np.clip(progress, 0.0, 1.0)
+    density = max_density * progress
+    threshold = (density * 64).astype(np.int32)
 
-            grid_x = (x // spacing) % 8
-            grid_y = (y // spacing) % 8
-            if bayer[grid_y][grid_x] >= threshold:
-                continue
+    bayer_np = np.array(bayer, dtype=np.int32)
+    grid_x = (xx // spacing) % 8
+    grid_y = (yy // spacing) % 8
+    bayer_vals = bayer_np[grid_y, grid_x]
+    mask = bayer_vals < threshold
 
-            dot_radius = max(1.0, density * spacing)
-            local_x = (x % spacing) - cell_center
-            local_y = (y % spacing) - cell_center
-            if (local_x * local_x + local_y * local_y) > (dot_radius * dot_radius):
-                continue
+    dot_radius = np.maximum(1.0, density * spacing)
+    local_x = (xx % spacing) - cell_center
+    local_y = (yy % spacing) - cell_center
+    mask &= (local_x * local_x + local_y * local_y) <= (dot_radius * dot_radius)
 
-            if alpha_view is not None:
-                alpha_view[x, y] = base_alpha
-            else:
-                hatch.set_at((x, y), (base_color[0], base_color[1], base_color[2], base_alpha))
-
-    if alpha_view is not None:
-        del alpha_view
-    else:  # pragma: no cover
-        hatch.unlock()
+    alpha_view[:, :] = (mask.T * base_alpha).astype(np.uint8)
+    del alpha_view
 
     return hatch
 
