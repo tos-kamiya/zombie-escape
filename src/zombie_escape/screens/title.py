@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from importlib.resources import Anchor
 import webbrowser
 from typing import Any, Sequence
 
@@ -13,7 +12,7 @@ from ..localization import get_font_settings, get_language
 from ..localization import translate as tr
 from ..models import Stage
 from ..progress import load_progress
-from ..render import blit_wrapped_text, show_message, wrap_text
+from ..render import blit_wrapped_text, wrap_text
 from ..rng import generate_seed
 from ..input_utils import (
     CONTROLLER_BUTTON_DOWN,
@@ -40,6 +39,7 @@ from ..windowing import (
     sync_window_size,
     toggle_fullscreen,
 )
+
 try:  # pragma: no cover - version fallback not critical for tests
     from ..__about__ import __version__
 except Exception:  # pragma: no cover - fallback version
@@ -95,17 +95,24 @@ def title_screen(
     if width <= 0 or height <= 0:
         width, height = screen_size
     stage_options_all: list[dict] = [
-        {"type": "stage", "stage": stage, "available": stage.available} for stage in stages if stage.available
+        {"type": "stage", "stage": stage, "available": stage.available}
+        for stage in stages
+        if stage.available
     ]
     page_size = 5
-    stage_pages = [stage_options_all[i : i + page_size] for i in range(0, len(stage_options_all), page_size)]
+    stage_pages = [
+        stage_options_all[i : i + page_size]
+        for i in range(0, len(stage_options_all), page_size)
+    ]
     resource_options: list[dict[str, Any]] = [
         {"type": "settings"},
         {"type": "readme"},
         {"type": "quit"},
     ]
     generated = seed_text is None
-    current_seed_text = seed_text if seed_text is not None else _generate_auto_seed_text()
+    current_seed_text = (
+        seed_text if seed_text is not None else _generate_auto_seed_text()
+    )
     current_seed_auto = seed_is_auto or generated
     stage_progress, _ = load_progress()
 
@@ -132,176 +139,44 @@ def title_screen(
 
     options, stage_options = _build_options(current_page)
     selected_stage_index = next(
-        (i for i, opt in enumerate(options) if opt["type"] == "stage" and opt["stage"].id == default_stage_id),
+        (
+            i
+            for i, opt in enumerate(options)
+            if opt["type"] == "stage" and opt["stage"].id == default_stage_id
+        ),
         0,
     )
     selected = min(selected_stage_index, len(options) - 1)
     controller = init_first_controller()
     joystick = init_first_joystick() if controller is None else None
 
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return ScreenTransition(
-                    ScreenID.EXIT,
-                    seed_text=current_seed_text,
-                    seed_is_auto=current_seed_auto,
-                )
-            if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
-                sync_window_size(event)
-                adjust_menu_logical_size()
-                continue
-            if event.type == pygame.JOYDEVICEADDED or (
-                CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
-            ):
-                if controller is None:
-                    controller = init_first_controller()
-                if controller is None:
-                    joystick = init_first_joystick()
-            if event.type == pygame.JOYDEVICEREMOVED or (
-                CONTROLLER_DEVICE_REMOVED is not None and event.type == CONTROLLER_DEVICE_REMOVED
-            ):
-                if controller and not controller.get_init():
-                    controller = None
-                if joystick and not joystick.get_init():
-                    joystick = None
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_BACKSPACE:
-                    current_seed_text = _generate_auto_seed_text()
-                    current_seed_auto = True
-                    continue
-                if event.unicode and event.unicode.isdigit():
-                    if current_seed_auto:
-                        current_seed_text = ""
-                        current_seed_auto = False
-                    if len(current_seed_text) < MAX_SEED_DIGITS:
-                        current_seed_text += event.unicode
-                    continue
-                if event.key == pygame.K_LEFTBRACKET:
-                    nudge_menu_window_scale(0.5)
-                    continue
-                if event.key == pygame.K_RIGHTBRACKET:
-                    nudge_menu_window_scale(2.0)
-                    continue
-                if event.key == pygame.K_f:
-                    toggle_fullscreen()
-                    adjust_menu_logical_size()
-                    continue
-                if event.key == pygame.K_LEFT:
-                    if current_page > 0:
-                        current_page -= 1
-                        options, stage_options = _build_options(current_page)
-                        selected = 0
-                    continue
-                if event.key == pygame.K_RIGHT:
-                    if current_page < len(stage_pages) - 1 and _page_available(current_page + 1):
-                        current_page += 1
-                        options, stage_options = _build_options(current_page)
-                        selected = 0
-                    continue
-                if event.key in (pygame.K_UP, pygame.K_w):
-                    selected = (selected - 1) % len(options)
-                elif event.key in (pygame.K_DOWN, pygame.K_s):
-                    selected = (selected + 1) % len(options)
-                elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                    current = options[selected]
-                    if current["type"] == "stage" and current.get("available"):
-                        seed_value = int(current_seed_text) if current_seed_text else None
-                        return ScreenTransition(
-                            ScreenID.GAMEPLAY,
-                            stage=current["stage"],
-                            seed=seed_value,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-                    if current["type"] == "settings":
-                        return ScreenTransition(
-                            ScreenID.SETTINGS,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-                    if current["type"] == "readme":
-                        _open_readme_link(use_stage6=current_page > 0)
-                        continue
-                    if current["type"] == "quit":
-                        return ScreenTransition(
-                            ScreenID.EXIT,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-            if event.type == pygame.JOYBUTTONDOWN or (
-                CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN
-            ):
-                if is_confirm_event(event):
-                    current = options[selected]
-                    if current["type"] == "stage" and current.get("available"):
-                        seed_value = int(current_seed_text) if current_seed_text else None
-                        return ScreenTransition(
-                            ScreenID.GAMEPLAY,
-                            stage=current["stage"],
-                            seed=seed_value,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-                    if current["type"] == "settings":
-                        return ScreenTransition(
-                            ScreenID.SETTINGS,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-                    if current["type"] == "readme":
-                        _open_readme_link(use_stage6=current_page > 0)
-                        continue
-                    if current["type"] == "quit":
-                        return ScreenTransition(
-                            ScreenID.EXIT,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-                if CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN:
-                    if CONTROLLER_BUTTON_DPAD_UP is not None and event.button == CONTROLLER_BUTTON_DPAD_UP:
-                        selected = (selected - 1) % len(options)
-                    if CONTROLLER_BUTTON_DPAD_DOWN is not None and event.button == CONTROLLER_BUTTON_DPAD_DOWN:
-                        selected = (selected + 1) % len(options)
-                    if CONTROLLER_BUTTON_DPAD_LEFT is not None and event.button == CONTROLLER_BUTTON_DPAD_LEFT:
-                        if current_page > 0:
-                            current_page -= 1
-                            options, stage_options = _build_options(current_page)
-                            selected = 0
-                    if CONTROLLER_BUTTON_DPAD_RIGHT is not None and event.button == CONTROLLER_BUTTON_DPAD_RIGHT:
-                        if current_page < len(stage_pages) - 1 and _page_available(current_page + 1):
-                            current_page += 1
-                            options, stage_options = _build_options(current_page)
-                            selected = 0
-            if event.type == pygame.JOYHATMOTION:
-                hat_x, hat_y = event.value
-                if hat_y == 1:
-                    selected = (selected - 1) % len(options)
-                elif hat_y == -1:
-                    selected = (selected + 1) % len(options)
-                if hat_x == -1:
-                    if current_page > 0:
-                        current_page -= 1
-                        options, stage_options = _build_options(current_page)
-                        selected = 0
-                elif hat_x == 1:
-                    if current_page < len(stage_pages) - 1 and _page_available(current_page + 1):
-                        current_page += 1
-                        options, stage_options = _build_options(current_page)
-                        selected = 0
-
+    def _render_frame() -> None:
         screen.fill(BLACK)
         title_text = tr("game.title")
         try:
             font_settings = get_font_settings()
+
             def _get_font(size: int) -> pygame.font.Font:
                 return load_font(font_settings.resource, size)
 
             base_stage_size = font_settings.scaled_size(16)
             selected_stage_size = font_settings.scaled_size(19)
             line_height_scale = font_settings.line_height_scale
-            base_row_height = int(round(_get_font(base_stage_size).get_linesize() * line_height_scale)) + 2
-            selected_row_height = int(round(_get_font(selected_stage_size).get_linesize() * line_height_scale)) + 2
+            base_row_height = (
+                int(
+                    round(_get_font(base_stage_size).get_linesize() * line_height_scale)
+                )
+                + 2
+            )
+            selected_row_height = (
+                int(
+                    round(
+                        _get_font(selected_stage_size).get_linesize()
+                        * line_height_scale
+                    )
+                )
+                + 2
+            )
             list_column_x = 24
             list_column_width = width // 2 - 36
             info_column_x = width // 2 + 12
@@ -316,7 +191,12 @@ def title_screen(
             show_page_arrows = len(stage_pages) > 1 and _page_available(1)
             if show_page_arrows:
                 left_arrow = "<- " if current_page > 0 else ""
-                right_arrow = " ->" if current_page < len(stage_pages) - 1 and _page_available(current_page + 1) else ""
+                right_arrow = (
+                    " ->"
+                    if current_page < len(stage_pages) - 1
+                    and _page_available(current_page + 1)
+                    else ""
+                )
                 stage_header_text = f"{left_arrow}{stage_header_text}{right_arrow}"
             section_size = font_settings.scaled_size(11)
             section_font = _get_font(section_size)
@@ -331,7 +211,8 @@ def title_screen(
             resource_row_height = base_row_height
             resource_offset = resource_row_height
             stage_row_heights = [
-                (selected_row_height if idx == selected else base_row_height) for idx in range(stage_count)
+                (selected_row_height if idx == selected else base_row_height)
+                for idx in range(stage_count)
             ]
             fixed_stage_block_height = base_row_height * 4 + selected_row_height
             action_header_pos = (
@@ -350,7 +231,9 @@ def title_screen(
             row_top = stage_rows_start
             for idx, option in enumerate(stage_options):
                 row_height = stage_row_heights[idx]
-                highlight_rect = pygame.Rect(list_column_x, row_top - 2, list_column_width, row_height)
+                highlight_rect = pygame.Rect(
+                    list_column_x, row_top - 2, list_column_width, row_height
+                )
                 cleared = stage_progress.get(option["stage"].id, 0) > 0
                 base_color = WHITE if cleared else _UNCLEARED_STAGE_COLOR
                 color = base_color
@@ -362,7 +245,9 @@ def title_screen(
                     locked_suffix = tr("menu.locked_suffix")
                     label = f"{label} {locked_suffix}"
                     color = GRAY
-                stage_option_size = selected_stage_size if is_selected else base_stage_size
+                stage_option_size = (
+                    selected_stage_size if is_selected else base_stage_size
+                )
                 stage_option_font = _get_font(stage_option_size)
                 text_height = stage_option_font.get_linesize()
                 blit_text_scaled_font(
@@ -382,14 +267,18 @@ def title_screen(
             for idx, option in enumerate(resource_options):
                 option_idx = stage_count + idx
                 row_top = action_rows_start + idx * resource_row_height
-                highlight_rect = pygame.Rect(list_column_x, row_top - 2, list_column_width, resource_row_height)
+                highlight_rect = pygame.Rect(
+                    list_column_x, row_top - 2, list_column_width, resource_row_height
+                )
                 is_selected = option_idx == selected
                 if is_selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
                 if option["type"] == "settings":
                     label = tr("menu.settings")
                 elif option["type"] == "readme":
-                    label_key = "menu.readme_stage6" if current_page > 0 else "menu.readme"
+                    label_key = (
+                        "menu.readme_stage6" if current_page > 0 else "menu.readme"
+                    )
                     label = f"> {tr(label_key)}"
                 else:
                     label = tr("menu.quit")
@@ -412,8 +301,12 @@ def title_screen(
                 desc_size = font_settings.scaled_size(11)
                 desc_font = _get_font(desc_size)
                 desc_color = WHITE if current.get("available") else GRAY
-                desc_lines = wrap_text(current["stage"].description, desc_font, info_column_width)
-                desc_line_height = int(round(desc_font.get_linesize() * font_settings.line_height_scale))
+                desc_lines = wrap_text(
+                    current["stage"].description, desc_font, info_column_width
+                )
+                desc_line_height = int(
+                    round(desc_font.get_linesize() * font_settings.line_height_scale)
+                )
                 desc_height = max(1, len(desc_lines)) * desc_line_height
                 desc_panel_padding = 6
                 desc_panel_rect = pygame.Rect(
@@ -422,7 +315,9 @@ def title_screen(
                     info_column_width + desc_panel_padding * 2,
                     desc_height + desc_panel_padding * 2,
                 )
-                desc_panel = pygame.Surface((desc_panel_rect.width, desc_panel_rect.height), pygame.SRCALPHA)
+                desc_panel = pygame.Surface(
+                    (desc_panel_rect.width, desc_panel_rect.height), pygame.SRCALPHA
+                )
                 desc_panel.fill((0, 0, 0, 140))
                 screen.blit(desc_panel, desc_panel_rect.topleft)
                 blit_wrapped_text(
@@ -442,7 +337,11 @@ def title_screen(
             elif current["type"] == "quit":
                 help_text = tr("menu.option_help.quit")
             elif current["type"] == "readme":
-                help_key = "menu.option_help.readme_stage6" if current_page > 0 else "menu.option_help.readme"
+                help_key = (
+                    "menu.option_help.readme_stage6"
+                    if current_page > 0
+                    else "menu.option_help.readme"
+                )
                 help_text = tr(help_key)
 
             if help_text:
@@ -464,7 +363,9 @@ def title_screen(
             hint_lines.extend(tr("menu.hints.confirm").splitlines())
             hint_size = font_settings.scaled_size(11)
             hint_font = _get_font(hint_size)
-            hint_line_height = int(round(hint_font.get_linesize() * font_settings.line_height_scale))
+            hint_line_height = int(
+                round(hint_font.get_linesize() * font_settings.line_height_scale)
+            )
             # hint_block_height = len(hint_lines) * hint_line_height
             hint_start_y = action_header_pos[1]
             hint_step = hint_line_height
@@ -477,7 +378,9 @@ def title_screen(
                     topleft=(info_column_x, hint_start_y + offset * hint_step),
                 )
 
-            seed_value_display = current_seed_text if current_seed_text else tr("menu.seed_empty")
+            seed_value_display = (
+                current_seed_text if current_seed_text else tr("menu.seed_empty")
+            )
             seed_label = tr("menu.seed_label", value=seed_value_display)
             seed_offset_y = hint_step
             seed_rect = blit_text_scaled_font(
@@ -522,5 +425,185 @@ def title_screen(
         except pygame.error as e:
             print(f"Error rendering title screen: {e}")
 
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return ScreenTransition(
+                    ScreenID.EXIT,
+                    seed_text=current_seed_text,
+                    seed_is_auto=current_seed_auto,
+                )
+            if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
+                sync_window_size(event)
+                adjust_menu_logical_size()
+                continue
+            if event.type == pygame.JOYDEVICEADDED or (
+                CONTROLLER_DEVICE_ADDED is not None
+                and event.type == CONTROLLER_DEVICE_ADDED
+            ):
+                if controller is None:
+                    controller = init_first_controller()
+                if controller is None:
+                    joystick = init_first_joystick()
+            if event.type == pygame.JOYDEVICEREMOVED or (
+                CONTROLLER_DEVICE_REMOVED is not None
+                and event.type == CONTROLLER_DEVICE_REMOVED
+            ):
+                if controller and not controller.get_init():
+                    controller = None
+                if joystick and not joystick.get_init():
+                    joystick = None
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_BACKSPACE:
+                    current_seed_text = _generate_auto_seed_text()
+                    current_seed_auto = True
+                    continue
+                if event.unicode and event.unicode.isdigit():
+                    if current_seed_auto:
+                        current_seed_text = ""
+                        current_seed_auto = False
+                    if len(current_seed_text) < MAX_SEED_DIGITS:
+                        current_seed_text += event.unicode
+                    continue
+                if event.key == pygame.K_LEFTBRACKET:
+                    nudge_menu_window_scale(0.5)
+                    continue
+                if event.key == pygame.K_RIGHTBRACKET:
+                    nudge_menu_window_scale(2.0)
+                    continue
+                if event.key == pygame.K_f:
+                    toggle_fullscreen()
+                    adjust_menu_logical_size()
+                    continue
+                if event.key == pygame.K_LEFT:
+                    if current_page > 0:
+                        current_page -= 1
+                        options, stage_options = _build_options(current_page)
+                        selected = 0
+                    continue
+                if event.key == pygame.K_RIGHT:
+                    if current_page < len(stage_pages) - 1 and _page_available(
+                        current_page + 1
+                    ):
+                        current_page += 1
+                        options, stage_options = _build_options(current_page)
+                        selected = 0
+                    continue
+                if event.key in (pygame.K_UP, pygame.K_w):
+                    selected = (selected - 1) % len(options)
+                elif event.key in (pygame.K_DOWN, pygame.K_s):
+                    selected = (selected + 1) % len(options)
+                elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    current = options[selected]
+                    if current["type"] == "stage" and current.get("available"):
+                        seed_value = (
+                            int(current_seed_text) if current_seed_text else None
+                        )
+                        return ScreenTransition(
+                            ScreenID.GAMEPLAY,
+                            stage=current["stage"],
+                            seed=seed_value,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
+                        )
+                    if current["type"] == "settings":
+                        return ScreenTransition(
+                            ScreenID.SETTINGS,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
+                        )
+                    if current["type"] == "readme":
+                        _open_readme_link(use_stage6=current_page > 0)
+                        continue
+                    if current["type"] == "quit":
+                        return ScreenTransition(
+                            ScreenID.EXIT,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
+                        )
+            if event.type == pygame.JOYBUTTONDOWN or (
+                CONTROLLER_BUTTON_DOWN is not None
+                and event.type == CONTROLLER_BUTTON_DOWN
+            ):
+                if is_confirm_event(event):
+                    current = options[selected]
+                    if current["type"] == "stage" and current.get("available"):
+                        seed_value = (
+                            int(current_seed_text) if current_seed_text else None
+                        )
+                        return ScreenTransition(
+                            ScreenID.GAMEPLAY,
+                            stage=current["stage"],
+                            seed=seed_value,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
+                        )
+                    if current["type"] == "settings":
+                        return ScreenTransition(
+                            ScreenID.SETTINGS,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
+                        )
+                    if current["type"] == "readme":
+                        _open_readme_link(use_stage6=current_page > 0)
+                        continue
+                    if current["type"] == "quit":
+                        return ScreenTransition(
+                            ScreenID.EXIT,
+                            seed_text=current_seed_text,
+                            seed_is_auto=current_seed_auto,
+                        )
+                if (
+                    CONTROLLER_BUTTON_DOWN is not None
+                    and event.type == CONTROLLER_BUTTON_DOWN
+                ):
+                    if (
+                        CONTROLLER_BUTTON_DPAD_UP is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_UP
+                    ):
+                        selected = (selected - 1) % len(options)
+                    if (
+                        CONTROLLER_BUTTON_DPAD_DOWN is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_DOWN
+                    ):
+                        selected = (selected + 1) % len(options)
+                    if (
+                        CONTROLLER_BUTTON_DPAD_LEFT is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_LEFT
+                    ):
+                        if current_page > 0:
+                            current_page -= 1
+                            options, stage_options = _build_options(current_page)
+                            selected = 0
+                    if (
+                        CONTROLLER_BUTTON_DPAD_RIGHT is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_RIGHT
+                    ):
+                        if current_page < len(stage_pages) - 1 and _page_available(
+                            current_page + 1
+                        ):
+                            current_page += 1
+                            options, stage_options = _build_options(current_page)
+                            selected = 0
+            if event.type == pygame.JOYHATMOTION:
+                hat_x, hat_y = event.value
+                if hat_y == 1:
+                    selected = (selected - 1) % len(options)
+                elif hat_y == -1:
+                    selected = (selected + 1) % len(options)
+                if hat_x == -1:
+                    if current_page > 0:
+                        current_page -= 1
+                        options, stage_options = _build_options(current_page)
+                        selected = 0
+                elif hat_x == 1:
+                    if current_page < len(stage_pages) - 1 and _page_available(
+                        current_page + 1
+                    ):
+                        current_page += 1
+                        options, stage_options = _build_options(current_page)
+                        selected = 0
+
+        _render_frame()
         present(screen)
         clock.tick(fps)

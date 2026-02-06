@@ -44,6 +44,7 @@ from ..windowing import (
     toggle_fullscreen,
 )
 
+
 def settings_screen(
     screen: surface.Surface,
     clock: time.Clock,
@@ -205,6 +206,227 @@ def settings_screen(
         save_config(working, config_path)
         return working
 
+    def _render_frame() -> None:
+        nonlocal last_language, sections, rows, row_sections, row_count, selected
+        current_language = get_language()
+        if current_language != last_language:
+            sections, rows, row_sections = rebuild_rows()
+            row_count = len(rows)
+            selected %= row_count
+            last_language = current_language
+
+        screen.fill(BLACK)
+        show_message(
+            screen,
+            tr("settings.title"),
+            26,
+            LIGHT_GRAY,
+            (screen_width // 2, TITLE_HEADER_Y),
+        )
+
+        try:
+            font_settings = get_font_settings()
+            highlight_color = (70, 70, 70)
+
+            row_height = (
+                int(
+                    round(
+                        load_font(
+                            font_settings.resource, font_settings.scaled_size(11)
+                        ).get_linesize()
+                        * font_settings.line_height_scale
+                    )
+                )
+                + 2
+            )
+            start_y = TITLE_SECTION_TOP
+
+            segment_width = int(round(30 * 1.5 * 0.8))
+            segment_height = int(round(18 * 0.8))
+            segment_gap = 10
+            segment_total_width = segment_width * 2 + segment_gap
+
+            column_margin = 24
+            column_width = screen_width // 2 - column_margin * 2
+            section_spacing = 4
+            row_indent = 12
+            value_padding = 20
+
+            section_states: dict[str, dict] = {}
+            y_cursor = start_y
+            for section in sections:
+                section_size = font_settings.scaled_size(11)
+                header_font = load_font(font_settings.resource, section_size)
+                header_surface = render_text_scaled_font(
+                    header_font,
+                    section["label"],
+                    LIGHT_GRAY,
+                )
+                section_states[section["label"]] = {
+                    "next_y": y_cursor + header_surface.get_height() + 4,
+                    "header_surface": header_surface,
+                    "header_pos": (column_margin, y_cursor),
+                }
+                rows_in_section = len(section["rows"])
+                y_cursor = (
+                    section_states[section["label"]]["next_y"]
+                    + rows_in_section * row_height
+                    + section_spacing
+                )
+
+            for state in section_states.values():
+                screen.blit(state["header_surface"], state["header_pos"])
+
+            label_size = font_settings.scaled_size(11)
+            value_size = font_settings.scaled_size(11)
+            label_font = load_font(font_settings.resource, label_size)
+            value_font = load_font(font_settings.resource, value_size)
+            for idx, row in enumerate(rows):
+                section_label = row_sections[idx]
+                state = section_states[section_label]
+                col_x = column_margin + row_indent
+                row_width = column_width - row_indent + value_padding
+                row_type = row.get("type", "toggle")
+                value = None
+                if row_type != "action":
+                    value = _get_value(
+                        row["path"],
+                        row.get("easy_value", row.get("choices", [None])[0]),
+                    )
+                row_y_current = state["next_y"]
+                state["next_y"] += row_height
+
+                highlight_rect = pygame.Rect(
+                    col_x, row_y_current - 2, row_width, row_height
+                )
+                if idx == selected:
+                    pygame.draw.rect(screen, highlight_color, highlight_rect)
+
+                label_height = label_font.get_linesize()
+                blit_text_scaled_font(
+                    screen,
+                    label_font,
+                    row["label"],
+                    WHITE,
+                    topleft=(
+                        col_x,
+                        row_y_current + (row_height - label_height) // 2,
+                    ),
+                )
+                if row_type == "choice":
+                    display_fn = row.get("get_display")
+                    display_text = (
+                        display_fn(value)
+                        if display_fn and value is not None
+                        else str(value)
+                    )
+                    blit_text_scaled_font(
+                        screen,
+                        value_font,
+                        display_text,
+                        WHITE,
+                        midright=(
+                            col_x + row_width,
+                            row_y_current + row_height // 2,
+                        ),
+                    )
+                elif row_type == "toggle":
+                    slider_y = row_y_current + (row_height - segment_height) // 2 - 2
+                    slider_x = col_x + row_width - segment_total_width
+                    left_rect = pygame.Rect(
+                        slider_x, slider_y, segment_width, segment_height
+                    )
+                    right_rect = pygame.Rect(
+                        left_rect.right + segment_gap,
+                        slider_y,
+                        segment_width,
+                        segment_height,
+                    )
+
+                    left_active = value == row["easy_value"]
+                    right_active = not left_active
+
+                    def draw_segment(
+                        rect: pygame.Rect, text: str, active: bool
+                    ) -> None:
+                        base_color = (35, 35, 35)
+                        active_color = (60, 90, 60) if active else base_color
+                        outline_color = GREEN if active else LIGHT_GRAY
+                        pygame.draw.rect(screen, active_color, rect)
+                        pygame.draw.rect(screen, outline_color, rect, width=2)
+                        blit_text_scaled_font(
+                            screen,
+                            value_font,
+                            text,
+                            WHITE,
+                            center=rect.center,
+                        )
+
+                    draw_segment(left_rect, row["left_label"], left_active)
+                    draw_segment(right_rect, row["right_label"], right_active)
+
+            hint_start_y = start_y
+            hint_start_x = screen_width // 2 + 16
+            hint_size = font_settings.scaled_size(11)
+            hint_font = load_font(font_settings.resource, hint_size)
+            hint_lines = [
+                tr("settings.hints.navigate"),
+                tr("settings.hints.adjust"),
+                tr("settings.hints.toggle"),
+                tr("settings.hints.reset"),
+                tr("settings.hints.exit"),
+            ]
+            hint_line_height = int(
+                round(hint_font.get_linesize() * font_settings.line_height_scale)
+            )
+            hint_max_width = screen_width - hint_start_x - 16
+            y_cursor = hint_start_y
+            for line in hint_lines:
+                blit_text_scaled_font(
+                    screen,
+                    hint_font,
+                    line,
+                    WHITE,
+                    topleft=(hint_start_x, y_cursor),
+                )
+                y_cursor += hint_line_height
+
+            y_cursor += 26
+            window_hint = tr("menu.window_hint")
+            for line in wrap_text(window_hint, hint_font, hint_max_width):
+                blit_text_scaled_font(
+                    screen,
+                    hint_font,
+                    line,
+                    WHITE,
+                    topleft=(hint_start_x, y_cursor),
+                )
+                y_cursor += hint_line_height
+
+            path_size = font_settings.scaled_size(11)
+            config_text = tr("settings.config_path", path=str(config_path))
+            progress_text = tr("settings.progress_path", path=str(user_progress_path()))
+            path_font = load_font(font_settings.resource, path_size)
+            line_height = path_font.get_linesize()
+            blit_text_scaled_font(
+                screen,
+                path_font,
+                config_text,
+                LIGHT_GRAY,
+                midtop=(screen_width // 2, screen_height - 32 - line_height),
+            )
+            blit_text_scaled_font(
+                screen,
+                path_font,
+                progress_text,
+                LIGHT_GRAY,
+                midtop=(screen_width // 2, screen_height - 32),
+            )
+        except pygame.error as e:
+            print(f"Error rendering settings: {e}")
+
+        present(screen)
+        clock.tick(fps)
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -214,14 +436,16 @@ def settings_screen(
                 adjust_menu_logical_size()
                 continue
             if event.type == pygame.JOYDEVICEADDED or (
-                CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
+                CONTROLLER_DEVICE_ADDED is not None
+                and event.type == CONTROLLER_DEVICE_ADDED
             ):
                 if controller is None:
                     controller = init_first_controller()
                 if controller is None:
                     joystick = init_first_joystick()
             if event.type == pygame.JOYDEVICEREMOVED or (
-                CONTROLLER_DEVICE_REMOVED is not None and event.type == CONTROLLER_DEVICE_REMOVED
+                CONTROLLER_DEVICE_REMOVED is not None
+                and event.type == CONTROLLER_DEVICE_REMOVED
             ):
                 if controller and not controller.get_init():
                     controller = None
@@ -269,7 +493,8 @@ def settings_screen(
                     working = copy.deepcopy(DEFAULT_CONFIG)
                     set_language(working.get("language"))
             if event.type == pygame.JOYBUTTONDOWN or (
-                CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN
+                CONTROLLER_BUTTON_DOWN is not None
+                and event.type == CONTROLLER_BUTTON_DOWN
             ):
                 current_row = rows[selected]
                 row_type = current_row.get("type", "toggle")
@@ -280,10 +505,19 @@ def settings_screen(
                         toggle_row(current_row)
                     elif row_type == "choice":
                         cycle_choice(current_row, 1)
-                if CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN:
-                    if CONTROLLER_BUTTON_DPAD_UP is not None and event.button == CONTROLLER_BUTTON_DPAD_UP:
+                if (
+                    CONTROLLER_BUTTON_DOWN is not None
+                    and event.type == CONTROLLER_BUTTON_DOWN
+                ):
+                    if (
+                        CONTROLLER_BUTTON_DPAD_UP is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_UP
+                    ):
                         selected = (selected - 1) % row_count
-                    if CONTROLLER_BUTTON_DPAD_DOWN is not None and event.button == CONTROLLER_BUTTON_DPAD_DOWN:
+                    if (
+                        CONTROLLER_BUTTON_DPAD_DOWN is not None
+                        and event.button == CONTROLLER_BUTTON_DPAD_DOWN
+                    ):
                         selected = (selected + 1) % row_count
                     if (
                         CONTROLLER_BUTTON_DPAD_LEFT is not None
@@ -322,200 +556,6 @@ def settings_screen(
                     elif row_type == "choice":
                         cycle_choice(current_row, 1)
 
-        current_language = get_language()
-        if current_language != last_language:
-            sections, rows, row_sections = rebuild_rows()
-            row_count = len(rows)
-            selected %= row_count
-            last_language = current_language
-
-        screen.fill(BLACK)
-        show_message(
-            screen,
-            tr("settings.title"),
-            26,
-            LIGHT_GRAY,
-            (screen_width // 2, TITLE_HEADER_Y),
-        )
-
-        try:
-            font_settings = get_font_settings()
-            highlight_color = (70, 70, 70)
-
-            row_height = (
-                int(round(load_font(font_settings.resource, font_settings.scaled_size(11)).get_linesize()
-                          * font_settings.line_height_scale))
-                + 2
-            )
-            start_y = TITLE_SECTION_TOP
-
-            segment_width = int(round(30 * 1.5 * 0.8))
-            segment_height = int(round(18 * 0.8))
-            segment_gap = 10
-            segment_total_width = segment_width * 2 + segment_gap
-
-            column_margin = 24
-            column_width = screen_width // 2 - column_margin * 2
-            section_spacing = 4
-            row_indent = 12
-            value_padding = 20
-
-            section_states: dict[str, dict] = {}
-            y_cursor = start_y
-            for section in sections:
-                section_size = font_settings.scaled_size(11)
-                header_font = load_font(font_settings.resource, section_size)
-                header_surface = render_text_scaled_font(
-                    header_font,
-                    section["label"],
-                    LIGHT_GRAY,
-                )
-                section_states[section["label"]] = {
-                    "next_y": y_cursor + header_surface.get_height() + 4,
-                    "header_surface": header_surface,
-                    "header_pos": (column_margin, y_cursor),
-                }
-                rows_in_section = len(section["rows"])
-                y_cursor = section_states[section["label"]]["next_y"] + rows_in_section * row_height + section_spacing
-
-            for state in section_states.values():
-                screen.blit(state["header_surface"], state["header_pos"])
-
-            label_size = font_settings.scaled_size(11)
-            value_size = font_settings.scaled_size(11)
-            label_font = load_font(font_settings.resource, label_size)
-            value_font = load_font(font_settings.resource, value_size)
-            for idx, row in enumerate(rows):
-                section_label = row_sections[idx]
-                state = section_states[section_label]
-                col_x = column_margin + row_indent
-                row_width = column_width - row_indent + value_padding
-                row_type = row.get("type", "toggle")
-                value = None
-                if row_type != "action":
-                    value = _get_value(
-                        row["path"],
-                        row.get("easy_value", row.get("choices", [None])[0]),
-                    )
-                row_y_current = state["next_y"]
-                state["next_y"] += row_height
-
-                highlight_rect = pygame.Rect(col_x, row_y_current - 2, row_width, row_height)
-                if idx == selected:
-                    pygame.draw.rect(screen, highlight_color, highlight_rect)
-
-                label_height = label_font.get_linesize()
-                blit_text_scaled_font(
-                    screen,
-                    label_font,
-                    row["label"],
-                    WHITE,
-                    topleft=(
-                        col_x,
-                        row_y_current + (row_height - label_height) // 2,
-                    ),
-                )
-                if row_type == "choice":
-                    display_fn = row.get("get_display")
-                    display_text = display_fn(value) if display_fn and value is not None else str(value)
-                    blit_text_scaled_font(
-                        screen,
-                        value_font,
-                        display_text,
-                        WHITE,
-                        midright=(
-                            col_x + row_width,
-                            row_y_current + row_height // 2,
-                        ),
-                    )
-                elif row_type == "toggle":
-                    slider_y = row_y_current + (row_height - segment_height) // 2 - 2
-                    slider_x = col_x + row_width - segment_total_width
-                    left_rect = pygame.Rect(slider_x, slider_y, segment_width, segment_height)
-                    right_rect = pygame.Rect(
-                        left_rect.right + segment_gap,
-                        slider_y,
-                        segment_width,
-                        segment_height,
-                    )
-
-                    left_active = value == row["easy_value"]
-                    right_active = not left_active
-
-                    def draw_segment(rect: pygame.Rect, text: str, active: bool) -> None:
-                        base_color = (35, 35, 35)
-                        active_color = (60, 90, 60) if active else base_color
-                        outline_color = GREEN if active else LIGHT_GRAY
-                        pygame.draw.rect(screen, active_color, rect)
-                        pygame.draw.rect(screen, outline_color, rect, width=2)
-                        blit_text_scaled_font(
-                            screen,
-                            value_font,
-                            text,
-                            WHITE,
-                            center=rect.center,
-                        )
-
-                    draw_segment(left_rect, row["left_label"], left_active)
-                    draw_segment(right_rect, row["right_label"], right_active)
-
-            hint_start_y = start_y
-            hint_start_x = screen_width // 2 + 16
-            hint_size = font_settings.scaled_size(11)
-            hint_font = load_font(font_settings.resource, hint_size)
-            hint_lines = [
-                tr("settings.hints.navigate"),
-                tr("settings.hints.adjust"),
-                tr("settings.hints.toggle"),
-                tr("settings.hints.reset"),
-                tr("settings.hints.exit"),
-            ]
-            hint_line_height = int(round(hint_font.get_linesize() * font_settings.line_height_scale))
-            hint_max_width = screen_width - hint_start_x - 16
-            y_cursor = hint_start_y
-            for line in hint_lines:
-                blit_text_scaled_font(
-                    screen,
-                    hint_font,
-                    line,
-                    WHITE,
-                    topleft=(hint_start_x, y_cursor),
-                )
-                y_cursor += hint_line_height
-
-            y_cursor += 26
-            window_hint = tr("menu.window_hint")
-            for line in wrap_text(window_hint, hint_font, hint_max_width):
-                blit_text_scaled_font(
-                    screen,
-                    hint_font,
-                    line,
-                    WHITE,
-                    topleft=(hint_start_x, y_cursor),
-                )
-                y_cursor += hint_line_height
-
-            path_size = font_settings.scaled_size(11)
-            config_text = tr("settings.config_path", path=str(config_path))
-            progress_text = tr("settings.progress_path", path=str(user_progress_path()))
-            path_font = load_font(font_settings.resource, path_size)
-            line_height = path_font.get_linesize()
-            blit_text_scaled_font(
-                screen,
-                path_font,
-                config_text,
-                LIGHT_GRAY,
-                midtop=(screen_width // 2, screen_height - 32 - line_height),
-            )
-            blit_text_scaled_font(
-                screen,
-                path_font,
-                progress_text,
-                LIGHT_GRAY,
-                midtop=(screen_width // 2, screen_height - 32),
-            )
-        except pygame.error as e:
-            print(f"Error rendering settings: {e}")
-
+        _render_frame()
         present(screen)
         clock.tick(fps)
