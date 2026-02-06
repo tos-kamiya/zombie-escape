@@ -327,9 +327,7 @@ def _build_continuous_hatch_surface(
     center: tuple[int, int],
     base_color: tuple[int, int, int, int],
     max_radius: float,
-    start_ratio: float,
-    max_density: float,
-    *,
+    density_ramps: list[tuple[float, float]],
     spacing: int = 4,
 ) -> surface.Surface:
     width, height = size
@@ -346,10 +344,13 @@ def _build_continuous_hatch_surface(
         [15, 47, 7, 39, 13, 45, 5, 37],
         [63, 31, 55, 23, 61, 29, 53, 21],
     ]
-    max_density = max(0.0, min(1.0, max_density))
-    start_ratio = max(0.0, min(1.0, start_ratio))
-    start_radius = max(0.0, max_radius * start_ratio)
-    fade_range = max(1.0, max_radius - start_radius)
+    ramps: list[tuple[float, float, float]] = []
+    for ramp_start_ratio, ramp_max_density in density_ramps:
+        safe_start = max(0.0, min(1.0, ramp_start_ratio))
+        safe_max_density = max(0.0, min(1.0, ramp_max_density))
+        start_radius = max(0.0, max_radius * safe_start)
+        fade_range = max(1.0, max_radius - start_radius)
+        ramps.append((safe_max_density, start_radius, fade_range))
     base_alpha = base_color[3]
     cell_center = (spacing - 1) / 2.0
 
@@ -359,9 +360,12 @@ def _build_continuous_hatch_surface(
     dx = xx - cx
     dy = yy - cy
     radius = np.hypot(dx, dy)
-    progress = (radius - start_radius) / fade_range
-    progress = np.clip(progress, 0.0, 1.0)
-    density = max_density * progress
+    density = np.zeros_like(radius)
+    for ramp_max_density, ramp_start, ramp_range in ramps:
+        progress = (radius - ramp_start) / ramp_range
+        progress = np.clip(progress, 0.0, 1.0)
+        density += ramp_max_density * progress
+    density = np.clip(density, 0.0, 1.0)
     threshold = (density * 64).astype(np.int32)
 
     bayer_np = np.array(bayer, dtype=np.int32)
@@ -418,8 +422,7 @@ def _get_fog_overlay_surfaces(
         center,
         base_color,
         max_radius,
-        assets.fog_hatch_linear_start_ratio,
-        assets.fog_hatch_density_scale,
+        assets.fog_hatch_density_ramps,
     )
     if assets.fog_hatch_soften_scale < 1.0:
         hatch_surface = _soften_surface(

@@ -43,8 +43,7 @@ class RenderAssets:
     internal_wall_grid_snap: int
     flashlight_hatch_extra_scale: float
     fog_hatch_soften_scale: float
-    fog_hatch_density_scale: float
-    fog_hatch_linear_start_ratio: float
+    fog_hatch_density_ramps: list[tuple[float, float]]
 
 
 FOG_RADIUS_SCALE = 1.2
@@ -52,9 +51,11 @@ FOG_RADIUS_SCALE = 1.2
 FLASHLIGHT_FOG_SCALE_ONE = FOG_RADIUS_SCALE + 0.3
 FLASHLIGHT_FOG_SCALE_TWO = FOG_RADIUS_SCALE + 0.6
 _FLASHLIGHT_HATCH_EXTRA_SCALE = 0.12
-FOG_HATCH_SOFTEN_SCALE = 0.8
-FOG_HATCH_DENSITY_SCALE = 0.5
-FOG_HATCH_LINEAR_START_RATIO = 0.5
+FOG_HATCH_SOFTEN_SCALE = 0.9
+FOG_HATCH_DENSITY_RAMPS: list[tuple[float, float]] = [
+    (0.5, 0.5),
+    (0.97, 0.3),
+]
 
 FOOTPRINT_RADIUS = 2
 FOOTPRINT_OVERVIEW_RADIUS = 3
@@ -96,8 +97,7 @@ def build_render_assets(cell_size: int) -> RenderAssets:
         internal_wall_grid_snap=cell_size,
         flashlight_hatch_extra_scale=_FLASHLIGHT_HATCH_EXTRA_SCALE,
         fog_hatch_soften_scale=FOG_HATCH_SOFTEN_SCALE,
-        fog_hatch_density_scale=FOG_HATCH_DENSITY_SCALE,
-        fog_hatch_linear_start_ratio=FOG_HATCH_LINEAR_START_RATIO,
+        fog_hatch_density_ramps=FOG_HATCH_DENSITY_RAMPS,
     )
 
 
@@ -125,8 +125,7 @@ __all__ = [
     "FLASHLIGHT_FOG_SCALE_ONE",
     "FLASHLIGHT_FOG_SCALE_TWO",
     "FOG_HATCH_SOFTEN_SCALE",
-    "FOG_HATCH_DENSITY_SCALE",
-    "FOG_HATCH_LINEAR_START_RATIO",
+    "FOG_HATCH_DENSITY_RAMPS",
     "SHADOW_OVERSAMPLE",
     "SHADOW_STEPS",
     "SHADOW_MIN_RATIO",
