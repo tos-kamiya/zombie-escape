@@ -323,7 +323,9 @@
   6. Sprite 群を `Camera` でオフセットして描画
   7. 追跡型/壁沿いゾンビには識別用の装飾を追加（追跡は鼻ライン、壁沿いは壁側の手）
   8. ヒント矢印 (`_draw_hint_arrow`)
-  9. 霧 (`fog_surfaces` + `FOG_RINGS`)
+  9. 霧 (`fog_surfaces`。ハッチは半径に応じて線形に濃くなる)
+     - 開始半径は `FOG_HATCH_LINEAR_START_RATIO`、最大濃度は `FOG_HATCH_DENSITY_SCALE` で制御。
+     - ハッチ生成は NumPy ベクトル化で一括計算し、初回生成後はキャッシュを使い回す。
   10. HUD: 目的/メッセージ/ステータスバー
 
 - 影は `shadow_layer` に壁影とエンティティ影を描き、光源（プレイヤーまたは車）基準でずらして合成する。
