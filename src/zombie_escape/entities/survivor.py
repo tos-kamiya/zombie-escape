@@ -16,6 +16,7 @@ from ..entities_constants import (
     BUDDY_WALL_DAMAGE,
     BUDDY_WALL_DAMAGE_RANGE,
     HUMANOID_WALL_BUMP_FRAMES,
+    HUMANOID_WALL_BUMP_HOLD_FRAMES,
     JUMP_DURATION_MS,
     JUMP_SCALE_MAX,
     PLAYER_RADIUS,
@@ -57,6 +58,7 @@ class Survivor(pygame.sprite.Sprite):
         self.input_facing_bin = 0
         self.wall_bump_counter = 0
         self.wall_bump_flip = 1
+        self.wall_bump_hold = 0
         self.directional_images = build_survivor_directional_surfaces(
             self.radius,
             is_buddy=is_buddy,
@@ -196,6 +198,7 @@ class Survivor(pygame.sprite.Sprite):
                 pitfall_cells=pitfall_cells,
                 can_jump_now=bool(can_jump_now),
                 now=now,
+                rollback_factor=1.5,
                 on_wall_hit=_on_buddy_wall_hit,
             )
 
@@ -208,6 +211,7 @@ class Survivor(pygame.sprite.Sprite):
                 pitfall_cells=pitfall_cells,
                 can_jump_now=bool(can_jump_now),
                 now=now,
+                rollback_factor=1.5,
                 on_wall_hit=_on_buddy_wall_hit,
             )
 
@@ -225,6 +229,11 @@ class Survivor(pygame.sprite.Sprite):
             self.x = min(level_width, max(0, self.x))
             self.y = min(level_height, max(0, self.y))
             self.rect.center = (int(self.x), int(self.y))
+            if inner_wall_hit:
+                self.wall_bump_hold = HUMANOID_WALL_BUMP_HOLD_FRAMES
+            elif self.wall_bump_hold:
+                self.wall_bump_hold -= 1
+                inner_wall_hit = True
             self._update_facing_for_bump(inner_wall_hit)
             return
 

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 from ..entities_constants import (
     HUMANOID_WALL_BUMP_FRAMES,
+    HUMANOID_WALL_BUMP_HOLD_FRAMES,
     JUMP_DURATION_MS,
     JUMP_SCALE_MAX,
     PLAYER_JUMP_RANGE,
@@ -48,6 +49,7 @@ class Player(pygame.sprite.Sprite):
         self.input_facing_bin = 0
         self.wall_bump_counter = 0
         self.wall_bump_flip = 1
+        self.wall_bump_hold = 0
         self.inner_wall_hit = False
         self.inner_wall_cell = None
         self.directional_images = build_player_directional_surfaces(self.radius)
@@ -155,6 +157,12 @@ class Player(pygame.sprite.Sprite):
         )
 
         self.rect.center = (int(self.x), int(self.y))
+        if inner_wall_hit:
+            self.wall_bump_hold = HUMANOID_WALL_BUMP_HOLD_FRAMES
+        elif self.wall_bump_hold:
+            self.wall_bump_hold -= 1
+            inner_wall_hit = True
+
         self.inner_wall_hit = inner_wall_hit
         self.inner_wall_cell = inner_wall_cell
         self._update_facing_for_bump(inner_wall_hit)
