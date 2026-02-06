@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import math
+
 import pygame
 
 from ..entities_constants import (
@@ -20,7 +22,9 @@ from ..entities_constants import (
     SURVIVOR_MAX_SAFE_PASSENGERS,
 )
 from .constants import (
-    CAR_ZOMBIE_DAMAGE,
+    CAR_ZOMBIE_CONTACT_DAMAGE,
+    CAR_ZOMBIE_HIT_DAMAGE,
+    CAR_ZOMBIE_RAM_DAMAGE,
     FUEL_HINT_DURATION_MS,
     SURVIVOR_OVERLOAD_DAMAGE_RATIO,
 )
@@ -344,9 +348,62 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
 
     # Car hitting zombies
     if player.in_car and active_car and active_car.health > 0 and shrunk_car:
-        zombies_hit = pygame.sprite.spritecollide(shrunk_car, zombie_group, True)
+        zombies_hit = pygame.sprite.spritecollide(shrunk_car, zombie_group, False)
         if zombies_hit:
-            active_car._take_damage(CAR_ZOMBIE_DAMAGE * len(zombies_hit))
+            move_dx = getattr(active_car, "last_move_dx", 0.0)
+            move_dy = getattr(active_car, "last_move_dy", 0.0)
+            moving = abs(move_dx) > 0.001 or abs(move_dy) > 0.001
+            move_len = math.hypot(move_dx, move_dy)
+            if move_len > 0:
+                norm_dx = move_dx / move_len
+                norm_dy = move_dy / move_len
+            else:
+                norm_dx = 0.0
+                norm_dy = 0.0
+            valid_hits = []
+            car_center = active_car.rect.center
+            car_radius = getattr(active_car, "collision_radius", 0.0)
+            for zombie in zombies_hit:
+                if not zombie.alive():
+                    continue
+                zombie_radius = getattr(zombie, "body_radius", None)
+                if zombie_radius is None:
+                    zombie_radius = getattr(zombie, "radius", None)
+                if zombie_radius is None:
+                    zombie_radius = max(zombie.rect.width, zombie.rect.height) / 2
+                zx = zombie.rect.centerx - car_center[0]
+                zy = zombie.rect.centery - car_center[1]
+                dist = math.hypot(zx, zy)
+                if dist <= 0:
+                    zx = norm_dx if norm_dx or norm_dy else 1.0
+                    zy = norm_dy if norm_dx or norm_dy else 0.0
+                    dist = 1.0
+                overlap = car_radius + zombie_radius - dist
+                allowed_overlap = min(car_radius, zombie_radius) * 0.3
+                if overlap > allowed_overlap:
+                    push = max(0.5, overlap - allowed_overlap)
+                    zombie.x += (zx / dist) * push
+                    zombie.y += (zy / dist) * push
+                    zombie.rect.center = (int(zombie.x), int(zombie.y))
+                if not moving:
+                    continue
+                zx = zombie.rect.centerx - car_center[0]
+                zy = zombie.rect.centery - car_center[1]
+                if zx * norm_dx + zy * norm_dy <= 0:
+                    continue
+                if hasattr(zombie, "take_damage"):
+                    zombie.take_damage(CAR_ZOMBIE_HIT_DAMAGE)
+                valid_hits.append(zombie)
+            if zombies_hit:
+                non_forward_hits = 0
+                if moving:
+                    non_forward_hits = len(zombies_hit) - len(valid_hits)
+                else:
+                    non_forward_hits = len(zombies_hit)
+                ram_damage = CAR_ZOMBIE_RAM_DAMAGE * len(valid_hits)
+                contact_damage = CAR_ZOMBIE_CONTACT_DAMAGE * non_forward_hits
+                total_damage = ram_damage + contact_damage
+                active_car._take_damage(total_damage)
 
     if (
         stage.rescue_stage

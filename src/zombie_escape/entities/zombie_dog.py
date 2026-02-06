@@ -72,6 +72,8 @@ class ZombieDog(pygame.sprite.Sprite):
         self.y = float(self.rect.centery)
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
+        self.max_health = 100
+        self.health = self.max_health
 
     def get_collision_circle(self: Self) -> tuple[tuple[int, int], float]:
         head_x, head_y = self._head_center()
@@ -300,3 +302,10 @@ class ZombieDog(pygame.sprite.Sprite):
         self.speed_assault = 0.0
         self.image = self.directional_images[self.facing_bin].copy()
         self.image.fill((80, 80, 80, 255), special_flags=pygame.BLEND_RGBA_MULT)
+
+    def take_damage(self: Self, amount: int) -> None:
+        if amount <= 0 or not self.alive():
+            return
+        self.health -= amount
+        if self.health <= 0:
+            self.kill()

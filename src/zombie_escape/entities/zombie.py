@@ -89,8 +89,9 @@ class Zombie(pygame.sprite.Sprite):
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
         self.was_in_sight = False
-        self.max_health = 1.0
+        self.max_health = 100
         self.health = self.max_health
+        self.decay_carry = 0.0
         self.decay_duration_frames = decay_duration_frames
         if movement_strategy is None:
             if tracker:
@@ -233,13 +234,24 @@ class Zombie(pygame.sprite.Sprite):
         """Reduce zombie health over time and despawn when depleted."""
         if self.decay_duration_frames <= 0:
             return
-        self.health -= self.max_health / self.decay_duration_frames
+        self.decay_carry += self.max_health / self.decay_duration_frames
+        if self.decay_carry >= 1.0:
+            decay_amount = int(self.decay_carry)
+            self.decay_carry -= decay_amount
+            self.health -= decay_amount
         health_ratio = 0.0 if self.max_health <= 0 else self.health / self.max_health
         health_ratio = max(0.0, min(1.0, health_ratio))
         speed_ratio = ZOMBIE_DECAY_MIN_SPEED_RATIO + (
             1.0 - ZOMBIE_DECAY_MIN_SPEED_RATIO
         ) * health_ratio
         self.speed = self.initial_speed * speed_ratio
+        if self.health <= 0:
+            self.kill()
+
+    def take_damage(self: Self, amount: int) -> None:
+        if amount <= 0 or not self.alive():
+            return
+        self.health -= amount
         if self.health <= 0:
             self.kill()
 

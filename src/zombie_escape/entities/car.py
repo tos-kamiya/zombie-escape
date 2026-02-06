@@ -46,9 +46,11 @@ class Car(pygame.sprite.Sprite):
         self.health = CAR_HEALTH
         self.max_health = CAR_HEALTH
         self.collision_radius = _car_body_radius(CAR_WIDTH, CAR_HEIGHT)
+        self.last_move_dx = 0.0
+        self.last_move_dy = 0.0
         self._update_color()
 
-    def _take_damage(self: Self, amount: int) -> None:
+    def _take_damage(self: Self, amount: float) -> None:
         if self.health > 0:
             self.health -= amount
             self._update_color()
@@ -98,6 +100,8 @@ class Car(pygame.sprite.Sprite):
             return
         if dx == 0 and dy == 0:
             self.rect.center = (int(self.x), int(self.y))
+            self.last_move_dx = 0.0
+            self.last_move_dy = 0.0
             return
         new_x = self.x + dx
         new_y = self.y + dy
@@ -142,6 +146,8 @@ class Car(pygame.sprite.Sprite):
         self.x = new_x
         self.y = new_y
         self.rect.center = (int(self.x), int(self.y))
+        self.last_move_dx = dx
+        self.last_move_dy = dy
 
 
 def _car_body_radius(width: float, height: float) -> float:
