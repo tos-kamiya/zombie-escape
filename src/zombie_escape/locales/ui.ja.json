@@ -154,6 +154,10 @@
         "name": "#20 救出要請",
         "description": "合流して車で脱出せよ。",
         "intro": "「... \nみんな中にいるはずだ。\n合流してくれ。」"
+      },
+      "stage_dog_debug": {
+        "name": "犬デバッグ",
+        "description": "ゾンビ犬確認用ステージ。"
       }
     },
     "status": {

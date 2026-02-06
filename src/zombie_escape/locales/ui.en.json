@@ -154,6 +154,10 @@
         "name": "#20 Rescue Request",
         "description": "Link up and escape by car.",
         "intro": "\"... \nThey should be inside.\nLink up with them.\""
+      },
+      "stage_dog_debug": {
+        "name": "Dog Debug",
+        "description": "Debug stage for zombie dogs."
       }
     },
     "status": {

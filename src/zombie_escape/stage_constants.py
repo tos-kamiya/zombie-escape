@@ -436,6 +436,21 @@ STAGES: list[Stage] = [
         zombie_normal_ratio=0.2,
         zombie_aging_duration_frames=ZOMBIE_AGING_DURATION_FRAMES * 2,
     ),
+    Stage(
+        id="stage_dog_debug",
+        name_key="stages.stage_dog_debug.name",
+        description_key="stages.stage_dog_debug.description",
+        available=True,
+        grid_cols=15,
+        grid_rows=15,
+        wall_algorithm="empty",
+        exterior_spawn_weight=0.2,
+        interior_spawn_weight=0.8,
+        zombie_dog_ratio=0.5,
+        zombie_normal_ratio=0.5,
+        zombie_tracker_ratio=0.0,
+        zombie_wall_hugging_ratio=0.0,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 

@@ -31,6 +31,7 @@ from ..rng import get_rng
 from ..render_constants import BUDDY_COLOR
 from ..screen_constants import FPS
 from ..entities import Car
+from ..entities.collisions import collide_circle_custom
 from .footprints import get_shrunk_sprite
 from .spawn import maintain_waiting_car_supply
 from .survivors import (
@@ -197,7 +198,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 g = pygame.sprite.Group()
                 g.add(buddy)
                 if pygame.sprite.spritecollide(
-                    shrunk_car, g, False, pygame.sprite.collide_circle
+                    shrunk_car, g, False, collide_circle_custom
                 ):
                     prospective_passengers = state.survivors_onboard + 1
                     capacity_limit = state.survivor_capacity
@@ -213,7 +214,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     continue
 
             if buddy.alive() and pygame.sprite.spritecollide(
-                buddy, zombie_group, False, pygame.sprite.collide_circle
+                buddy, zombie_group, False, collide_circle_custom
             ):
                 fov_target = None
                 if player.in_car and active_car:
@@ -355,7 +356,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         and survivor_group
     ):
         boarded = pygame.sprite.spritecollide(
-            shrunk_car, survivor_group, True, pygame.sprite.collide_circle
+            shrunk_car, survivor_group, True, collide_circle_custom
         )
         if boarded:
             state.survivors_onboard += len(boarded)
@@ -399,7 +400,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     if not player.in_car and player in all_sprites:
         shrunk_player = get_shrunk_sprite(player, 0.8)
         collisions = pygame.sprite.spritecollide(
-            shrunk_player, zombie_group, False, pygame.sprite.collide_circle
+            shrunk_player, zombie_group, False, collide_circle_custom
         )
         if any(not zombie.carbonized for zombie in collisions):
             if not state.game_over:

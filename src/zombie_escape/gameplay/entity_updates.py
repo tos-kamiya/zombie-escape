@@ -11,6 +11,7 @@ from ..entities import (
     Survivor,
     Wall,
     Zombie,
+    ZombieDog,
 )
 from ..entities_constants import (
     HUMANOID_WALL_BUMP_FRAMES,
@@ -238,7 +239,9 @@ def update_entities(
                 if rect_visible_on_screen(camera, survivor.rect):
                     survivors_on_screen.append(survivor)
 
-    zombies_sorted: list[Zombie] = sorted(list(zombie_group), key=lambda z: z.x)
+    zombies_sorted: list[Zombie | ZombieDog] = sorted(
+        list(zombie_group), key=lambda z: z.x
+    )
 
     tracker_buckets: dict[tuple[int, int, int], list[Zombie]] = {}
     tracker_cell_size = ZOMBIE_TRACKER_CROWD_BAND_WIDTH
@@ -262,9 +265,9 @@ def update_entities(
             continue
         RNG.choice(bucket).tracker_force_wander = True
 
-    def _nearby_zombies(index: int) -> list[Zombie]:
+    def _nearby_zombies(index: int) -> list[Zombie | ZombieDog]:
         center = zombies_sorted[index]
-        neighbors: list[Zombie] = []
+        neighbors: list[Zombie | ZombieDog] = []
         search_radius = ZOMBIE_SEPARATION_DISTANCE + PLAYER_SPEED
         for left in range(index - 1, -1, -1):
             other = zombies_sorted[left]
@@ -282,7 +285,9 @@ def update_entities(
 
     for idx, zombie in enumerate(zombies_sorted):
         target = target_center
-        if buddies_on_screen:
+        if isinstance(zombie, ZombieDog):
+            target = player.rect.center
+        if buddies_on_screen and not isinstance(zombie, ZombieDog):
             dist_to_target_sq = (target_center[0] - zombie.x) ** 2 + (
                 target_center[1] - zombie.y
             ) ** 2
@@ -299,7 +304,7 @@ def update_entities(
             if dist_to_buddy_sq < dist_to_target_sq:
                 target = nearest_buddy.rect.center
 
-        if stage.rescue_stage:
+        if stage.rescue_stage and not isinstance(zombie, ZombieDog):
             zombie_on_screen = rect_visible_on_screen(camera, zombie.rect)
             if zombie_on_screen:
                 candidate_positions: list[tuple[int, int]] = []
@@ -318,17 +323,18 @@ def update_entities(
         nearby_candidates = _nearby_zombies(idx)
         zombie_search_radius = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius + 120
         nearby_walls = _walls_near((zombie.x, zombie.y), zombie_search_radius)
+        dog_candidates = list(zombie_group) if isinstance(zombie, ZombieDog) else nearby_candidates
         zombie.update(
             target,
             nearby_walls,
-            nearby_candidates,
+            dog_candidates,
             footprints=game_data.state.footprints,
             cell_size=game_data.cell_size,
             layout=game_data.layout,
         )
 
         # Check zombie pitfall
-        pull_dist = zombie.radius * 0.5
+        pull_dist = getattr(zombie, "body_radius", zombie.radius) * 0.5
         pitfall_target_pos = pitfall_target(
             x=zombie.x,
             y=zombie.y,
@@ -345,8 +351,9 @@ def update_entities(
                 pre_fx_ms=0,
                 fall_duration_ms=500,
                 dust_duration_ms=0,
-                tracker=zombie.tracker,
-                wall_hugging=zombie.wall_hugging,
+                tracker=getattr(zombie, "tracker", False),
+                wall_hugging=getattr(zombie, "wall_hugging", False),
+                variant="dog" if isinstance(zombie, ZombieDog) else "normal",
                 mode="pitfall",
             )
             game_data.state.falling_zombies.append(fall)

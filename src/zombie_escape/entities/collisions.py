@@ -20,6 +20,26 @@ def _sprite_center_and_radius(
     return center, radius
 
 
+def _sprite_collision_circle(
+    sprite: pygame.sprite.Sprite,
+) -> tuple[tuple[int, int], float]:
+    if hasattr(sprite, "get_collision_circle"):
+        center, radius = sprite.get_collision_circle()
+        return (int(center[0]), int(center[1])), float(radius)
+    return _sprite_center_and_radius(sprite)
+
+
+def collide_circle_custom(
+    sprite_a: pygame.sprite.Sprite, sprite_b: pygame.sprite.Sprite
+) -> bool:
+    center_a, radius_a = _sprite_collision_circle(sprite_a)
+    center_b, radius_b = _sprite_collision_circle(sprite_b)
+    dx = center_a[0] - center_b[0]
+    dy = center_a[1] - center_b[1]
+    radius = radius_a + radius_b
+    return dx * dx + dy * dy <= radius * radius
+
+
 def _walls_for_sprite(
     sprite: pygame.sprite.Sprite,
     wall_index: WallIndex,

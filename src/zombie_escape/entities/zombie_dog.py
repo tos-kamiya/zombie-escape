@@ -1,0 +1,302 @@
+from __future__ import annotations
+
+import math
+from enum import Enum
+
+import pygame
+
+try:
+    from typing import Self
+except ImportError:  # pragma: no cover - Python 3.10 fallback
+    from typing_extensions import Self
+
+from ..entities_constants import (
+    ZOMBIE_DOG_ASSAULT_SPEED,
+    ZOMBIE_DOG_HEAD_RADIUS_RATIO,
+    ZOMBIE_DOG_LONG_AXIS_RATIO,
+    ZOMBIE_DOG_PATROL_SPEED,
+    ZOMBIE_DOG_PACK_CHASE_RANGE,
+    ZOMBIE_DOG_SHORT_AXIS_RATIO,
+    ZOMBIE_DOG_SIGHT_RANGE,
+    ZOMBIE_DOG_WANDER_INTERVAL_MS,
+    ZOMBIE_RADIUS,
+)
+from ..rng import get_rng
+from ..render_assets import (
+    angle_bin_from_vector,
+    build_zombie_dog_directional_surfaces,
+)
+from ..render_constants import ANGLE_BINS
+from ..world_grid import apply_cell_edge_nudge
+from .zombie import Zombie
+from .movement import _circle_wall_collision
+from .walls import Wall
+
+
+RNG = get_rng()
+
+
+class ZombieDogMode(Enum):
+    WANDER = "wander"
+    CHARGE = "charge"
+    CHASE = "chase"
+
+
+class ZombieDog(pygame.sprite.Sprite):
+    def __init__(self: Self, x: float, y: float) -> None:
+        super().__init__()
+        base_size = ZOMBIE_RADIUS * 2.0
+        self.long_axis = base_size * ZOMBIE_DOG_LONG_AXIS_RATIO
+        self.short_axis = base_size * ZOMBIE_DOG_SHORT_AXIS_RATIO
+        self.body_radius = self.short_axis * 0.5
+        self.radius = self.body_radius
+        self.head_radius = self.short_axis * ZOMBIE_DOG_HEAD_RADIUS_RATIO
+        self.speed_patrol = ZOMBIE_DOG_PATROL_SPEED
+        self.speed_assault = ZOMBIE_DOG_ASSAULT_SPEED
+        self.sight_range = ZOMBIE_DOG_SIGHT_RANGE
+        self.mode = ZombieDogMode.WANDER
+        self.charge_direction = (0.0, 0.0)
+        self.wander_angle = RNG.uniform(0.0, math.tau)
+        self.wander_change_time = pygame.time.get_ticks()
+        self.tracker = False
+        self.wall_hugging = False
+        self.carbonized = False
+        self.facing_bin = 0
+        self.directional_images = build_zombie_dog_directional_surfaces(
+            self.long_axis,
+            self.short_axis,
+        )
+        self.image = self.directional_images[self.facing_bin]
+        self.rect = self.image.get_rect(center=(x, y))
+        self.x = float(self.rect.centerx)
+        self.y = float(self.rect.centery)
+        self.last_move_dx = 0.0
+        self.last_move_dy = 0.0
+
+    def get_collision_circle(self: Self) -> tuple[tuple[int, int], float]:
+        head_x, head_y = self._head_center()
+        return (int(round(head_x)), int(round(head_y))), float(self.head_radius)
+
+    def _head_center(self: Self) -> tuple[float, float]:
+        angle = (self.facing_bin % ANGLE_BINS) * (math.tau / ANGLE_BINS)
+        offset = self.long_axis * 0.5
+        return (
+            self.x + math.cos(angle) * offset,
+            self.y + math.sin(angle) * offset,
+        )
+
+    def _set_facing_bin(self: Self, new_bin: int) -> None:
+        if new_bin == self.facing_bin:
+            return
+        center = self.rect.center
+        self.facing_bin = new_bin
+        self.image = self.directional_images[self.facing_bin]
+        self.rect = self.image.get_rect(center=center)
+
+    def _update_facing_from_movement(self: Self, dx: float, dy: float) -> None:
+        new_bin = angle_bin_from_vector(dx, dy)
+        if new_bin is None:
+            return
+        self._set_facing_bin(new_bin)
+
+    def _in_sight(self: Self, player_center: tuple[int, int]) -> bool:
+        dx = player_center[0] - self.x
+        dy = player_center[1] - self.y
+        return dx * dx + dy * dy <= self.sight_range * self.sight_range
+
+    def _nearest_zombie_target(
+        self: Self, nearby_zombies: list[pygame.sprite.Sprite]
+    ) -> pygame.sprite.Sprite | None:
+        best: pygame.sprite.Sprite | None = None
+        best_dist_sq = ZOMBIE_DOG_PACK_CHASE_RANGE * ZOMBIE_DOG_PACK_CHASE_RANGE
+        for candidate in nearby_zombies:
+            if not isinstance(candidate, Zombie):
+                continue
+            if candidate is self or not candidate.alive():
+                continue
+            if not hasattr(candidate, "carbonized"):
+                continue
+            if getattr(candidate, "carbonized", False):
+                continue
+            dx = candidate.rect.centerx - self.x
+            dy = candidate.rect.centery - self.y
+            dist_sq = dx * dx + dy * dy
+            if dist_sq <= best_dist_sq:
+                best = candidate
+                best_dist_sq = dist_sq
+        return best
+
+    def _set_charge_direction(self: Self, player_center: tuple[int, int]) -> None:
+        dx = player_center[0] - self.x
+        dy = player_center[1] - self.y
+        dist = math.hypot(dx, dy)
+        if dist <= 0:
+            self.charge_direction = (0.0, 0.0)
+            return
+        self.charge_direction = (dx / dist, dy / dist)
+
+    def _apply_wall_collision(
+        self: Self,
+        next_x: float,
+        next_y: float,
+        walls: list[Wall],
+    ) -> tuple[float, float, bool, bool]:
+        hit_x = False
+        hit_y = False
+        possible_walls = [
+            w
+            for w in walls
+            if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100
+        ]
+        final_x = self.x
+        final_y = self.y
+        if next_x != self.x:
+            for wall in possible_walls:
+                if _circle_wall_collision((next_x, final_y), self.body_radius, wall):
+                    hit_x = True
+                    next_x = self.x
+                    break
+            final_x = next_x
+        if next_y != self.y:
+            for wall in possible_walls:
+                if _circle_wall_collision((final_x, next_y), self.body_radius, wall):
+                    hit_y = True
+                    next_y = self.y
+                    break
+            final_y = next_y
+        return final_x, final_y, hit_x, hit_y
+
+    def update(
+        self: Self,
+        player_center: tuple[int, int],
+        walls: list[Wall],
+        nearby_zombies: list[pygame.sprite.Sprite],
+        footprints: list | None = None,
+        *,
+        cell_size: int,
+        layout,
+    ) -> None:
+        if self.carbonized:
+            return
+        _ = nearby_zombies, footprints
+        level_width = layout.field_rect.width
+        level_height = layout.field_rect.height
+
+        chase_target = self._nearest_zombie_target(list(nearby_zombies))
+        if chase_target is not None:
+            if self.mode != ZombieDogMode.CHASE:
+                self.mode = ZombieDogMode.CHASE
+        elif self.mode == ZombieDogMode.CHASE:
+            self.mode = ZombieDogMode.WANDER
+
+        if self.mode == ZombieDogMode.WANDER and self._in_sight(player_center):
+            self.mode = ZombieDogMode.CHARGE
+            self._set_charge_direction(player_center)
+            if self.charge_direction == (0.0, 0.0):
+                self.wander_angle = RNG.uniform(0.0, math.tau)
+                self.charge_direction = (
+                    math.cos(self.wander_angle),
+                    math.sin(self.wander_angle),
+                )
+        elif self.mode == ZombieDogMode.CHARGE and not self._in_sight(player_center):
+            self.mode = ZombieDogMode.WANDER
+
+        move_x = 0.0
+        move_y = 0.0
+        if self.mode == ZombieDogMode.WANDER:
+            now = pygame.time.get_ticks()
+            if now - self.wander_change_time > ZOMBIE_DOG_WANDER_INTERVAL_MS:
+                self.wander_change_time = now
+                self.wander_angle = RNG.uniform(0.0, math.tau)
+            move_x = math.cos(self.wander_angle) * self.speed_patrol
+            move_y = math.sin(self.wander_angle) * self.speed_patrol
+        elif self.mode == ZombieDogMode.CHARGE:
+            if self.charge_direction == (0.0, 0.0):
+                self.wander_angle = RNG.uniform(0.0, math.tau)
+                self.charge_direction = (
+                    math.cos(self.wander_angle),
+                    math.sin(self.wander_angle),
+                )
+            move_x = self.charge_direction[0] * self.speed_assault
+            move_y = self.charge_direction[1] * self.speed_assault
+        elif self.mode == ZombieDogMode.CHASE and chase_target is not None:
+            dx = chase_target.rect.centerx - self.x
+            dy = chase_target.rect.centery - self.y
+            dist = math.hypot(dx, dy)
+            if dist > 0:
+                move_x = (dx / dist) * self.speed_patrol
+                move_y = (dy / dist) * self.speed_patrol
+            else:
+                self.mode = ZombieDogMode.WANDER
+                self.wander_angle = RNG.uniform(0.0, math.tau)
+                self.wander_change_time = pygame.time.get_ticks()
+
+        move_x, move_y = apply_cell_edge_nudge(
+            self.x,
+            self.y,
+            move_x,
+            move_y,
+            layout=layout,
+            cell_size=cell_size,
+        )
+        self._update_facing_from_movement(move_x, move_y)
+        self.last_move_dx = move_x
+        self.last_move_dy = move_y
+
+        next_x = self.x + move_x
+        next_y = self.y + move_y
+        final_x, final_y, hit_x, hit_y = self._apply_wall_collision(
+            next_x, next_y, walls
+        )
+
+        if self.mode == ZombieDogMode.WANDER and (hit_x or hit_y):
+            self.wander_angle = (self.wander_angle + math.pi) % math.tau
+        elif self.mode in (ZombieDogMode.CHARGE, ZombieDogMode.CHASE) and (
+            hit_x or hit_y
+        ):
+            self.mode = ZombieDogMode.WANDER
+            self.wander_angle = RNG.uniform(0.0, math.tau)
+            self.wander_change_time = pygame.time.get_ticks()
+
+        if (
+            self.mode == ZombieDogMode.WANDER
+            and self.last_move_dx == 0.0
+            and self.last_move_dy == 0.0
+        ):
+            self.wander_angle = RNG.uniform(0.0, math.tau)
+            self.wander_change_time = pygame.time.get_ticks()
+        if final_x == self.x and final_y == self.y:
+            self.wander_angle = RNG.uniform(0.0, math.tau)
+            try_dx = math.cos(self.wander_angle) * self.speed_patrol
+            try_dy = math.sin(self.wander_angle) * self.speed_patrol
+            try_dx, try_dy = apply_cell_edge_nudge(
+                self.x,
+                self.y,
+                try_dx,
+                try_dy,
+                layout=layout,
+                cell_size=cell_size,
+            )
+            retry_x, retry_y, _, _ = self._apply_wall_collision(
+                self.x + try_dx, self.y + try_dy, walls
+            )
+            if retry_x != self.x or retry_y != self.y:
+                final_x = retry_x
+                final_y = retry_y
+
+        if not (0 <= final_x < level_width and 0 <= final_y < level_height):
+            self.kill()
+            return
+
+        self.x = final_x
+        self.y = final_y
+        self.rect.center = (int(self.x), int(self.y))
+
+    def carbonize(self: Self) -> None:
+        if self.carbonized:
+            return
+        self.carbonized = True
+        self.speed_patrol = 0.0
+        self.speed_assault = 0.0
+        self.image = self.directional_images[self.facing_bin].copy()
+        self.image.fill((80, 80, 80, 255), special_flags=pygame.BLEND_RGBA_MULT)

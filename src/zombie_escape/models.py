@@ -52,6 +52,7 @@ class FallingZombie:
     dust_duration_ms: int
     tracker: bool
     wall_hugging: bool
+    variant: str = "normal"
     dust_started: bool = False
     mode: str = "spawn"  # "spawn" (falling in) or "pitfall" (falling out)
 
@@ -206,6 +207,7 @@ class Stage:
     zombie_tracker_ratio: float = 0.0
     zombie_wall_hugging_ratio: float = 0.0
     zombie_normal_ratio: float = 1.0
+    zombie_dog_ratio: float = 0.0
     zombie_aging_duration_frames: int = ZOMBIE_AGING_DURATION_FRAMES
 
     # Survivor spawning

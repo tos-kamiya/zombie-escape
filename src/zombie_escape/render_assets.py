@@ -48,6 +48,9 @@ _SURVIVOR_DIRECTIONAL_CACHE: dict[
     tuple[int, bool, bool, int], list[pygame.Surface]
 ] = {}
 _ZOMBIE_DIRECTIONAL_CACHE: dict[tuple[int, bool, int], list[pygame.Surface]] = {}
+_ZOMBIE_DOG_DIRECTIONAL_CACHE: dict[
+    tuple[float, float, int], list[pygame.Surface]
+] = {}
 _RUBBLE_SURFACE_CACHE: dict[tuple, pygame.Surface] = {}
 
 RUBBLE_ROTATION_DEG = 5.0
@@ -513,6 +516,60 @@ def build_zombie_directional_surfaces(
     return surfaces
 
 
+def build_zombie_dog_directional_surfaces(
+    long_axis: float,
+    short_axis: float,
+    *,
+    bins: int = ANGLE_BINS,
+) -> list[pygame.Surface]:
+    cache_key = (float(long_axis), float(short_axis), bins)
+    if cache_key in _ZOMBIE_DOG_DIRECTIONAL_CACHE:
+        return _ZOMBIE_DOG_DIRECTIONAL_CACHE[cache_key]
+    half_long = long_axis * 0.5
+    half_short = short_axis * 0.5
+    width = int(math.ceil(long_axis + HUMANOID_OUTLINE_WIDTH * 2))
+    height = int(math.ceil(long_axis + HUMANOID_OUTLINE_WIDTH * 2))
+    center = (width / 2.0, height / 2.0)
+
+    def _lemon_points(angle_rad: float) -> list[tuple[int, int]]:
+        taper = 0.4
+        waist = 0.9
+        local_points = [
+            (half_long, 0.0),
+            (half_long * taper, half_short),
+            (-half_long * taper, half_short * waist),
+            (-half_long, 0.0),
+            (-half_long * taper, -half_short * waist),
+            (half_long * taper, -half_short),
+        ]
+        cos_a = math.cos(angle_rad)
+        sin_a = math.sin(angle_rad)
+        points = []
+        for px, py in local_points:
+            rx = px * cos_a - py * sin_a + center[0]
+            ry = px * sin_a + py * cos_a + center[1]
+            points.append((int(round(rx)), int(round(ry))))
+        return points
+
+    surfaces: list[pygame.Surface] = []
+    for bin_idx in range(bins):
+        angle_rad = bin_idx * ANGLE_STEP
+        surface = pygame.Surface((width, height), pygame.SRCALPHA)
+        points = _lemon_points(angle_rad)
+        pygame.draw.polygon(surface, ZOMBIE_BODY_COLOR, points)
+        if HUMANOID_OUTLINE_WIDTH > 0:
+            pygame.draw.polygon(
+                surface,
+                ZOMBIE_OUTLINE_COLOR,
+                points,
+                width=HUMANOID_OUTLINE_WIDTH,
+            )
+        surfaces.append(surface)
+
+    _ZOMBIE_DOG_DIRECTIONAL_CACHE[cache_key] = surfaces
+    return surfaces
+
+
 def build_car_surface(width: int, height: int) -> pygame.Surface:
     return pygame.Surface((width, height), pygame.SRCALPHA)
 
@@ -856,6 +913,7 @@ __all__ = [
     "draw_humanoid_nose",
     "build_survivor_directional_surfaces",
     "build_zombie_directional_surfaces",
+    "build_zombie_dog_directional_surfaces",
     "build_car_surface",
     "build_car_directional_surfaces",
     "paint_car_surface",
