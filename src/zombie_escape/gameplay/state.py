@@ -16,6 +16,7 @@ from ..screen_constants import FPS
 from ..entities import Camera
 from .ambient import _set_ambient_palette
 from .constants import INTRO_MESSAGE_DISPLAY_FRAMES
+from .decay_effects import prepare_decay_mask
 from .spatial_index import SPATIAL_INDEX_CELL_SIZE, SpatialIndex
 
 
@@ -75,6 +76,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         overview_created=False,
         footprints=[],
         spatial_index=SpatialIndex(cell_size=SPATIAL_INDEX_CELL_SIZE),
+        decay_effects=[],
         last_footprint_pos=None,
         footprint_visible_toggle=True,
         elapsed_play_ms=0,
@@ -119,6 +121,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
 
     # Start fade-in from black when gameplay begins.
     game_state.fade_in_started_at_ms = game_state.elapsed_play_ms
+
+    prepare_decay_mask()
 
     # Create sprite groups
     all_sprites = pygame.sprite.LayeredUpdates()

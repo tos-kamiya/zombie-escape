@@ -12,6 +12,7 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
 
 from ..entities_constants import (
     FAST_ZOMBIE_BASE_SPEED,
+    ZOMBIE_CARBONIZE_DECAY_FRAMES,
     ZOMBIE_DECAY_DURATION_FRAMES,
     ZOMBIE_DECAY_MIN_SPEED_RATIO,
     ZOMBIE_RADIUS,
@@ -93,6 +94,7 @@ class Zombie(pygame.sprite.Sprite):
         self.health = self.max_health
         self.decay_carry = 0.0
         self.decay_duration_frames = decay_duration_frames
+        self.last_damage_ms: int | None = None
         if movement_strategy is None:
             if tracker:
                 movement_strategy = _zombie_tracker_movement
@@ -251,6 +253,7 @@ class Zombie(pygame.sprite.Sprite):
     def take_damage(self: Self, amount: int) -> None:
         if amount <= 0 or not self.alive():
             return
+        self.last_damage_ms = pygame.time.get_ticks()
         self.health -= amount
         if self.health <= 0:
             self.kill()
@@ -346,6 +349,7 @@ class Zombie(pygame.sprite.Sprite):
         layout: LevelLayout,
     ) -> None:
         if self.carbonized:
+            self._apply_decay()
             return
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
@@ -421,6 +425,13 @@ class Zombie(pygame.sprite.Sprite):
             return
         self.carbonized = True
         self.speed = 0
+        if self.decay_duration_frames > 0:
+            remaining_ratio = min(
+                1.0, ZOMBIE_CARBONIZE_DECAY_FRAMES / self.decay_duration_frames
+            )
+            remaining_health = max(1, int(round(self.max_health * remaining_ratio)))
+            self.health = min(self.health, remaining_health)
+            self.decay_carry = 0.0
         self.image = self.directional_images[self.facing_bin].copy()
         self.image.fill((0, 0, 0, 0))
         color = (80, 80, 80)

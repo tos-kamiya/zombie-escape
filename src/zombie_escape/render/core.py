@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pygame
 import pygame.surfarray as pg_surfarray  # type: ignore
@@ -42,6 +42,9 @@ from ..render_constants import (
     PLAYER_SHADOW_RADIUS_MULT,
     FADE_IN_DURATION_MS,
 )
+
+if TYPE_CHECKING:  # pragma: no cover - typing-only imports
+    from ..gameplay.decay_effects import DecayingEntityEffect
 from .hud import (
     _build_objective_lines,
     _draw_endurance_timer,
@@ -613,6 +616,17 @@ def _draw_falling_fx(
         pygame.draw.circle(screen, color, screen_center, radius, width=2)
 
 
+def _draw_decay_fx(
+    screen: surface.Surface,
+    camera: Camera,
+    decay_effects: list["DecayingEntityEffect"],
+) -> None:
+    if not decay_effects:
+        return
+    for effect in decay_effects:
+        screen.blit(effect.surface, camera.apply_rect(effect.rect))
+
+
 def _draw_play_area(
     screen: surface.Surface,
     camera: Camera,
@@ -999,6 +1013,12 @@ def draw(
         player,
         has_fuel=has_fuel,
         show_fuel_indicator=not (stage and stage.endurance_stage),
+    )
+
+    _draw_decay_fx(
+        screen,
+        camera,
+        state.decay_effects,
     )
 
     _draw_falling_fx(

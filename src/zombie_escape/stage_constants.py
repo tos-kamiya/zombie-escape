@@ -455,6 +455,20 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.0,
         zombie_wall_hugging_ratio=0.0,
     ),
+    Stage(
+        id="decay_test",
+        name_key="stages.decay_test.name",
+        description_key="stages.decay_test.description",
+        available=True,
+        endurance_stage=True,
+        endurance_goal_ms=20_000,
+        grid_cols=15,
+        grid_rows=15,
+        wall_algorithm="empty",
+        exterior_spawn_weight=0.8,
+        interior_spawn_weight=0.2,
+        zombie_tracker_ratio=1.0,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 

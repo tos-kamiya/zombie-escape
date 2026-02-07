@@ -31,10 +31,11 @@ from ..rng import get_rng
 from ..entities.movement_helpers import pitfall_target
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
 from .constants import MAX_ZOMBIES
+from .decay_effects import DecayingEntityEffect, update_decay_effects
 from .spawn import spawn_weighted_zombie, update_falling_zombies
 from .spatial_index import SpatialKind
 from .survivors import update_survivors
-from .utils import rect_visible_on_screen
+from .utils import is_entity_in_fov, rect_visible_on_screen
 
 RNG = get_rng()
 
@@ -116,6 +117,7 @@ def update_entities(
     active_car = car if car and car.alive() else None
     pitfall_cells = game_data.layout.pitfall_cells
     field_rect = game_data.layout.field_rect
+    current_time = pygame.time.get_ticks()
 
     all_walls = list(wall_group) if wall_index is None else None
 
@@ -211,7 +213,6 @@ def update_entities(
     update_falling_zombies(game_data, config)
 
     # Spawn new zombies if needed
-    current_time = pygame.time.get_ticks()
     spawn_interval = max(1, stage.spawn_interval_ms)
     spawn_blocked = stage.endurance_stage and game_data.state.dawn_ready
     if (
@@ -327,6 +328,22 @@ def update_entities(
             cell_size=game_data.cell_size,
             layout=game_data.layout,
         )
+        if not zombie.alive():
+            last_damage_ms = getattr(zombie, "last_damage_ms", None)
+            died_from_damage = (
+                last_damage_ms is not None and last_damage_ms == current_time
+            )
+            if not died_from_damage:
+                fov_target = active_car if player.in_car and active_car else player
+                if rect_visible_on_screen(camera, zombie.rect) and is_entity_in_fov(
+                    zombie.rect,
+                    fov_target=fov_target,
+                    flashlight_count=game_data.state.flashlight_count,
+                ):
+                    game_data.state.decay_effects.append(
+                        DecayingEntityEffect(zombie.image, zombie.rect.center)
+                    )
+            continue
 
         # Check zombie pitfall
         pull_dist = getattr(zombie, "body_radius", zombie.radius) * 0.5
@@ -352,3 +369,5 @@ def update_entities(
                 mode="pitfall",
             )
             game_data.state.falling_zombies.append(fall)
+
+    update_decay_effects(game_data.state.decay_effects, frames=1)

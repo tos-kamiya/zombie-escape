@@ -20,6 +20,7 @@ from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from .entities import Camera, Car, Flashlight, FuelCan, Player, Shoes
+    from .gameplay.decay_effects import DecayingEntityEffect
     from .gameplay.spatial_index import SpatialIndex
     from .level_blueprints import Blueprint
 
@@ -89,6 +90,7 @@ class ProgressState:
     overview_created: bool
     footprints: list[Footprint]
     spatial_index: "SpatialIndex"
+    decay_effects: list["DecayingEntityEffect"]
     last_footprint_pos: tuple[int, int] | None
     footprint_visible_toggle: bool
     elapsed_play_ms: int

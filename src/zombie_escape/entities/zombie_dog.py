@@ -14,6 +14,7 @@ from ..entities_constants import (
     ZOMBIE_DOG_ASSAULT_SPEED,
     ZOMBIE_DOG_BITE_DAMAGE,
     ZOMBIE_DOG_BITE_INTERVAL_FRAMES,
+    ZOMBIE_CARBONIZE_DECAY_FRAMES,
     ZOMBIE_DOG_DECAY_DURATION_FRAMES,
     ZOMBIE_DOG_DECAY_MIN_SPEED_RATIO,
     ZOMBIE_DOG_HEAD_RADIUS_RATIO,
@@ -84,6 +85,7 @@ class ZombieDog(pygame.sprite.Sprite):
         self.health = self.max_health
         self.decay_carry = 0.0
         self.decay_duration_frames = ZOMBIE_DOG_DECAY_DURATION_FRAMES
+        self.last_damage_ms: int | None = None
 
     def get_collision_circle(self: Self) -> tuple[tuple[int, int], float]:
         head_x, head_y = self._head_center()
@@ -274,6 +276,7 @@ class ZombieDog(pygame.sprite.Sprite):
         layout,
     ) -> None:
         if self.carbonized:
+            self._apply_decay()
             return
         self._apply_decay()
         if not self.alive():
@@ -411,12 +414,20 @@ class ZombieDog(pygame.sprite.Sprite):
         self.carbonized = True
         self.speed_patrol = 0.0
         self.speed_assault = 0.0
+        if self.decay_duration_frames > 0:
+            remaining_ratio = min(
+                1.0, ZOMBIE_CARBONIZE_DECAY_FRAMES / self.decay_duration_frames
+            )
+            remaining_health = max(1, int(round(self.max_health * remaining_ratio)))
+            self.health = min(self.health, remaining_health)
+            self.decay_carry = 0.0
         self.image = self.directional_images[self.facing_bin].copy()
         self.image.fill((80, 80, 80, 255), special_flags=pygame.BLEND_RGBA_MULT)
 
     def take_damage(self: Self, amount: int) -> None:
         if amount <= 0 or not self.alive():
             return
+        self.last_damage_ms = pygame.time.get_ticks()
         self.health -= amount
         if self.health <= 0:
             self.kill()
