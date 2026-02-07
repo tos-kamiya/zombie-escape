@@ -12,3 +12,4 @@ Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/righ
 | Falling Spawn Floor | <img src="../imgs/exports/fall-zone.png" width="80"> | Stage 12 | Rusted-iron-looking floor; zombies drop from above here. |
 | Wall Rubble | <img src="../imgs/exports/wall-rubble.png" width="80"> | Stage 14 | Variant of inner wall with a collapsed look. |
 | Pitfall | <img src="../imgs/exports/pitfall.png" width="80"> | Stage 16 | Humans can hop a tiny corner gap; zombies fall in. |
+| Zombie Dog | <img src="../imgs/exports/zombie-dog.png" width="80"> | Stage 21 | Fast charging zombie that also chases nearby zombies. |
