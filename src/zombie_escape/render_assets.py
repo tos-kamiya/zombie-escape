@@ -33,7 +33,7 @@ from .render_constants import (
 
 
 def _brighten_color(
-    color: tuple[int, int, int], *, factor: float = 1.25
+    color: tuple[int, int, int], *, factor: float = 1.125
 ) -> tuple[int, int, int]:
     return tuple(min(255, int(c * factor + 0.5)) for c in color)
 
@@ -557,6 +557,20 @@ def build_zombie_dog_directional_surfaces(
         surface = pygame.Surface((width, height), pygame.SRCALPHA)
         points = _lemon_points(angle_rad)
         pygame.draw.polygon(surface, ZOMBIE_BODY_COLOR, points)
+        center_x, center_y = center
+        highlight_dir = (math.cos(angle_rad) * 0.25, math.sin(angle_rad) * 0.25)
+        highlight_points = [
+            (
+                int(round((px - center_x) * 0.82 + center_x + highlight_dir[0])),
+                int(round((py - center_y) * 0.82 + center_y + highlight_dir[1])),
+            )
+            for px, py in points
+        ]
+        pygame.draw.polygon(
+            surface,
+            _brighten_color(ZOMBIE_BODY_COLOR),
+            highlight_points,
+        )
         if HUMANOID_OUTLINE_WIDTH > 0:
             pygame.draw.polygon(
                 surface,
