@@ -17,6 +17,7 @@ from ..entities_constants import (
     HUMANOID_WALL_BUMP_FRAMES,
     PLAYER_SPEED,
     ZOMBIE_DOG_PACK_CHASE_RANGE,
+    ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_TRACKER_CROWD_BAND_WIDTH,
     ZOMBIE_TRACKER_GRID_CROWD_COUNT,
@@ -271,10 +272,26 @@ def update_entities(
             continue
         RNG.choice(bucket).tracker_force_wander = True
 
+    survivor_candidates = [
+        survivor for survivor in survivor_group if survivor.alive() and not survivor.rescued
+    ]
+    dog_survivor_range_sq = ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE * ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE
+
     for zombie in zombies_sorted:
         target = target_center
         if isinstance(zombie, ZombieDog):
             target = player.rect.center
+            closest_survivor: Survivor | None = None
+            closest_dist_sq = dog_survivor_range_sq
+            for survivor in survivor_candidates:
+                dx = survivor.rect.centerx - zombie.x
+                dy = survivor.rect.centery - zombie.y
+                dist_sq = dx * dx + dy * dy
+                if dist_sq <= closest_dist_sq:
+                    closest_survivor = survivor
+                    closest_dist_sq = dist_sq
+            if closest_survivor is not None:
+                target = closest_survivor.rect.center
         if buddies_on_screen and not isinstance(zombie, ZombieDog):
             dist_to_target_sq = (target_center[0] - zombie.x) ** 2 + (
                 target_center[1] - zombie.y
