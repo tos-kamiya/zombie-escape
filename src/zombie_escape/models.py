@@ -23,6 +23,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from .gameplay.decay_effects import DecayingEntityEffect
     from .gameplay.spatial_index import SpatialIndex
     from .level_blueprints import Blueprint
+    from .world_grid import WallIndex
 
 
 @dataclass
@@ -156,6 +157,8 @@ class GameData:
     fog: dict
     stage: Stage
     cell_size: int
+    wall_index: "WallIndex | None" = None
+    wall_index_dirty: bool = True
     blueprint: Blueprint | None = None
     fuel: FuelCan | None = None
     flashlights: list[Flashlight] | None = None

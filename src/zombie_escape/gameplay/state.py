@@ -167,6 +167,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         },
         stage=stage,
         cell_size=cell_size,
+        wall_index=None,
+        wall_index_dirty=True,
         blueprint=None,
         fuel=None,
         flashlights=[],

@@ -115,12 +115,16 @@ def generate_level_from_blueprint(
     palette = get_environment_palette(game_data.state.ambient_palette_key)
     rubble_ratio = max(0.0, min(1.0, stage.wall_rubble_ratio))
 
+    def _invalidate_wall_index() -> None:
+        game_data.wall_index_dirty = True
+
     def add_beam_to_groups(beam: SteelBeam) -> None:
         if beam._added_to_groups:
             return
         wall_group.add(beam)
         all_sprites.add(beam, layer=0)
         beam._added_to_groups = True
+        _invalidate_wall_index()
 
     def remove_wall_cell(cell: tuple[int, int], *, allow_walkable: bool = True) -> None:
         if cell in wall_cells:
@@ -128,6 +132,7 @@ def generate_level_from_blueprint(
             if allow_walkable and cell not in walkable_cells:
                 walkable_cells.append(cell)
         outer_wall_cells.discard(cell)
+        _invalidate_wall_index()
 
     for y, row in enumerate(blueprint):
         if len(row) != stage.grid_cols:

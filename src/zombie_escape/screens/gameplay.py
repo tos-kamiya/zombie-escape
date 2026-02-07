@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pygame
 from pygame import surface, time
 
 from ..colors import LIGHT_GRAY, RED, WHITE, YELLOW
-from ..font_utils import load_font
+from ..font_utils import load_font, render_text_unscaled
 from ..gameplay_constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
     SURVIVAL_TIME_ACCEL_SUBSTEPS,
@@ -87,12 +89,35 @@ def gameplay_screen(
     render_assets: "RenderAssets",
     debug_mode: bool = False,
     show_fps: bool = False,
+    profiler: "object | None" = None,
+    profiler_output: Path | None = None,
 ) -> ScreenTransition:
     """Main gameplay loop that returns the next screen transition."""
 
     screen_width = screen.get_width()
     screen_height = screen.get_height()
     mouse_hidden = False
+    use_busy_loop = os.environ.get("ZOMBIE_ESCAPE_BUSY_LOOP") == "1"
+    profiling_active = False
+
+    def _dump_profile() -> None:
+        nonlocal profiling_active
+        if profiler is None or profiler_output is None:
+            return
+        try:
+            import pstats
+        except Exception:
+            return
+        if profiling_active:
+            profiler.disable()
+            profiling_active = False
+        output_path = profiler_output
+        profiler.dump_stats(output_path)
+        summary_path = output_path.with_suffix(".txt")
+        with summary_path.open("w", encoding="utf-8") as handle:
+            stats = pstats.Stats(profiler, stream=handle).sort_stats("tottime")
+            stats.print_stats(50)
+        print(f"Profile saved to {output_path} and {summary_path}")
 
     def _set_mouse_hidden(hidden: bool) -> None:
         nonlocal mouse_hidden
@@ -103,6 +128,8 @@ def gameplay_screen(
 
     def _finalize(transition: ScreenTransition) -> ScreenTransition:
         _set_mouse_hidden(False)
+        if profiling_active:
+            _dump_profile()
         return transition
 
     def _show_loading_still() -> None:
@@ -257,7 +284,8 @@ def gameplay_screen(
     level_rect = game_data.layout.field_rect
     overview_surface = pygame.Surface((level_rect.width, level_rect.height))
     while True:
-        dt = clock.tick(fps) / 1000.0
+        frame_ms = clock.tick_busy_loop(fps) if use_busy_loop else clock.tick(fps)
+        dt = frame_ms / 1000.0
         current_fps = clock.get_fps()
         if game_data.state.game_over or game_data.state.game_won:
             if game_data.state.game_won:
@@ -316,6 +344,15 @@ def gameplay_screen(
                 if joystick and not joystick.get_init():
                     joystick = None
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_F10:
+                    if profiler is not None:
+                        if profiling_active:
+                            _dump_profile()
+                        else:
+                            profiler.enable()
+                            profiling_active = True
+                            print("Profile started (F10 to stop and save).")
+                    continue
                 if event.key == pygame.K_LEFTBRACKET:
                     nudge_window_scale(0.5, game_data=game_data)
                     continue
@@ -405,9 +442,12 @@ def gameplay_screen(
         game_data.state.time_accel_active = accel_active
         substeps = SURVIVAL_TIME_ACCEL_SUBSTEPS if accel_active else 1
         sub_dt = min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
-        wall_index = build_wall_index(
-            game_data.groups.wall_group, cell_size=game_data.cell_size
-        )
+        if game_data.wall_index is None or game_data.wall_index_dirty:
+            game_data.wall_index = build_wall_index(
+                game_data.groups.wall_group, cell_size=game_data.cell_size
+            )
+            game_data.wall_index_dirty = False
+        wall_index = game_data.wall_index
         for _ in range(substeps):
             player_ref = game_data.player
             if player_ref is None:
@@ -538,6 +578,11 @@ def gameplay_screen(
             hint_color=hint_color,
             fps=current_fps,
         )
+        if profiling_active:
+            font_settings = get_font_settings()
+            font = load_font(font_settings.resource, font_settings.scaled_size(11))
+            label = render_text_unscaled(font, "PROFILE ON", RED)
+            screen.blit(label, (6, 6))
         present(screen)
 
     # Should not reach here, but return to title if it happens

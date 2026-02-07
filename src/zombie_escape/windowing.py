@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+import os
 
 import pygame
 from pygame import surface
@@ -28,6 +29,16 @@ current_window_size = (
 )
 last_logged_window_size = current_window_size
 _scaled_logical_size = (SCREEN_WIDTH, SCREEN_HEIGHT)
+_WINDOW_SCALE_COOLDOWN_MS = 500
+_last_window_scale_apply_ms: int | None = None
+_pending_window_scale: float | None = None
+_pending_window_scale_game_data: "GameData | None" = None
+_VSYNC_ENV = os.environ.get("ZOMBIE_ESCAPE_VSYNC")
+_VSYNC_PREFERENCE: int | None
+if _VSYNC_ENV is None:
+    _VSYNC_PREFERENCE = None
+else:
+    _VSYNC_PREFERENCE = 1 if _VSYNC_ENV not in ("0", "false", "False") else 0
 
 __all__ = [
     "present",
@@ -44,6 +55,7 @@ __all__ = [
 
 def present(logical_surface: surface.Surface) -> None:
     """Scale the logical surface directly to the window and flip buffers."""
+    _maybe_apply_pending_window_scale()
     window = pygame.display.get_surface()
     if window is None:
         return
@@ -88,6 +100,31 @@ def apply_window_scale(
     scale: float, *, game_data: "GameData | None" = None
 ) -> surface.Surface:
     """Resize the OS window; logical render surface stays constant."""
+    global _last_window_scale_apply_ms, _pending_window_scale, _pending_window_scale_game_data
+
+    now = pygame.time.get_ticks()
+    if pygame.display.get_surface() is None:
+        _last_window_scale_apply_ms = now
+        _pending_window_scale = None
+        _pending_window_scale_game_data = None
+        return _apply_window_scale_now(scale, game_data=game_data)
+    if (
+        _last_window_scale_apply_ms is not None
+        and now - _last_window_scale_apply_ms < _WINDOW_SCALE_COOLDOWN_MS
+    ):
+        _pending_window_scale = scale
+        _pending_window_scale_game_data = game_data
+        window = pygame.display.get_surface()
+        return window if window is not None else pygame.Surface((1, 1))
+    _last_window_scale_apply_ms = now
+    _pending_window_scale = None
+    _pending_window_scale_game_data = None
+    return _apply_window_scale_now(scale, game_data=game_data)
+
+
+def _apply_window_scale_now(
+    scale: float, *, game_data: "GameData | None" = None
+) -> surface.Surface:
     global current_window_scale, current_maximized, last_window_scale
 
     clamped_scale = max(WINDOW_SCALE_MIN, min(WINDOW_SCALE_MAX, scale))
@@ -101,10 +138,10 @@ def apply_window_scale(
     flags = pygame.RESIZABLE
     if _use_scaled_display():
         flags |= pygame.SCALED
-        new_window = pygame.display.set_mode(_scaled_logical_size, flags)
+        new_window = _set_mode(_scaled_logical_size, flags)
         _set_window_size((window_width, window_height))
     else:
-        new_window = pygame.display.set_mode((window_width, window_height), flags)
+        new_window = _set_mode((window_width, window_height), flags)
     _update_window_size((window_width, window_height), source="apply_scale")
     _update_window_caption()
 
@@ -153,10 +190,10 @@ def toggle_fullscreen(*, game_data: "GameData | None" = None) -> surface.Surface
         flags = pygame.RESIZABLE
         if _use_scaled_display():
             flags |= pygame.SCALED
-            window = pygame.display.set_mode(_scaled_logical_size, flags)
+            window = _set_mode(_scaled_logical_size, flags)
             _set_window_size((window_width, window_height))
         else:
-            window = pygame.display.set_mode((window_width, window_height), flags)
+            window = _set_mode((window_width, window_height), flags)
         if last_window_position is not None:
             _restore_window_position(last_window_position)
         _restore_window()
@@ -177,11 +214,9 @@ def toggle_fullscreen(*, game_data: "GameData | None" = None) -> surface.Surface
                 flags |= pygame.SCALED
                 render_size = _scaled_logical_size
             if display_index is None:
-                window = pygame.display.set_mode(render_size, flags)
+                window = _set_mode(render_size, flags)
             else:
-                window = pygame.display.set_mode(
-                    render_size, flags, display=display_index
-                )
+                window = _set_mode(render_size, flags, display=display_index)
         window_width, window_height = _fetch_window_size(window)
         _update_window_caption()
         _update_window_size((window_width, window_height), source="toggle_fullscreen")
@@ -195,7 +230,7 @@ def sync_window_size(
     event: pygame.event.Event, *, game_data: "GameData | None" = None
 ) -> None:
     """Synchronize tracked window size with SDL window events."""
-    global current_window_scale, last_window_scale
+    global current_window_scale, last_window_scale, _last_window_scale_apply_ms
     size = getattr(event, "size", None)
     if not size:
         width = getattr(event, "x", None)
@@ -215,6 +250,8 @@ def sync_window_size(
     _update_window_caption()
     if game_data is not None:
         game_data.state.overview_created = False
+    _last_window_scale_apply_ms = None
+    _maybe_apply_pending_window_scale()
 
 
 def set_scaled_logical_size(
@@ -235,10 +272,10 @@ def set_scaled_logical_size(
     flags = pygame.SCALED
     if current_maximized:
         flags |= pygame.FULLSCREEN
-        pygame.display.set_mode(_scaled_logical_size, flags)
+        _set_mode(_scaled_logical_size, flags)
     else:
         flags |= pygame.RESIZABLE
-        pygame.display.set_mode(_scaled_logical_size, flags)
+        _set_mode(_scaled_logical_size, flags)
         if preserve_window_size:
             _set_window_size(previous_window_size)
     _update_window_caption()
@@ -296,6 +333,24 @@ def _set_window_size(size: tuple[int, int]) -> None:
         window.size = size
     except Exception:
         return
+
+
+def _set_mode(
+    size: tuple[int, int], flags: int, *, display: int | None = None
+) -> surface.Surface:
+    vsync = _VSYNC_PREFERENCE
+    try:
+        kwargs: dict[str, int] = {}
+        if display is not None:
+            kwargs["display"] = int(display)
+        if vsync is None:
+            return pygame.display.set_mode(size, flags, **kwargs)
+        kwargs["vsync"] = int(vsync)
+        return pygame.display.set_mode(size, flags, **kwargs)
+    except TypeError:
+        if display is None:
+            return pygame.display.set_mode(size, flags)
+        return pygame.display.set_mode(size, flags, display=int(display))
 
 
 def _use_scaled_display() -> bool:
@@ -507,3 +562,23 @@ def _restore_window() -> None:
         window.restore()
     except Exception:
         return
+
+
+
+
+def _maybe_apply_pending_window_scale() -> None:
+    global _last_window_scale_apply_ms, _pending_window_scale, _pending_window_scale_game_data
+    if _pending_window_scale is None or current_maximized:
+        return
+    now = pygame.time.get_ticks()
+    if (
+        _last_window_scale_apply_ms is not None
+        and now - _last_window_scale_apply_ms < _WINDOW_SCALE_COOLDOWN_MS
+    ):
+        return
+    scale = _pending_window_scale
+    game_data = _pending_window_scale_game_data
+    _pending_window_scale = None
+    _pending_window_scale_game_data = None
+    _last_window_scale_apply_ms = now
+    _apply_window_scale_now(scale, game_data=game_data)

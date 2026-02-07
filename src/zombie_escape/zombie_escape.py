@@ -154,34 +154,24 @@ def main() -> None:
         show_fps: bool,
     ) -> ScreenTransition:
         import cProfile
-        import pstats
 
         profiler = cProfile.Profile()
-        try:
-            return profiler.runcall(
-                gameplay_screen,
-                screen,
-                clock,
-                config,
-                fps,
-                stage,
-                show_pause_overlay=show_pause_overlay,
-                seed=seed,
-                render_assets=render_assets,
-                debug_mode=debug_mode,
-                show_fps=show_fps,
-            )
-        finally:
-            output_path = Path(args.profile_output)
-            profiler.dump_stats(output_path)
-            summary_path = output_path.with_suffix(".txt")
-            with summary_path.open("w", encoding="utf-8") as handle:
-                stats = pstats.Stats(
-                    profiler,
-                    stream=handle,
-                ).sort_stats("tottime")
-                stats.print_stats(50)
-            print(f"Profile saved to {output_path} and {summary_path}")
+        output_path = Path(args.profile_output)
+        print("Profile ready. Press F10 in gameplay to start/stop and save.")
+        return gameplay_screen(
+            screen,
+            clock,
+            config,
+            fps,
+            stage,
+            show_pause_overlay=show_pause_overlay,
+            seed=seed,
+            render_assets=render_assets,
+            debug_mode=debug_mode,
+            show_fps=show_fps,
+            profiler=profiler,
+            profiler_output=output_path,
+        )
 
     next_screen = ScreenID.TITLE
     transition: ScreenTransition | None = None

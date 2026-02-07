@@ -381,6 +381,18 @@
 - 表示パス: `set_scaled_logical_size()` / `adjust_menu_logical_size()` で論理解像度を整えたうえで、`present()` が現在のウィンドウへスケーリング描画する。
 - `pygame.SCALED` の扱い: 利用可能な環境ではウィンドウ側で拡大し、利用できない場合は `present()` がアスペクト比を保つレターボックス描画を行う。
 
+### 8.2 プラットフォーム
+
+- **Windows のウィンドウリサイズ連打によるクラッシュ対策**:
+  - `[`/`]` キー（ウィンドウ倍率変更）を高速連打すると、SDL/ドライバ側の処理が追いつかず
+    `pygame.display.set_mode()` が過密に呼ばれてクラッシュする事例がある。
+  - `windowing.apply_window_scale()` に **500ms のクールダウン**を入れ、連打時は
+    **最後の変更のみを保留**して次の描画フレームで反映する。
+  - `WINDOWSIZECHANGED/VIDEORESIZE` を受け取ったらクールダウンを即時解除し、
+    保留中の変更があればその場で適用する。
+  - 実装は `src/zombie_escape/windowing.py` の `apply_window_scale()` と
+    `_maybe_apply_pending_window_scale()` を参照。
+
 ## 9. レベル生成 (level_blueprints.py)
 
 - グリッド凡例
