@@ -21,7 +21,7 @@ from ..entities import (
     Survivor,
     Wall,
 )
-from ..font_utils import load_font, render_text_unscaled
+from ..font_utils import load_font, render_text_surface
 from ..localization import get_font_settings
 from ..models import Footprint, GameData
 from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
@@ -53,7 +53,7 @@ def _draw_overview_tag(
     padding: tuple[int, int] = (4, 2),
     line_height_scale: float = 1.0,
 ) -> None:
-    label = render_text_unscaled(
+    label = render_text_surface(
         font, text, fg, line_height_scale=line_height_scale
     )
     label_rect = label.get_rect()

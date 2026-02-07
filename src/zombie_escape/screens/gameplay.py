@@ -8,7 +8,7 @@ import pygame
 from pygame import surface, time
 
 from ..colors import LIGHT_GRAY, RED, WHITE, YELLOW
-from ..font_utils import load_font, render_text_unscaled
+from ..font_utils import load_font, render_text_surface
 from ..gameplay_constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
     SURVIVAL_TIME_ACCEL_SUBSTEPS,
@@ -58,7 +58,7 @@ from ..render import (
     draw_debug_overview,
     draw_pause_overlay,
     prewarm_fog_overlays,
-    show_message_wrapped,
+    blit_message_wrapped,
 )
 from ..render_constants import (
     GAMEPLAY_FONT_SIZE,
@@ -209,7 +209,7 @@ def gameplay_screen(
     except MapGenerationError:
         # If generation fails after retries, show error and back to title
         screen.fill((0, 0, 0))
-        show_message_wrapped(
+        blit_message_wrapped(
             screen,
             tr("errors.map_generation_failed"),
             16,
@@ -581,7 +581,7 @@ def gameplay_screen(
         if profiling_active:
             font_settings = get_font_settings()
             font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            label = render_text_unscaled(
+            label = render_text_surface(
                 font,
                 "PROFILE ON",
                 RED,

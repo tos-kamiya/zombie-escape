@@ -12,7 +12,7 @@ from ..localization import get_font_settings, get_language
 from ..localization import translate as tr
 from ..models import Stage
 from ..progress import load_progress
-from ..render import blit_wrapped_text, wrap_text
+from ..render import blit_text_wrapped, wrap_text
 from ..rng import generate_seed
 from ..input_utils import (
     CONTROLLER_BUTTON_DOWN,
@@ -213,7 +213,7 @@ def title_screen(
             header_width, header_height, _ = _measure_text(
                 stage_header_text, section_font, list_column_width
             )
-            blit_wrapped_text(
+            blit_text_wrapped(
                 screen,
                 stage_header_text,
                 section_font,
@@ -241,7 +241,7 @@ def title_screen(
             action_width, action_height, _ = _measure_text(
                 action_header_text, section_font, list_column_width
             )
-            blit_wrapped_text(
+            blit_text_wrapped(
                 screen,
                 action_header_text,
                 section_font,
@@ -277,7 +277,7 @@ def title_screen(
                 )
                 stage_option_font = _get_font(stage_option_size)
                 text_height = stage_option_font.get_linesize()
-                blit_wrapped_text(
+                blit_text_wrapped(
                     screen,
                     label,
                     stage_option_font,
@@ -313,7 +313,7 @@ def title_screen(
                     label = tr("menu.quit")
                 color = WHITE
                 text_height = resource_option_font.get_linesize()
-                blit_wrapped_text(
+                blit_text_wrapped(
                     screen,
                     label,
                     resource_option_font,
@@ -351,7 +351,7 @@ def title_screen(
                 )
                 desc_panel.fill((0, 0, 0, 140))
                 screen.blit(desc_panel, desc_panel_rect.topleft)
-                blit_wrapped_text(
+                blit_text_wrapped(
                     screen,
                     current["stage"].description,
                     desc_font,
@@ -378,7 +378,7 @@ def title_screen(
             if help_text:
                 desc_size = font_settings.scaled_size(11)
                 desc_font = _get_font(desc_size)
-                blit_wrapped_text(
+                blit_text_wrapped(
                     screen,
                     help_text,
                     desc_font,
@@ -401,7 +401,7 @@ def title_screen(
             hint_start_y = action_header_pos[1]
             hint_step = hint_line_height
             for offset, line in enumerate(hint_lines):
-                blit_wrapped_text(
+                blit_text_wrapped(
                     screen,
                     line,
                     hint_font,
@@ -420,7 +420,7 @@ def title_screen(
                 seed_label, hint_font, info_column_width
             )
             seed_bottom = height - 30 + seed_offset_y
-            blit_wrapped_text(
+            blit_text_wrapped(
                 screen,
                 seed_label,
                 hint_font,
@@ -437,7 +437,7 @@ def title_screen(
             seed_hint_lines = wrap_text(seed_hint, hint_font, info_column_width)
             seed_hint_height = len(seed_hint_lines) * hint_line_height
             seed_hint_top = seed_rect.top - 4 - seed_hint_height
-            blit_wrapped_text(
+            blit_text_wrapped(
                 screen,
                 seed_hint,
                 hint_font,
@@ -456,7 +456,7 @@ def title_screen(
                 width // 2 - title_width // 2,
                 TITLE_HEADER_Y - title_height // 2,
             )
-            blit_wrapped_text(
+            blit_text_wrapped(
                 screen,
                 title_text,
                 title_font,
@@ -477,7 +477,7 @@ def title_screen(
                 title_rect.right + 4,
                 title_rect.bottom - version_height,
             )
-            blit_wrapped_text(
+            blit_text_wrapped(
                 screen,
                 version_text,
                 version_font,

@@ -16,7 +16,7 @@ from ..entities_constants import (
     SHOES_HEIGHT,
     SHOES_WIDTH,
 )
-from ..font_utils import load_font, render_text_unscaled
+from ..font_utils import load_font, render_text_surface
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 from ..localization import get_font_settings
 from ..localization import translate as tr
@@ -142,14 +142,14 @@ def _draw_status_bar(
         font = load_font(
             font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
         )
-        text_surface = render_text_unscaled(
+        text_surface = render_text_surface(
             font, status_text, color, line_height_scale=font_settings.line_height_scale
         )
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)
         if seed is not None:
             seed_text = tr("status.seed", value=str(seed))
-            seed_surface = render_text_unscaled(
+            seed_surface = render_text_surface(
                 font,
                 seed_text,
                 LIGHT_GRAY,
@@ -161,7 +161,7 @@ def _draw_status_bar(
             screen.blit(seed_surface, seed_rect)
         if show_fps and fps is not None:
             fps_text = f"FPS:{fps:.1f}"
-            fps_surface = render_text_unscaled(
+            fps_surface = render_text_surface(
                 font,
                 fps_text,
                 LIGHT_GRAY,
@@ -181,7 +181,7 @@ def _draw_objective(lines: list[str], *, screen: surface.Surface) -> None:
         )
         y = 8
         for line in lines:
-            text_surface = render_text_unscaled(
+            text_surface = render_text_surface(
                 font, line, YELLOW, line_height_scale=font_settings.line_height_scale
             )
             text_rect = text_surface.get_rect(topleft=(12, y))
@@ -276,7 +276,7 @@ def _draw_endurance_timer(
         font = load_font(
             font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
         )
-        text_surface = render_text_unscaled(
+        text_surface = render_text_surface(
             font,
             timer_text,
             LIGHT_GRAY,
@@ -286,7 +286,7 @@ def _draw_endurance_timer(
         screen.blit(text_surface, text_rect)
         if state.time_accel_active:
             accel_text = tr("hud.time_accel")
-            accel_surface = render_text_unscaled(
+            accel_surface = render_text_surface(
                 font, accel_text, YELLOW, line_height_scale=font_settings.line_height_scale
             )
             accel_rect = accel_surface.get_rect(
@@ -295,7 +295,7 @@ def _draw_endurance_timer(
             screen.blit(accel_surface, accel_rect)
         else:
             hint_text = tr("hud.time_accel_hint")
-            hint_surface = render_text_unscaled(
+            hint_surface = render_text_surface(
                 font,
                 hint_text,
                 LIGHT_GRAY,
@@ -327,7 +327,7 @@ def _draw_time_accel_indicator(
         else:
             text = tr("hud.time_accel_hint")
             color = LIGHT_GRAY
-        text_surface = render_text_unscaled(
+        text_surface = render_text_surface(
             font, text, color, line_height_scale=font_settings.line_height_scale
         )
         bottom_margin = assets.status_bar_height + 6
@@ -357,7 +357,7 @@ def _draw_survivor_messages(
             text = message.get("text", "")
             if not text:
                 continue
-            msg_surface = render_text_unscaled(
+            msg_surface = render_text_surface(
                 font, text, ORANGE, line_height_scale=font_settings.line_height_scale
             )
             msg_rect = msg_surface.get_rect(
@@ -389,7 +389,7 @@ def _draw_timed_message(
         line_height = int(round(font.get_linesize() * font_settings.line_height_scale))
         lines = message.text.splitlines() or [message.text]
         rendered_lines = [
-            render_text_unscaled(
+            render_text_surface(
                 font, line, text_color, line_height_scale=font_settings.line_height_scale
             )
             for line in lines

@@ -23,7 +23,7 @@ from ..render import (
     _draw_status_bar,
     compute_floor_cells,
     draw_level_overview,
-    show_message,
+    blit_message,
 )
 from ..screens import ScreenID, ScreenTransition
 from ..windowing import nudge_window_scale, present, sync_window_size, toggle_fullscreen
@@ -115,7 +115,7 @@ def game_over_screen(
                 ),
             )
             if state.game_won:
-                show_message(
+                blit_message(
                     screen,
                     tr("game_over.win"),
                     11,
@@ -123,7 +123,7 @@ def game_over_screen(
                     (screen_width // 2, screen_height // 2 - 26),
                 )
             else:
-                show_message(
+                blit_message(
                     screen,
                     tr("game_over.lose"),
                     11,
@@ -134,7 +134,7 @@ def game_over_screen(
             if stage and (stage.survivor_rescue_stage or stage.buddy_required_count > 0):
                 total_rescued = state.survivors_rescued + state.buddy_rescued
                 msg = tr("game_over.survivors_summary", count=total_rescued)
-                show_message(
+                blit_message(
                     screen,
                     msg,
                     11,
@@ -151,7 +151,7 @@ def game_over_screen(
                 minutes = (display_ms % 3_600_000) // 60_000
                 time_label = f"{int(hours):02d}:{int(minutes):02d}"
                 msg = tr("game_over.endurance_duration", time=time_label)
-                show_message(
+                blit_message(
                     screen,
                     msg,
                     11,
@@ -159,7 +159,7 @@ def game_over_screen(
                     (screen_width // 2, summary_y),
                 )
 
-        show_message(
+        blit_message(
             screen,
             tr("game_over.prompt"),
             11,
