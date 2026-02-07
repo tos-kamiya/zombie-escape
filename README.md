@@ -114,7 +114,7 @@ Open **Settings** from the title to toggle gameplay assists:
     <tr>
       <td>Buddy (Stage 3)</td>
       <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/buddy.png" width="64"></td>
-      <td>Green survivor you can rescue; zombies only target them on-screen and off-screen catches just respawn them. Touch on foot to follow (70% speed), touch while driving to pick up. Helps chip away at walls you bash.</td>
+      <td>Teal-blue survivor you can rescue; zombies only target them on-screen and off-screen catches just respawn them. Touch on foot to follow (70% speed), touch while driving to pick up. Helps chip away at walls you bash.</td>
     </tr>
     <tr>
       <td>Survivors (Stage 4)</td>

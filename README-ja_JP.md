@@ -114,7 +114,7 @@
     <tr>
       <td>相棒 (Stage 3)</td>
       <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/buddy.png" width="64"></td>
-      <td>画面内のときだけゾンビに狙われ、画面外で触れられても別地点に再出現。徒歩で触れると追尾（約70%速度）、車で触れると回収。壁や鉄筋を叩くと寄って削ってくれます。</td>
+      <td>青緑寄りの相棒。画面内のときだけゾンビに狙われ、画面外で触れられても別地点に再出現。徒歩で触れると追尾（約70%速度）、車で触れると回収。壁や鉄筋を叩くと寄って削ってくれます。</td>
     </tr>
     <tr>
       <td>生存者 (Stage 4)</td>
