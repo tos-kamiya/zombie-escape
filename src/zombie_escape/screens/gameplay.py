@@ -164,14 +164,14 @@ def gameplay_screen(
     game_data.state.seed = applied_seed
     game_data.state.debug_mode = debug_mode
     game_data.state.show_fps = show_fps
-    if debug_mode and stage.endurance_stage:
-        goal_ms = max(0, stage.endurance_goal_ms)
-        if goal_ms > 0:
-            remaining = 3 * 60 * 1000  # 3 minutes in ms
-            game_data.state.endurance_elapsed_ms = max(0, goal_ms - remaining)
-            game_data.state.dawn_ready = False
-            game_data.state.dawn_prompt_at = None
-            game_data.state.dawn_carbonized = False
+    # if debug_mode and stage.endurance_stage:
+    #     goal_ms = max(0, stage.endurance_goal_ms)
+    #     if goal_ms > 0:
+    #         remaining = 3 * 60 * 1000  # 3 minutes in ms
+    #         game_data.state.endurance_elapsed_ms = max(0, goal_ms - remaining)
+    #         game_data.state.dawn_ready = False
+    #         game_data.state.dawn_prompt_at = None
+    #         game_data.state.dawn_carbonized = False
     global _SHARED_FOG_CACHE
     if _SHARED_FOG_CACHE is None:
         prewarm_fog_overlays(
