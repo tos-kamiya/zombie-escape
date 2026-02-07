@@ -14,6 +14,8 @@ from ..entities_constants import (
     ZOMBIE_DOG_ASSAULT_SPEED,
     ZOMBIE_DOG_BITE_DAMAGE,
     ZOMBIE_DOG_BITE_INTERVAL_FRAMES,
+    ZOMBIE_DOG_DECAY_DURATION_FRAMES,
+    ZOMBIE_DOG_DECAY_MIN_SPEED_RATIO,
     ZOMBIE_DOG_HEAD_RADIUS_RATIO,
     ZOMBIE_DOG_LONG_AXIS_RATIO,
     ZOMBIE_DOG_PATROL_SPEED,
@@ -22,6 +24,7 @@ from ..entities_constants import (
     ZOMBIE_DOG_SIGHT_RANGE,
     ZOMBIE_DOG_WANDER_INTERVAL_MS,
     ZOMBIE_RADIUS,
+    ZOMBIE_SEPARATION_DISTANCE,
 )
 from ..rng import get_rng
 from ..render_assets import (
@@ -55,6 +58,8 @@ class ZombieDog(pygame.sprite.Sprite):
         self.head_radius = self.short_axis * ZOMBIE_DOG_HEAD_RADIUS_RATIO
         self.speed_patrol = ZOMBIE_DOG_PATROL_SPEED
         self.speed_assault = ZOMBIE_DOG_ASSAULT_SPEED
+        self.initial_speed_patrol = self.speed_patrol
+        self.initial_speed_assault = self.speed_assault
         self.sight_range = ZOMBIE_DOG_SIGHT_RANGE
         self.mode = ZombieDogMode.WANDER
         self.charge_direction = (0.0, 0.0)
@@ -77,6 +82,8 @@ class ZombieDog(pygame.sprite.Sprite):
         self.bite_frame_counter = 0
         self.max_health = 100
         self.health = self.max_health
+        self.decay_carry = 0.0
+        self.decay_duration_frames = ZOMBIE_DOG_DECAY_DURATION_FRAMES
 
     def get_collision_circle(self: Self) -> tuple[tuple[int, int], float]:
         head_x, head_y = self._head_center()
@@ -140,6 +147,53 @@ class ZombieDog(pygame.sprite.Sprite):
             return
         self.charge_direction = (dx / dist, dy / dist)
 
+    def _avoid_other_zombies(
+        self: Self,
+        move_x: float,
+        move_y: float,
+        zombies: list[pygame.sprite.Sprite],
+    ) -> tuple[float, float]:
+        """If another zombie is too close, steer directly away from the closest one."""
+        next_x = self.x + move_x
+        next_y = self.y + move_y
+
+        closest: pygame.sprite.Sprite | None = None
+        closest_dist_sq = ZOMBIE_SEPARATION_DISTANCE * ZOMBIE_SEPARATION_DISTANCE
+        for other in zombies:
+            if other is self or not other.alive():
+                continue
+            if isinstance(other, Zombie) and not isinstance(other, ZombieDog):
+                continue
+            dx = other.x - next_x  # type: ignore[attr-defined]
+            dy = other.y - next_y  # type: ignore[attr-defined]
+            if (
+                abs(dx) > ZOMBIE_SEPARATION_DISTANCE
+                or abs(dy) > ZOMBIE_SEPARATION_DISTANCE
+            ):
+                continue
+            dist_sq = dx * dx + dy * dy
+            if dist_sq < closest_dist_sq:
+                closest = other
+                closest_dist_sq = dist_sq
+
+        if closest is None:
+            return move_x, move_y
+
+        away_dx = next_x - closest.x  # type: ignore[attr-defined]
+        away_dy = next_y - closest.y  # type: ignore[attr-defined]
+        away_dist = math.hypot(away_dx, away_dy)
+        if away_dist == 0:
+            angle = RNG.uniform(0, 2 * math.pi)
+            away_dx, away_dy = math.cos(angle), math.sin(angle)
+            away_dist = 1
+
+        speed = math.hypot(move_x, move_y)
+        if speed <= 0:
+            speed = self.speed_patrol
+        move_x = (away_dx / away_dist) * speed
+        move_y = (away_dy / away_dist) * speed
+        return move_x, move_y
+
     def _apply_pack_damage(
         self: Self,
         nearby_zombies: list[pygame.sprite.Sprite],
@@ -159,6 +213,24 @@ class ZombieDog(pygame.sprite.Sprite):
             combined = self.head_radius + candidate.radius
             if dx * dx + dy * dy <= combined * combined:
                 candidate.take_damage(ZOMBIE_DOG_BITE_DAMAGE)
+
+    def _apply_decay(self: Self) -> None:
+        if self.decay_duration_frames <= 0:
+            return
+        self.decay_carry += self.max_health / self.decay_duration_frames
+        if self.decay_carry >= 1.0:
+            decay_amount = int(self.decay_carry)
+            self.decay_carry -= decay_amount
+            self.health -= decay_amount
+        health_ratio = 0.0 if self.max_health <= 0 else self.health / self.max_health
+        health_ratio = max(0.0, min(1.0, health_ratio))
+        speed_ratio = ZOMBIE_DOG_DECAY_MIN_SPEED_RATIO + (
+            1.0 - ZOMBIE_DOG_DECAY_MIN_SPEED_RATIO
+        ) * health_ratio
+        self.speed_patrol = self.initial_speed_patrol * speed_ratio
+        self.speed_assault = self.initial_speed_assault * speed_ratio
+        if self.health <= 0:
+            self.kill()
 
     def _apply_wall_collision(
         self: Self,
@@ -202,6 +274,9 @@ class ZombieDog(pygame.sprite.Sprite):
         layout,
     ) -> None:
         if self.carbonized:
+            return
+        self._apply_decay()
+        if not self.alive():
             return
         _ = nearby_zombies, footprints
         level_width = layout.field_rect.width
@@ -256,6 +331,10 @@ class ZombieDog(pygame.sprite.Sprite):
                 self.wander_angle = RNG.uniform(0.0, math.tau)
                 self.wander_change_time = pygame.time.get_ticks()
 
+        if nearby_zombies:
+            move_x, move_y = self._avoid_other_zombies(
+                move_x, move_y, list(nearby_zombies)
+            )
         move_x, move_y = apply_cell_edge_nudge(
             self.x,
             self.y,

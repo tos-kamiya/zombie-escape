@@ -155,9 +155,9 @@
         "description": "Link up and escape by car.",
         "intro": "\"... \nThey should be inside.\nLink up with them.\""
       },
-      "stage_dog_debug": {
-        "name": "Dog Debug",
-        "description": "Debug stage for zombie dogs."
+      "stage21": {
+        "name": "#21 Running Shadow",
+        "description": "It seems almost eager to run at anyone."
       }
     },
     "status": {

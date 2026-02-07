@@ -155,9 +155,9 @@
         "description": "合流して車で脱出せよ。",
         "intro": "「... \nみんな中にいるはずだ。\n合流してくれ。」"
       },
-      "stage_dog_debug": {
-        "name": "犬デバッグ",
-        "description": "ゾンビ犬確認用ステージ。"
+      "stage21": {
+        "name": "#21 走る影",
+        "description": "目に入った相手に喜んで寄ってくる。"
       }
     },
     "status": {
