@@ -33,6 +33,7 @@ from ..render_assets import (
     build_zombie_dog_directional_surfaces,
 )
 from ..render_constants import ANGLE_BINS
+from ..screen_constants import FPS
 from ..world_grid import apply_cell_edge_nudge
 from .zombie import Zombie
 from .movement import _circle_wall_collision
@@ -215,6 +216,18 @@ class ZombieDog(pygame.sprite.Sprite):
             combined = self.head_radius + candidate.radius
             if dx * dx + dy * dy <= combined * combined:
                 candidate.take_damage(ZOMBIE_DOG_BITE_DAMAGE)
+                if (
+                    candidate.alive()
+                    and getattr(candidate, "decay_duration_frames", 0) > 0
+                    and getattr(candidate, "max_health", 0) > 0
+                ):
+                    frames_to_zero = (
+                        candidate.health
+                        * candidate.decay_duration_frames
+                        / candidate.max_health
+                    )
+                    if frames_to_zero <= FPS:
+                        candidate.take_damage(candidate.health)
 
     def _apply_decay(self: Self) -> None:
         if self.decay_duration_frames <= 0:
