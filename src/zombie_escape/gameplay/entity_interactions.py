@@ -338,7 +338,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 active_car.health = active_car.max_health
                 active_car._update_color()
                 removed_any = True
-                if stage.rescue_stage:
+                if stage.survivor_rescue_stage:
                     capacity_increments += 1
             if removed_any:
                 if capacity_increments:
@@ -405,7 +405,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 active_car._take_damage(total_damage)
 
     if (
-        stage.rescue_stage
+        stage.survivor_rescue_stage
         and player.in_car
         and active_car
         and shrunk_car
@@ -426,14 +426,14 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 add_survivor_message(game_data, tr("survivors.too_many_aboard"))
                 active_car._take_damage(overload_damage)
 
-    if stage.rescue_stage:
+    if stage.survivor_rescue_stage:
         handle_survivor_zombie_collisions(game_data, config)
 
     # Handle car destruction
     if car and car.alive() and car.health <= 0:
         car_destroyed_pos = car.rect.center
         car.kill()
-        if stage.rescue_stage:
+        if stage.survivor_rescue_stage:
             drop_survivors_from_car(game_data, car_destroyed_pos)
         if player.in_car:
             player.in_car = False
@@ -496,7 +496,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 state.buddy_rescued = min(
                     stage.buddy_required_count, state.buddy_merged_count
                 )
-            if stage.rescue_stage and state.survivors_onboard:
+            if stage.survivor_rescue_stage and state.survivors_onboard:
                 state.survivors_rescued += state.survivors_onboard
                 state.survivors_onboard = 0
                 apply_passenger_speed_penalty(game_data)

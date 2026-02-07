@@ -238,7 +238,7 @@ def update_entities(
     ]
 
     survivors_on_screen: list[Survivor] = []
-    if stage.rescue_stage:
+    if stage.survivor_rescue_stage:
         for survivor in survivor_group:
             if survivor.alive():
                 if rect_visible_on_screen(camera, survivor.rect):
@@ -309,7 +309,7 @@ def update_entities(
             if dist_to_buddy_sq < dist_to_target_sq:
                 target = nearest_buddy.rect.center
 
-        if stage.rescue_stage and not isinstance(zombie, ZombieDog):
+        if stage.survivor_rescue_stage and not isinstance(zombie, ZombieDog):
             zombie_on_screen = rect_visible_on_screen(camera, zombie.rect)
             if zombie_on_screen:
                 candidate_positions: list[tuple[int, int]] = []

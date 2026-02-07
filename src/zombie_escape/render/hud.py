@@ -448,7 +448,7 @@ def _build_objective_lines(
                     objective_lines.append(tr("objectives.escape"))
     elif stage and stage.requires_fuel and not has_fuel:
         objective_lines.append(tr("objectives.find_fuel"))
-    elif stage and stage.rescue_stage:
+    elif stage and stage.survivor_rescue_stage:
         if not player.in_car:
             objective_lines.append(tr("objectives.find_car"))
         else:
@@ -458,7 +458,7 @@ def _build_objective_lines(
     else:
         objective_lines.append(tr("objectives.escape"))
 
-    if stage and stage.rescue_stage and (survivors_onboard is not None):
+    if stage and stage.survivor_rescue_stage and (survivors_onboard is not None):
         limit = state.survivor_capacity
         objective_lines.append(
             tr("objectives.survivors_onboard", count=survivors_onboard, limit=limit)

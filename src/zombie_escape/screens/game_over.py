@@ -131,7 +131,7 @@ def game_over_screen(
                     (screen_width // 2, screen_height // 2 - 26),
                 )
             summary_y = screen_height // 2 + 70
-            if stage and (stage.rescue_stage or stage.buddy_required_count > 0):
+            if stage and (stage.survivor_rescue_stage or stage.buddy_required_count > 0):
                 total_rescued = state.survivors_rescued + state.buddy_rescued
                 msg = tr("game_over.survivors_summary", count=total_rescued)
                 show_message(

@@ -41,7 +41,10 @@ def update_survivors(
     wall_index: WallIndex | None = None,
     wall_target_cell: tuple[int, int] | None = None,
 ) -> None:
-    if not (game_data.stage.rescue_stage or game_data.stage.buddy_required_count > 0):
+    if not (
+        game_data.stage.survivor_rescue_stage
+        or game_data.stage.buddy_required_count > 0
+    ):
         return
     survivor_group = game_data.groups.survivor_group
     wall_group = game_data.groups.wall_group
@@ -187,7 +190,7 @@ def apply_passenger_speed_penalty(game_data: GameData) -> None:
     car = game_data.car
     if not car:
         return
-    if not game_data.stage.rescue_stage:
+    if not game_data.stage.survivor_rescue_stage:
         car.speed = CAR_SPEED
         return
     car.speed = calculate_car_speed_for_passengers(
@@ -199,7 +202,7 @@ def apply_passenger_speed_penalty(game_data: GameData) -> None:
 def increase_survivor_capacity(game_data: GameData, increments: int = 1) -> None:
     if increments <= 0:
         return
-    if not game_data.stage.rescue_stage:
+    if not game_data.stage.survivor_rescue_stage:
         return
     state = game_data.state
     state.survivor_capacity += increments * SURVIVOR_MAX_SAFE_PASSENGERS
@@ -290,7 +293,7 @@ def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> Non
 def handle_survivor_zombie_collisions(
     game_data: GameData, config: dict[str, Any]
 ) -> None:
-    if not game_data.stage.rescue_stage:
+    if not game_data.stage.survivor_rescue_stage:
         return
     survivor_group = game_data.groups.survivor_group
     if not survivor_group:

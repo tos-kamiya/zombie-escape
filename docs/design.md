@@ -112,7 +112,7 @@
 
 `Stage` はステージ属性を保持する `dataclass`。
 
-- プレイ特性: `requires_fuel`, `buddy_required_count`, `rescue_stage`, `endurance_stage`, `intro_key`
+- プレイ特性: `requires_fuel`, `buddy_required_count`, `survivor_rescue_stage`, `endurance_stage`, `intro_key`
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`, `survivor_spawn_rate`
 - 内外/落下スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`, `interior_fall_spawn_weight`（重みを分け合う）
 - サバイバル設定: `endurance_goal_ms`, `fuel_spawn_count`

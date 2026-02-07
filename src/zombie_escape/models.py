@@ -189,7 +189,7 @@ class Stage:
     # Stage objective
     requires_fuel: bool = False
     buddy_required_count: int = 0
-    rescue_stage: bool = False
+    survivor_rescue_stage: bool = False
     endurance_stage: bool = False
     endurance_goal_ms: int = 0
 
