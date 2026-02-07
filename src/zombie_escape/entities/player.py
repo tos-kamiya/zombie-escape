@@ -140,7 +140,7 @@ class Player(pygame.sprite.Sprite):
             pitfall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
-            rollback_factor=1.5,
+            rollback_factor=1.0,
             clamp_range=(0.0, level_width),
             on_wall_hit=_on_player_wall_hit,
         )
@@ -154,7 +154,7 @@ class Player(pygame.sprite.Sprite):
             pitfall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
-            rollback_factor=1.5,
+            rollback_factor=1.0,
             clamp_range=(0.0, level_height),
             on_wall_hit=_on_player_wall_hit,
         )
