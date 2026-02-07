@@ -16,6 +16,7 @@ from ..entities import (
 from ..entities_constants import (
     HUMANOID_WALL_BUMP_FRAMES,
     PLAYER_SPEED,
+    ZOMBIE_DOG_PACK_CHASE_RANGE,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_TRACKER_CROWD_BAND_WIDTH,
     ZOMBIE_TRACKER_GRID_CROWD_COUNT,
@@ -31,6 +32,7 @@ from ..entities.movement_helpers import pitfall_target
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
 from .constants import MAX_ZOMBIES
 from .spawn import spawn_weighted_zombie, update_falling_zombies
+from .spatial_index import SpatialKind
 from .survivors import update_survivors
 from .utils import rect_visible_on_screen
 
@@ -108,6 +110,7 @@ def update_entities(
     all_sprites = game_data.groups.all_sprites
     zombie_group = game_data.groups.zombie_group
     survivor_group = game_data.groups.survivor_group
+    spatial_index = game_data.state.spatial_index
     camera = game_data.camera
     stage = game_data.stage
     active_car = car if car and car.alive() else None
@@ -246,6 +249,8 @@ def update_entities(
     tracker_buckets: dict[tuple[int, int, int], list[Zombie]] = {}
     tracker_cell_size = ZOMBIE_TRACKER_CROWD_BAND_WIDTH
     angle_step = math.pi / 4.0
+    zombie_kinds = SpatialKind.ZOMBIE | SpatialKind.ZOMBIE_DOG
+    base_radius = ZOMBIE_SEPARATION_DISTANCE + PLAYER_SPEED
     for zombie in zombies_sorted:
         if not zombie.alive() or not zombie.tracker:
             continue
@@ -265,25 +270,7 @@ def update_entities(
             continue
         RNG.choice(bucket).tracker_force_wander = True
 
-    def _nearby_zombies(index: int) -> list[Zombie | ZombieDog]:
-        center = zombies_sorted[index]
-        neighbors: list[Zombie | ZombieDog] = []
-        search_radius = ZOMBIE_SEPARATION_DISTANCE + PLAYER_SPEED
-        for left in range(index - 1, -1, -1):
-            other = zombies_sorted[left]
-            if center.x - other.x > search_radius:
-                break
-            if other.alive():
-                neighbors.append(other)
-        for right in range(index + 1, len(zombies_sorted)):
-            other = zombies_sorted[right]
-            if other.x - center.x > search_radius:
-                break
-            if other.alive():
-                neighbors.append(other)
-        return neighbors
-
-    for idx, zombie in enumerate(zombies_sorted):
+    for zombie in zombies_sorted:
         target = target_center
         if isinstance(zombie, ZombieDog):
             target = player.rect.center
@@ -320,10 +307,18 @@ def update_entities(
                             (pos[0] - zombie.x) ** 2 + (pos[1] - zombie.y) ** 2
                         ),
                     )
-        nearby_candidates = _nearby_zombies(idx)
+        if isinstance(zombie, ZombieDog):
+            search_radius = max(ZOMBIE_DOG_PACK_CHASE_RANGE, base_radius)
+        else:
+            search_radius = base_radius
+        nearby_candidates = spatial_index.query_radius(
+            (zombie.x, zombie.y),
+            search_radius,
+            kinds=zombie_kinds,
+        )
         zombie_search_radius = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius + 120
         nearby_walls = _walls_near((zombie.x, zombie.y), zombie_search_radius)
-        dog_candidates = list(zombie_group) if isinstance(zombie, ZombieDog) else nearby_candidates
+        dog_candidates = nearby_candidates
         zombie.update(
             target,
             nearby_walls,

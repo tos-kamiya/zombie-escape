@@ -26,6 +26,7 @@ from ..rng import get_rng
 from ..entities import Survivor, Zombie, spritecollideany_walls
 from ..world_grid import WallIndex
 from .spawn import _create_zombie
+from .spatial_index import SpatialKind
 from .utils import (
     find_nearby_offscreen_spawn_position,
     is_entity_in_fov,
@@ -51,6 +52,7 @@ def update_survivors(
         return
     target_rect = car.rect if player.in_car and car and car.alive() else player.rect
     target_pos = target_rect.center
+    spatial_index = game_data.state.spatial_index
     survivors = [s for s in survivor_group if s.alive()]
 
     for survivor in survivors:
@@ -131,13 +133,17 @@ def update_survivors(
             survivor.y = float(cy)
             survivor.rect.center = (int(survivor.x), int(survivor.y))
 
-    survivors_with_x = sorted(
-        ((survivor.x, survivor) for survivor in survivors), key=lambda item: item[0]
-    )
-    for i, (base_x, survivor) in enumerate(survivors_with_x):
-        for other_base_x, other in survivors_with_x[i + 1 :]:
-            if other_base_x - base_x > survivor_overlap:
-                break
+    for survivor in survivors:
+        nearby = spatial_index.query_radius(
+            (survivor.x, survivor.y),
+            survivor_overlap,
+            kinds=SpatialKind.SURVIVOR,
+        )
+        for other in nearby:
+            if other is survivor or not other.alive():
+                continue
+            if id(other) <= id(survivor):
+                continue
             dx = other.x - survivor.x
             dy = other.y - survivor.y
             dist = math.hypot(dx, dy)

@@ -16,6 +16,7 @@ from ..screen_constants import FPS
 from ..entities import Camera
 from .ambient import _set_ambient_palette
 from .constants import INTRO_MESSAGE_DISPLAY_FRAMES
+from .spatial_index import SPATIAL_INDEX_CELL_SIZE, SpatialIndex
 
 
 def frames_to_ms(frames: int) -> int:
@@ -73,6 +74,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         scaled_overview=None,
         overview_created=False,
         footprints=[],
+        spatial_index=SpatialIndex(cell_size=SPATIAL_INDEX_CELL_SIZE),
         last_footprint_pos=None,
         footprint_visible_toggle=True,
         elapsed_play_ms=0,

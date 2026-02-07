@@ -447,6 +447,26 @@ def gameplay_screen(
             if game_data.state.game_over or game_data.state.game_won:
                 break
 
+        player_ref = game_data.player
+        if player_ref is not None:
+            mobile_entities: list[pygame.sprite.Sprite] = []
+            if player_ref.alive():
+                mobile_entities.append(player_ref)
+            car_ref = game_data.car
+            if car_ref and car_ref.alive():
+                mobile_entities.append(car_ref)
+            mobile_entities.extend(
+                [zombie for zombie in game_data.groups.zombie_group if zombie.alive()]
+            )
+            mobile_entities.extend(
+                [
+                    survivor
+                    for survivor in game_data.groups.survivor_group
+                    if survivor.alive()
+                ]
+            )
+            game_data.state.spatial_index.rebuild(mobile_entities)
+
         player = game_data.player
         if player is None:
             raise ValueError("Player missing from game data")
