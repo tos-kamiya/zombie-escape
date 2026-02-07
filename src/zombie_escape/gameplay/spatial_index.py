@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
-    from ..entities import Car, Player, Survivor, Zombie, ZombieDog
+    pass
 
 
 SPATIAL_INDEX_CELL_SIZE = 32
