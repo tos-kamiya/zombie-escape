@@ -177,6 +177,7 @@
 - 相棒 (`is_buddy=True`) は一定距離内で追従を開始し、車に乗った数と脱出時の救出数で管理する。
 - 相棒は内部壁/鉄筋に衝突すると、プレイヤーの70%のダメージを与える。
 - 生存者/相棒は画面外でゾンビに接触した場合はリスポーンする。
+- プレイヤーが壁に接触した場合、**最初に検出した壁1つ**にのみダメージを与える。
 - プレイヤー/相棒/生存者は、進行方向に落とし穴があっても、その先に安全な床（`walkable_cells`）があれば自動的に**ジャンプ（跳躍）**して回避する。
   - ジャンプ中はスプライトが一時的に拡大し、影が本体から切り離されて描画されることで滞空感を表現する。
 
@@ -297,6 +298,8 @@
   - 移動、カメラ更新、ゾンビAI、サバイバー移動など。
   - 人間キャラクターのジャンプ判定と、ゾンビの穴落下判定を実施。
   - 壁セルに隣接するタイル端に近い場合、移動ベクトルをタイル中心へ3%だけ補正する（全キャラ共通）。
+- 壁インデックス（`build_wall_index`）は `GameData.wall_index` にキャッシュされ、
+  **壁が破壊されたときにのみ**再構築される（`wall_index_dirty` フラグ）。
 - `check_interactions(game_data, config)` (`gameplay/interactions.py`)
   - アイテム収集、車両/救助/敗北判定などの相互作用。
 - `update_survivors(game_data, config)` (`gameplay/survivors.py`)
@@ -392,6 +395,16 @@
     保留中の変更があればその場で適用する。
   - 実装は `src/zombie_escape/windowing.py` の `apply_window_scale()` と
     `_maybe_apply_pending_window_scale()` を参照。
+- **VSync 切替**:
+  - 環境変数 `ZOMBIE_ESCAPE_VSYNC=0/1` で `pygame.display.set_mode(..., vsync=...)` を指定する。
+- **フレームタイミング安定化**:
+  - 環境変数 `ZOMBIE_ESCAPE_BUSY_LOOP=1` で `Clock.tick_busy_loop()` を使用する。
+  - VM環境でのフレーム揺れを抑えるためのオプション。
+
+### 8.3 プロファイル
+
+- `--profile` 起動時は **F10 でプロファイルの開始/停止**を行う。
+- 停止時に `profile.prof` と `profile.txt`（上位50件のサマリ）を保存する。
 
 ## 9. レベル生成 (level_blueprints.py)
 
