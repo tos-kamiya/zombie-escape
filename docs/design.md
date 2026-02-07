@@ -14,6 +14,7 @@
   - ゲームロジックの分割モジュール。初期化、スポーン、更新、当たり判定、勝敗条件など。
   - `entity_updates.py`: エンティティ全体の更新・移動・入力処理。
   - `entity_interactions.py`: エンティティ間の相互作用（接触、救助、ダメージなど）。
+  - `spatial_index.py`: 移動体用の空間インデックス（32pxセル、ビットフィールドで種別検索）。
   - 責務の目安: 個別エンティティの“行動”は `entities/` に置き、複数エンティティの相互作用や
     進行状態の更新は `gameplay/` に集約する。
 - `src/zombie_escape/entities/`, `src/zombie_escape/world_grid.py`
@@ -82,6 +83,7 @@
 - 勝敗・ゲーム終了関連: `game_over`, `game_won`, `game_over_message`, `game_over_at`
 - ゲームオーバー画面用: `scaled_overview`, `overview_created`
 - 進行演出: `footprints`, `last_footprint_pos`, `footprint_visible_toggle`, `elapsed_play_ms`
+- 近接探索: `spatial_index`（移動体用の空間インデックス）
 - アイテム状態: `has_fuel`, `flashlight_count`, `shoes_count`
 - ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`,
   `timed_message`（`TimedMessage` の内容を保持）
@@ -119,6 +121,7 @@
 - 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）
 - 変種移動ルーチン: `zombie_tracker_ratio`（足跡追跡型の出現率）
 - 変種移動ルーチン: `zombie_wall_hugging_ratio`（壁沿い巡回型の出現率）
+- 変種移動ルーチン: `zombie_dog_ratio`（ゾンビ犬の出現率）
 - 耐久減衰速度: `zombie_decay_duration_frames`（値が大きいほど消滅が遅い）
 - 壁生成アルゴリズム: `wall_algorithm` ("default", "empty", "grid_wire")
 - 瓦礫壁の割合: `wall_rubble_ratio`（内部壁のうち、瓦礫外観に差し替える比率）
@@ -153,6 +156,9 @@
 - `Camera`: 画面スクロール用の矩形管理（小さな揺れを抑える deadzone 付き）。
 - `Player`, `Zombie`, `Car`, `Survivor`（`is_buddy` フラグで相棒を表現）
 - `ZombieDog`: レモン型のゾンビ犬。16方向画像で描画し、当たり判定は頭のみ。
+  - 通常は徘徊、プレイヤーが視界内に入ると突進。
+  - 近くに通常ゾンビがいれば追跡し、接触時は一定フレーム間隔でダメージを与える。
+  - 耐久値と減衰（decay）を持ち、時間経過で消滅する。
 - `FuelCan`, `Flashlight`, `Shoes`（収集アイテム）
 
 相棒 (`is_buddy=True`) は一定距離内で追従を開始し、車に乗った数と脱出時の救出数で管理する。
