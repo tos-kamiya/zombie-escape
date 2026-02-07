@@ -50,7 +50,7 @@ def render_text_surface(
     *,
     line_height_scale: float = 1.0,
 ) -> pygame.Surface:
-    surface = font.render(text, False, color).convert_alpha()
+    surface = font.render(text, False, color)
     line_height = int(round(font.get_linesize() * max(0.0, line_height_scale)))
     if line_height <= 0 or line_height <= surface.get_height():
         return surface

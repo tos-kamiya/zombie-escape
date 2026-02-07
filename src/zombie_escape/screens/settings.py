@@ -322,7 +322,11 @@ def settings_screen(
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
-                label_height = label_font.get_linesize()
+                label_height = int(
+                    round(
+                        label_font.get_linesize() * font_settings.line_height_scale
+                    )
+                )
                 blit_text_wrapped(
                     screen,
                     row["label"],
@@ -343,7 +347,11 @@ def settings_screen(
                         else str(value)
                     )
                     text_width = value_font.size(display_text)[0]
-                    text_height = value_font.get_linesize()
+                    text_height = int(
+                        round(
+                            value_font.get_linesize() * font_settings.line_height_scale
+                        )
+                    )
                     blit_text_wrapped(
                         screen,
                         display_text,
@@ -381,7 +389,12 @@ def settings_screen(
                         pygame.draw.rect(screen, active_color, rect)
                         pygame.draw.rect(screen, outline_color, rect, width=2)
                         text_width = value_font.size(text)[0]
-                        text_height = value_font.get_linesize()
+                        text_height = int(
+                            round(
+                                value_font.get_linesize()
+                                * font_settings.line_height_scale
+                            )
+                        )
                         blit_text_wrapped(
                             screen,
                             text,
@@ -444,7 +457,9 @@ def settings_screen(
             progress_text = tr("settings.progress_path", path=str(user_progress_path()))
             path_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             config_width = path_font.size(config_text)[0]
-            config_height = path_font.get_linesize()
+            config_height = int(
+                round(path_font.get_linesize() * font_settings.line_height_scale)
+            )
             progress_width = path_font.size(progress_text)[0]
             config_top = screen_height - 32 - config_height
             blit_text_wrapped(

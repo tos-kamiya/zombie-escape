@@ -276,7 +276,12 @@ def title_screen(
                     selected_stage_size if is_selected else base_stage_size
                 )
                 stage_option_font = _get_font(stage_option_size)
-                text_height = stage_option_font.get_linesize()
+                text_height = int(
+                    round(
+                        stage_option_font.get_linesize()
+                        * font_settings.line_height_scale
+                    )
+                )
                 blit_text_wrapped(
                     screen,
                     label,
@@ -312,7 +317,12 @@ def title_screen(
                 else:
                     label = tr("menu.quit")
                 color = WHITE
-                text_height = resource_option_font.get_linesize()
+                text_height = int(
+                    round(
+                        resource_option_font.get_linesize()
+                        * font_settings.line_height_scale
+                    )
+                )
                 blit_text_wrapped(
                     screen,
                     label,
