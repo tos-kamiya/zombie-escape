@@ -27,7 +27,7 @@ from ..entities_constants import (
 from ..render_assets import angle_bin_from_vector, build_player_directional_surfaces
 from ..render_constants import ANGLE_BINS
 from ..world_grid import WallIndex
-from .collisions import _spritecollide_walls
+from .collisions import spritecollideany_walls
 from .movement import _can_humanoid_jump, _get_jump_scale
 from .movement_helpers import (
     move_axis_with_pitfall,
@@ -106,26 +106,29 @@ class Player(pygame.sprite.Sprite):
         inner_wall_hit = False
         inner_wall_cell: tuple[int, int] | None = None
 
-        def _on_player_wall_hit(hit_list: list[Wall]) -> None:
+        def _on_player_wall_hit(hit_wall: Wall | None) -> None:
             nonlocal inner_wall_hit, inner_wall_cell
+            if hit_wall is None:
+                return
             damage = max(1, PLAYER_WALL_DAMAGE)
-            for wall in hit_list:
-                if wall.alive():
-                    wall._take_damage(amount=damage)
-                    if _is_inner_wall(wall):
-                        inner_wall_hit = True
-                        if inner_wall_cell is None and cell_size:
-                            inner_wall_cell = (
-                                int(wall.rect.centerx // cell_size),
-                                int(wall.rect.centery // cell_size),
-                            )
+            if hit_wall.alive():
+                hit_wall._take_damage(amount=damage)
+                if _is_inner_wall(hit_wall):
+                    inner_wall_hit = True
+                    if inner_wall_cell is None and cell_size:
+                        inner_wall_cell = (
+                            int(hit_wall.rect.centerx // cell_size),
+                            int(hit_wall.rect.centery // cell_size),
+                        )
 
-        def _collide_player() -> list[Wall]:
-            return _spritecollide_walls(
+        def _collide_player() -> Wall | None:
+            return spritecollideany_walls(
                 self,
                 walls,
                 wall_index=wall_index,
                 cell_size=cell_size,
+                grid_cols=level_width // cell_size if cell_size else None,
+                grid_rows=level_height // cell_size if cell_size else None,
             )
 
         move_axis_with_pitfall(

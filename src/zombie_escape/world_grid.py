@@ -22,27 +22,15 @@ def build_wall_index(walls: Iterable["Wall"], *, cell_size: int) -> WallIndex:
     return index
 
 
-def _infer_grid_size_from_index(wall_index: WallIndex) -> tuple[int | None, int | None]:
-    if not wall_index:
-        return None, None
-    max_col = max(cell[0] for cell in wall_index)
-    max_row = max(cell[1] for cell in wall_index)
-    return max_col + 1, max_row + 1
-
-
 def walls_for_radius(
     wall_index: WallIndex,
     center: tuple[float, float],
     radius: float,
     *,
     cell_size: int,
-    grid_cols: int | None = None,
-    grid_rows: int | None = None,
+    grid_cols: int,
+    grid_rows: int,
 ) -> list["Wall"]:
-    if grid_cols is None or grid_rows is None:
-        grid_cols, grid_rows = _infer_grid_size_from_index(wall_index)
-    if grid_cols is None or grid_rows is None:
-        return []
     search_radius = radius + cell_size
     min_x = max(0, int((center[0] - search_radius) // cell_size))
     max_x = min(grid_cols - 1, int((center[0] + search_radius) // cell_size))

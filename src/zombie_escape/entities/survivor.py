@@ -187,6 +187,8 @@ class Survivor(pygame.sprite.Sprite):
                     walls,
                     wall_index=wall_index,
                     cell_size=cell_size,
+                    grid_cols=layout.grid_cols,
+                    grid_rows=layout.grid_rows,
                 )
 
             move_axis_with_pitfall(
@@ -284,6 +286,8 @@ class Survivor(pygame.sprite.Sprite):
                 walls,
                 wall_index=wall_index,
                 cell_size=cell_size,
+                grid_cols=layout.grid_cols,
+                grid_rows=layout.grid_rows,
             )
 
         move_axis_with_pitfall(
