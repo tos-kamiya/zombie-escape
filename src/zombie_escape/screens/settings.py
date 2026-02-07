@@ -33,7 +33,7 @@ from ..localization import (
 from ..localization import (
     translate as tr,
 )
-from ..render import blit_wrapped_text, wrap_text
+from ..render import blit_text_wrapped, wrap_text
 from ..progress import user_progress_path
 from ..screens import TITLE_HEADER_Y, TITLE_SECTION_TOP
 from ..windowing import (
@@ -233,7 +233,7 @@ def settings_screen(
                 screen_width // 2 - title_width // 2,
                 TITLE_HEADER_Y - title_height // 2,
             )
-            blit_wrapped_text(
+            blit_text_wrapped(
                 screen,
                 title_text,
                 title_font,
@@ -289,7 +289,7 @@ def settings_screen(
                 )
 
             for state in section_states.values():
-                blit_wrapped_text(
+                blit_text_wrapped(
                     screen,
                     state["header_text"],
                     header_font,
@@ -323,7 +323,7 @@ def settings_screen(
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
                 label_height = label_font.get_linesize()
-                blit_wrapped_text(
+                blit_text_wrapped(
                     screen,
                     row["label"],
                     label_font,
@@ -344,7 +344,7 @@ def settings_screen(
                     )
                     text_width = value_font.size(display_text)[0]
                     text_height = value_font.get_linesize()
-                    blit_wrapped_text(
+                    blit_text_wrapped(
                         screen,
                         display_text,
                         value_font,
@@ -382,7 +382,7 @@ def settings_screen(
                         pygame.draw.rect(screen, outline_color, rect, width=2)
                         text_width = value_font.size(text)[0]
                         text_height = value_font.get_linesize()
-                        blit_wrapped_text(
+                        blit_text_wrapped(
                             screen,
                             text,
                             value_font,
@@ -414,7 +414,7 @@ def settings_screen(
             hint_max_width = screen_width - hint_start_x - 16
             y_cursor = hint_start_y
             for line in hint_lines:
-                blit_wrapped_text(
+                blit_text_wrapped(
                     screen,
                     line,
                     hint_font,
@@ -429,7 +429,7 @@ def settings_screen(
             window_hint = tr("menu.window_hint")
             window_lines = wrap_text(window_hint, hint_font, hint_max_width)
             window_height = max(1, len(window_lines)) * hint_line_height
-            blit_wrapped_text(
+            blit_text_wrapped(
                 screen,
                 window_hint,
                 hint_font,
@@ -446,9 +446,8 @@ def settings_screen(
             config_width = path_font.size(config_text)[0]
             config_height = path_font.get_linesize()
             progress_width = path_font.size(progress_text)[0]
-            progress_height = path_font.get_linesize()
             config_top = screen_height - 32 - config_height
-            blit_wrapped_text(
+            blit_text_wrapped(
                 screen,
                 config_text,
                 path_font,
@@ -457,7 +456,7 @@ def settings_screen(
                 screen_width,
                 line_height_scale=font_settings.line_height_scale,
             )
-            blit_wrapped_text(
+            blit_text_wrapped(
                 screen,
                 progress_text,
                 path_font,

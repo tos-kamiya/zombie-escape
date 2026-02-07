@@ -21,7 +21,7 @@ from ..entities import (
     Player,
 )
 from ..entities_constants import INTERNAL_WALL_BEVEL_DEPTH, ZOMBIE_RADIUS
-from ..font_utils import load_font, render_text_unscaled
+from ..font_utils import load_font, render_text_surface
 from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
 from ..localization import get_font_settings
 from ..localization import translate as tr
@@ -67,7 +67,7 @@ from .shadows import (
 )
 
 
-def show_message(
+def blit_message(
     screen: surface.Surface,
     text: str,
     size: int,
@@ -78,7 +78,7 @@ def show_message(
         font_settings = get_font_settings()
         scaled_size = font_settings.scaled_size(size)
         font = load_font(font_settings.resource, scaled_size)
-        text_surface = render_text_unscaled(
+        text_surface = render_text_surface(
             font, text, color, line_height_scale=font_settings.line_height_scale
         )
         text_rect = text_surface.get_rect(center=position)
@@ -160,7 +160,7 @@ def wrap_text(text: str, font: pygame.font.Font, max_width: int) -> list[str]:
     return lines
 
 
-def blit_wrapped_text(
+def blit_text_wrapped(
     target: surface.Surface,
     text: str,
     font: pygame.font.Font,
@@ -178,14 +178,14 @@ def blit_wrapped_text(
         if not line:
             y += line_height
             continue
-        rendered = render_text_unscaled(
+        rendered = render_text_surface(
             font, line, color, line_height_scale=line_height_scale
         )
         target.blit(rendered, (x, y))
         y += line_height
 
 
-def show_message_wrapped(
+def blit_message_wrapped(
     screen: surface.Surface,
     text: str,
     size: int,
@@ -198,11 +198,14 @@ def show_message_wrapped(
     try:
         font_settings = get_font_settings()
         font = load_font(font_settings.resource, font_settings.scaled_size(size))
+        line_height_scale = font_settings.line_height_scale
         lines = wrap_text(text, font, max_width)
         if not lines:
             return
         rendered = [
-            render_text_unscaled(font, line, color, line_height_scale=line_height_scale)
+            render_text_surface(
+                font, line, color, line_height_scale=line_height_scale
+            )
             for line in lines
         ]
         max_line_width = max(surface.get_width() for surface in rendered)
@@ -258,14 +261,14 @@ def draw_pause_overlay(screen: pygame.Surface) -> None:
         (cx + gap, cy - bar_height // 2, bar_width, bar_height),
     )
     screen.blit(overlay, (0, 0))
-    show_message(
+    blit_message(
         screen,
         tr("hud.paused"),
         GAMEPLAY_FONT_SIZE,
         WHITE,
         (screen_width // 2, 28),
     )
-    show_message(
+    blit_message(
         screen,
         tr("hud.pause_hint"),
         GAMEPLAY_FONT_SIZE,
