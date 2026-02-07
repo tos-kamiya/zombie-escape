@@ -32,6 +32,7 @@ from .render_assets import (
     build_rubble_wall_surface,
     build_shoes_surface,
     build_survivor_directional_surfaces,
+    build_zombie_dog_directional_surfaces,
     build_zombie_directional_surfaces,
     draw_humanoid_hand,
     draw_humanoid_nose,
@@ -168,6 +169,17 @@ def export_images(
     wall_path = out / "zombie-wall.png"
     _save_surface(wall_hugging, wall_path, scale=output_scale)
     saved.append(wall_path)
+
+    zombie_dog = _pick_directional_surface(
+        build_zombie_dog_directional_surfaces(
+            long_axis=ZOMBIE_RADIUS * 2.0 * 1.2,
+            short_axis=ZOMBIE_RADIUS * 2.0 * 0.6,
+        ),
+        bin_index=10,
+    )
+    zombie_dog_path = out / "zombie-dog.png"
+    _save_surface(zombie_dog, zombie_dog_path, scale=output_scale)
+    saved.append(zombie_dog_path)
 
     buddy = _pick_directional_surface(
         build_survivor_directional_surfaces(

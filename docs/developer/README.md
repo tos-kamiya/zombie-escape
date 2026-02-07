@@ -33,6 +33,7 @@ uv run -p .venv/bin/python -m zombie_escape --export-images
 ```
 
 Images are written to `imgs/exports/` at 4x size and are intended to be committed.
+Zombie dog (`zombie-dog.png`) is exported at a 45° up-left angle.
 
 ## Multi-Python Checks
 
