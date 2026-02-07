@@ -51,8 +51,11 @@ def _draw_overview_tag(
     *,
     fg: tuple[int, int, int] = YELLOW,
     padding: tuple[int, int] = (4, 2),
+    line_height_scale: float = 1.0,
 ) -> None:
-    label = render_text_unscaled(font, text, fg)
+    label = render_text_unscaled(
+        font, text, fg, line_height_scale=line_height_scale
+    )
     label_rect = label.get_rect()
     padded = label_rect.inflate(padding[0] * 2, padding[1] * 2)
     top_left = (item_rect.left, item_rect.top)
@@ -324,19 +327,47 @@ def draw_debug_overview(
         )
 
     if game_data.car and game_data.car.alive():
-        _draw_overview_tag(screen, label_font, "C", _scaled_rect(game_data.car.rect))
+        _draw_overview_tag(
+            screen,
+            label_font,
+            "C",
+            _scaled_rect(game_data.car.rect),
+            line_height_scale=font_settings.line_height_scale,
+        )
     for parked in game_data.waiting_cars:
         if parked.alive():
-            _draw_overview_tag(screen, label_font, "C", _scaled_rect(parked.rect))
+            _draw_overview_tag(
+                screen,
+                label_font,
+                "C",
+                _scaled_rect(parked.rect),
+                line_height_scale=font_settings.line_height_scale,
+            )
     if game_data.fuel and game_data.fuel.alive():
-        _draw_overview_tag(screen, label_font, "F", _scaled_rect(game_data.fuel.rect))
+        _draw_overview_tag(
+            screen,
+            label_font,
+            "F",
+            _scaled_rect(game_data.fuel.rect),
+            line_height_scale=font_settings.line_height_scale,
+        )
     if game_data.flashlights:
         for flashlight in game_data.flashlights:
             if flashlight.alive():
                 _draw_overview_tag(
-                    screen, label_font, "L", _scaled_rect(flashlight.rect)
+                    screen,
+                    label_font,
+                    "L",
+                    _scaled_rect(flashlight.rect),
+                    line_height_scale=font_settings.line_height_scale,
                 )
     if game_data.shoes:
         for item in game_data.shoes:
             if item.alive():
-                _draw_overview_tag(screen, label_font, "S", _scaled_rect(item.rect))
+                _draw_overview_tag(
+                    screen,
+                    label_font,
+                    "S",
+                    _scaled_rect(item.rect),
+                    line_height_scale=font_settings.line_height_scale,
+                )

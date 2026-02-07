@@ -78,7 +78,9 @@ def show_message(
         font_settings = get_font_settings()
         scaled_size = font_settings.scaled_size(size)
         font = load_font(font_settings.resource, scaled_size)
-        text_surface = render_text_unscaled(font, text, color)
+        text_surface = render_text_unscaled(
+            font, text, color, line_height_scale=font_settings.line_height_scale
+        )
         text_rect = text_surface.get_rect(center=position)
 
         # Add a semi-transparent background rectangle for better visibility
@@ -176,7 +178,9 @@ def blit_wrapped_text(
         if not line:
             y += line_height
             continue
-        rendered = render_text_unscaled(font, line, color)
+        rendered = render_text_unscaled(
+            font, line, color, line_height_scale=line_height_scale
+        )
         target.blit(rendered, (x, y))
         y += line_height
 
@@ -197,9 +201,12 @@ def show_message_wrapped(
         lines = wrap_text(text, font, max_width)
         if not lines:
             return
-        rendered = [render_text_unscaled(font, line, color) for line in lines]
+        rendered = [
+            render_text_unscaled(font, line, color, line_height_scale=line_height_scale)
+            for line in lines
+        ]
         max_line_width = max(surface.get_width() for surface in rendered)
-        line_height = font.get_linesize()
+        line_height = int(round(font.get_linesize() * line_height_scale))
         total_height = line_height * len(rendered) + line_spacing * (len(rendered) - 1)
 
         center_x, center_y = position

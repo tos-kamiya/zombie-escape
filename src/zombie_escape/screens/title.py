@@ -7,7 +7,7 @@ import pygame
 from pygame import surface, time
 
 from ..colors import BLACK, GRAY, LIGHT_GRAY, WHITE
-from ..font_utils import blit_text_scaled_font, load_font
+from ..font_utils import load_font
 from ..localization import get_font_settings, get_language
 from ..localization import translate as tr
 from ..models import Stage
@@ -152,15 +152,25 @@ def title_screen(
 
     def _render_frame() -> None:
         screen.fill(BLACK)
-        title_text = tr("game.title")
         try:
             font_settings = get_font_settings()
 
             def _get_font(size: int) -> pygame.font.Font:
                 return load_font(font_settings.resource, size)
 
-            base_stage_size = font_settings.scaled_size(16)
-            selected_stage_size = font_settings.scaled_size(19)
+            def _measure_text(
+                text: str, font: pygame.font.Font, max_width: int
+            ) -> tuple[int, int, int]:
+                lines = wrap_text(text, font, max_width)
+                line_height = int(
+                    round(font.get_linesize() * font_settings.line_height_scale)
+                )
+                height = max(1, len(lines)) * line_height
+                width = max((font.size(line)[0] for line in lines if line), default=0)
+                return width, height, line_height
+
+            base_stage_size = font_settings.scaled_size(11)
+            selected_stage_size = font_settings.scaled_size(22)
             line_height_scale = font_settings.line_height_scale
             base_row_height = (
                 int(
@@ -200,12 +210,20 @@ def title_screen(
                 stage_header_text = f"{left_arrow}{stage_header_text}{right_arrow}"
             section_size = font_settings.scaled_size(11)
             section_font = _get_font(section_size)
-            stage_header_rect = blit_text_scaled_font(
+            header_width, header_height, _ = _measure_text(
+                stage_header_text, section_font, list_column_width
+            )
+            blit_wrapped_text(
                 screen,
-                section_font,
                 stage_header_text,
+                section_font,
                 LIGHT_GRAY,
-                topleft=(list_column_x, section_top),
+                (list_column_x, section_top),
+                list_column_width,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            stage_header_rect = pygame.Rect(
+                list_column_x, section_top, max(header_width, 1), header_height
             )
             stage_rows_start = stage_header_rect.bottom + 6
             resource_row_height = base_row_height
@@ -219,12 +237,21 @@ def title_screen(
                 list_column_x,
                 stage_rows_start + fixed_stage_block_height + 14 + resource_offset,
             )
-            action_header_rect = blit_text_scaled_font(
+            action_header_text = tr("menu.sections.resources")
+            action_width, action_height, _ = _measure_text(
+                action_header_text, section_font, list_column_width
+            )
+            blit_wrapped_text(
                 screen,
+                action_header_text,
                 section_font,
-                tr("menu.sections.resources"),
                 LIGHT_GRAY,
-                topleft=action_header_pos,
+                action_header_pos,
+                list_column_width,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            action_header_rect = pygame.Rect(
+                action_header_pos[0], action_header_pos[1], max(action_width, 1), action_height
             )
             action_rows_start = action_header_rect.bottom + 6
 
@@ -250,15 +277,17 @@ def title_screen(
                 )
                 stage_option_font = _get_font(stage_option_size)
                 text_height = stage_option_font.get_linesize()
-                blit_text_scaled_font(
+                blit_wrapped_text(
                     screen,
-                    stage_option_font,
                     label,
+                    stage_option_font,
                     color,
-                    topleft=(
+                    (
                         list_column_x + 8,
                         row_top + (row_height - text_height) // 2,
                     ),
+                    10_000,
+                    line_height_scale=font_settings.line_height_scale,
                 )
                 row_top += row_height
 
@@ -284,15 +313,17 @@ def title_screen(
                     label = tr("menu.quit")
                 color = WHITE
                 text_height = resource_option_font.get_linesize()
-                blit_text_scaled_font(
+                blit_wrapped_text(
                     screen,
-                    resource_option_font,
                     label,
+                    resource_option_font,
                     color,
-                    topleft=(
+                    (
                         list_column_x + 8,
                         row_top + (resource_row_height - text_height) // 2,
                     ),
+                    list_column_width - 12,
+                    line_height_scale=font_settings.line_height_scale,
                 )
 
             current = options[selected]
@@ -304,8 +335,8 @@ def title_screen(
                 desc_lines = wrap_text(
                     current["stage"].description, desc_font, info_column_width
                 )
-                desc_line_height = int(
-                    round(desc_font.get_linesize() * font_settings.line_height_scale)
+                _, _, desc_line_height = _measure_text(
+                    current["stage"].description, desc_font, info_column_width
                 )
                 desc_height = max(1, len(desc_lines)) * desc_line_height
                 desc_panel_padding = 6
@@ -370,12 +401,14 @@ def title_screen(
             hint_start_y = action_header_pos[1]
             hint_step = hint_line_height
             for offset, line in enumerate(hint_lines):
-                blit_text_scaled_font(
+                blit_wrapped_text(
                     screen,
-                    hint_font,
                     line,
+                    hint_font,
                     WHITE,
-                    topleft=(info_column_x, hint_start_y + offset * hint_step),
+                    (info_column_x, hint_start_y + offset * hint_step),
+                    info_column_width,
+                    line_height_scale=font_settings.line_height_scale,
                 )
 
             seed_value_display = (
@@ -383,12 +416,21 @@ def title_screen(
             )
             seed_label = tr("menu.seed_label", value=seed_value_display)
             seed_offset_y = hint_step
-            seed_rect = blit_text_scaled_font(
+            seed_width, seed_height, _ = _measure_text(
+                seed_label, hint_font, info_column_width
+            )
+            seed_bottom = height - 30 + seed_offset_y
+            blit_wrapped_text(
                 screen,
-                hint_font,
                 seed_label,
+                hint_font,
                 LIGHT_GRAY,
-                bottomleft=(info_column_x, height - 30 + seed_offset_y),
+                (info_column_x, seed_bottom - seed_height),
+                info_column_width,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            seed_rect = pygame.Rect(
+                info_column_x, seed_bottom - seed_height, max(seed_width, 1), seed_height
             )
 
             seed_hint = tr("menu.seed_hint")
@@ -405,21 +447,44 @@ def title_screen(
                 line_height_scale=font_settings.line_height_scale,
             )
 
-            title_font = _get_font(font_settings.scaled_size(32))
-            title_rect = blit_text_scaled_font(
+            title_text = tr("game.title")
+            title_font = _get_font(font_settings.scaled_size(33))
+            title_width, title_height, _ = _measure_text(
+                title_text, title_font, width
+            )
+            title_topleft = (
+                width // 2 - title_width // 2,
+                TITLE_HEADER_Y - title_height // 2,
+            )
+            blit_wrapped_text(
                 screen,
-                title_font,
                 title_text,
+                title_font,
                 LIGHT_GRAY,
-                center=(width // 2, TITLE_HEADER_Y),
+                title_topleft,
+                width,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            title_rect = pygame.Rect(
+                title_topleft[0], title_topleft[1], max(title_width, 1), title_height
             )
             version_font = _get_font(font_settings.scaled_size(11))
-            blit_text_scaled_font(
+            version_text = f"v{__version__}"
+            version_width, version_height, _ = _measure_text(
+                version_text, version_font, width
+            )
+            version_topleft = (
+                title_rect.right + 4,
+                title_rect.bottom - version_height,
+            )
+            blit_wrapped_text(
                 screen,
+                version_text,
                 version_font,
-                f"v{__version__}",
                 LIGHT_GRAY,
-                bottomleft=(title_rect.right + 4, title_rect.bottom),
+                version_topleft,
+                width - version_topleft[0],
+                line_height_scale=font_settings.line_height_scale,
             )
 
         except pygame.error as e:

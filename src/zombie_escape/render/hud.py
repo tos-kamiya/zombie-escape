@@ -142,19 +142,31 @@ def _draw_status_bar(
         font = load_font(
             font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
         )
-        text_surface = render_text_unscaled(font, status_text, color)
+        text_surface = render_text_unscaled(
+            font, status_text, color, line_height_scale=font_settings.line_height_scale
+        )
         text_rect = text_surface.get_rect(left=12, centery=bar_rect.centery)
         screen.blit(text_surface, text_rect)
         if seed is not None:
             seed_text = tr("status.seed", value=str(seed))
-            seed_surface = render_text_unscaled(font, seed_text, LIGHT_GRAY)
+            seed_surface = render_text_unscaled(
+                font,
+                seed_text,
+                LIGHT_GRAY,
+                line_height_scale=font_settings.line_height_scale,
+            )
             seed_rect = seed_surface.get_rect(
                 right=bar_rect.right - 12, centery=bar_rect.centery
             )
             screen.blit(seed_surface, seed_rect)
         if show_fps and fps is not None:
             fps_text = f"FPS:{fps:.1f}"
-            fps_surface = render_text_unscaled(font, fps_text, LIGHT_GRAY)
+            fps_surface = render_text_unscaled(
+                font,
+                fps_text,
+                LIGHT_GRAY,
+                line_height_scale=font_settings.line_height_scale,
+            )
             fps_rect = fps_surface.get_rect(left=12, bottom=max(2, bar_rect.top))
             screen.blit(fps_surface, fps_rect)
     except pygame.error as e:
@@ -169,7 +181,9 @@ def _draw_objective(lines: list[str], *, screen: surface.Surface) -> None:
         )
         y = 8
         for line in lines:
-            text_surface = render_text_unscaled(font, line, YELLOW)
+            text_surface = render_text_unscaled(
+                font, line, YELLOW, line_height_scale=font_settings.line_height_scale
+            )
             text_rect = text_surface.get_rect(topleft=(12, y))
             screen.blit(text_surface, text_rect)
             y += text_rect.height + 4
@@ -262,19 +276,31 @@ def _draw_endurance_timer(
         font = load_font(
             font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
         )
-        text_surface = render_text_unscaled(font, timer_text, LIGHT_GRAY)
+        text_surface = render_text_unscaled(
+            font,
+            timer_text,
+            LIGHT_GRAY,
+            line_height_scale=font_settings.line_height_scale,
+        )
         text_rect = text_surface.get_rect(left=bar_rect.left, bottom=text_bottom)
         screen.blit(text_surface, text_rect)
         if state.time_accel_active:
             accel_text = tr("hud.time_accel")
-            accel_surface = render_text_unscaled(font, accel_text, YELLOW)
+            accel_surface = render_text_unscaled(
+                font, accel_text, YELLOW, line_height_scale=font_settings.line_height_scale
+            )
             accel_rect = accel_surface.get_rect(
                 right=bar_rect.right, bottom=text_bottom
             )
             screen.blit(accel_surface, accel_rect)
         else:
             hint_text = tr("hud.time_accel_hint")
-            hint_surface = render_text_unscaled(font, hint_text, LIGHT_GRAY)
+            hint_surface = render_text_unscaled(
+                font,
+                hint_text,
+                LIGHT_GRAY,
+                line_height_scale=font_settings.line_height_scale,
+            )
             hint_rect = hint_surface.get_rect(right=bar_rect.right, bottom=text_bottom)
             screen.blit(hint_surface, hint_rect)
     except pygame.error as e:
@@ -301,7 +327,9 @@ def _draw_time_accel_indicator(
         else:
             text = tr("hud.time_accel_hint")
             color = LIGHT_GRAY
-        text_surface = render_text_unscaled(font, text, color)
+        text_surface = render_text_unscaled(
+            font, text, color, line_height_scale=font_settings.line_height_scale
+        )
         bottom_margin = assets.status_bar_height + 6
         text_rect = text_surface.get_rect(
             right=assets.screen_width - 12,
@@ -329,7 +357,9 @@ def _draw_survivor_messages(
             text = message.get("text", "")
             if not text:
                 continue
-            msg_surface = render_text_unscaled(font, text, ORANGE)
+            msg_surface = render_text_unscaled(
+                font, text, ORANGE, line_height_scale=font_settings.line_height_scale
+            )
             msg_rect = msg_surface.get_rect(
                 center=(assets.screen_width // 2, base_y + idx * line_height)
             )
@@ -359,7 +389,10 @@ def _draw_timed_message(
         line_height = int(round(font.get_linesize() * font_settings.line_height_scale))
         lines = message.text.splitlines() or [message.text]
         rendered_lines = [
-            render_text_unscaled(font, line, text_color) for line in lines
+            render_text_unscaled(
+                font, line, text_color, line_height_scale=font_settings.line_height_scale
+            )
+            for line in lines
         ]
         max_width = max(surface.get_width() for surface in rendered_lines)
         total_height = line_height * len(rendered_lines)

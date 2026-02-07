@@ -581,7 +581,12 @@ def gameplay_screen(
         if profiling_active:
             font_settings = get_font_settings()
             font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            label = render_text_unscaled(font, "PROFILE ON", RED)
+            label = render_text_unscaled(
+                font,
+                "PROFILE ON",
+                RED,
+                line_height_scale=font_settings.line_height_scale,
+            )
             screen.blit(label, (6, 6))
         present(screen)
 

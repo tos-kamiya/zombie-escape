@@ -9,7 +9,7 @@ from pygame import surface, time
 
 from ..colors import BLACK, GREEN, LIGHT_GRAY, WHITE
 from ..config import DEFAULT_CONFIG, save_config
-from ..font_utils import blit_text_scaled_font, load_font, render_text_scaled_font
+from ..font_utils import load_font
 from ..input_utils import (
     CONTROLLER_BUTTON_DOWN,
     CONTROLLER_BUTTON_DPAD_DOWN,
@@ -33,7 +33,7 @@ from ..localization import (
 from ..localization import (
     translate as tr,
 )
-from ..render import show_message, wrap_text
+from ..render import blit_wrapped_text, wrap_text
 from ..progress import user_progress_path
 from ..screens import TITLE_HEADER_Y, TITLE_SECTION_TOP
 from ..windowing import (
@@ -216,17 +216,32 @@ def settings_screen(
             last_language = current_language
 
         screen.fill(BLACK)
-        show_message(
-            screen,
-            tr("settings.title"),
-            26,
-            LIGHT_GRAY,
-            (screen_width // 2, TITLE_HEADER_Y),
-        )
-
         try:
             font_settings = get_font_settings()
             highlight_color = (70, 70, 70)
+            title_text = tr("settings.title")
+            title_font = load_font(font_settings.resource, font_settings.scaled_size(33))
+            title_lines = wrap_text(title_text, title_font, screen_width)
+            title_line_height = int(
+                round(title_font.get_linesize() * font_settings.line_height_scale)
+            )
+            title_height = max(1, len(title_lines)) * title_line_height
+            title_width = max(
+                (title_font.size(line)[0] for line in title_lines if line), default=0
+            )
+            title_topleft = (
+                screen_width // 2 - title_width // 2,
+                TITLE_HEADER_Y - title_height // 2,
+            )
+            blit_wrapped_text(
+                screen,
+                title_text,
+                title_font,
+                LIGHT_GRAY,
+                title_topleft,
+                screen_width,
+                line_height_scale=font_settings.line_height_scale,
+            )
 
             row_height = (
                 int(
@@ -254,17 +269,16 @@ def settings_screen(
 
             section_states: dict[str, dict] = {}
             y_cursor = start_y
+            header_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             for section in sections:
-                section_size = font_settings.scaled_size(11)
-                header_font = load_font(font_settings.resource, section_size)
-                header_surface = render_text_scaled_font(
-                    header_font,
-                    section["label"],
-                    LIGHT_GRAY,
+                header_lines = wrap_text(section["label"], header_font, column_width)
+                header_line_height = int(
+                    round(header_font.get_linesize() * font_settings.line_height_scale)
                 )
+                header_height = max(1, len(header_lines)) * header_line_height
                 section_states[section["label"]] = {
-                    "next_y": y_cursor + header_surface.get_height() + 4,
-                    "header_surface": header_surface,
+                    "next_y": y_cursor + header_height + 4,
+                    "header_text": section["label"],
                     "header_pos": (column_margin, y_cursor),
                 }
                 rows_in_section = len(section["rows"])
@@ -275,12 +289,18 @@ def settings_screen(
                 )
 
             for state in section_states.values():
-                screen.blit(state["header_surface"], state["header_pos"])
+                blit_wrapped_text(
+                    screen,
+                    state["header_text"],
+                    header_font,
+                    LIGHT_GRAY,
+                    state["header_pos"],
+                    column_width,
+                    line_height_scale=font_settings.line_height_scale,
+                )
 
-            label_size = font_settings.scaled_size(11)
-            value_size = font_settings.scaled_size(11)
-            label_font = load_font(font_settings.resource, label_size)
-            value_font = load_font(font_settings.resource, value_size)
+            label_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+            value_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             for idx, row in enumerate(rows):
                 section_label = row_sections[idx]
                 state = section_states[section_label]
@@ -303,15 +323,17 @@ def settings_screen(
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
                 label_height = label_font.get_linesize()
-                blit_text_scaled_font(
+                blit_wrapped_text(
                     screen,
-                    label_font,
                     row["label"],
+                    label_font,
                     WHITE,
-                    topleft=(
+                    (
                         col_x,
                         row_y_current + (row_height - label_height) // 2,
                     ),
+                    row_width,
+                    line_height_scale=font_settings.line_height_scale,
                 )
                 if row_type == "choice":
                     display_fn = row.get("get_display")
@@ -320,15 +342,19 @@ def settings_screen(
                         if display_fn and value is not None
                         else str(value)
                     )
-                    blit_text_scaled_font(
+                    text_width = value_font.size(display_text)[0]
+                    text_height = value_font.get_linesize()
+                    blit_wrapped_text(
                         screen,
-                        value_font,
                         display_text,
+                        value_font,
                         WHITE,
-                        midright=(
-                            col_x + row_width,
-                            row_y_current + row_height // 2,
+                        (
+                            col_x + row_width - text_width,
+                            row_y_current + (row_height - text_height) // 2,
                         ),
+                        row_width,
+                        line_height_scale=font_settings.line_height_scale,
                     )
                 elif row_type == "toggle":
                     slider_y = row_y_current + (row_height - segment_height) // 2 - 2
@@ -354,12 +380,19 @@ def settings_screen(
                         outline_color = GREEN if active else LIGHT_GRAY
                         pygame.draw.rect(screen, active_color, rect)
                         pygame.draw.rect(screen, outline_color, rect, width=2)
-                        blit_text_scaled_font(
+                        text_width = value_font.size(text)[0]
+                        text_height = value_font.get_linesize()
+                        blit_wrapped_text(
                             screen,
-                            value_font,
                             text,
+                            value_font,
                             WHITE,
-                            center=rect.center,
+                            (
+                                rect.centerx - text_width // 2,
+                                rect.centery - text_height // 2,
+                            ),
+                            rect.width,
+                            line_height_scale=font_settings.line_height_scale,
                         )
 
                     draw_segment(left_rect, row["left_label"], left_active)
@@ -367,8 +400,7 @@ def settings_screen(
 
             hint_start_y = start_y
             hint_start_x = screen_width // 2 + 16
-            hint_size = font_settings.scaled_size(11)
-            hint_font = load_font(font_settings.resource, hint_size)
+            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             hint_lines = [
                 tr("settings.hints.navigate"),
                 tr("settings.hints.adjust"),
@@ -382,45 +414,57 @@ def settings_screen(
             hint_max_width = screen_width - hint_start_x - 16
             y_cursor = hint_start_y
             for line in hint_lines:
-                blit_text_scaled_font(
+                blit_wrapped_text(
                     screen,
-                    hint_font,
                     line,
+                    hint_font,
                     WHITE,
-                    topleft=(hint_start_x, y_cursor),
+                    (hint_start_x, y_cursor),
+                    hint_max_width,
+                    line_height_scale=font_settings.line_height_scale,
                 )
                 y_cursor += hint_line_height
 
             y_cursor += 26
             window_hint = tr("menu.window_hint")
-            for line in wrap_text(window_hint, hint_font, hint_max_width):
-                blit_text_scaled_font(
-                    screen,
-                    hint_font,
-                    line,
-                    WHITE,
-                    topleft=(hint_start_x, y_cursor),
-                )
-                y_cursor += hint_line_height
+            window_lines = wrap_text(window_hint, hint_font, hint_max_width)
+            window_height = max(1, len(window_lines)) * hint_line_height
+            blit_wrapped_text(
+                screen,
+                window_hint,
+                hint_font,
+                WHITE,
+                (hint_start_x, y_cursor),
+                hint_max_width,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            y_cursor += window_height
 
-            path_size = font_settings.scaled_size(11)
             config_text = tr("settings.config_path", path=str(config_path))
             progress_text = tr("settings.progress_path", path=str(user_progress_path()))
-            path_font = load_font(font_settings.resource, path_size)
-            line_height = path_font.get_linesize()
-            blit_text_scaled_font(
+            path_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+            config_width = path_font.size(config_text)[0]
+            config_height = path_font.get_linesize()
+            progress_width = path_font.size(progress_text)[0]
+            progress_height = path_font.get_linesize()
+            config_top = screen_height - 32 - config_height
+            blit_wrapped_text(
                 screen,
-                path_font,
                 config_text,
-                LIGHT_GRAY,
-                midtop=(screen_width // 2, screen_height - 32 - line_height),
-            )
-            blit_text_scaled_font(
-                screen,
                 path_font,
-                progress_text,
                 LIGHT_GRAY,
-                midtop=(screen_width // 2, screen_height - 32),
+                (screen_width // 2 - config_width // 2, config_top),
+                screen_width,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            blit_wrapped_text(
+                screen,
+                progress_text,
+                path_font,
+                LIGHT_GRAY,
+                (screen_width // 2 - progress_width // 2, screen_height - 32),
+                screen_width,
+                line_height_scale=font_settings.line_height_scale,
             )
         except pygame.error as e:
             print(f"Error rendering settings: {e}")

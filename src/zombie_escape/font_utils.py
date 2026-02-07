@@ -71,9 +71,18 @@ def render_text_unscaled(
     font: pygame.font.Font,
     text: str,
     color: tuple[int, int, int],
+    *,
+    line_height_scale: float = 1.0,
 ) -> pygame.Surface:
     """Render text without supersampling for realtime HUD use."""
-    return font.render(text, False, color)
+    surface = font.render(text, False, color).convert_alpha()
+    line_height = int(round(font.get_linesize() * max(0.0, line_height_scale)))
+    if line_height <= 0 or line_height <= surface.get_height():
+        return surface
+    padded = pygame.Surface((surface.get_width(), line_height), pygame.SRCALPHA)
+    top_pad = max(0, (line_height - surface.get_height()) // 2)
+    padded.blit(surface, (0, top_pad))
+    return padded
 
 
 def blit_text_scaled_font(
