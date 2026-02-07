@@ -11,6 +11,10 @@ from ..render_constants import (
     ENTITY_SHADOW_ALPHA,
     ENTITY_SHADOW_EDGE_SOFTNESS,
     ENTITY_SHADOW_RADIUS_MULT,
+    FLASHLIGHT_FOG_SCALE_ONE,
+    FLASHLIGHT_FOG_SCALE_TWO,
+    FOG_RADIUS_SCALE,
+    FOV_RADIUS,
     SHADOW_MIN_RATIO,
     SHADOW_OVERSAMPLE,
     SHADOW_RADIUS_RATIO,
@@ -224,6 +228,7 @@ def _draw_entity_shadows(
     exclude_car: Car | None,
     outside_cells: set[tuple[int, int]] | None,
     cell_size: int,
+    flashlight_count: int = 0,
     shadow_radius: int = int(ZOMBIE_RADIUS * ENTITY_SHADOW_RADIUS_MULT),
     alpha: int = ENTITY_SHADOW_ALPHA,
 ) -> bool:
@@ -236,7 +241,10 @@ def _draw_entity_shadows(
         alpha,
         edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
     )
-    screen_rect = shadow_layer.get_rect()
+    screen_rect = _expanded_shadow_screen_rect(
+        shadow_layer.get_rect(),
+        flashlight_count,
+    )
     px, py = light_source_pos
     offset_dist = max(1.0, shadow_radius * 0.6)
     drew = False
@@ -296,6 +304,7 @@ def _draw_entity_drop_shadows(
     exclude_car: Car | None,
     outside_cells: set[tuple[int, int]] | None,
     cell_size: int,
+    flashlight_count: int = 0,
     shadow_radius: int = int(ZOMBIE_RADIUS * ENTITY_SHADOW_RADIUS_MULT),
     alpha: int = ENTITY_SHADOW_ALPHA,
 ) -> bool:
@@ -308,7 +317,10 @@ def _draw_entity_drop_shadows(
         alpha,
         edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
     )
-    screen_rect = shadow_layer.get_rect()
+    screen_rect = _expanded_shadow_screen_rect(
+        shadow_layer.get_rect(),
+        flashlight_count,
+    )
     drew = False
     for entity in all_sprites:
         if not entity.alive():
@@ -346,6 +358,24 @@ def _draw_entity_drop_shadows(
         )
         drew = True
     return drew
+
+
+def _expanded_shadow_screen_rect(
+    screen_rect: pygame.Rect,
+    flashlight_count: int,
+) -> pygame.Rect:
+    count = max(0, int(flashlight_count))
+    if count <= 0:
+        scale = FOG_RADIUS_SCALE
+    elif count == 1:
+        scale = FLASHLIGHT_FOG_SCALE_ONE
+    else:
+        scale = FLASHLIGHT_FOG_SCALE_TWO
+    extra_scale = max(0.0, scale - FOG_RADIUS_SCALE)
+    margin = int(FOV_RADIUS * extra_scale)
+    if margin <= 0:
+        return screen_rect
+    return screen_rect.inflate(margin * 2, margin * 2)
 
 
 def _draw_single_entity_shadow(

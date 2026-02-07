@@ -938,6 +938,7 @@ def draw(
                 exclude_car=active_car if player.in_car else None,
                 outside_cells=outside_cells,
                 cell_size=game_data.cell_size,
+                flashlight_count=flashlight_count,
             )
         else:
             drew_shadow |= _draw_entity_shadows(
@@ -948,6 +949,7 @@ def draw(
                 exclude_car=active_car if player.in_car else None,
                 outside_cells=outside_cells,
                 cell_size=game_data.cell_size,
+                flashlight_count=flashlight_count,
             )
         player_shadow_alpha = max(
             1, int(ENTITY_SHADOW_ALPHA * PLAYER_SHADOW_ALPHA_MULT)
