@@ -859,15 +859,7 @@ def _draw_fog_of_war(
         return
     if stage and stage.endurance_stage and dawn_ready:
         return
-    fov_center_on_screen = list(camera.apply(fov_target).center)
-    cam_rect = camera.camera
-    horizontal_span = camera.width - assets.screen_width
-    vertical_span = camera.height - assets.screen_height
-    if horizontal_span <= 0 or (cam_rect.x != 0 and cam_rect.x != -horizontal_span):
-        fov_center_on_screen[0] = assets.screen_width // 2
-    if vertical_span <= 0 or (cam_rect.y != 0 and cam_rect.y != -vertical_span):
-        fov_center_on_screen[1] = assets.screen_height // 2
-    fov_center_tuple = (int(fov_center_on_screen[0]), int(fov_center_on_screen[1]))
+    fov_center_tuple = tuple(map(int, camera.apply(fov_target).center))
     profile = _FogProfile._from_flashlight_count(flashlight_count)
     overlay = _get_fog_overlay_surfaces(
         fog_surfaces,
