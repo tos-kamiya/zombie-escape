@@ -143,7 +143,7 @@ class Zombie(pygame.sprite.Sprite):
         self.patrol_paralyze_until_ms = 0
 
     def _update_mode(
-        self: Self, player_center: tuple[int, int], sight_range: float
+        self: Self, player_center: tuple[float, float], sight_range: float
     ) -> bool:
         dx_target = player_center[0] - self.x
         dy_target = player_center[1] - self.y
@@ -374,7 +374,7 @@ class Zombie(pygame.sprite.Sprite):
 
     def update(
         self: Self,
-        player_center: tuple[int, int],
+        player_center: tuple[float, float],
         walls: list[Wall],
         nearby_zombies: Iterable[Zombie],
         nearby_patrol_bots: Iterable["PatrolBot"],

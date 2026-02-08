@@ -122,7 +122,7 @@ class ZombieDog(pygame.sprite.Sprite):
             return
         self._set_facing_bin(new_bin)
 
-    def _in_sight(self: Self, player_center: tuple[int, int]) -> bool:
+    def _in_sight(self: Self, player_center: tuple[float, float]) -> bool:
         dx = player_center[0] - self.x
         dy = player_center[1] - self.y
         return dx * dx + dy * dy <= self.sight_range * self.sight_range
@@ -149,7 +149,7 @@ class ZombieDog(pygame.sprite.Sprite):
                 best_dist_sq = dist_sq
         return best
 
-    def _set_charge_direction(self: Self, player_center: tuple[int, int]) -> None:
+    def _set_charge_direction(self: Self, player_center: tuple[float, float]) -> None:
         dx = player_center[0] - self.x
         dy = player_center[1] - self.y
         dist = math.hypot(dx, dy)
@@ -305,7 +305,7 @@ class ZombieDog(pygame.sprite.Sprite):
 
     def update(
         self: Self,
-        player_center: tuple[int, int],
+        player_center: tuple[float, float],
         walls: list[Wall],
         nearby_zombies: list[pygame.sprite.Sprite],
         nearby_patrol_bots: list[pygame.sprite.Sprite] | None = None,

@@ -227,7 +227,7 @@ def _line_of_sight_clear(
 
 def _zombie_tracker_movement(
     zombie: "Zombie",
-    player_center: tuple[int, int],
+    player_center: tuple[float, float],
     walls: list["Wall"],
     nearby_zombies: Iterable["Zombie"],
     footprints: list["Footprint"],
@@ -296,7 +296,7 @@ def _zombie_wall_hug_wall_distance(
 
 def _zombie_wall_hug_movement(
     zombie: "Zombie",
-    player_center: tuple[int, int],
+    player_center: tuple[float, float],
     walls: list["Wall"],
     _nearby_zombies: Iterable["Zombie"],
     _footprints: list["Footprint"],
@@ -397,7 +397,7 @@ def _zombie_wall_hug_movement(
 
 def _zombie_normal_movement(
     zombie: "Zombie",
-    player_center: tuple[int, int],
+    player_center: tuple[float, float],
     walls: list["Wall"],
     _nearby_zombies: Iterable["Zombie"],
     _footprints: list["Footprint"],
