@@ -34,12 +34,12 @@ from ..render_assets import (
     build_zombie_directional_surfaces,
     draw_humanoid_hand,
     draw_humanoid_nose,
-    draw_lightning_marker,
 )
 from ..render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR
 from ..rng import get_rng
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from ..world_grid import apply_cell_edge_nudge
+from .patrol_paralyze import draw_paralyze_marker, update_paralyze_from_patrol_contact
 from .movement import (
     _circle_wall_collision,
     _zombie_normal_movement,
@@ -320,22 +320,17 @@ class Zombie(pygame.sprite.Sprite):
 
     def _apply_paralyze_overlay(self: Self, now_ms: int) -> None:
         self._apply_render_overlays()
-        if PATROL_BOT_PARALYZE_BLINK_MS <= 0:
-            return
-        blink_on = (now_ms // PATROL_BOT_PARALYZE_BLINK_MS) % 2 == 0
         self.image = self.image.copy()
         center = self.image.get_rect().center
-        offset = int(self.radius * 0.4)
-        if blink_on:
-            p = (center[0] - offset, center[1] + offset)
-        else:
-            p = (center[0] + offset, center[1] - offset)
         marker_size = max(6, int(self.radius * 0.8))
-        draw_lightning_marker(
-            self.image,
-            center=p,
+        draw_paralyze_marker(
+            surface=self.image,
+            now_ms=now_ms,
+            blink_ms=PATROL_BOT_PARALYZE_BLINK_MS,
+            center=center,
             size=marker_size,
             color=PATROL_BOT_PARALYZE_MARKER_COLOR,
+            offset=int(self.radius * 0.4),
             width=2,
         )
 
@@ -392,29 +387,27 @@ class Zombie(pygame.sprite.Sprite):
         self._apply_decay()
         if not self.alive():
             return
-        bot_hit_now = False
         possible_bots = [
             b
             for b in nearby_patrol_bots
             if abs(b.x - self.x) < 100 and abs(b.y - self.y) < 100
         ]
-        for bot in possible_bots:
-            dx = self.x - bot.x
-            dy = self.y - bot.y
-            hit_range = self.radius + bot.radius
-            if dx * dx + dy * dy <= hit_range * hit_range:
-                bot_hit_now = True
-                break
-        if bot_hit_now:
-            self.patrol_damage_frame_counter = (
-                self.patrol_damage_frame_counter + 1
-            ) % PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES
-            if self.patrol_damage_frame_counter == 0:
-                self.take_damage(PATROL_BOT_ZOMBIE_DAMAGE, source="patrol_bot")
-            self.patrol_paralyze_until_ms = max(
-                self.patrol_paralyze_until_ms,
-                now + PATROL_BOT_PARALYZE_MS,
+        _, self.patrol_paralyze_until_ms, self.patrol_damage_frame_counter = (
+            update_paralyze_from_patrol_contact(
+                entity_center=(self.x, self.y),
+                entity_radius=self.radius,
+                patrol_bots=possible_bots,
+                now_ms=now,
+                paralyze_until_ms=self.patrol_paralyze_until_ms,
+                paralyze_duration_ms=PATROL_BOT_PARALYZE_MS,
+                damage_counter=self.patrol_damage_frame_counter,
+                damage_interval_frames=PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,
+                damage_amount=PATROL_BOT_ZOMBIE_DAMAGE,
+                apply_damage=lambda amount: self.take_damage(
+                    amount, source="patrol_bot"
+                ),
             )
+        )
         if now < self.patrol_paralyze_until_ms:
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0

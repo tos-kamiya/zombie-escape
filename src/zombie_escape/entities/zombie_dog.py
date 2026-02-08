@@ -24,6 +24,8 @@ from ..entities_constants import (
     ZOMBIE_DOG_SHORT_AXIS_RATIO,
     ZOMBIE_DOG_SIGHT_RANGE,
     ZOMBIE_DOG_WANDER_INTERVAL_MS,
+    PATROL_BOT_ZOMBIE_DAMAGE,
+    PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,
     PATROL_BOT_PARALYZE_MS,
     PATROL_BOT_PARALYZE_BLINK_MS,
     PATROL_BOT_PARALYZE_MARKER_COLOR,
@@ -34,11 +36,11 @@ from ..rng import get_rng
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_dog_directional_surfaces,
-    draw_lightning_marker,
 )
 from ..render_constants import ANGLE_BINS
 from ..screen_constants import FPS
 from ..world_grid import apply_cell_edge_nudge
+from .patrol_paralyze import draw_paralyze_marker, update_paralyze_from_patrol_contact
 from .zombie import Zombie
 from .movement import _circle_wall_collision
 from .walls import Wall
@@ -87,6 +89,7 @@ class ZombieDog(pygame.sprite.Sprite):
         self.last_move_dy = 0.0
         self.bite_frame_counter = 0
         self.patrol_paralyze_until_ms = 0
+        self.patrol_damage_frame_counter = 0
         self.max_health = 100
         self.health = self.max_health
         self.decay_carry = 0.0
@@ -285,23 +288,17 @@ class ZombieDog(pygame.sprite.Sprite):
 
     def _apply_paralyze_overlay(self: Self, now_ms: int) -> None:
         base_surface = self.directional_images[self.facing_bin]
-        if PATROL_BOT_PARALYZE_BLINK_MS <= 0:
-            self.image = base_surface
-            return
-        blink_on = (now_ms // PATROL_BOT_PARALYZE_BLINK_MS) % 2 == 0
         image = base_surface.copy()
         center = image.get_rect().center
-        offset = int(self.short_axis * 0.4)
-        if blink_on:
-            p = (center[0] - offset, center[1] + offset)
-        else:
-            p = (center[0] + offset, center[1] - offset)
         marker_size = max(6, int(self.short_axis * 0.8))
-        draw_lightning_marker(
-            image,
-            center=p,
+        draw_paralyze_marker(
+            surface=image,
+            now_ms=now_ms,
+            blink_ms=PATROL_BOT_PARALYZE_BLINK_MS,
+            center=center,
             size=marker_size,
             color=PATROL_BOT_PARALYZE_MARKER_COLOR,
+            offset=int(self.short_axis * 0.4),
             width=2,
         )
         self.image = image
@@ -324,26 +321,28 @@ class ZombieDog(pygame.sprite.Sprite):
         if not self.alive():
             return
         _ = nearby_zombies, footprints
-        bot_hit_now = False
+        possible_bots = []
         if nearby_patrol_bots:
             possible_bots = [
                 b
                 for b in nearby_patrol_bots
                 if abs(b.x - self.x) < 100 and abs(b.y - self.y) < 100
             ]
-            for bot in possible_bots:
-                dx = self.x - bot.x
-                dy = self.y - bot.y
-                hit_range = self.body_radius + bot.radius
-                if dx * dx + dy * dy <= hit_range * hit_range:
-                    bot_hit_now = True
-                    break
         now = pygame.time.get_ticks()
-        if bot_hit_now:
-            self.patrol_paralyze_until_ms = max(
-                self.patrol_paralyze_until_ms,
-                now + PATROL_BOT_PARALYZE_MS,
+        _, self.patrol_paralyze_until_ms, self.patrol_damage_frame_counter = (
+            update_paralyze_from_patrol_contact(
+                entity_center=(self.x, self.y),
+                entity_radius=self.body_radius,
+                patrol_bots=possible_bots,
+                now_ms=now,
+                paralyze_until_ms=self.patrol_paralyze_until_ms,
+                paralyze_duration_ms=PATROL_BOT_PARALYZE_MS,
+                damage_counter=self.patrol_damage_frame_counter,
+                damage_interval_frames=PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,
+                damage_amount=PATROL_BOT_ZOMBIE_DAMAGE,
+                apply_damage=self.take_damage,
             )
+        )
         if now < self.patrol_paralyze_until_ms:
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0
@@ -414,6 +413,7 @@ class ZombieDog(pygame.sprite.Sprite):
             cell_size=cell_size,
         )
         self._update_facing_from_movement(move_x, move_y)
+        self.image = self.directional_images[self.facing_bin]
         self.last_move_dx = move_x
         self.last_move_dy = move_y
 
