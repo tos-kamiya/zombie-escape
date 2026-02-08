@@ -159,9 +159,9 @@
         "name": "#21 走る影",
         "description": "目に入った相手に喜んで寄ってくる。"
       },
-      "patrol_bot_test": {
-        "name": "巡回ロボット確認",
-        "description": "巡回ロボットの動作確認ステージ。"
+      "stage22": {
+        "name": "#22 巡回中",
+        "description": "巡回ユニットが巡回経路を軽やかに巡っている。"
       }
     },
     "status": {
