@@ -20,7 +20,7 @@ from ..entities import (
     Camera,
     Player,
 )
-from ..entities_constants import INTERNAL_WALL_BEVEL_DEPTH, ZOMBIE_RADIUS
+from ..entities_constants import INTERNAL_WALL_BEVEL_DEPTH, PATROL_BOT_RADIUS, ZOMBIE_RADIUS
 from ..font_utils import load_font, render_text_surface
 from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
 from ..localization import get_font_settings
@@ -29,6 +29,7 @@ from ..models import DustRing, FallingZombie, Footprint, GameData, Stage
 from ..render_assets import RenderAssets
 from ..render_constants import (
     ENTITY_SHADOW_ALPHA,
+    ENTITY_SHADOW_EDGE_SOFTNESS,
     FALLING_DUST_COLOR,
     FALLING_WHIRLWIND_COLOR,
     FALLING_ZOMBIE_COLOR,
@@ -953,10 +954,47 @@ def draw(
                 cell_size=game_data.cell_size,
                 flashlight_count=flashlight_count,
             )
+        # Patrol bot shadows: low profile, small offset, slightly larger than body.
+        patrol_bots = game_data.groups.patrol_bot_group
+        if patrol_bots:
+            bot_radius = max(1, int(PATROL_BOT_RADIUS * 1.2))
+            bot_alpha = max(1, int(ENTITY_SHADOW_ALPHA * 0.6))
+            for bot in patrol_bots:
+                if not bot.alive():
+                    continue
+                if dawn_shadow_mode:
+                    drew_shadow |= _draw_single_entity_drop_shadow(
+                        shadow_layer,
+                        camera,
+                        entity=bot,
+                        outside_cells=outside_cells,
+                        cell_size=game_data.cell_size,
+                        shadow_radius=bot_radius,
+                        alpha=bot_alpha,
+                        edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
+                    )
+                else:
+                    drew_shadow |= _draw_single_entity_shadow(
+                        shadow_layer,
+                        camera,
+                        entity=bot,
+                        light_source_pos=light_source_pos,
+                        outside_cells=outside_cells,
+                        cell_size=game_data.cell_size,
+                        shadow_radius=bot_radius,
+                        alpha=bot_alpha,
+                        edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
+                        offset_scale=1 / 3,
+                    )
         player_shadow_alpha = max(
             1, int(ENTITY_SHADOW_ALPHA * PLAYER_SHADOW_ALPHA_MULT)
         )
         player_shadow_radius = int(ZOMBIE_RADIUS * PLAYER_SHADOW_RADIUS_MULT)
+        car_shadow_radius = player_shadow_radius
+        if active_car is not None:
+            car_shadow_radius = max(
+                1, int(min(active_car.rect.width, active_car.rect.height) * 0.5 * 1.2)
+            )
         if player.in_car:
             if dawn_shadow_mode:
                 drew_shadow |= _draw_single_entity_drop_shadow(
@@ -965,7 +1003,7 @@ def draw(
                     entity=active_car,
                     outside_cells=outside_cells,
                     cell_size=game_data.cell_size,
-                    shadow_radius=player_shadow_radius,
+                    shadow_radius=car_shadow_radius,
                     alpha=player_shadow_alpha,
                 )
             else:
@@ -976,7 +1014,7 @@ def draw(
                     light_source_pos=light_source_pos,
                     outside_cells=outside_cells,
                     cell_size=game_data.cell_size,
-                    shadow_radius=player_shadow_radius,
+                    shadow_radius=car_shadow_radius,
                     alpha=player_shadow_alpha,
                 )
         else:

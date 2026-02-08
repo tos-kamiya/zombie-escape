@@ -246,7 +246,6 @@ def _draw_entity_shadows(
         flashlight_count,
     )
     px, py = light_source_pos
-    offset_dist = max(1.0, shadow_radius * 0.6)
     drew = False
     for entity in all_sprites:
         if not entity.alive():
@@ -269,6 +268,19 @@ def _draw_entity_shadows(
         dx = cx - px
         dy = cy - py
         dist = math.hypot(dx, dy)
+        if isinstance(entity, Car):
+            car_shadow_radius = max(
+                1, int(min(entity.rect.width, entity.rect.height) * 0.5 * 1.2)
+            )
+            surface_to_draw = _get_shadow_circle_surface(
+                car_shadow_radius,
+                alpha,
+                edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
+            )
+            offset_dist = max(1.0, car_shadow_radius * 0.6)
+        else:
+            surface_to_draw = shadow_surface
+            offset_dist = max(1.0, shadow_radius * 0.6)
         if dist > 0.001:
             scale = offset_dist / dist
             offset_x = dx * scale
@@ -281,14 +293,14 @@ def _draw_entity_shadows(
         if getattr(entity, "is_jumping", False):
             jump_dy = JUMP_SHADOW_OFFSET
 
-        shadow_rect = shadow_surface.get_rect(
+        shadow_rect = surface_to_draw.get_rect(
             center=(int(cx + offset_x), int(cy + offset_y + jump_dy))
         )
         shadow_screen_rect = camera.apply_rect(shadow_rect)
         if not shadow_screen_rect.colliderect(screen_rect):
             continue
         shadow_layer.blit(
-            shadow_surface,
+            surface_to_draw,
             shadow_screen_rect.topleft,
             special_flags=pygame.BLEND_RGBA_MAX,
         )
@@ -345,14 +357,25 @@ def _draw_entity_drop_shadows(
         if getattr(entity, "is_jumping", False):
             jump_dy = JUMP_SHADOW_OFFSET
 
-        shadow_rect = shadow_surface.get_rect(
+        if isinstance(entity, Car):
+            car_shadow_radius = max(
+                1, int(min(entity.rect.width, entity.rect.height) * 0.5 * 1.2)
+            )
+            surface_to_draw = _get_shadow_circle_surface(
+                car_shadow_radius,
+                alpha,
+                edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
+            )
+        else:
+            surface_to_draw = shadow_surface
+        shadow_rect = surface_to_draw.get_rect(
             center=(int(cx), int(cy + jump_dy))
         )
         shadow_screen_rect = camera.apply_rect(shadow_rect)
         if not shadow_screen_rect.colliderect(screen_rect):
             continue
         shadow_layer.blit(
-            shadow_surface,
+            surface_to_draw,
             shadow_screen_rect.topleft,
             special_flags=pygame.BLEND_RGBA_MAX,
         )
@@ -389,6 +412,7 @@ def _draw_single_entity_shadow(
     shadow_radius: int,
     alpha: int,
     edge_softness: float = ENTITY_SHADOW_EDGE_SOFTNESS,
+    offset_scale: float = 1.0,
 ) -> bool:
     if (
         entity is None
@@ -415,7 +439,7 @@ def _draw_single_entity_shadow(
     dx = cx - px
     dy = cy - py
     dist = math.hypot(dx, dy)
-    offset_dist = max(1.0, shadow_radius * 0.6)
+    offset_dist = max(1.0, shadow_radius * 0.6) * max(0.0, offset_scale)
     if dist > 0.001:
         scale = offset_dist / dist
         offset_x = dx * scale
