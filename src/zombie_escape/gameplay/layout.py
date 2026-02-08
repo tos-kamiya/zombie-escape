@@ -283,6 +283,8 @@ def generate_level_from_blueprint(
     game_data.layout.grid_cols = stage.grid_cols
     game_data.layout.grid_rows = stage.grid_rows
     game_data.layout.outside_cells = outside_cells
+    if pitfall_cells:
+        walkable_cells = [cell for cell in walkable_cells if cell not in pitfall_cells]
     game_data.layout.walkable_cells = walkable_cells
     game_data.layout.outer_wall_cells = outer_wall_cells
     game_data.layout.wall_cells = wall_cells

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pygame
 
 try:
@@ -15,6 +17,7 @@ from ..entities_constants import (
     PATROL_BOT_COLLISION_MARGIN,
 )
 from ..render_assets import angle_bin_from_vector, build_patrol_bot_directional_surfaces
+from ..render_constants import ANGLE_BINS
 from ..rng import get_rng
 from ..world_grid import apply_cell_edge_nudge
 from .movement import _circle_wall_collision
@@ -29,14 +32,29 @@ class PatrolBot(pygame.sprite.Sprite):
         self.size = PATROL_BOT_SIZE
         self.radius = float(PATROL_BOT_RADIUS)
         self.facing_bin = 0
-        self.directional_images = build_patrol_bot_directional_surfaces(self.size)
+        self.directional_images_player = build_patrol_bot_directional_surfaces(
+            self.size, arrow_scale=1.0
+        )
+        self.directional_images_auto = build_patrol_bot_directional_surfaces(
+            self.size, arrow_scale=2.0 / 3.0
+        )
+        self.using_player_arrow = False
+        self.directional_images = self.directional_images_auto
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
         self.speed = PATROL_BOT_SPEED
         self.direction = RNG.choice([(1, 0), (-1, 0), (0, 1), (0, -1)])
-        self.turn_right_next = RNG.choice([True, False])
+        self.turn_patterns = [
+            [True, False],
+            [True, True, False, False],
+            [True, True, True, False, False, False],
+            [True, True, True, True, False, False, False, False],
+            [True, True, True, True, True, False, False, False, False, False],
+        ]
+        self.turn_pattern_idx = 0
+        self.turn_step_idx = 0
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
         self.pause_until_ms = 0
@@ -46,6 +64,19 @@ class PatrolBot(pygame.sprite.Sprite):
             return
         center = self.rect.center
         self.facing_bin = new_bin
+        self.image = self.directional_images[self.facing_bin]
+        self.rect = self.image.get_rect(center=center)
+
+    def _set_arrow_source(self: Self, from_player: bool) -> None:
+        if from_player == self.using_player_arrow:
+            return
+        self.using_player_arrow = from_player
+        center = self.rect.center
+        self.directional_images = (
+            self.directional_images_player
+            if self.using_player_arrow
+            else self.directional_images_auto
+        )
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=center)
 
@@ -61,6 +92,21 @@ class PatrolBot(pygame.sprite.Sprite):
             self.direction = (dy, -dx)
         else:
             self.direction = (-dy, dx)
+        self._set_arrow_source(False)
+
+    def _set_direction_from_player(self: Self, player: pygame.sprite.Sprite) -> None:
+        input_bin = getattr(player, "input_facing_bin", None)
+        if input_bin is None:
+            return
+        angle_rad = (input_bin % ANGLE_BINS) * (math.tau / ANGLE_BINS)
+        dx = math.cos(angle_rad)
+        dy = math.sin(angle_rad)
+        if abs(dx) >= abs(dy):
+            self.direction = (1, 0) if dx >= 0 else (-1, 0)
+        else:
+            self.direction = (0, 1) if dy >= 0 else (0, -1)
+        self._update_facing_from_movement(*self.direction)
+        self._set_arrow_source(True)
 
     def _handle_axis_collision(
         self: Self,
@@ -133,27 +179,26 @@ class PatrolBot(pygame.sprite.Sprite):
         layout,
     ) -> None:
         now = pygame.time.get_ticks()
+
         if now < self.pause_until_ms:
+            if player is not None and getattr(player, "alive", lambda: True)():
+                hx, hy = player.rect.center
+                hr = getattr(player, "radius", None)
+                if hr is None:
+                    hr = max(player.rect.width, player.rect.height) / 2
+                dx = self.x - hx
+                dy = self.y - hy
+                hit_range = (self.radius + PATROL_BOT_COLLISION_MARGIN) + float(hr)
+                if dx * dx + dy * dy <= hit_range * hit_range:
+                    center_threshold = self.radius * 0.5
+                    if dx * dx + dy * dy <= center_threshold * center_threshold:
+                        self._set_direction_from_player(player)
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0
             return
-        slow_factor = 1.0
-        if zombie_group:
-            for zombie in zombie_group:
-                if not zombie.alive():
-                    continue
-                zx, zy = zombie.rect.center
-                zr = getattr(zombie, "radius", None)
-                if zr is None:
-                    zr = max(zombie.rect.width, zombie.rect.height) / 2
-                dx = self.x - zx
-                dy = self.y - zy
-                hit_range = (self.radius + PATROL_BOT_COLLISION_MARGIN) + float(zr)
-                if dx * dx + dy * dy <= hit_range * hit_range:
-                    slow_factor = 0.5
-                    break
-        move_x = float(self.direction[0]) * self.speed * slow_factor
-        move_y = float(self.direction[1]) * self.speed * slow_factor
+
+        move_x = float(self.direction[0]) * self.speed
+        move_y = float(self.direction[1]) * self.speed
         move_x, move_y = apply_cell_edge_nudge(
             self.x,
             self.y,
@@ -221,7 +266,6 @@ class PatrolBot(pygame.sprite.Sprite):
                 final_y = self.y
                 break
 
-        hit_humanoid = False
         possible_humans = []
         if human_group:
             possible_humans.extend(
@@ -252,15 +296,12 @@ class PatrolBot(pygame.sprite.Sprite):
                     return True
             return False
 
-        if _humanoid_collision(final_x, final_y):
-            hit_humanoid = True
-            final_x = self.x
-            final_y = self.y
-
         hit_pitfall = False
         if pitfall_cells and cell_size > 0:
-            cell_x = int(final_x // cell_size)
-            cell_y = int(final_y // cell_size)
+            lead_x = next_x + float(self.direction[0]) * collision_radius
+            lead_y = next_y + float(self.direction[1]) * collision_radius
+            cell_x = int(lead_x // cell_size)
+            cell_y = int(lead_y // cell_size)
             if (cell_x, cell_y) in pitfall_cells:
                 hit_pitfall = True
                 final_x = self.x
@@ -282,7 +323,7 @@ class PatrolBot(pygame.sprite.Sprite):
             final_x = self.x
             final_y = self.y
 
-        if hit_humanoid:
+        if _humanoid_collision(final_x, final_y):
             self.pause_until_ms = now + PATROL_BOT_HUMANOID_PAUSE_MS
         elif hit_wall or hit_pitfall or hit_bot or hit_car or hit_outer:
             # Step back slightly to avoid corner lock, then rotate.
@@ -315,28 +356,24 @@ class PatrolBot(pygame.sprite.Sprite):
             # If we hit the outer boundary, reverse direction.
             if hit_outer:
                 self.direction = (-self.direction[0], -self.direction[1])
+                self._set_arrow_source(False)
             else:
-                preferred_turn = self.turn_right_next
+                pattern = self.turn_patterns[self.turn_pattern_idx]
+                preferred_turn = pattern[self.turn_step_idx]
+                self.turn_step_idx += 1
+                if self.turn_step_idx >= len(pattern):
+                    self.turn_step_idx = 0
+                    self.turn_pattern_idx = (self.turn_pattern_idx + 1) % len(
+                        self.turn_patterns
+                    )
                 self._rotate_direction(turn_right=preferred_turn)
-                self.turn_right_next = not self.turn_right_next
-                # If the preferred turn is still blocked, flip once.
-                test_dx = float(self.direction[0]) * self.speed
-                test_dy = float(self.direction[1]) * self.speed
-                test_x = final_x + test_dx
-                test_y = final_y + test_dy
-                _, _, still_hit = self._handle_axis_collision(
-                    next_x=test_x,
-                    next_y=test_y,
-                    walls=walls,
-                    radius=collision_radius,
-                )
-                if still_hit or _bot_collision(test_x, test_y):
-                    self._rotate_direction(turn_right=not preferred_turn)
+                # Keep the chosen turn even if it would remain blocked.
 
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
         if final_x <= 0 or final_y <= 0 or final_x >= level_width or final_y >= level_height:
             self.direction = (-self.direction[0], -self.direction[1])
+            self._set_arrow_source(False)
             final_x = min(level_width - 1, max(1.0, final_x))
             final_y = min(level_height - 1, max(1.0, final_y))
 

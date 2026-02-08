@@ -834,7 +834,6 @@ def spawn_initial_patrol_bots(
     walkable_cells = layout_data.get("walkable_cells", [])
     if not walkable_cells:
         return
-
     cell_size = game_data.cell_size
     positions = find_interior_spawn_positions(
         walkable_cells,

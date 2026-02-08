@@ -591,9 +591,10 @@ def build_zombie_dog_directional_surfaces(
 def build_patrol_bot_directional_surfaces(
     size: int,
     *,
+    arrow_scale: float = 1.0,
     bins: int = ANGLE_BINS,
 ) -> list[pygame.Surface]:
-    cache_key = (int(size), bins)
+    cache_key = (int(size), round(float(arrow_scale), 3), bins)
     if cache_key in _PATROL_BOT_DIRECTIONAL_CACHE:
         return _PATROL_BOT_DIRECTIONAL_CACHE[cache_key]
     base_surface = pygame.Surface((size, size), pygame.SRCALPHA)
@@ -603,7 +604,7 @@ def build_patrol_bot_directional_surfaces(
     pygame.draw.circle(
         base_surface, PATROL_BOT_OUTLINE_COLOR, center, radius, width=2
     )
-    arrow = _build_patrol_bot_arrow_surface(size)
+    arrow = _build_patrol_bot_arrow_surface(size, arrow_scale)
     surfaces: list[pygame.Surface] = []
     for idx in range(bins):
         angle_deg = -(idx * 360.0 / bins)
@@ -615,11 +616,11 @@ def build_patrol_bot_directional_surfaces(
     return surfaces
 
 
-def _build_patrol_bot_arrow_surface(size: int) -> pygame.Surface:
+def _build_patrol_bot_arrow_surface(size: int, arrow_scale: float) -> pygame.Surface:
     surface = pygame.Surface((size, size), pygame.SRCALPHA)
     center_x, center_y = surface.get_rect().center
-    arrow_width = max(6, int(size * 0.32))
-    arrow_height = max(8, int(size * 0.44))
+    arrow_width = max(6, int(size * 0.32 * arrow_scale))
+    arrow_height = max(8, int(size * 0.44 * arrow_scale))
     tip_x = center_x + arrow_height // 2
     half_width = arrow_width // 2
     points = [
