@@ -604,29 +604,31 @@ def build_patrol_bot_directional_surfaces(
     pygame.draw.circle(
         base_surface, PATROL_BOT_OUTLINE_COLOR, center, radius, width=2
     )
-    arrow = _build_patrol_bot_arrow_surface(size, arrow_scale)
+    marker = _build_patrol_bot_marker_surface(size, arrow_scale)
     surfaces: list[pygame.Surface] = []
     for idx in range(bins):
-        angle_deg = -(idx * 360.0 / bins)
-        rotated_arrow = pygame.transform.rotozoom(arrow, angle_deg, 1.0)
         framed = base_surface.copy()
-        framed.blit(rotated_arrow, rotated_arrow.get_rect(center=center))
+        angle_rad = idx * ANGLE_STEP
+        offset_radius = max(1.0, (size * 0.3) - (size * 0.22 * arrow_scale))
+        eye_x = int(round(center[0] + math.cos(angle_rad) * offset_radius))
+        eye_y = int(round(center[1] + math.sin(angle_rad) * offset_radius))
+        rotated_marker = pygame.transform.rotozoom(
+            marker, -math.degrees(angle_rad), 1.0
+        )
+        framed.blit(rotated_marker, rotated_marker.get_rect(center=(eye_x, eye_y)))
         surfaces.append(framed)
     _PATROL_BOT_DIRECTIONAL_CACHE[cache_key] = surfaces
     return surfaces
 
 
-def _build_patrol_bot_arrow_surface(size: int, arrow_scale: float) -> pygame.Surface:
+def _build_patrol_bot_marker_surface(size: int, marker_scale: float) -> pygame.Surface:
     surface = pygame.Surface((size, size), pygame.SRCALPHA)
-    center_x, center_y = surface.get_rect().center
-    arrow_width = max(6, int(size * 0.32 * arrow_scale))
-    arrow_height = max(8, int(size * 0.44 * arrow_scale))
-    tip_x = center_x + arrow_height // 2
-    half_width = arrow_width // 2
+    center = surface.get_rect().center
+    marker_size = max(4, int(size * 0.2 * marker_scale))
     points = [
-        (tip_x, center_y),
-        (tip_x - arrow_height, center_y - half_width),
-        (tip_x - arrow_height, center_y + half_width),
+        (center[0] + marker_size, center[1]),
+        (center[0], center[1] + marker_size),
+        (center[0], center[1] - marker_size),
     ]
     pygame.draw.polygon(surface, PATROL_BOT_ARROW_COLOR, points)
     return surface
