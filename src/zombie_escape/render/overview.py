@@ -28,6 +28,7 @@ from ..font_utils import load_font, render_text_surface
 from ..localization import get_font_settings
 from ..models import Footprint, GameData
 from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
+from ..render_constants import MOVING_FLOOR_OVERVIEW_COLOR
 from ..entities_constants import PATROL_BOT_RADIUS
 from .hud import _get_fog_scale
 
@@ -93,6 +94,7 @@ def draw_level_overview(
     patrol_bots: list[PatrolBot] | None = None,
     zombies: list[pygame.sprite.Sprite] | None = None,
     fall_spawn_cells: set[tuple[int, int]] | None = None,
+    moving_floor_cells: dict[tuple[int, int], object] | None = None,
     palette_key: str | None = None,
 ) -> None:
     palette = get_environment_palette(palette_key)
@@ -121,6 +123,18 @@ def draw_level_overview(
                 pygame.draw.rect(
                     surface,
                     fall_floor,
+                    pygame.Rect(
+                        x * cell_size,
+                        y * cell_size,
+                        cell_size,
+                        cell_size,
+                    ),
+                )
+        if moving_floor_cells:
+            for x, y in moving_floor_cells.keys():
+                pygame.draw.rect(
+                    surface,
+                    MOVING_FLOOR_OVERVIEW_COLOR,
                     pygame.Rect(
                         x * cell_size,
                         y * cell_size,
@@ -277,6 +291,7 @@ def draw_debug_overview(
         patrol_bots=list(game_data.groups.patrol_bot_group),
         zombies=list(game_data.groups.zombie_group),
         fall_spawn_cells=game_data.layout.fall_spawn_cells,
+        moving_floor_cells=game_data.layout.moving_floor_cells,
         palette_key=game_data.state.ambient_palette_key,
     )
     fov_target = None

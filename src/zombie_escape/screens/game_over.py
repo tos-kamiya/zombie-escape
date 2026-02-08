@@ -90,6 +90,7 @@ def game_over_screen(
                 patrol_bots=list(game_data.groups.patrol_bot_group),
                 zombies=list(game_data.groups.zombie_group),
                 fall_spawn_cells=game_data.layout.fall_spawn_cells,
+                moving_floor_cells=game_data.layout.moving_floor_cells,
                 palette_key=state.ambient_palette_key,
             )
 
