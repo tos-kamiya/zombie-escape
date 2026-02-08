@@ -11,6 +11,7 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
     from typing_extensions import Self
 
 from ..entities_constants import (
+    ZombieKind,
     ZOMBIE_DOG_ASSAULT_SPEED,
     ZOMBIE_DOG_BITE_DAMAGE,
     ZOMBIE_DOG_BITE_INTERVAL_FRAMES,
@@ -73,8 +74,7 @@ class ZombieDog(pygame.sprite.Sprite):
         self.charge_direction = (0.0, 0.0)
         self.wander_angle = RNG.uniform(0.0, math.tau)
         self.wander_change_time = pygame.time.get_ticks()
-        self.tracker = False
-        self.wall_hugging = False
+        self.kind = ZombieKind.DOG
         self.carbonized = False
         self.facing_bin = 0
         self.directional_images = build_zombie_dog_directional_surfaces(

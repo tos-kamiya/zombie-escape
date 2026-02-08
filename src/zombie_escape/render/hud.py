@@ -20,7 +20,7 @@ from ..font_utils import load_font, render_text_surface
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 from ..localization import get_font_settings
 from ..localization import translate as tr
-from ..entities import ZombieDog
+from ..entities_constants import ZombieKind
 from ..models import Stage, TimedMessage
 from ..render_assets import (
     RenderAssets,
@@ -128,10 +128,11 @@ def _draw_status_bar(
         if zombie_group is not None:
             zombies = [z for z in zombie_group if z.alive()]
             total = len(zombies)
-            tracker = sum(1 for z in zombies if z.tracker)
-            wall = sum(1 for z in zombies if z.wall_hugging)
-            normal = max(0, total - tracker - wall)
-            dog_count = sum(1 for z in zombies if isinstance(z, ZombieDog))
+            kinds = [getattr(z, "kind", None) for z in zombies]
+            tracker = sum(1 for kind in kinds if kind == ZombieKind.TRACKER)
+            wall = sum(1 for kind in kinds if kind == ZombieKind.WALL_HUGGER)
+            dog_count = sum(1 for kind in kinds if kind == ZombieKind.DOG)
+            normal = max(0, total - tracker - wall - dog_count)
             debug_counts = f"Z:{total} N:{normal} T:{tracker} W:{wall} D:{dog_count}"
             if falling_spawn_carry is not None:
                 debug_counts = f"{debug_counts} C:{max(0, falling_spawn_carry)}"

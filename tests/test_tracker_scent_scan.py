@@ -1,4 +1,5 @@
 from zombie_escape.entities import Wall, Zombie
+from zombie_escape.entities_constants import ZombieKind
 from zombie_escape.entities.movement import _zombie_update_tracker_target
 from zombie_escape.models import Footprint
 
@@ -13,7 +14,7 @@ def _force_scan(zombie: Zombie) -> None:
 
 
 def test_tracker_picks_latest_visible_footprint() -> None:
-    zombie = Zombie(10, 10, tracker=True)
+    zombie = Zombie(10, 10, kind=ZombieKind.TRACKER)
     _force_scan(zombie)
     footprints = [
         _make_footprint((30, 10), 1000),
@@ -24,7 +25,7 @@ def test_tracker_picks_latest_visible_footprint() -> None:
 
 
 def test_tracker_skips_blocked_latest_footprint() -> None:
-    zombie = Zombie(10, 10, tracker=True)
+    zombie = Zombie(10, 10, kind=ZombieKind.TRACKER)
     _force_scan(zombie)
     wall = Wall(30, 0, 10, 20)
     footprints = [
@@ -37,7 +38,7 @@ def test_tracker_skips_blocked_latest_footprint() -> None:
 
 
 def test_tracker_limits_to_top_k_candidates() -> None:
-    zombie = Zombie(10, 10, tracker=True)
+    zombie = Zombie(10, 10, kind=ZombieKind.TRACKER)
     _force_scan(zombie)
     wall = Wall(20, 0, 5, 30)
     footprints = [

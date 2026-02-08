@@ -17,6 +17,7 @@ from ..entities import (
 from ..entities_constants import (
     HUMANOID_WALL_BUMP_FRAMES,
     PLAYER_SPEED,
+    ZombieKind,
     ZOMBIE_DOG_PACK_CHASE_RANGE,
     ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE,
     ZOMBIE_SEPARATION_DISTANCE,
@@ -262,7 +263,11 @@ def update_entities(
     patrol_kinds = SpatialKind.PATROL_BOT
     base_radius = ZOMBIE_SEPARATION_DISTANCE + PLAYER_SPEED
     for zombie in zombies_sorted:
-        if not zombie.alive() or not zombie.tracker:
+        if (
+            not zombie.alive()
+            or not isinstance(zombie, Zombie)
+            or zombie.kind != ZombieKind.TRACKER
+        ):
             continue
         zombie.tracker_force_wander = False
         dx = zombie.last_move_dx
@@ -397,9 +402,9 @@ def update_entities(
                 pre_fx_ms=0,
                 fall_duration_ms=500,
                 dust_duration_ms=0,
-                tracker=getattr(zombie, "tracker", False),
-                wall_hugging=getattr(zombie, "wall_hugging", False),
-                variant="dog" if isinstance(zombie, ZombieDog) else "normal",
+                kind=ZombieKind.DOG
+                if isinstance(zombie, ZombieDog)
+                else getattr(zombie, "kind", ZombieKind.NORMAL),
                 mode="pitfall",
             )
             game_data.state.falling_zombies.append(fall)

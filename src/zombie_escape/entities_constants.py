@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
+from enum import Enum
+
 from .screen_constants import FPS
+
+
+class ZombieKind(str, Enum):
+    NORMAL = "normal"
+    TRACKER = "tracker"
+    WALL_HUGGER = "wall_hugging"
+    DOG = "dog"
 
 # --- Player and buddy settings ---
 HUMANOID_RADIUS = 6
@@ -134,6 +143,7 @@ __all__ = [
     "FLASHLIGHT_HEIGHT",
     "SHOES_WIDTH",
     "SHOES_HEIGHT",
+    "ZombieKind",
     "ZOMBIE_RADIUS",
     "ZOMBIE_SPEED",
     "ZOMBIE_WANDER_INTERVAL_MS",

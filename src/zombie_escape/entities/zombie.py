@@ -12,6 +12,7 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
 
 from ..entities_constants import (
     FAST_ZOMBIE_BASE_SPEED,
+    ZombieKind,
     ZOMBIE_CARBONIZE_DECAY_FRAMES,
     ZOMBIE_DECAY_DURATION_FRAMES,
     ZOMBIE_DECAY_MIN_SPEED_RATIO,
@@ -74,16 +75,14 @@ class Zombie(pygame.sprite.Sprite):
         y: float,
         *,
         speed: float = ZOMBIE_SPEED,
-        tracker: bool = False,
-        wall_hugging: bool = False,
+        kind: ZombieKind = ZombieKind.NORMAL,
         movement_strategy: MovementStrategy | None = None,
         decay_duration_frames: float = ZOMBIE_DECAY_DURATION_FRAMES,
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
         self.facing_bin = 0
-        self.tracker = tracker
-        self.wall_hugging = wall_hugging
+        self.kind = kind
         self.carbonized = False
         self.directional_images = build_zombie_directional_surfaces(
             self.radius,
@@ -106,9 +105,9 @@ class Zombie(pygame.sprite.Sprite):
         self.last_damage_ms: int | None = None
         self.last_damage_source: str | None = None
         if movement_strategy is None:
-            if tracker:
+            if self.kind == ZombieKind.TRACKER:
                 movement_strategy = _zombie_tracker_movement
-            elif wall_hugging:
+            elif self.kind == ZombieKind.WALL_HUGGER:
                 movement_strategy = _zombie_wall_hug_movement
             else:
                 movement_strategy = _zombie_normal_movement
@@ -119,14 +118,20 @@ class Zombie(pygame.sprite.Sprite):
         self.tracker_scan_interval_ms = ZOMBIE_TRACKER_SCAN_INTERVAL_MS
         self.tracker_relock_after_time: int | None = None
         self.tracker_force_wander = False
-        self.wall_hug_side = RNG.choice([-1.0, 1.0]) if wall_hugging else 0.0
-        self.wall_hug_angle = RNG.uniform(0, math.tau) if wall_hugging else None
+        if self.kind == ZombieKind.WALL_HUGGER:
+            self.wall_hug_side = RNG.choice([-1.0, 1.0])
+            self.wall_hug_angle = RNG.uniform(0, math.tau)
+        else:
+            self.wall_hug_side = 0.0
+            self.wall_hug_angle = None
         self.wall_hug_last_wall_time: int | None = None
         self.wall_hug_last_side_has_wall = False
         self.wall_hug_stuck_flag = False
         self.wander_angle = RNG.uniform(0, math.tau)
         self.wander_interval_ms = (
-            ZOMBIE_TRACKER_WANDER_INTERVAL_MS if tracker else ZOMBIE_WANDER_INTERVAL_MS
+            ZOMBIE_TRACKER_WANDER_INTERVAL_MS
+            if self.kind == ZombieKind.TRACKER
+            else ZOMBIE_WANDER_INTERVAL_MS
         )
         self.last_wander_change_time = pygame.time.get_ticks()
         self.wander_change_interval = max(
@@ -209,7 +214,7 @@ class Zombie(pygame.sprite.Sprite):
         if closest is None:
             return move_x, move_y
 
-        if self.wall_hugging:
+        if self.kind == ZombieKind.WALL_HUGGER:
             other_radius = float(closest.radius)
             bump_dist_sq = (self.radius + other_radius) ** 2
             if closest_dist_sq < bump_dist_sq and RNG.random() < 0.1:
@@ -232,7 +237,7 @@ class Zombie(pygame.sprite.Sprite):
 
         move_x = (away_dx / away_dist) * self.speed
         move_y = (away_dy / away_dist) * self.speed
-        if self.wall_hugging:
+        if self.kind == ZombieKind.WALL_HUGGER:
             if orig_move_x or orig_move_y:
                 orig_angle = math.atan2(orig_move_y, orig_move_x)
                 new_angle = math.atan2(move_y, move_x)
@@ -287,8 +292,8 @@ class Zombie(pygame.sprite.Sprite):
 
     def _apply_render_overlays(self: Self) -> None:
         base_surface = self.directional_images[self.facing_bin]
-        needs_overlay = self.tracker or (
-            self.wall_hugging
+        needs_overlay = self.kind == ZombieKind.TRACKER or (
+            self.kind == ZombieKind.WALL_HUGGER
             and self.wall_hug_side != 0
             and self.wall_hug_last_side_has_wall
         )
@@ -297,7 +302,7 @@ class Zombie(pygame.sprite.Sprite):
             return
         self.image = base_surface.copy()
         angle_rad = (self.facing_bin % ANGLE_BINS) * (math.tau / ANGLE_BINS)
-        if self.tracker:
+        if self.kind == ZombieKind.TRACKER:
             draw_humanoid_nose(
                 self.image,
                 radius=self.radius,
@@ -305,7 +310,7 @@ class Zombie(pygame.sprite.Sprite):
                 color=ZOMBIE_NOSE_COLOR,
             )
         if (
-            self.wall_hugging
+            self.kind == ZombieKind.WALL_HUGGER
             and self.wall_hug_side != 0
             and self.wall_hug_last_side_has_wall
         ):
@@ -427,7 +432,7 @@ class Zombie(pygame.sprite.Sprite):
             cell_size,
             layout,
         )
-        if dist_to_player_sq <= avoid_radius_sq or self.wall_hugging:
+        if dist_to_player_sq <= avoid_radius_sq or self.kind == ZombieKind.WALL_HUGGER:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
         move_x, move_y = apply_cell_edge_nudge(
             self.x,

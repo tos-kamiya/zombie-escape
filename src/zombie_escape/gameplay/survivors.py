@@ -14,6 +14,7 @@ from ..entities_constants import (
     SURVIVOR_MAX_SAFE_PASSENGERS,
     SURVIVOR_MIN_SPEED_FACTOR,
     SURVIVOR_RADIUS,
+    ZombieKind,
     ZOMBIE_RADIUS,
 )
 from .constants import (
@@ -25,7 +26,7 @@ from .constants import (
 from ..localization import translate_dict, translate_list
 from ..models import GameData, ProgressState
 from ..rng import get_rng
-from ..entities import Survivor, Zombie, spritecollideany_walls
+from ..entities import Survivor, Zombie, ZombieDog, spritecollideany_walls
 from ..world_grid import WallIndex
 from .spawn import _create_zombie
 from .spatial_index import SpatialKind
@@ -366,8 +367,9 @@ def handle_survivor_zombie_collisions(
             config,
             start_pos=survivor.rect.center,
             stage=game_data.stage,
-            tracker=collided_zombie.tracker,
-            wall_hugging=collided_zombie.wall_hugging,
+            kind=ZombieKind.NORMAL
+            if isinstance(collided_zombie, ZombieDog)
+            else getattr(collided_zombie, "kind", ZombieKind.NORMAL),
         )
         zombie_group.add(new_zombie)
         game_data.groups.all_sprites.add(new_zombie, layer=LAYER_ZOMBIES)

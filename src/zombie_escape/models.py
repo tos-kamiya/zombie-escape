@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import sprite, surface
 
-from .entities_constants import ZOMBIE_DECAY_DURATION_FRAMES
+from .entities_constants import ZOMBIE_DECAY_DURATION_FRAMES, ZombieKind
 from .gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     DEFAULT_SHOES_SPAWN_COUNT,
@@ -53,9 +53,7 @@ class FallingZombie:
     pre_fx_ms: int
     fall_duration_ms: int
     dust_duration_ms: int
-    tracker: bool
-    wall_hugging: bool
-    variant: str = "normal"
+    kind: ZombieKind
     dust_started: bool = False
     mode: str = "spawn"  # "spawn" (falling in) or "pitfall" (falling out)
 
