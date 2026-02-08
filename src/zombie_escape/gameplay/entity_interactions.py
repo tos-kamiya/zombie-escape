@@ -133,8 +133,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
 
     # Fuel pickup
     if (
-        not player_on_moving_floor
-        and fuel
+        fuel
         and fuel.alive()
         and not state.has_fuel
         and not player.in_car
@@ -150,7 +149,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             print("Fuel acquired!")
 
     # Flashlight pickup
-    if not player.in_car and not player_on_moving_floor:
+    if not player.in_car:
         for flashlight in list(flashlights):
             if not flashlight.alive():
                 continue

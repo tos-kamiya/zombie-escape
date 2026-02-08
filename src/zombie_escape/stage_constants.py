@@ -510,7 +510,7 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.0,
         zombie_wall_hugging_ratio=0.0,
         zombie_dog_ratio=0.0,
-        patrol_bot_spawn_rate=0.0,
+        patrol_bot_spawn_rate=0.05,
         moving_floor_cells={
             (4, 3): MovingFloorDirection.UP,
             (5, 3): MovingFloorDirection.UP,

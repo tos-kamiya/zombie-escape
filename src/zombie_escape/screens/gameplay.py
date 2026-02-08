@@ -209,7 +209,19 @@ def gameplay_screen(
     _set_mouse_hidden(pygame.mouse.get_focused())
 
     try:
-        layout_data = generate_level_from_blueprint(game_data, config)
+        layout, layout_data, wall_group, all_sprites, blueprint = (
+            generate_level_from_blueprint(
+                stage,
+                config,
+                seed=game_data.state.seed,
+                ambient_palette_key=game_data.state.ambient_palette_key,
+            )
+        )
+        game_data.layout = layout
+        game_data.blueprint = blueprint
+        game_data.groups.wall_group = wall_group
+        game_data.groups.all_sprites = all_sprites
+        game_data.wall_index_dirty = True
     except MapGenerationError:
         # If generation fails after retries, show error and back to title
         screen.fill((0, 0, 0))
@@ -246,7 +258,9 @@ def gameplay_screen(
         if stage.endurance_stage:
             fuel_spawn_count = 0
         fuel_can = place_fuel_can(
-            layout_data["fuel_cells"] or layout_data["walkable_cells"],
+            layout_data["fuel_cells"]
+            or layout_data.get("item_spawn_cells")
+            or layout_data["walkable_cells"],
             cell_size,
             player,
             cars=game_data.waiting_cars,
@@ -259,7 +273,9 @@ def gameplay_screen(
             occupied_centers.add(fuel_can.rect.center)
     flashlight_count = stage.initial_flashlight_count
     flashlights = place_flashlights(
-        layout_data["flashlight_cells"] or layout_data["walkable_cells"],
+        layout_data["flashlight_cells"]
+        or layout_data.get("item_spawn_cells")
+        or layout_data["walkable_cells"],
         cell_size,
         player,
         cars=game_data.waiting_cars,
@@ -273,7 +289,9 @@ def gameplay_screen(
 
     shoes_count = stage.initial_shoes_count
     shoes_list = place_shoes(
-        layout_data["shoes_cells"] or layout_data["walkable_cells"],
+        layout_data["shoes_cells"]
+        or layout_data.get("item_spawn_cells")
+        or layout_data["walkable_cells"],
         cell_size,
         player,
         cars=game_data.waiting_cars,

@@ -41,13 +41,40 @@ def _floor_tile_for_entity(
     if radius is not None:
         cx = float(entity.rect.centerx)
         cy = float(entity.rect.centery)
-        if (
-            cx - radius < tile_rect.left
-            or cx + radius > tile_rect.right
-            or cy - radius < tile_rect.top
-            or cy + radius > tile_rect.bottom
-        ):
-            return None
+        if direction in (MovingFloorDirection.UP, MovingFloorDirection.DOWN):
+            if cx - radius < tile_rect.left or cx + radius > tile_rect.right:
+                return None
+            if direction == MovingFloorDirection.UP:
+                if cy - radius < tile_rect.top:
+                    return None
+                if cy + radius <= tile_rect.top:
+                    return None
+                if cy - radius >= tile_rect.bottom:
+                    return None
+            else:
+                if cy + radius > tile_rect.bottom:
+                    return None
+                if cy - radius >= tile_rect.bottom:
+                    return None
+                if cy + radius <= tile_rect.top:
+                    return None
+        else:
+            if cy - radius < tile_rect.top or cy + radius > tile_rect.bottom:
+                return None
+            if direction == MovingFloorDirection.LEFT:
+                if cx - radius < tile_rect.left:
+                    return None
+                if cx + radius <= tile_rect.left:
+                    return None
+                if cx - radius >= tile_rect.right:
+                    return None
+            else:
+                if cx + radius > tile_rect.right:
+                    return None
+                if cx - radius >= tile_rect.right:
+                    return None
+                if cx + radius <= tile_rect.left:
+                    return None
     else:
         if not tile_rect.contains(entity.rect):
             return None
@@ -79,12 +106,23 @@ def apply_moving_floor(
     dy = 0.0
     if direction == MovingFloorDirection.UP:
         dy = -speed
+        floor_dir = (0, -1)
     elif direction == MovingFloorDirection.DOWN:
         dy = speed
+        floor_dir = (0, 1)
     elif direction == MovingFloorDirection.LEFT:
         dx = -speed
+        floor_dir = (-1, 0)
     elif direction == MovingFloorDirection.RIGHT:
         dx = speed
+        floor_dir = (1, 0)
+    else:
+        floor_dir = (0, 0)
+
+    if hasattr(entity, "direction"):
+        entity.direction = floor_dir
+        if hasattr(entity, "_set_arrow_source"):
+            entity._set_arrow_source(False)
 
     new_x = min(max(entity.x + dx, min_x), max_x)
     new_y = min(max(entity.y + dy, min_y), max_y)
@@ -124,3 +162,15 @@ def apply_moving_floor(
     if hasattr(entity, "_update_facing_for_bump"):
         entity._update_facing_for_bump(False)
     return True
+
+
+def get_moving_floor_direction(
+    entity: _MovingFloorEntity,
+    layout: LevelLayout,
+    *,
+    cell_size: int,
+) -> MovingFloorDirection | None:
+    info = _floor_tile_for_entity(entity, layout, cell_size=cell_size)
+    if info is None:
+        return None
+    return info[0]

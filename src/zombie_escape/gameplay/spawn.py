@@ -689,8 +689,12 @@ def setup_player_and_cars(
     player_pos = _pick_center(layout_data["player_cells"] or walkable_cells)
     player = Player(*player_pos)
 
-    car_walkable = layout_data.get("car_walkable_cells") or walkable_cells
-    car_candidates = list(layout_data["car_cells"] or car_walkable)
+    car_spawn_cells = (
+        layout_data.get("car_spawn_cells")
+        or layout_data.get("car_walkable_cells")
+        or walkable_cells
+    )
+    car_candidates = list(layout_data["car_cells"] or car_spawn_cells)
     waiting_cars: list[Car] = []
     car_appearance = _car_appearance_for_stage(game_data.stage)
 

@@ -15,8 +15,8 @@ from ..entities_constants import (
 )
 from ..render_assets import RUBBLE_ROTATION_DEG
 from .constants import LAYER_WALLS, OUTER_WALL_HEALTH
-from ..level_blueprints import MapGenerationError, choose_blueprint
-from ..models import GameData
+from ..level_blueprints import Blueprint, MapGenerationError, choose_blueprint
+from ..models import LevelLayout, Stage
 from ..rng import get_rng
 
 __all__ = ["generate_level_from_blueprint", "MapGenerationError"]
@@ -54,12 +54,21 @@ def _expand_zone_cells(
 
 
 def generate_level_from_blueprint(
-    game_data: GameData, config: dict[str, Any]
-) -> dict[str, list[pygame.Rect]]:
+    stage: Stage,
+    config: dict[str, Any],
+    *,
+    seed: int | None,
+    ambient_palette_key: str | None,
+) -> tuple[
+    LevelLayout,
+    dict[str, list[tuple[int, int]]],
+    pygame.sprite.Group,
+    pygame.sprite.LayeredUpdates,
+    Blueprint,
+]:
     """Build walls/spawn candidates/outside area from a blueprint grid."""
-    wall_group = game_data.groups.wall_group
-    all_sprites = game_data.groups.all_sprites
-    stage = game_data.stage
+    wall_group = pygame.sprite.Group()
+    all_sprites = pygame.sprite.LayeredUpdates()
 
     steel_conf = config.get("steel_beams", {})
     steel_enabled = steel_conf.get("enabled", False)
@@ -71,9 +80,9 @@ def generate_level_from_blueprint(
         wall_algo=stage.wall_algorithm,
         pitfall_density=stage.pitfall_density,
         pitfall_zones=stage.pitfall_zones,
-        base_seed=game_data.state.seed,
+        base_seed=seed,
+        moving_floor_cells=set(stage.moving_floor_cells.keys()),
     )
-    game_data.blueprint = blueprint_data
     blueprint = blueprint_data.grid
     steel_cells_raw = blueprint_data.steel_cells
     car_reachable_cells = blueprint_data.car_reachable_cells
@@ -81,7 +90,7 @@ def generate_level_from_blueprint(
     steel_cells = (
         {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
     )
-    cell_size = game_data.cell_size
+    cell_size = stage.cell_size
     outer_wall_cells = {
         (x, y)
         for y, row in enumerate(blueprint)
@@ -113,11 +122,8 @@ def generate_level_from_blueprint(
     interior_min_y = 2
     interior_max_y = stage.grid_rows - 3
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] = {}
-    palette = get_environment_palette(game_data.state.ambient_palette_key)
+    palette = get_environment_palette(ambient_palette_key)
     rubble_ratio = max(0.0, min(1.0, stage.wall_rubble_ratio))
-
-    def _invalidate_wall_index() -> None:
-        game_data.wall_index_dirty = True
 
     def add_beam_to_groups(beam: SteelBeam) -> None:
         if beam._added_to_groups:
@@ -125,7 +131,6 @@ def generate_level_from_blueprint(
         wall_group.add(beam)
         all_sprites.add(beam, layer=LAYER_WALLS)
         beam._added_to_groups = True
-        _invalidate_wall_index()
 
     def remove_wall_cell(cell: tuple[int, int], *, allow_walkable: bool = True) -> None:
         if cell in wall_cells:
@@ -133,7 +138,6 @@ def generate_level_from_blueprint(
             if allow_walkable and cell not in walkable_cells:
                 walkable_cells.append(cell)
         outer_wall_cells.discard(cell)
-        _invalidate_wall_index()
 
     for y, row in enumerate(blueprint):
         if len(row) != stage.grid_cols:
@@ -275,15 +279,25 @@ def generate_level_from_blueprint(
                 )
                 add_beam_to_groups(beam)
 
-    game_data.layout.field_rect = pygame.Rect(
-        0,
-        0,
-        stage.grid_cols * game_data.cell_size,
-        stage.grid_rows * game_data.cell_size,
+    layout = LevelLayout(
+        field_rect=pygame.Rect(
+            0,
+            0,
+            stage.grid_cols * cell_size,
+            stage.grid_rows * cell_size,
+        ),
+        grid_cols=stage.grid_cols,
+        grid_rows=stage.grid_rows,
+        outside_cells=outside_cells,
+        walkable_cells=[],
+        outer_wall_cells=outer_wall_cells,
+        wall_cells=wall_cells,
+        pitfall_cells=pitfall_cells,
+        car_walkable_cells=car_reachable_cells,
+        fall_spawn_cells=set(),
+        bevel_corners=bevel_corners,
+        moving_floor_cells={},
     )
-    game_data.layout.grid_cols = stage.grid_cols
-    game_data.layout.grid_rows = stage.grid_rows
-    game_data.layout.outside_cells = outside_cells
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = {}
     if stage.moving_floor_cells:
         for cell, direction in stage.moving_floor_cells.items():
@@ -308,12 +322,12 @@ def generate_level_from_blueprint(
                 walkable_cells.append(cell)
     if pitfall_cells:
         walkable_cells = [cell for cell in walkable_cells if cell not in pitfall_cells]
-    game_data.layout.walkable_cells = walkable_cells
-    game_data.layout.outer_wall_cells = outer_wall_cells
-    game_data.layout.wall_cells = wall_cells
-    game_data.layout.pitfall_cells = pitfall_cells
-    game_data.layout.car_walkable_cells = car_reachable_cells
-    game_data.layout.moving_floor_cells = moving_floor_cells
+    layout.walkable_cells = walkable_cells
+    layout.outer_wall_cells = outer_wall_cells
+    layout.wall_cells = wall_cells
+    layout.pitfall_cells = pitfall_cells
+    layout.car_walkable_cells = car_reachable_cells
+    layout.moving_floor_cells = moving_floor_cells
     fall_spawn_cells = _expand_zone_cells(
         stage.fall_spawn_zones,
         grid_cols=stage.grid_cols,
@@ -332,15 +346,55 @@ def generate_level_from_blueprint(
                     RNG.randint(interior_min_y, interior_max_y),
                 )
             )
-    game_data.layout.fall_spawn_cells = fall_spawn_cells
-    game_data.layout.bevel_corners = bevel_corners
+    layout.fall_spawn_cells = fall_spawn_cells
+    layout.bevel_corners = bevel_corners
 
-    return {
+    moving_floor_set = set(moving_floor_cells)
+    item_spawn_cells = (
+        [cell for cell in walkable_cells if cell not in moving_floor_set]
+        if moving_floor_set
+        else list(walkable_cells)
+    )
+    car_spawn_cells = (
+        [cell for cell in car_reachable_cells if cell not in moving_floor_set]
+        if moving_floor_set
+        else list(car_reachable_cells)
+    )
+    filtered_car_cells = (
+        [cell for cell in car_cells if cell not in moving_floor_set]
+        if moving_floor_set
+        else list(car_cells)
+    )
+    filtered_fuel_cells = (
+        [cell for cell in fuel_cells if cell not in moving_floor_set]
+        if moving_floor_set
+        else list(fuel_cells)
+    )
+    filtered_flashlight_cells = (
+        [cell for cell in flashlight_cells if cell not in moving_floor_set]
+        if moving_floor_set
+        else list(flashlight_cells)
+    )
+    filtered_shoes_cells = (
+        [cell for cell in shoes_cells if cell not in moving_floor_set]
+        if moving_floor_set
+        else list(shoes_cells)
+    )
+
+    return (
+        layout,
+        {
         "player_cells": player_cells,
-        "car_cells": car_cells,
-        "fuel_cells": fuel_cells,
-        "flashlight_cells": flashlight_cells,
-        "shoes_cells": shoes_cells,
+        "car_cells": filtered_car_cells,
+        "fuel_cells": filtered_fuel_cells,
+        "flashlight_cells": filtered_flashlight_cells,
+        "shoes_cells": filtered_shoes_cells,
         "walkable_cells": walkable_cells,
         "car_walkable_cells": list(car_reachable_cells),
-    }
+        "item_spawn_cells": item_spawn_cells,
+        "car_spawn_cells": car_spawn_cells,
+        },
+        wall_group,
+        all_sprites,
+        blueprint_data,
+    )

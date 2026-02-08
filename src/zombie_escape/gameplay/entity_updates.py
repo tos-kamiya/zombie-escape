@@ -17,6 +17,7 @@ from ..entities import (
 from ..entities_constants import (
     HUMANOID_WALL_BUMP_FRAMES,
     PLAYER_SPEED,
+    MovingFloorDirection,
     ZombieKind,
     ZOMBIE_DOG_PACK_CHASE_RANGE,
     ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE,
@@ -33,7 +34,11 @@ from ..models import FallingZombie, GameData
 from ..rng import get_rng
 from ..entities.movement_helpers import pitfall_target
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
-from .moving_floor import apply_moving_floor, is_entity_on_moving_floor
+from .moving_floor import (
+    apply_moving_floor,
+    get_moving_floor_direction,
+    is_entity_on_moving_floor,
+)
 from .constants import LAYER_PLAYERS, MAX_ZOMBIES
 from .decay_effects import DecayingEntityEffect, update_decay_effects
 from .spawn import spawn_weighted_zombie, update_falling_zombies
@@ -141,6 +146,16 @@ def update_entities(
     # Update player/car movement
     if player.in_car and active_car:
         player.on_moving_floor = False
+        floor_dir = get_moving_floor_direction(
+            active_car,
+            game_data.layout,
+            cell_size=game_data.cell_size,
+        )
+        if floor_dir is not None:
+            if floor_dir in (MovingFloorDirection.UP, MovingFloorDirection.DOWN):
+                car_dx *= 0.5
+            else:
+                car_dy *= 0.5
         car_dx, car_dy = apply_cell_edge_nudge(
             active_car.x,
             active_car.y,
@@ -437,6 +452,12 @@ def update_entities(
     ]
     for bot in patrol_bots_sorted:
         if not bot.alive():
+            continue
+        if apply_moving_floor(
+            bot,
+            game_data.layout,
+            cell_size=game_data.cell_size,
+        ):
             continue
         bot_search_radius = bot.radius + 120
         nearby_walls = _walls_near((bot.x, bot.y), bot_search_radius)

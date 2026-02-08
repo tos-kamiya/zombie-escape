@@ -421,11 +421,39 @@ def _place_steel_beams(
     return beams
 
 
-def _place_pitfalls(
+def _place_pitfall_zones(
+    grid: list[list[str]],
+    *,
+    pitfall_zones: list[tuple[int, int, int, int]] | None = None,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Place zone-defined pitfalls on empty floor cells."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+
+    if not pitfall_zones:
+        return
+    for col, row, width, height in pitfall_zones:
+        if width <= 0 or height <= 0:
+            continue
+        start_x = max(0, col)
+        start_y = max(0, row)
+        end_x = min(cols, col + width)
+        end_y = min(rows, row + height)
+        for y in range(start_y, end_y):
+            for x in range(start_x, end_x):
+                if (x, y) in forbidden:
+                    continue
+                if grid[y][x] == ".":
+                    grid[y][x] = "x"
+
+
+def _place_pitfall_density(
     grid: list[list[str]],
     *,
     density: float,
-    pitfall_zones: list[tuple[int, int, int, int]] | None = None,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
     """Replace empty floor cells with pitfalls based on density."""
@@ -433,21 +461,6 @@ def _place_pitfalls(
     forbidden = _collect_exit_adjacent_cells(grid)
     if forbidden_cells:
         forbidden |= forbidden_cells
-
-    if pitfall_zones:
-        for col, row, width, height in pitfall_zones:
-            if width <= 0 or height <= 0:
-                continue
-            start_x = max(0, col)
-            start_y = max(0, row)
-            end_x = min(cols, col + width)
-            end_y = min(rows, row + height)
-            for y in range(start_y, end_y):
-                for x in range(start_x, end_x):
-                    if (x, y) in forbidden:
-                        continue
-                    if grid[y][x] == ".":
-                        grid[y][x] = "x"
 
     if density <= 0.0:
         return
@@ -464,21 +477,44 @@ def _place_pitfalls(
 def _pick_empty_cell(
     grid: list[list[str]],
     margin: int,
+    *,
+    forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> tuple[int, int]:
     cols, rows = len(grid[0]), len(grid)
+    forbidden = forbidden_cells or set()
     attempts = 0
     while attempts < 2000:
         attempts += 1
         x = RNG.randint(margin, cols - margin - 1)
         y = RNG.randint(margin, rows - margin - 1)
-        if grid[y][x] == ".":
+        if grid[y][x] == "." and (x, y) not in forbidden:
             return x, y
     # Fallback: scan for any acceptable cell
     for y in range(margin, rows - margin):
         for x in range(margin, cols - margin):
-            if grid[y][x] == ".":
+            if grid[y][x] == "." and (x, y) not in forbidden:
                 return x, y
     return cols // 2, rows // 2
+
+
+def _expand_zone_cells(
+    zones: list[tuple[int, int, int, int]],
+    *,
+    grid_cols: int,
+    grid_rows: int,
+) -> set[tuple[int, int]]:
+    cells: set[tuple[int, int]] = set()
+    for col, row, width, height in zones:
+        if width <= 0 or height <= 0:
+            continue
+        start_x = max(0, col)
+        start_y = max(0, row)
+        end_x = min(grid_cols, col + width)
+        end_y = min(grid_rows, row + height)
+        for y in range(start_y, end_y):
+            for x in range(start_x, end_x):
+                cells.add((x, y))
+    return cells
 
 
 def _generate_random_blueprint(
@@ -489,32 +525,46 @@ def _generate_random_blueprint(
     wall_algo: str = "default",
     pitfall_density: float = 0.0,
     pitfall_zones: list[tuple[int, int, int, int]] | None = None,
+    reserved_cells: set[tuple[int, int]] | None = None,
+    moving_floor_cells: set[tuple[int, int]] | None = None,
 ) -> Blueprint:
     grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE)
 
+    # Reserved cells
+    reserved_cells = set(reserved_cells or set())
+    if moving_floor_cells:
+        reserved_cells.update(moving_floor_cells)
+    if pitfall_zones:
+        reserved_cells.update(
+            _expand_zone_cells(
+                pitfall_zones,
+                grid_cols=cols,
+                grid_rows=rows,
+            )
+        )
+
     # Spawns: player, car
-    reserved_cells: set[tuple[int, int]] = set()
-    px, py = _pick_empty_cell(grid, SPAWN_MARGIN)
+    px, py = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
     grid[py][px] = "P"
     reserved_cells.add((px, py))
-    cx, cy = _pick_empty_cell(grid, SPAWN_MARGIN)
+    cx, cy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
     grid[cy][cx] = "C"
     reserved_cells.add((cx, cy))
     # (No zombie candidate cells; initial spawns are handled by gameplay.)
 
     # Items
-    fx, fy = _pick_empty_cell(grid, SPAWN_MARGIN)
+    fx, fy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
     grid[fy][fx] = "f"
     reserved_cells.add((fx, fy))
 
     for _ in range(2):
-        lx, ly = _pick_empty_cell(grid, SPAWN_MARGIN)
+        lx, ly = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
         grid[ly][lx] = "l"
         reserved_cells.add((lx, ly))
 
     for _ in range(2):
-        sx, sy = _pick_empty_cell(grid, SPAWN_MARGIN)
+        sx, sy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
         grid[sy][sx] = "s"
         reserved_cells.add((sx, sy))
 
@@ -596,11 +646,16 @@ def _generate_random_blueprint(
         )
         wall_algo = "default"
 
-    # Place pitfalls BEFORE walls so walls avoid them (consistent with spawn reservation)
-    _place_pitfalls(
+    # Zone-defined pitfalls are already reserved so walls avoid the zones.
+    # Place zone-defined pitfalls, then density-based pitfalls.
+    _place_pitfall_zones(
+        grid,
+        pitfall_zones=pitfall_zones,
+        forbidden_cells=reserved_cells,
+    )
+    _place_pitfall_density(
         grid,
         density=pitfall_density,
-        pitfall_zones=pitfall_zones,
         forbidden_cells=reserved_cells,
     )
 
@@ -629,6 +684,8 @@ def choose_blueprint(
     pitfall_density: float = 0.0,
     pitfall_zones: list[tuple[int, int, int, int]] | None = None,
     base_seed: int | None = None,
+    reserved_cells: set[tuple[int, int]] | None = None,
+    moving_floor_cells: set[tuple[int, int]] | None = None,
 ) -> Blueprint:
     # Currently only random generation; hook for future variants.
     steel_conf = config.get("steel_beams", {})
@@ -648,6 +705,8 @@ def choose_blueprint(
             wall_algo=wall_algo,
             pitfall_density=pitfall_density,
             pitfall_zones=pitfall_zones,
+            reserved_cells=reserved_cells,
+            moving_floor_cells=moving_floor_cells,
         )
 
         car_reachable = validate_connectivity(blueprint.grid)
