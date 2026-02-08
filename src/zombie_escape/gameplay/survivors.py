@@ -403,6 +403,7 @@ def respawn_buddies_near_player(game_data: GameData) -> None:
                 walkable_cells,
                 cell_size,
                 camera=camera,
+                attempts=50,
             )
         else:
             spawn_pos = (int(player.x), int(player.y))
