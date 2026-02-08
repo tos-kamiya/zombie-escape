@@ -122,6 +122,7 @@
 - 変種移動ルーチン: `zombie_tracker_ratio`（足跡追跡型の出現率）
 - 変種移動ルーチン: `zombie_wall_hugging_ratio`（壁沿い巡回型の出現率）
 - 変種移動ルーチン: `zombie_dog_ratio`（ゾンビ犬の出現率）
+- 巡回ロボット比率: `patrol_bot_spawn_rate`（初期スポーン割合）
 - 耐久減衰速度: `zombie_decay_duration_frames`（値が大きいほど消滅が遅い）
 - 壁生成アルゴリズム: `wall_algorithm` ("default", "empty", "grid_wire")
 - 瓦礫壁の割合: `wall_rubble_ratio`（内部壁のうち、瓦礫外観に差し替える比率）
@@ -146,7 +147,7 @@
 
 ### 3.5 スプライト群 (models.Groups)
 
-- `all_sprites` (`LayeredUpdates`) と `wall_group`, `zombie_group`, `survivor_group` を保持。
+- `all_sprites` (`LayeredUpdates`) と `wall_group`, `zombie_group`, `survivor_group`, `patrol_bot_group` を保持。
 
 ## 4. エンティティ (entities/)
 
@@ -159,6 +160,7 @@
 - `Player`（操作主体）
 - `Car`（搭乗時に操作対象が切り替わる）
 - `Survivor`（`is_buddy` フラグで相棒を表現）
+- `PatrolBot`（巡回ロボット）
 - `FuelCan`, `Flashlight`, `Shoes`（収集アイテム）
 
 ### 4.2 ゾンビ
@@ -180,6 +182,17 @@
 - プレイヤーが壁に接触した場合、**最初に検出した壁1つ**にのみダメージを与える。
 - プレイヤー/相棒/生存者は、進行方向に落とし穴があっても、その先に安全な床（`walkable_cells`）があれば自動的に**ジャンプ（跳躍）**して回避する。
   - ジャンプ中はスプライトが一時的に拡大し、影が本体から切り離されて描画されることで滞空感を表現する。
+
+### 4.5 巡回ロボット (PatrolBot)
+
+- 形状は円（`PATROL_BOT_SIZE`）。速度はプレイヤーの半分。
+- 直線移動し、壁・落とし穴・他のロボット・車に接触すると停止/方向転換。
+- 外周セル/外側セルに到達すると180度反転して引き返す。
+- 人間（プレイヤー/生存者）に触れた場合は1秒停止。
+- ゾンビに接触している間は移動速度を50%に低下。
+- ゾンビはロボットに進入できない。ロボット側はゾンビを無視して移動。
+- ゾンビはロボット接触でダメージ（フレーム間引き）を受ける。
+- 描画は白系ボディ＋黒縁、進行方向は紫矢印。
 
 ### 4.4 足跡 (models.Footprint)
 
@@ -347,6 +360,7 @@
      - ジャンプ中のエンティティの影は、本体から下にオフセットして描画。
   5. 足跡のフェード描画
   6. Sprite 群を `Camera` でオフセットして描画
+     - レイヤーは `gameplay/constants.py` の `LAYER_*` 定数で管理（壁/アイテム/車&ロボット/ゾンビ/プレイヤー&生存者）。
   7. 追跡型/壁沿いゾンビには識別用の装飾を追加（追跡は鼻ライン、壁沿いは壁側の手）
   8. ヒント矢印 (`_draw_hint_arrow`)
   9. 霧 (`fog_surfaces`。ハッチは半径に応じて線形に濃くなる)
@@ -367,8 +381,9 @@
 
 - `draw_level_overview()` (`render/overview.py`)
   - `game_over` 画面用のレベル縮小図（落下ゾンビ床も表示）。
+  - ゾンビ/ゾンビ犬は赤、巡回ロボットは紫で表示。
 - `draw_debug_overview()` (`render/overview.py`)
-  - デバッグ用の全体表示（ゾンビ位置＋カメラ枠）。
+  - デバッグ用の全体表示（ゾンビ位置＋カメラ枠＋巡回ロボット）。
 
 ### 8.1 ウィンドウ/フルスクリーン
 
