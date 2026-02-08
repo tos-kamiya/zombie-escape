@@ -224,7 +224,7 @@ def _draw_entity_shadows(
     camera: Camera,
     all_sprites: sprite.LayeredUpdates,
     *,
-    light_source_pos: tuple[int, int] | None,
+    light_source_pos: tuple[float, float] | None,
     exclude_car: Car | None,
     outside_cells: set[tuple[int, int]] | None,
     cell_size: int,
@@ -383,6 +383,46 @@ def _draw_entity_drop_shadows(
     return drew
 
 
+def draw_entity_shadows_by_mode(
+    shadow_layer: surface.Surface,
+    camera: Camera,
+    all_sprites: sprite.LayeredUpdates,
+    *,
+    dawn_shadow_mode: bool,
+    light_source_pos: tuple[float, float] | None,
+    exclude_car: Car | None,
+    outside_cells: set[tuple[int, int]] | None,
+    cell_size: int,
+    flashlight_count: int = 0,
+    shadow_radius: int = int(ZOMBIE_RADIUS * ENTITY_SHADOW_RADIUS_MULT),
+    alpha: int = ENTITY_SHADOW_ALPHA,
+) -> bool:
+    if dawn_shadow_mode:
+        return _draw_entity_drop_shadows(
+            shadow_layer,
+            camera,
+            all_sprites,
+            exclude_car=exclude_car,
+            outside_cells=outside_cells,
+            cell_size=cell_size,
+            flashlight_count=flashlight_count,
+            shadow_radius=shadow_radius,
+            alpha=alpha,
+        )
+    return _draw_entity_shadows(
+        shadow_layer,
+        camera,
+        all_sprites,
+        light_source_pos=light_source_pos,
+        exclude_car=exclude_car,
+        outside_cells=outside_cells,
+        cell_size=cell_size,
+        flashlight_count=flashlight_count,
+        shadow_radius=shadow_radius,
+        alpha=alpha,
+    )
+
+
 def _expanded_shadow_screen_rect(
     screen_rect: pygame.Rect,
     flashlight_count: int,
@@ -406,7 +446,7 @@ def _draw_single_entity_shadow(
     camera: Camera,
     *,
     entity: pygame.sprite.Sprite | None,
-    light_source_pos: tuple[int, int] | None,
+    light_source_pos: tuple[float, float] | None,
     outside_cells: set[tuple[int, int]] | None,
     cell_size: int,
     shadow_radius: int,
@@ -464,6 +504,45 @@ def _draw_single_entity_shadow(
         special_flags=pygame.BLEND_RGBA_MAX,
     )
     return True
+
+
+def draw_single_entity_shadow_by_mode(
+    shadow_layer: surface.Surface,
+    camera: Camera,
+    *,
+    entity: pygame.sprite.Sprite | None,
+    dawn_shadow_mode: bool,
+    light_source_pos: tuple[float, float] | None,
+    outside_cells: set[tuple[int, int]] | None,
+    cell_size: int,
+    shadow_radius: int,
+    alpha: int,
+    edge_softness: float = ENTITY_SHADOW_EDGE_SOFTNESS,
+    offset_scale: float = 1.0,
+) -> bool:
+    if dawn_shadow_mode:
+        return _draw_single_entity_drop_shadow(
+            shadow_layer,
+            camera,
+            entity=entity,
+            outside_cells=outside_cells,
+            cell_size=cell_size,
+            shadow_radius=shadow_radius,
+            alpha=alpha,
+            edge_softness=edge_softness,
+        )
+    return _draw_single_entity_shadow(
+        shadow_layer,
+        camera,
+        entity=entity,
+        light_source_pos=light_source_pos,
+        outside_cells=outside_cells,
+        cell_size=cell_size,
+        shadow_radius=shadow_radius,
+        alpha=alpha,
+        edge_softness=edge_softness,
+        offset_scale=offset_scale,
+    )
 
 
 def _draw_single_entity_drop_shadow(
