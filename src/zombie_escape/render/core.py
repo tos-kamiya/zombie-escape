@@ -20,10 +20,16 @@ from ..entities import (
     Camera,
     Player,
 )
-from ..entities_constants import INTERNAL_WALL_BEVEL_DEPTH, PATROL_BOT_RADIUS, ZOMBIE_RADIUS
+from ..entities_constants import (
+    INTERNAL_WALL_BEVEL_DEPTH,
+    MOVING_FLOOR_SPEED,
+    PATROL_BOT_RADIUS,
+    ZOMBIE_RADIUS,
+)
 from ..entities_constants import MovingFloorDirection
 from ..font_utils import load_font, render_text_surface
 from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
+from ..screen_constants import FPS
 from ..localization import get_font_settings
 from ..localization import translate as tr
 from ..models import DustRing, FallingZombie, Footprint, GameData, Stage
@@ -35,7 +41,8 @@ from ..render_constants import (
     FALLING_WHIRLWIND_COLOR,
     FALLING_ZOMBIE_COLOR,
     GAMEPLAY_FONT_SIZE,
-    MOVING_FLOOR_TEXT_COLOR,
+    MOVING_FLOOR_BORDER_COLOR,
+    MOVING_FLOOR_LINE_COLOR,
     MOVING_FLOOR_TILE_COLOR,
     PITFALL_ABYSS_COLOR,
     PITFALL_EDGE_DEPTH_OFFSET,
@@ -114,25 +121,43 @@ def _draw_fade_in_overlay(screen: surface.Surface, state: GameData | Any) -> Non
     screen.blit(overlay, (0, 0))
 
 
-_MOVING_FLOOR_LABEL_CACHE: dict[tuple[str, int], surface.Surface] = {}
-
-
-def _get_moving_floor_label(letter: str, cell_size: int) -> surface.Surface:
-    key = (letter, cell_size)
-    cached = _MOVING_FLOOR_LABEL_CACHE.get(key)
-    if cached is not None:
-        return cached
-    font_settings = get_font_settings()
-    size = max(8, int(cell_size * 0.4))
-    font = load_font(font_settings.resource, font_settings.scaled_size(size))
-    label = render_text_surface(
-        font,
-        letter,
-        MOVING_FLOOR_TEXT_COLOR,
-        line_height_scale=font_settings.line_height_scale,
-    )
-    _MOVING_FLOOR_LABEL_CACHE[key] = label
-    return label
+def _build_moving_floor_pattern(
+    direction: MovingFloorDirection,
+    cell_size: int,
+    offset_px: float,
+) -> surface.Surface:
+    surface_out = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
+    spacing = max(2, cell_size // 4)
+    phase = offset_px % spacing
+    thickness = 2
+    line_color = MOVING_FLOOR_LINE_COLOR
+    if direction in (MovingFloorDirection.UP, MovingFloorDirection.DOWN):
+        start = -spacing + phase
+        y = start
+        while y < cell_size + spacing:
+            y_pos = int(round(y))
+            pygame.draw.line(
+                surface_out,
+                line_color,
+                (0, y_pos),
+                (cell_size, y_pos),
+                thickness,
+            )
+            y += spacing
+    else:
+        start = -spacing + phase
+        x = start
+        while x < cell_size + spacing:
+            x_pos = int(round(x))
+            pygame.draw.line(
+                surface_out,
+                line_color,
+                (x_pos, 0),
+                (x_pos, cell_size),
+                thickness,
+            )
+            x += spacing
+    return surface_out
 
 
 def _wrap_long_segment(
@@ -670,6 +695,8 @@ def _draw_play_area(
     fall_spawn_cells: set[tuple[int, int]],
     pitfall_cells: set[tuple[int, int]],
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection],
+    *,
+    elapsed_ms: int,
 ) -> tuple[int, int, int, int, set[tuple[int, int]]]:
     grid_snap = assets.internal_wall_grid_snap
     xs, ys, xe, ye = (
@@ -709,6 +736,9 @@ def _draw_play_area(
     start_y = max(ys, int(min_world_y // grid_snap))
     end_y = min(ye, int(math.ceil(max_world_y / grid_snap)))
 
+    base_offset_px = (elapsed_ms / 1000.0) * MOVING_FLOOR_SPEED * FPS
+    pattern_cache: dict[MovingFloorDirection, surface.Surface] = {}
+
     for y in range(start_y, end_y):
         for x in range(start_x, end_x):
             if (x, y) in outside_cells:
@@ -729,6 +759,7 @@ def _draw_play_area(
 
             direction = moving_floor_cells.get((x, y))
             if direction is not None:
+                use_secondary = ((x // 2) + (y // 2)) % 2 == 0
                 lx, ly = (
                     x * grid_snap,
                     y * grid_snap,
@@ -741,11 +772,42 @@ def _draw_play_area(
                 )
                 sr = camera.apply_rect(r)
                 if sr.colliderect(screen.get_rect()):
-                    pygame.draw.rect(screen, MOVING_FLOOR_TILE_COLOR, sr)
-                    pygame.draw.rect(screen, MOVING_FLOOR_TEXT_COLOR, sr, width=1)
-                    label = _get_moving_floor_label(direction.value, grid_snap)
-                    label_rect = label.get_rect(center=sr.center)
-                    screen.blit(label, label_rect)
+                    if (x, y) in fall_spawn_cells:
+                        color = (
+                            palette.fall_zone_secondary
+                            if use_secondary
+                            else palette.fall_zone_primary
+                        )
+                        pygame.draw.rect(screen, color, sr)
+                    elif use_secondary:
+                        pygame.draw.rect(screen, palette.floor_secondary, sr)
+                    inset = 4
+                    inner_rect = sr.inflate(-2 * inset, -2 * inset)
+                    pygame.draw.rect(screen, MOVING_FLOOR_TILE_COLOR, inner_rect)
+                    pattern = pattern_cache.get(direction)
+                    if pattern is None:
+                        signed_offset = (
+                            -base_offset_px
+                            if direction
+                            in (MovingFloorDirection.UP, MovingFloorDirection.LEFT)
+                            else base_offset_px
+                        )
+                        pattern = _build_moving_floor_pattern(
+                            direction, grid_snap, signed_offset
+                        )
+                        pattern_cache[direction] = pattern
+                    clip_prev = screen.get_clip()
+                    screen.set_clip(inner_rect)
+                    screen.blit(pattern, sr.topleft)
+                    screen.set_clip(clip_prev)
+                    border_rect = inner_rect
+                    pygame.draw.rect(
+                        screen,
+                        MOVING_FLOOR_BORDER_COLOR,
+                        border_rect,
+                        width=3,
+                        border_radius=4,
+                    )
                 continue
 
             if (x, y) in pitfall_cells:
@@ -960,6 +1022,7 @@ def draw(
         game_data.layout.fall_spawn_cells,
         game_data.layout.pitfall_cells,
         game_data.layout.moving_floor_cells,
+        elapsed_ms=int(state.elapsed_play_ms),
     )
     shadows_enabled = config.get("visual", {}).get("shadows", {}).get("enabled", True)
     if shadows_enabled:
