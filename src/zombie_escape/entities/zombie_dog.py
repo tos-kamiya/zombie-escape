@@ -25,6 +25,8 @@ from ..entities_constants import (
     ZOMBIE_DOG_SIGHT_RANGE,
     ZOMBIE_DOG_WANDER_INTERVAL_MS,
     PATROL_BOT_PARALYZE_MS,
+    PATROL_BOT_PARALYZE_BLINK_MS,
+    PATROL_BOT_PARALYZE_MARKER_COLOR,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
 )
@@ -32,6 +34,7 @@ from ..rng import get_rng
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_dog_directional_surfaces,
+    draw_lightning_marker,
 )
 from ..render_constants import ANGLE_BINS
 from ..screen_constants import FPS
@@ -280,6 +283,31 @@ class ZombieDog(pygame.sprite.Sprite):
             final_y = next_y
         return final_x, final_y, hit_x, hit_y
 
+    def _apply_paralyze_overlay(self: Self, now_ms: int) -> None:
+        base_surface = self.directional_images[self.facing_bin]
+        if PATROL_BOT_PARALYZE_BLINK_MS <= 0:
+            self.image = base_surface
+            return
+        blink_on = (now_ms // PATROL_BOT_PARALYZE_BLINK_MS) % 2 == 0
+        if not blink_on:
+            self.image = base_surface
+            return
+        image = base_surface.copy()
+        p = self.image.get_rect().topleft
+        p = (
+            p[0] + int(self.radius),
+            p[1] + int(self.radius),
+        )
+        marker_size = max(6, int(self.short_axis * 0.8))
+        draw_lightning_marker(
+            image,
+            center=p,
+            size=marker_size,
+            color=PATROL_BOT_PARALYZE_MARKER_COLOR,
+            width=2,
+        )
+        self.image = image
+
     def update(
         self: Self,
         player_center: tuple[int, int],
@@ -321,6 +349,7 @@ class ZombieDog(pygame.sprite.Sprite):
         if now < self.patrol_paralyze_until_ms:
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0
+            self._apply_paralyze_overlay(now)
             return
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height

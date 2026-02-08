@@ -476,6 +476,27 @@ def draw_humanoid_nose(
     )
 
 
+def draw_lightning_marker(
+    surface: pygame.Surface,
+    *,
+    center: tuple[int, int],
+    size: int,
+    color: tuple[int, int, int],
+    width: int = 2,
+) -> None:
+    """Draw a small lightning bolt marker centered at the given point."""
+    half = max(2, int(size * 0.5))
+    quarter = max(1, int(size * 0.25))
+    x, y = center
+    points = [
+        (x - quarter, y - half),
+        (x + quarter, y - quarter),
+        (x - quarter, y),
+        (x + quarter, y + half),
+    ]
+    pygame.draw.lines(surface, color, False, points, width=width)
+
+
 def build_survivor_directional_surfaces(
     radius: int,
     *,
@@ -975,6 +996,7 @@ __all__ = [
     "build_player_directional_surfaces",
     "draw_humanoid_hand",
     "draw_humanoid_nose",
+    "draw_lightning_marker",
     "build_survivor_directional_surfaces",
     "build_zombie_directional_surfaces",
     "build_zombie_dog_directional_surfaces",

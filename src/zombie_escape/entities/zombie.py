@@ -25,6 +25,8 @@ from ..entities_constants import (
     PATROL_BOT_ZOMBIE_DAMAGE,
     PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,
     PATROL_BOT_PARALYZE_MS,
+    PATROL_BOT_PARALYZE_BLINK_MS,
+    PATROL_BOT_PARALYZE_MARKER_COLOR,
 )
 from ..models import Footprint, LevelLayout
 from ..render_assets import (
@@ -32,6 +34,7 @@ from ..render_assets import (
     build_zombie_directional_surfaces,
     draw_humanoid_hand,
     draw_humanoid_nose,
+    draw_lightning_marker,
 )
 from ..render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR
 from ..rng import get_rng
@@ -315,6 +318,28 @@ class Zombie(pygame.sprite.Sprite):
                 color=ZOMBIE_NOSE_COLOR,
             )
 
+    def _apply_paralyze_overlay(self: Self, now_ms: int) -> None:
+        self._apply_render_overlays()
+        if PATROL_BOT_PARALYZE_BLINK_MS <= 0:
+            return
+        blink_on = (now_ms // PATROL_BOT_PARALYZE_BLINK_MS) % 2 == 0
+        if not blink_on:
+            return
+        self.image = self.image.copy()
+        p = self.image.get_rect().topleft
+        p = (
+            p[0] + int(self.radius),
+            p[1] + int(self.radius),
+        )
+        marker_size = max(6, int(self.radius * 0.8))
+        draw_lightning_marker(
+            self.image,
+            center=p,
+            size=marker_size,
+            color=PATROL_BOT_PARALYZE_MARKER_COLOR,
+            width=2,
+        )
+
     def _avoid_pitfalls(
         self: Self,
         pitfall_cells: set[tuple[int, int]],
@@ -394,6 +419,7 @@ class Zombie(pygame.sprite.Sprite):
         if now < self.patrol_paralyze_until_ms:
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0
+            self._apply_paralyze_overlay(now)
             return
         dx_player = player_center[0] - self.x
         dy_player = player_center[1] - self.y
