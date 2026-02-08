@@ -53,6 +53,47 @@ def _expand_zone_cells(
     return cells
 
 
+def _expand_moving_floor_cells(stage: Stage) -> dict[tuple[int, int], MovingFloorDirection]:
+    directions: dict[str, MovingFloorDirection] = {
+        "u": MovingFloorDirection.UP,
+        "up": MovingFloorDirection.UP,
+        "d": MovingFloorDirection.DOWN,
+        "down": MovingFloorDirection.DOWN,
+        "l": MovingFloorDirection.LEFT,
+        "left": MovingFloorDirection.LEFT,
+        "r": MovingFloorDirection.RIGHT,
+        "right": MovingFloorDirection.RIGHT,
+        "U": MovingFloorDirection.UP,
+        "D": MovingFloorDirection.DOWN,
+        "L": MovingFloorDirection.LEFT,
+        "R": MovingFloorDirection.RIGHT,
+    }
+    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = {}
+    if stage.moving_floor_zones:
+        for key, zones in stage.moving_floor_zones.items():
+            direction = directions.get(str(key).lower(), directions.get(str(key)))
+            if not direction or not zones:
+                continue
+            for cell in _expand_zone_cells(
+                zones,
+                grid_cols=stage.grid_cols,
+                grid_rows=stage.grid_rows,
+            ):
+                moving_floor_cells[cell] = direction
+    if stage.moving_floor_cells:
+        for cell, direction in stage.moving_floor_cells.items():
+            try:
+                dir_enum = (
+                    direction
+                    if isinstance(direction, MovingFloorDirection)
+                    else MovingFloorDirection(direction)
+                )
+            except ValueError:
+                continue
+            moving_floor_cells[cell] = dir_enum
+    return moving_floor_cells
+
+
 def generate_level_from_blueprint(
     stage: Stage,
     config: dict[str, Any],
@@ -73,6 +114,7 @@ def generate_level_from_blueprint(
     steel_conf = config.get("steel_beams", {})
     steel_enabled = steel_conf.get("enabled", False)
 
+    base_moving_floor_cells = _expand_moving_floor_cells(stage)
     blueprint_data = choose_blueprint(
         config,
         cols=stage.grid_cols,
@@ -81,7 +123,7 @@ def generate_level_from_blueprint(
         pitfall_density=stage.pitfall_density,
         pitfall_zones=stage.pitfall_zones,
         base_seed=seed,
-        moving_floor_cells=set(stage.moving_floor_cells.keys()),
+        moving_floor_cells=set(base_moving_floor_cells.keys()),
     )
     blueprint = blueprint_data.grid
     steel_cells_raw = blueprint_data.steel_cells
@@ -299,22 +341,14 @@ def generate_level_from_blueprint(
         moving_floor_cells={},
     )
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = {}
-    if stage.moving_floor_cells:
-        for cell, direction in stage.moving_floor_cells.items():
+    if base_moving_floor_cells:
+        for cell, direction in base_moving_floor_cells.items():
             x, y = cell
             if x < 0 or y < 0 or x >= stage.grid_cols or y >= stage.grid_rows:
                 continue
             if cell in outside_cells or cell in wall_cells or cell in outer_wall_cells:
                 continue
-            try:
-                dir_enum = (
-                    direction
-                    if isinstance(direction, MovingFloorDirection)
-                    else MovingFloorDirection(direction)
-                )
-            except ValueError:
-                continue
-            moving_floor_cells[cell] = dir_enum
+            moving_floor_cells[cell] = direction
     if moving_floor_cells:
         pitfall_cells.difference_update(moving_floor_cells.keys())
         for cell in moving_floor_cells:

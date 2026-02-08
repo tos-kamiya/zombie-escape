@@ -192,6 +192,9 @@ class Stage:
     fall_spawn_floor_ratio: float = 0.0
     pitfall_density: float = 0.0
     pitfall_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
+    moving_floor_zones: dict[str, list[tuple[int, int, int, int]]] = field(
+        default_factory=dict
+    )
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = field(
         default_factory=dict
     )

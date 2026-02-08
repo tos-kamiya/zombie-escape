@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .entities_constants import MovingFloorDirection, ZOMBIE_DECAY_DURATION_FRAMES
+from .entities_constants import ZOMBIE_DECAY_DURATION_FRAMES
 from .gameplay_constants import SURVIVOR_SPAWN_RATE
 from .level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from .models import Stage
@@ -511,19 +511,11 @@ STAGES: list[Stage] = [
         zombie_wall_hugging_ratio=0.0,
         zombie_dog_ratio=0.0,
         patrol_bot_spawn_rate=0.05,
-        moving_floor_cells={
-            (4, 3): MovingFloorDirection.UP,
-            (5, 3): MovingFloorDirection.UP,
-            (6, 3): MovingFloorDirection.UP,
-            (11, 3): MovingFloorDirection.DOWN,
-            (12, 3): MovingFloorDirection.DOWN,
-            (13, 3): MovingFloorDirection.DOWN,
-            (4, 7): MovingFloorDirection.LEFT,
-            (5, 7): MovingFloorDirection.LEFT,
-            (6, 7): MovingFloorDirection.LEFT,
-            (11, 7): MovingFloorDirection.RIGHT,
-            (12, 7): MovingFloorDirection.RIGHT,
-            (13, 7): MovingFloorDirection.RIGHT,
+        moving_floor_zones={
+            "up": [(4, 3, 3, 1)],
+            "down": [(11, 3, 3, 1)],
+            "left": [(4, 7, 3, 1)],
+            "right": [(11, 7, 3, 1)],
         },
     ),
 ]
