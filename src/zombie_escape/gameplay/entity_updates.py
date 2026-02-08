@@ -16,6 +16,7 @@ from ..entities import (
 )
 from ..entities_constants import (
     HUMANOID_WALL_BUMP_FRAMES,
+    MOVING_FLOOR_CAR_OPPOSED_FACTOR,
     PLAYER_SPEED,
     MovingFloorDirection,
     ZombieKind,
@@ -152,10 +153,23 @@ def update_entities(
             cell_size=game_data.cell_size,
         )
         if floor_dir is not None:
-            if floor_dir in (MovingFloorDirection.UP, MovingFloorDirection.DOWN):
-                car_dx *= 0.5
-            else:
-                car_dy *= 0.5
+            oppose_factor = MOVING_FLOOR_CAR_OPPOSED_FACTOR
+            if floor_dir == MovingFloorDirection.UP:
+                car_dx *= oppose_factor
+                if car_dy > 0:
+                    car_dy *= oppose_factor
+            elif floor_dir == MovingFloorDirection.DOWN:
+                car_dx *= oppose_factor
+                if car_dy < 0:
+                    car_dy *= oppose_factor
+            elif floor_dir == MovingFloorDirection.LEFT:
+                car_dy *= oppose_factor
+                if car_dx > 0:
+                    car_dx *= oppose_factor
+            elif floor_dir == MovingFloorDirection.RIGHT:
+                car_dy *= oppose_factor
+                if car_dx < 0:
+                    car_dx *= oppose_factor
         car_dx, car_dy = apply_cell_edge_nudge(
             active_car.x,
             active_car.y,
