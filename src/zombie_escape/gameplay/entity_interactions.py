@@ -48,6 +48,7 @@ from .survivors import (
 from .utils import is_entity_in_fov, rect_visible_on_screen
 from .ambient import sync_ambient_palette_with_flashlights
 from .constants import SCREAM_MESSAGE_DISPLAY_FRAMES
+from .moving_floor import is_entity_on_moving_floor
 from .state import schedule_timed_message
 
 
@@ -74,6 +75,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     """Check and handle interactions between entities."""
     player = game_data.player
     assert player is not None
+    player_on_moving_floor = is_entity_on_moving_floor(player)
     car = game_data.car
     zombie_group = game_data.groups.zombie_group
     patrol_bot_group = game_data.groups.patrol_bot_group
@@ -130,7 +132,13 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         return _player_near_sprite(car_obj, car_interaction_radius)
 
     # Fuel pickup
-    if fuel and fuel.alive() and not state.has_fuel and not player.in_car:
+    if (
+        not player_on_moving_floor
+        and fuel
+        and fuel.alive()
+        and not state.has_fuel
+        and not player.in_car
+    ):
         if _player_near_point(fuel.rect.center, fuel_interaction_radius):
             state.has_fuel = True
             if state.timed_message == need_fuel_text:
@@ -142,7 +150,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             print("Fuel acquired!")
 
     # Flashlight pickup
-    if not player.in_car:
+    if not player.in_car and not player_on_moving_floor:
         for flashlight in list(flashlights):
             if not flashlight.alive():
                 continue
@@ -183,9 +191,11 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         if survivor.alive() and survivor.is_buddy and not survivor.rescued
     ]
     # Buddy interactions (Stage 3)
-    if stage.buddy_required_count > 0 and buddies:
+    if stage.buddy_required_count > 0 and buddies and not player_on_moving_floor:
         for buddy in list(buddies):
             if not buddy.alive():
+                continue
+            if is_entity_on_moving_floor(buddy):
                 continue
             buddy_on_screen = rect_visible_on_screen(camera, buddy.rect)
             if not player.in_car:
@@ -270,6 +280,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     # Player entering an active car already under control
     if (
         not player.in_car
+        and not player_on_moving_floor
         and _player_near_car(active_car)
         and active_car
         and active_car.health > 0
@@ -292,7 +303,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 state.hint_target_type = "fuel"
 
     # Claim a waiting/parked car when the player finally reaches it
-    if not player.in_car and not active_car and waiting_cars:
+    if not player.in_car and not player_on_moving_floor and not active_car and waiting_cars:
         claimed_car: Car | None = None
         for parked_car in waiting_cars:
             if _player_near_car(parked_car):
@@ -353,7 +364,13 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
 
     # Car hitting zombies
     if player.in_car and active_car and active_car.health > 0 and shrunk_car:
-        zombies_hit = pygame.sprite.spritecollide(shrunk_car, zombie_group, False)
+        zombies_hit = [
+            zombie
+            for zombie in pygame.sprite.spritecollide(
+                shrunk_car, zombie_group, False
+            )
+            if not is_entity_on_moving_floor(zombie)
+        ]
         if zombies_hit:
             move_dx = getattr(active_car, "last_move_dx", 0.0)
             move_dy = getattr(active_car, "last_move_dy", 0.0)
@@ -371,9 +388,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             for zombie in zombies_hit:
                 if not zombie.alive():
                     continue
-                zombie_radius = getattr(zombie, "body_radius", None)
-                if zombie_radius is None:
-                    zombie_radius = getattr(zombie, "radius", None)
+                zombie_radius = getattr(zombie, "radius", None)
                 if zombie_radius is None:
                     zombie_radius = max(zombie.rect.width, zombie.rect.height) / 2
                 zx = zombie.rect.centerx - car_center[0]
@@ -432,9 +447,16 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         and shrunk_car
         and survivor_group
     ):
-        boarded = pygame.sprite.spritecollide(
-            shrunk_car, survivor_group, True, collide_circle_custom
+        boarded_candidates = pygame.sprite.spritecollide(
+            shrunk_car, survivor_group, False, collide_circle_custom
         )
+        boarded = [
+            survivor
+            for survivor in boarded_candidates
+            if not is_entity_on_moving_floor(survivor)
+        ]
+        for survivor in boarded:
+            survivor.kill()
         if boarded:
             state.survivors_onboard += len(boarded)
             apply_passenger_speed_penalty(game_data)
@@ -474,7 +496,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         maintain_waiting_car_supply(game_data)
 
     # Player getting caught by zombies
-    if not player.in_car and player in all_sprites:
+    if not player.in_car and player in all_sprites and not player_on_moving_floor:
         shrunk_player = get_shrunk_sprite(player, 0.8)
         collisions = pygame.sprite.spritecollide(
             shrunk_player, zombie_group, False, collide_circle_custom
@@ -483,6 +505,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         if any(
             (not zombie.carbonized)
             and now >= getattr(zombie, "patrol_paralyze_until_ms", 0)
+            and not is_entity_on_moving_floor(zombie)
             for zombie in collisions
         ):
             if not state.game_over:

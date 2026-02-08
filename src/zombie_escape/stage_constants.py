@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .entities_constants import ZOMBIE_DECAY_DURATION_FRAMES
+from .entities_constants import MovingFloorDirection, ZOMBIE_DECAY_DURATION_FRAMES
 from .gameplay_constants import SURVIVOR_SPAWN_RATE
 from .level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from .models import Stage
@@ -492,6 +492,39 @@ STAGES: list[Stage] = [
         zombie_tracker_ratio=0.0,
         zombie_wall_hugging_ratio=0.0,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
+    ),
+    Stage(
+        id="moving_floor_test",
+        name_key="stages.moving_floor_test.name",
+        description_key="stages.moving_floor_test.description",
+        available=True,
+        cell_size=50,
+        grid_cols=18,
+        grid_rows=12,
+        wall_algorithm="empty",
+        requires_fuel=False,
+        initial_interior_spawn_rate=0.02,
+        exterior_spawn_weight=0.0,
+        interior_spawn_weight=1.0,
+        zombie_normal_ratio=1.0,
+        zombie_tracker_ratio=0.0,
+        zombie_wall_hugging_ratio=0.0,
+        zombie_dog_ratio=0.0,
+        patrol_bot_spawn_rate=0.0,
+        moving_floor_cells={
+            (4, 3): MovingFloorDirection.UP,
+            (5, 3): MovingFloorDirection.UP,
+            (6, 3): MovingFloorDirection.UP,
+            (11, 3): MovingFloorDirection.DOWN,
+            (12, 3): MovingFloorDirection.DOWN,
+            (13, 3): MovingFloorDirection.DOWN,
+            (4, 7): MovingFloorDirection.LEFT,
+            (5, 7): MovingFloorDirection.LEFT,
+            (6, 7): MovingFloorDirection.LEFT,
+            (11, 7): MovingFloorDirection.RIGHT,
+            (12, 7): MovingFloorDirection.RIGHT,
+            (13, 7): MovingFloorDirection.RIGHT,
+        },
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

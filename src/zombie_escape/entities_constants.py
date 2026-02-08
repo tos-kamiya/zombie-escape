@@ -13,10 +13,18 @@ class ZombieKind(str, Enum):
     WALL_HUGGER = "wall_hugging"
     DOG = "dog"
 
+
+class MovingFloorDirection(str, Enum):
+    UP = "U"
+    DOWN = "D"
+    LEFT = "L"
+    RIGHT = "R"
+
 # --- Player and buddy settings ---
 HUMANOID_RADIUS = 6
 PLAYER_RADIUS = HUMANOID_RADIUS
 PLAYER_SPEED = 1.4
+MOVING_FLOOR_SPEED = 2.8
 FOV_RADIUS = 124  # approximate legacy FOV (80) * 1.55 cap
 BUDDY_RADIUS = HUMANOID_RADIUS
 BUDDY_FOLLOW_SPEED = PLAYER_SPEED * 0.7
@@ -179,6 +187,8 @@ __all__ = [
     "ZOMBIE_DOG_HEAD_RADIUS_RATIO",
     "ZOMBIE_DOG_WANDER_INTERVAL_MS",
     "ZOMBIE_DOG_PACK_CHASE_RANGE",
+    "MovingFloorDirection",
+    "MOVING_FLOOR_SPEED",
     "PATROL_BOT_SIZE",
     "PATROL_BOT_RADIUS",
     "PATROL_BOT_SPEED",

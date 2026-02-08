@@ -62,8 +62,7 @@ class ZombieDog(pygame.sprite.Sprite):
         base_size = ZOMBIE_RADIUS * 2.0
         self.long_axis = base_size * ZOMBIE_DOG_LONG_AXIS_RATIO
         self.short_axis = base_size * ZOMBIE_DOG_SHORT_AXIS_RATIO
-        self.body_radius = self.short_axis * 0.5
-        self.radius = self.body_radius
+        self.radius = self.short_axis * 0.5
         self.head_radius = self.short_axis * ZOMBIE_DOG_HEAD_RADIUS_RATIO
         self.speed_patrol = ZOMBIE_DOG_PATROL_SPEED
         self.speed_assault = ZOMBIE_DOG_ASSAULT_SPEED
@@ -272,14 +271,14 @@ class ZombieDog(pygame.sprite.Sprite):
         final_y = self.y
         if next_x != self.x:
             for wall in possible_walls:
-                if _circle_wall_collision((next_x, final_y), self.body_radius, wall):
+                if _circle_wall_collision((next_x, final_y), self.radius, wall):
                     hit_x = True
                     next_x = self.x
                     break
             final_x = next_x
         if next_y != self.y:
             for wall in possible_walls:
-                if _circle_wall_collision((final_x, next_y), self.body_radius, wall):
+                if _circle_wall_collision((final_x, next_y), self.radius, wall):
                     hit_y = True
                     next_y = self.y
                     break
@@ -332,7 +331,7 @@ class ZombieDog(pygame.sprite.Sprite):
         _, self.patrol_paralyze_until_ms, self.patrol_damage_frame_counter = (
             update_paralyze_from_patrol_contact(
                 entity_center=(self.x, self.y),
-                entity_radius=self.body_radius,
+                entity_radius=self.radius,
                 patrol_bots=possible_bots,
                 now_ms=now,
                 paralyze_until_ms=self.patrol_paralyze_until_ms,

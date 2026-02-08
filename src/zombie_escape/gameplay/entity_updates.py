@@ -33,6 +33,7 @@ from ..models import FallingZombie, GameData
 from ..rng import get_rng
 from ..entities.movement_helpers import pitfall_target
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
+from .moving_floor import apply_moving_floor, is_entity_on_moving_floor
 from .constants import LAYER_PLAYERS, MAX_ZOMBIES
 from .decay_effects import DecayingEntityEffect, update_decay_effects
 from .spawn import spawn_weighted_zombie, update_falling_zombies
@@ -139,6 +140,7 @@ def update_entities(
 
     # Update player/car movement
     if player.in_car and active_car:
+        player.on_moving_floor = False
         car_dx, car_dy = apply_cell_edge_nudge(
             active_car.x,
             active_car.y,
@@ -171,30 +173,37 @@ def update_entities(
         # Ensure player is in all_sprites if not in car
         if player not in all_sprites:
             all_sprites.add(player, layer=LAYER_PLAYERS)
-        player_dx, player_dy = apply_cell_edge_nudge(
-            player.x,
-            player.y,
-            player_dx,
-            player_dy,
-            layout=game_data.layout,
+        if not apply_moving_floor(
+            player,
+            game_data.layout,
             cell_size=game_data.cell_size,
-        )
-        player.move(
-            player_dx,
-            player_dy,
-            wall_group,
-            patrol_bot_group=patrol_bot_group,
-            wall_index=wall_index,
-            cell_size=game_data.cell_size,
-            layout=game_data.layout,
-        )
+        ):
+            player_dx, player_dy = apply_cell_edge_nudge(
+                player.x,
+                player.y,
+                player_dx,
+                player_dy,
+                layout=game_data.layout,
+                cell_size=game_data.cell_size,
+            )
+            player.move(
+                player_dx,
+                player_dy,
+                wall_group,
+                patrol_bot_group=patrol_bot_group,
+                wall_index=wall_index,
+                cell_size=game_data.cell_size,
+                layout=game_data.layout,
+            )
     else:
         # Player flagged as in-car but car is gone; drop them back to foot control
         player.in_car = False
+        player.on_moving_floor = False
 
     # Update camera
     target_for_camera = active_car if player.in_car and active_car else player
     camera.update(target_for_camera)
+    player_on_moving_floor = is_entity_on_moving_floor(player)
 
     if player.inner_wall_hit and player.inner_wall_cell is not None:
         game_data.state.player_wall_target_cell = player.inner_wall_cell
@@ -292,6 +301,18 @@ def update_entities(
 
     for zombie in zombies_sorted:
         target = target_center
+        if getattr(zombie, "carbonized", False):
+            zombie.on_moving_floor = False
+        if not getattr(zombie, "carbonized", False) and apply_moving_floor(
+            zombie,
+            game_data.layout,
+            cell_size=game_data.cell_size,
+        ):
+            if hasattr(zombie, "_apply_decay"):
+                zombie._apply_decay()
+                if not zombie.alive():
+                    continue
+            continue
         if isinstance(zombie, ZombieDog):
             target = player.rect.center
             closest_survivor: Survivor | None = None
@@ -385,7 +406,7 @@ def update_entities(
             continue
 
         # Check zombie pitfall
-        pull_dist = getattr(zombie, "body_radius", zombie.radius) * 0.5
+        pull_dist = zombie.radius * 0.5
         pitfall_target_pos = pitfall_target(
             x=zombie.x,
             y=zombie.y,
@@ -409,6 +430,11 @@ def update_entities(
             )
             game_data.state.falling_zombies.append(fall)
 
+    active_humans = [
+        survivor
+        for survivor in survivor_group
+        if survivor.alive() and not is_entity_on_moving_floor(survivor)
+    ]
     for bot in patrol_bots_sorted:
         if not bot.alive():
             continue
@@ -417,9 +443,11 @@ def update_entities(
         bot.update(
             nearby_walls,
             patrol_bot_group=patrol_bot_group,
-            human_group=survivor_group,
+            human_group=active_humans,
             zombie_group=zombies_sorted,
-            player=None if player.in_car else player,
+            player=None
+            if player.in_car or player_on_moving_floor
+            else player,
             car=active_car,
             parked_cars=game_data.waiting_cars,
             cell_size=game_data.cell_size,

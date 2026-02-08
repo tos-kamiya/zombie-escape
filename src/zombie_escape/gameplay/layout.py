@@ -10,6 +10,7 @@ from ..entities import RubbleWall, SteelBeam, Wall
 from ..entities_constants import (
     INTERNAL_WALL_BEVEL_DEPTH,
     INTERNAL_WALL_HEALTH,
+    MovingFloorDirection,
     STEEL_BEAM_HEALTH,
 )
 from ..render_assets import RUBBLE_ROTATION_DEG
@@ -283,6 +284,28 @@ def generate_level_from_blueprint(
     game_data.layout.grid_cols = stage.grid_cols
     game_data.layout.grid_rows = stage.grid_rows
     game_data.layout.outside_cells = outside_cells
+    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = {}
+    if stage.moving_floor_cells:
+        for cell, direction in stage.moving_floor_cells.items():
+            x, y = cell
+            if x < 0 or y < 0 or x >= stage.grid_cols or y >= stage.grid_rows:
+                continue
+            if cell in outside_cells or cell in wall_cells or cell in outer_wall_cells:
+                continue
+            try:
+                dir_enum = (
+                    direction
+                    if isinstance(direction, MovingFloorDirection)
+                    else MovingFloorDirection(direction)
+                )
+            except ValueError:
+                continue
+            moving_floor_cells[cell] = dir_enum
+    if moving_floor_cells:
+        pitfall_cells.difference_update(moving_floor_cells.keys())
+        for cell in moving_floor_cells:
+            if cell not in walkable_cells:
+                walkable_cells.append(cell)
     if pitfall_cells:
         walkable_cells = [cell for cell in walkable_cells if cell not in pitfall_cells]
     game_data.layout.walkable_cells = walkable_cells
@@ -290,6 +313,7 @@ def generate_level_from_blueprint(
     game_data.layout.wall_cells = wall_cells
     game_data.layout.pitfall_cells = pitfall_cells
     game_data.layout.car_walkable_cells = car_reachable_cells
+    game_data.layout.moving_floor_cells = moving_floor_cells
     fall_spawn_cells = _expand_zone_cells(
         stage.fall_spawn_zones,
         grid_cols=stage.grid_cols,

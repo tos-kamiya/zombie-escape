@@ -162,6 +162,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             car_walkable_cells=set(),
             fall_spawn_cells=set(),
             bevel_corners={},
+            moving_floor_cells={},
         ),
         fog={
             "hatch_patterns": {},

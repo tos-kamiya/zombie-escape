@@ -35,6 +35,7 @@ from .utils import (
     is_entity_in_fov,
     rect_visible_on_screen,
 )
+from .moving_floor import apply_moving_floor, is_entity_on_moving_floor
 
 RNG = get_rng()
 
@@ -61,8 +62,17 @@ def update_survivors(
     target_pos = target_rect.center
     spatial_index = game_data.state.spatial_index
     survivors = [s for s in survivor_group if s.alive()]
+    player_on_moving_floor = is_entity_on_moving_floor(player)
+    moving_floor_survivors: list[Survivor] = []
 
     for survivor in survivors:
+        if apply_moving_floor(
+            survivor,
+            game_data.layout,
+            cell_size=game_data.cell_size,
+        ):
+            moving_floor_survivors.append(survivor)
+            continue
         survivor.update_behavior(
             target_pos,
             wall_group,
@@ -94,8 +104,11 @@ def update_survivors(
     survivor_overlap = (SURVIVOR_RADIUS * 2) * 1.05
 
     player_point = (player.x, player.y)
-    for survivor in survivors:
-        _separate_from_point(survivor, player_point, player_overlap)
+    if not player_on_moving_floor:
+        for survivor in survivors:
+            if survivor in moving_floor_survivors:
+                continue
+            _separate_from_point(survivor, player_point, player_overlap)
 
     def _resolve_wall_overlap(survivor: Survivor) -> None:
         for _ in range(4):
@@ -142,6 +155,8 @@ def update_survivors(
             survivor.rect.center = (int(survivor.x), int(survivor.y))
 
     for survivor in survivors:
+        if survivor in moving_floor_survivors:
+            continue
         nearby = spatial_index.query_radius(
             (survivor.x, survivor.y),
             survivor_overlap,
@@ -149,6 +164,8 @@ def update_survivors(
         )
         for other in nearby:
             if other is survivor or not other.alive():
+                continue
+            if is_entity_on_moving_floor(other):
                 continue
             if id(other) <= id(survivor):
                 continue
@@ -171,6 +188,8 @@ def update_survivors(
                 other.rect.center = (int(other.x), int(other.y))
 
     for survivor in survivors:
+        if survivor in moving_floor_survivors:
+            continue
         _resolve_wall_overlap(survivor)
 
 
@@ -320,6 +339,8 @@ def handle_survivor_zombie_collisions(
     for survivor in list(survivor_group):
         if not survivor.alive():
             continue
+        if is_entity_on_moving_floor(survivor):
+            continue
         survivor_radius = survivor.radius
         search_radius = survivor_radius + ZOMBIE_RADIUS
         search_radius_sq = search_radius * search_radius
@@ -334,6 +355,8 @@ def handle_survivor_zombie_collisions(
                 break
             zombie = zombies[idx]
             if not zombie.alive():
+                continue
+            if is_entity_on_moving_floor(zombie):
                 continue
             dy = zombie.rect.centery - survivor.rect.centery
             if abs(dy) > search_radius:

@@ -8,7 +8,11 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import sprite, surface
 
-from .entities_constants import ZOMBIE_DECAY_DURATION_FRAMES, ZombieKind
+from .entities_constants import (
+    MovingFloorDirection,
+    ZOMBIE_DECAY_DURATION_FRAMES,
+    ZombieKind,
+)
 from .gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     DEFAULT_SHOES_SPAWN_COUNT,
@@ -41,6 +45,7 @@ class LevelLayout:
     car_walkable_cells: set[tuple[int, int]]
     fall_spawn_cells: set[tuple[int, int]]
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
+    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection]
 
 
 @dataclass
@@ -187,6 +192,9 @@ class Stage:
     fall_spawn_floor_ratio: float = 0.0
     pitfall_density: float = 0.0
     pitfall_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
+    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = field(
+        default_factory=dict
+    )
 
     # Stage objective
     requires_fuel: bool = False

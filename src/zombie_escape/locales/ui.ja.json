@@ -166,6 +166,10 @@
       "stage23": {
         "name": "#23 防衛線",
         "description": "動くラインの背後に位置取れ。"
+      },
+      "moving_floor_test": {
+        "name": "動く床テスト",
+        "description": "動く床のデバッグ用レイアウト。"
       }
     },
     "status": {
