@@ -164,6 +164,25 @@ class PatrolBot(pygame.sprite.Sprite):
             return cx, rect.top - radius
         return cx, rect.bottom + radius
 
+    def _resolve_circle_from_bot(
+        self: Self,
+        cx: float,
+        cy: float,
+        radius: float,
+        other: "PatrolBot",
+    ) -> tuple[float, float]:
+        dx = cx - other.x
+        dy = cy - other.y
+        dist_sq = dx * dx + dy * dy
+        min_dist = radius + other.radius
+        if dist_sq <= 0:
+            return cx + min_dist, cy
+        dist = dist_sq**0.5
+        if dist >= min_dist:
+            return cx, cy
+        push = min_dist - dist
+        return cx + (dx / dist) * push, cy + (dy / dist) * push
+
     def update(
         self: Self,
         walls: list[Wall],
@@ -245,6 +264,15 @@ class PatrolBot(pygame.sprite.Sprite):
             hit_bot = True
             final_x = self.x
             final_y = self.y
+            closest_bot = None
+            closest_dist_sq = None
+            for bot in possible_bots:
+                dx = final_x - bot.x
+                dy = final_y - bot.y
+                dist_sq = dx * dx + dy * dy
+                if closest_dist_sq is None or dist_sq < closest_dist_sq:
+                    closest_bot = bot
+                    closest_dist_sq = dist_sq
 
         hit_car = False
         car_candidates: list[pygame.sprite.Sprite] = []
@@ -332,6 +360,10 @@ class PatrolBot(pygame.sprite.Sprite):
             final_y = self.y - float(self.direction[1]) * backoff
             final_x = min(layout.field_rect.width, max(0.0, final_x))
             final_y = min(layout.field_rect.height, max(0.0, final_y))
+            if hit_bot and closest_bot is not None:
+                final_x, final_y = self._resolve_circle_from_bot(
+                    final_x, final_y, collision_radius, closest_bot
+                )
             if hit_wall:
                 for _ in range(4):
                     moved = False
