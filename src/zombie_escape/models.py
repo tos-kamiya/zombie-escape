@@ -144,6 +144,7 @@ class Groups:
     wall_group: sprite.Group
     zombie_group: sprite.Group
     survivor_group: sprite.Group
+    patrol_bot_group: sprite.Group
 
 
 @dataclass
@@ -216,6 +217,9 @@ class Stage:
     zombie_normal_ratio: float = 1.0
     zombie_dog_ratio: float = 0.0
     zombie_decay_duration_frames: int = ZOMBIE_DECAY_DURATION_FRAMES
+
+    # Patrol bot spawning
+    patrol_bot_spawn_rate: float = 0.0
 
     # Survivor spawning
     survivor_spawn_rate: float = SURVIVOR_SPAWN_RATE

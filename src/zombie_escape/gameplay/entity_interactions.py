@@ -11,6 +11,7 @@ from ..entities_constants import (
     BUDDY_FOLLOW_STOP_DISTANCE,
     BUDDY_MERGE_DISTANCE,
     CAR_HEIGHT,
+    CAR_WALL_DAMAGE,
     CAR_WIDTH,
     FLASHLIGHT_HEIGHT,
     FLASHLIGHT_WIDTH,
@@ -71,6 +72,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     assert player is not None
     car = game_data.car
     zombie_group = game_data.groups.zombie_group
+    patrol_bot_group = game_data.groups.patrol_bot_group
     all_sprites = game_data.groups.all_sprites
     survivor_group = game_data.groups.survivor_group
     state = game_data.state
@@ -403,6 +405,21 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 contact_damage = CAR_ZOMBIE_CONTACT_DAMAGE * non_forward_hits
                 total_damage = ram_damage + contact_damage
                 active_car._take_damage(total_damage)
+
+    # Car hitting patrol bots
+    if player.in_car and active_car and active_car.health > 0 and patrol_bot_group:
+        car_center_x = active_car.x
+        car_center_y = active_car.y
+        car_radius = getattr(active_car, "collision_radius", 0.0)
+        for bot in list(patrol_bot_group):
+            if not bot.alive():
+                continue
+            dx = bot.x - car_center_x
+            dy = bot.y - car_center_y
+            hit_range = car_radius + getattr(bot, "radius", 0.0)
+            if dx * dx + dy * dy <= hit_range * hit_range:
+                bot.kill()
+                active_car._take_damage(CAR_WALL_DAMAGE)
 
     if (
         stage.survivor_rescue_stage

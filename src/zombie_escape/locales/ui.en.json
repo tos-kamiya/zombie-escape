@@ -158,6 +158,10 @@
       "stage21": {
         "name": "#21 Running Shadow",
         "description": "It seems almost eager to run at anyone."
+      },
+      "patrol_bot_test": {
+        "name": "Patrol Bot Test",
+        "description": "Test stage for patrol bots."
       }
     },
     "status": {

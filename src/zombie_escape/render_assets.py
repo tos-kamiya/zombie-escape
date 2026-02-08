@@ -25,6 +25,9 @@ from .render_constants import (
     HAND_SPREAD_RAD,
     HUMANOID_OUTLINE_COLOR,
     HUMANOID_OUTLINE_WIDTH,
+    PATROL_BOT_ARROW_COLOR,
+    PATROL_BOT_BODY_COLOR,
+    PATROL_BOT_OUTLINE_COLOR,
     SURVIVOR_COLOR,
     ZOMBIE_BODY_COLOR,
     ZOMBIE_OUTLINE_COLOR,
@@ -51,6 +54,7 @@ _ZOMBIE_DIRECTIONAL_CACHE: dict[tuple[int, bool, int], list[pygame.Surface]] = {
 _ZOMBIE_DOG_DIRECTIONAL_CACHE: dict[
     tuple[float, float, int], list[pygame.Surface]
 ] = {}
+_PATROL_BOT_DIRECTIONAL_CACHE: dict[tuple[int, int], list[pygame.Surface]] = {}
 _RUBBLE_SURFACE_CACHE: dict[tuple, pygame.Surface] = {}
 
 RUBBLE_ROTATION_DEG = 5.0
@@ -584,6 +588,50 @@ def build_zombie_dog_directional_surfaces(
     return surfaces
 
 
+def build_patrol_bot_directional_surfaces(
+    size: int,
+    *,
+    bins: int = ANGLE_BINS,
+) -> list[pygame.Surface]:
+    cache_key = (int(size), bins)
+    if cache_key in _PATROL_BOT_DIRECTIONAL_CACHE:
+        return _PATROL_BOT_DIRECTIONAL_CACHE[cache_key]
+    base_surface = pygame.Surface((size, size), pygame.SRCALPHA)
+    center = (size // 2, size // 2)
+    radius = max(1, size // 2)
+    pygame.draw.circle(base_surface, PATROL_BOT_BODY_COLOR, center, radius)
+    pygame.draw.circle(
+        base_surface, PATROL_BOT_OUTLINE_COLOR, center, radius, width=2
+    )
+    arrow = _build_patrol_bot_arrow_surface(size)
+    surfaces: list[pygame.Surface] = []
+    for idx in range(bins):
+        angle_deg = -(idx * 360.0 / bins)
+        rotated_arrow = pygame.transform.rotozoom(arrow, angle_deg, 1.0)
+        framed = base_surface.copy()
+        framed.blit(rotated_arrow, rotated_arrow.get_rect(center=center))
+        surfaces.append(framed)
+    _PATROL_BOT_DIRECTIONAL_CACHE[cache_key] = surfaces
+    return surfaces
+
+
+def _build_patrol_bot_arrow_surface(size: int) -> pygame.Surface:
+    surface = pygame.Surface((size, size), pygame.SRCALPHA)
+    center_x, center_y = surface.get_rect().center
+    arrow_width = max(6, int(size * 0.32))
+    arrow_height = max(8, int(size * 0.44))
+    tip_x = center_x + arrow_height // 2
+    half_width = arrow_width // 2
+    points = [
+        (tip_x, center_y),
+        (tip_x - arrow_height, center_y - half_width),
+        (tip_x - arrow_height, center_y + half_width),
+    ]
+    pygame.draw.polygon(surface, PATROL_BOT_ARROW_COLOR, points)
+    pygame.draw.polygon(surface, PATROL_BOT_OUTLINE_COLOR, points, width=1)
+    return surface
+
+
 def build_car_surface(width: int, height: int) -> pygame.Surface:
     return pygame.Surface((width, height), pygame.SRCALPHA)
 
@@ -928,6 +976,7 @@ __all__ = [
     "build_survivor_directional_surfaces",
     "build_zombie_directional_surfaces",
     "build_zombie_dog_directional_surfaces",
+    "build_patrol_bot_directional_surfaces",
     "build_car_surface",
     "build_car_directional_surfaces",
     "paint_car_surface",

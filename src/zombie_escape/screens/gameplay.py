@@ -29,6 +29,7 @@ from ..gameplay import (
     place_shoes,
     process_player_input,
     setup_player_and_cars,
+    spawn_initial_patrol_bots,
     spawn_initial_zombies,
     spawn_survivors,
     sync_ambient_palette_with_flashlights,
@@ -280,6 +281,7 @@ def gameplay_screen(
     game_data.groups.all_sprites.add(shoes_list, layer=1)
 
     spawn_initial_zombies(game_data, player, layout_data, config)
+    spawn_initial_patrol_bots(game_data, player, layout_data)
     update_footprints(game_data, config)
     level_rect = game_data.layout.field_rect
     overview_surface = pygame.Surface((level_rect.width, level_rect.height))
@@ -503,6 +505,13 @@ def gameplay_screen(
                     survivor
                     for survivor in game_data.groups.survivor_group
                     if survivor.alive()
+                ]
+            )
+            mobile_entities.extend(
+                [
+                    bot
+                    for bot in game_data.groups.patrol_bot_group
+                    if bot.alive()
                 ]
             )
             game_data.state.spatial_index.rebuild(mobile_entities)

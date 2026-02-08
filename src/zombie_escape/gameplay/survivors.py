@@ -40,6 +40,7 @@ def update_survivors(
     game_data: GameData,
     wall_index: WallIndex | None = None,
     wall_target_cell: tuple[int, int] | None = None,
+    patrol_bot_group: pygame.sprite.Group | None = None,
 ) -> None:
     if not (
         game_data.stage.survivor_rescue_stage
@@ -62,6 +63,7 @@ def update_survivors(
         survivor.update_behavior(
             target_pos,
             wall_group,
+            patrol_bot_group=patrol_bot_group,
             wall_index=wall_index,
             cell_size=game_data.cell_size,
             layout=game_data.layout,

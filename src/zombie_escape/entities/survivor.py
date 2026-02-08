@@ -28,7 +28,7 @@ from ..entities_constants import (
 from ..render_assets import angle_bin_from_vector, build_survivor_directional_surfaces
 from ..render_constants import ANGLE_BINS
 from ..world_grid import WallIndex, apply_cell_edge_nudge
-from .collisions import spritecollideany_walls
+from .collisions import collide_circle_custom, spritecollideany_walls
 from .movement import _can_humanoid_jump, _get_jump_scale
 from .movement_helpers import (
     move_axis_with_pitfall,
@@ -95,6 +95,7 @@ class Survivor(pygame.sprite.Sprite):
         player_pos: tuple[int, int],
         walls: pygame.sprite.Group,
         *,
+        patrol_bot_group: pygame.sprite.Group | None = None,
         wall_index: WallIndex | None = None,
         cell_size: int | None = None,
         layout: "LevelLayout",
@@ -171,6 +172,8 @@ class Survivor(pygame.sprite.Sprite):
 
             def _on_buddy_wall_hit(hit_wall: Wall) -> None:
                 nonlocal inner_wall_hit
+                if not isinstance(hit_wall, Wall):
+                    return
                 if hit_wall.alive():
                     dx_to_player = player_pos[0] - self.x
                     dy_to_player = player_pos[1] - self.y
@@ -182,7 +185,7 @@ class Survivor(pygame.sprite.Sprite):
                     inner_wall_hit = True
 
             def _collide_buddy() -> Wall | None:
-                return spritecollideany_walls(
+                hit_wall = spritecollideany_walls(
                     self,
                     walls,
                     wall_index=wall_index,
@@ -190,6 +193,7 @@ class Survivor(pygame.sprite.Sprite):
                     grid_cols=layout.grid_cols,
                     grid_rows=layout.grid_rows,
                 )
+                return hit_wall
 
             move_axis_with_pitfall(
                 sprite=self,
@@ -237,6 +241,16 @@ class Survivor(pygame.sprite.Sprite):
                 self.wall_bump_hold -= 1
                 inner_wall_hit = True
             self._update_facing_for_bump(inner_wall_hit)
+            if not self.is_jumping:
+                overlap_bot = (
+                    bool(
+                        patrol_bot_group
+                        and pygame.sprite.spritecollideany(
+                            self, patrol_bot_group, collided=collide_circle_custom
+                        )
+                    )
+                )
+                self._update_image_scale(1.08 if overlap_bot else 1.0)
             return
 
         dx = player_pos[0] - self.x
@@ -281,7 +295,7 @@ class Survivor(pygame.sprite.Sprite):
             )
 
         def _collide_survivor() -> Wall | None:
-            return spritecollideany_walls(
+            hit_wall = spritecollideany_walls(
                 self,
                 walls,
                 wall_index=wall_index,
@@ -289,6 +303,7 @@ class Survivor(pygame.sprite.Sprite):
                 grid_cols=layout.grid_cols,
                 grid_rows=layout.grid_rows,
             )
+            return hit_wall
 
         move_axis_with_pitfall(
             sprite=self,
@@ -313,6 +328,16 @@ class Survivor(pygame.sprite.Sprite):
 
         self.rect.center = (int(self.x), int(self.y))
         self._update_facing_for_bump(False)
+        if not self.is_jumping:
+            overlap_bot = (
+                bool(
+                    patrol_bot_group
+                    and pygame.sprite.spritecollideany(
+                        self, patrol_bot_group, collided=collide_circle_custom
+                    )
+                )
+            )
+            self._update_image_scale(1.08 if overlap_bot else 1.0)
 
     def _update_image_scale(self: Self, scale: float) -> None:
         """Apply scaling to the current directional image."""

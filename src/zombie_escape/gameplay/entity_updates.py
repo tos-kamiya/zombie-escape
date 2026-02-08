@@ -8,6 +8,7 @@ import pygame
 from ..entities import (
     Car,
     Player,
+    PatrolBot,
     Survivor,
     Wall,
     Zombie,
@@ -30,6 +31,7 @@ from ..gameplay_constants import (
 from ..models import FallingZombie, GameData
 from ..rng import get_rng
 from ..entities.movement_helpers import pitfall_target
+from ..entities.movement import _circle_wall_collision
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
 from .constants import MAX_ZOMBIES
 from .decay_effects import DecayingEntityEffect, update_decay_effects
@@ -112,6 +114,7 @@ def update_entities(
     all_sprites = game_data.groups.all_sprites
     zombie_group = game_data.groups.zombie_group
     survivor_group = game_data.groups.survivor_group
+    patrol_bot_group = game_data.groups.patrol_bot_group
     spatial_index = game_data.state.spatial_index
     camera = game_data.camera
     stage = game_data.stage
@@ -180,6 +183,7 @@ def update_entities(
             player_dx,
             player_dy,
             wall_group,
+            patrol_bot_group=patrol_bot_group,
             wall_index=wall_index,
             cell_size=game_data.cell_size,
             layout=game_data.layout,
@@ -210,6 +214,7 @@ def update_entities(
         game_data,
         wall_index=wall_index,
         wall_target_cell=wall_target_cell,
+        patrol_bot_group=patrol_bot_group,
     )
     update_falling_zombies(game_data, config)
 
@@ -247,11 +252,15 @@ def update_entities(
     zombies_sorted: list[Zombie | ZombieDog] = sorted(
         list(zombie_group), key=lambda z: z.x
     )
+    patrol_bots_sorted: list[PatrolBot] = sorted(
+        list(patrol_bot_group), key=lambda b: b.x
+    )
 
     tracker_buckets: dict[tuple[int, int, int], list[Zombie]] = {}
     tracker_cell_size = ZOMBIE_TRACKER_CROWD_BAND_WIDTH
     angle_step = math.pi / 4.0
     zombie_kinds = SpatialKind.ZOMBIE | SpatialKind.ZOMBIE_DOG
+    patrol_kinds = SpatialKind.PATROL_BOT
     base_radius = ZOMBIE_SEPARATION_DISTANCE + PLAYER_SPEED
     for zombie in zombies_sorted:
         if not zombie.alive() or not zombie.tracker:
@@ -335,21 +344,30 @@ def update_entities(
             kinds=zombie_kinds,
         )
         zombie_search_radius = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius + 120
+        nearby_patrol_bots = spatial_index.query_radius(
+            (zombie.x, zombie.y),
+            zombie_search_radius,
+            kinds=patrol_kinds,
+        )
         nearby_walls = _walls_near((zombie.x, zombie.y), zombie_search_radius)
         dog_candidates = nearby_candidates
         zombie.update(
             target,
             nearby_walls,
             dog_candidates,
+            nearby_patrol_bots,
             footprints=game_data.state.footprints,
             cell_size=game_data.cell_size,
             layout=game_data.layout,
         )
         if not zombie.alive():
             last_damage_ms = getattr(zombie, "last_damage_ms", None)
+            last_damage_source = getattr(zombie, "last_damage_source", None)
             died_from_damage = (
                 last_damage_ms is not None and last_damage_ms == current_time
             )
+            if died_from_damage and last_damage_source == "patrol_bot":
+                died_from_damage = False
             if not died_from_damage:
                 fov_target = active_car if player.in_car and active_car else player
                 if rect_visible_on_screen(camera, zombie.rect) and is_entity_in_fov(
@@ -387,4 +405,28 @@ def update_entities(
             )
             game_data.state.falling_zombies.append(fall)
 
-    update_decay_effects(game_data.state.decay_effects, frames=1)
+    for bot in patrol_bots_sorted:
+        if not bot.alive():
+            continue
+        bot_search_radius = bot.radius + 120
+        nearby_walls = _walls_near((bot.x, bot.y), bot_search_radius)
+        bot.update(
+            nearby_walls,
+            patrol_bot_group=patrol_bot_group,
+            human_group=survivor_group,
+            zombie_group=zombies_sorted,
+            player=None if player.in_car else player,
+            car=active_car,
+            parked_cars=game_data.waiting_cars,
+            cell_size=game_data.cell_size,
+            pitfall_cells=pitfall_cells,
+            layout=game_data.layout,
+        )
+
+    def _entity_radius(entity: pygame.sprite.Sprite) -> float:
+        radius = getattr(entity, "body_radius", None)
+        if radius is None:
+            radius = getattr(entity, "radius", None)
+        if radius is None:
+            radius = max(entity.rect.width, entity.rect.height) / 2
+        return float(radius)

@@ -20,7 +20,8 @@ class SpatialKind(IntFlag):
     ZOMBIE = 1 << 2
     ZOMBIE_DOG = 1 << 3
     SURVIVOR = 1 << 4
-    ALL = PLAYER | CAR | ZOMBIE | ZOMBIE_DOG | SURVIVOR
+    PATROL_BOT = 1 << 5
+    ALL = PLAYER | CAR | ZOMBIE | ZOMBIE_DOG | SURVIVOR | PATROL_BOT
 
 
 def _entity_center(entity: pygame.sprite.Sprite) -> tuple[float, float]:
@@ -33,7 +34,7 @@ def _entity_center(entity: pygame.sprite.Sprite) -> tuple[float, float]:
 
 
 def kind_for_entity(entity: pygame.sprite.Sprite) -> SpatialKind:
-    from ..entities import Car, Player, Survivor, Zombie, ZombieDog
+    from ..entities import Car, PatrolBot, Player, Survivor, Zombie, ZombieDog
 
     if isinstance(entity, Player):
         return SpatialKind.PLAYER
@@ -45,6 +46,8 @@ def kind_for_entity(entity: pygame.sprite.Sprite) -> SpatialKind:
         return SpatialKind.ZOMBIE
     if isinstance(entity, Survivor):
         return SpatialKind.SURVIVOR
+    if isinstance(entity, PatrolBot):
+        return SpatialKind.PATROL_BOT
     return SpatialKind.NONE
 
 

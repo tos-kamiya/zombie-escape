@@ -158,6 +158,10 @@
       "stage21": {
         "name": "#21 走る影",
         "description": "目に入った相手に喜んで寄ってくる。"
+      },
+      "patrol_bot_test": {
+        "name": "巡回ロボット確認",
+        "description": "巡回ロボットの動作確認ステージ。"
       }
     },
     "status": {

@@ -8,6 +8,7 @@ from ..entities import (
     Car,
     Flashlight,
     FuelCan,
+    PatrolBot,
     Player,
     Shoes,
     Survivor,
@@ -58,6 +59,7 @@ __all__ = [
     "spawn_survivors",
     "setup_player_and_cars",
     "spawn_initial_zombies",
+    "spawn_initial_patrol_bots",
     "spawn_waiting_car",
     "maintain_waiting_car_supply",
     "nearest_waiting_car",
@@ -139,6 +141,41 @@ def _is_spawn_position_clear(
             return False
     for zombie in game_data.groups.zombie_group:
         if zombie.alive() and spawn_rect.colliderect(zombie.rect):
+            return False
+    for bot in game_data.groups.patrol_bot_group:
+        if bot.alive() and spawn_rect.colliderect(bot.rect):
+            return False
+    return True
+
+
+def _is_patrol_spawn_position_clear(
+    game_data: GameData,
+    candidate: PatrolBot,
+    *,
+    allow_player_overlap: bool = False,
+) -> bool:
+    wall_group = game_data.groups.wall_group
+    if spritecollideany_walls(candidate, wall_group):
+        return False
+
+    spawn_rect = candidate.rect
+    player = game_data.player
+    if not allow_player_overlap and player and spawn_rect.colliderect(player.rect):
+        return False
+    car = game_data.car
+    if car and car.alive() and spawn_rect.colliderect(car.rect):
+        return False
+    for parked in game_data.waiting_cars:
+        if parked.alive() and spawn_rect.colliderect(parked.rect):
+            return False
+    for survivor in game_data.groups.survivor_group:
+        if survivor.alive() and spawn_rect.colliderect(survivor.rect):
+            return False
+    for zombie in game_data.groups.zombie_group:
+        if zombie.alive() and spawn_rect.colliderect(zombie.rect):
+            return False
+    for bot in game_data.groups.patrol_bot_group:
+        if bot.alive() and spawn_rect.colliderect(bot.rect):
             return False
     return True
 
@@ -780,6 +817,41 @@ def spawn_initial_zombies(
 
     interval = max(1, game_data.stage.spawn_interval_ms)
     game_data.state.last_zombie_spawn_time = pygame.time.get_ticks() - interval
+
+
+def spawn_initial_patrol_bots(
+    game_data: GameData,
+    player: Player,
+    layout_data: Mapping[str, list[tuple[int, int]]],
+) -> None:
+    """Spawn initial patrol bots using walkable cells and stage spawn rate."""
+    spawn_rate = max(0.0, game_data.stage.patrol_bot_spawn_rate)
+    if spawn_rate <= 0.0:
+        return
+    walkable_cells = layout_data.get("walkable_cells", [])
+    if not walkable_cells:
+        return
+
+    cell_size = game_data.cell_size
+    positions = find_interior_spawn_positions(
+        walkable_cells,
+        cell_size,
+        spawn_rate,
+        player=player,
+        min_player_dist=ZOMBIE_SPAWN_PLAYER_BUFFER,
+    )
+    if not positions:
+        return
+
+    patrol_group = game_data.groups.patrol_bot_group
+    all_sprites = game_data.groups.all_sprites
+
+    for pos in positions:
+        bot = PatrolBot(pos[0], pos[1])
+        if not _is_patrol_spawn_position_clear(game_data, bot):
+            continue
+        patrol_group.add(bot)
+        all_sprites.add(bot, layer=0)
 
 
 def spawn_waiting_car(game_data: GameData) -> Car | None:

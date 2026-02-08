@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import Callable, Iterable
+from typing import Callable, Iterable, TYPE_CHECKING
 
 import pygame
 
@@ -22,6 +22,8 @@ from ..entities_constants import (
     ZOMBIE_TRACKER_WANDER_INTERVAL_MS,
     ZOMBIE_WALL_DAMAGE,
     ZOMBIE_WANDER_INTERVAL_MS,
+    PATROL_BOT_ZOMBIE_DAMAGE,
+    PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,
 )
 from ..models import Footprint, LevelLayout
 from ..render_assets import (
@@ -41,6 +43,9 @@ from .movement import (
     _zombie_wall_hug_movement,
 )
 from .walls import Wall
+
+if TYPE_CHECKING:  # pragma: no cover - typing-only imports
+    from .patrol_bot import PatrolBot
 
 RNG = get_rng()
 
@@ -95,6 +100,7 @@ class Zombie(pygame.sprite.Sprite):
         self.decay_carry = 0.0
         self.decay_duration_frames = decay_duration_frames
         self.last_damage_ms: int | None = None
+        self.last_damage_source: str | None = None
         if movement_strategy is None:
             if tracker:
                 movement_strategy = _zombie_tracker_movement
@@ -124,6 +130,7 @@ class Zombie(pygame.sprite.Sprite):
         )
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
+        self.patrol_damage_frame_counter = 0
 
     def _update_mode(
         self: Self, player_center: tuple[int, int], sight_range: float
@@ -250,10 +257,11 @@ class Zombie(pygame.sprite.Sprite):
         if self.health <= 0:
             self.kill()
 
-    def take_damage(self: Self, amount: int) -> None:
+    def take_damage(self: Self, amount: int, *, source: str | None = None) -> None:
         if amount <= 0 or not self.alive():
             return
         self.last_damage_ms = pygame.time.get_ticks()
+        self.last_damage_source = source
         self.health -= amount
         if self.health <= 0:
             self.kill()
@@ -343,6 +351,7 @@ class Zombie(pygame.sprite.Sprite):
         player_center: tuple[int, int],
         walls: list[Wall],
         nearby_zombies: Iterable[Zombie],
+        nearby_patrol_bots: Iterable["PatrolBot"],
         footprints: list[Footprint] | None = None,
         *,
         cell_size: int,
@@ -389,10 +398,31 @@ class Zombie(pygame.sprite.Sprite):
             for w in walls
             if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100
         ]
+        possible_bots = [
+            b
+            for b in nearby_patrol_bots
+            if abs(b.x - self.x) < 100 and abs(b.y - self.y) < 100
+        ]
+
+        bot_hit = False
+
+        def _bot_collision(check_x: float, check_y: float) -> bool:
+            nonlocal bot_hit
+            for bot in possible_bots:
+                dx = check_x - bot.x
+                dy = check_y - bot.y
+                hit_range = self.radius + bot.radius
+                if dx * dx + dy * dy <= hit_range * hit_range:
+                    bot_hit = True
+                    return True
+            return False
+
         final_x = self.x
         final_y = self.y
         if move_x:
             next_x = final_x + move_x
+            if _bot_collision(next_x, final_y):
+                next_x = final_x
             for wall in possible_walls:
                 if _circle_wall_collision((next_x, final_y), self.radius, wall):
                     if wall.alive():
@@ -403,6 +433,8 @@ class Zombie(pygame.sprite.Sprite):
             final_x = next_x
         if move_y:
             next_y = final_y + move_y
+            if _bot_collision(final_x, next_y):
+                next_y = final_y
             for wall in possible_walls:
                 if _circle_wall_collision((final_x, next_y), self.radius, wall):
                     if wall.alive():
@@ -419,6 +451,12 @@ class Zombie(pygame.sprite.Sprite):
         self.x = final_x
         self.y = final_y
         self.rect.center = (int(self.x), int(self.y))
+        if bot_hit:
+            self.patrol_damage_frame_counter = (
+                self.patrol_damage_frame_counter + 1
+            ) % PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES
+            if self.patrol_damage_frame_counter == 0:
+                self.take_damage(PATROL_BOT_ZOMBIE_DAMAGE, source="patrol_bot")
 
     def carbonize(self: Self) -> None:
         if self.carbonized:

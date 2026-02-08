@@ -27,7 +27,7 @@ from ..entities_constants import (
 from ..render_assets import angle_bin_from_vector, build_player_directional_surfaces
 from ..render_constants import ANGLE_BINS
 from ..world_grid import WallIndex
-from .collisions import spritecollideany_walls
+from .collisions import collide_circle_custom, spritecollideany_walls
 from .movement import _can_humanoid_jump, _get_jump_scale
 from .movement_helpers import (
     move_axis_with_pitfall,
@@ -69,6 +69,7 @@ class Player(pygame.sprite.Sprite):
         dy: float,
         walls: pygame.sprite.Group,
         *,
+        patrol_bot_group: pygame.sprite.Group | None = None,
         wall_index: WallIndex | None = None,
         cell_size: int | None = None,
         layout: LevelLayout,
@@ -108,7 +109,7 @@ class Player(pygame.sprite.Sprite):
 
         def _on_player_wall_hit(hit_wall: Wall | None) -> None:
             nonlocal inner_wall_hit, inner_wall_cell
-            if hit_wall is None:
+            if hit_wall is None or not isinstance(hit_wall, Wall):
                 return
             damage = max(1, PLAYER_WALL_DAMAGE)
             if hit_wall.alive():
@@ -122,7 +123,7 @@ class Player(pygame.sprite.Sprite):
                         )
 
         def _collide_player() -> Wall | None:
-            return spritecollideany_walls(
+            hit_wall = spritecollideany_walls(
                 self,
                 walls,
                 wall_index=wall_index,
@@ -130,6 +131,7 @@ class Player(pygame.sprite.Sprite):
                 grid_cols=level_width // cell_size if cell_size else None,
                 grid_rows=level_height // cell_size if cell_size else None,
             )
+            return hit_wall
 
         move_axis_with_pitfall(
             sprite=self,
@@ -169,6 +171,16 @@ class Player(pygame.sprite.Sprite):
         self.inner_wall_hit = inner_wall_hit
         self.inner_wall_cell = inner_wall_cell
         self._update_facing_for_bump(inner_wall_hit)
+        if not self.is_jumping:
+            overlap_bot = (
+                bool(
+                    patrol_bot_group
+                    and pygame.sprite.spritecollideany(
+                        self, patrol_bot_group, collided=collide_circle_custom
+                    )
+                )
+            )
+            self._update_image_scale(1.08 if overlap_bot else 1.0)
 
     def _update_image_scale(self: Self, scale: float) -> None:
         """Apply scaling to the current directional image."""
