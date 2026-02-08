@@ -162,6 +162,10 @@
       "stage22": {
         "name": "#22 Still on Duty",
         "description": "Patrol bots hum along their usual routes."
+      },
+      "stage23": {
+        "name": "#23 Hold the Line",
+        "description": "Stay behind the moving line."
       }
     },
     "status": {

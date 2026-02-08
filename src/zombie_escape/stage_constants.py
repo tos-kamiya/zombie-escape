@@ -475,6 +475,24 @@ STAGES: list[Stage] = [
         zombie_wall_hugging_ratio=0.0,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
+    Stage(
+        id="stage23",
+        name_key="stages.stage23.name",
+        description_key="stages.stage23.description",
+        available=True,
+        wall_algorithm="grid_wire.25%",
+        pitfall_density=0.01,
+        requires_fuel=True,
+        initial_interior_spawn_rate=0.06,
+        patrol_bot_spawn_rate=0.06,
+        exterior_spawn_weight=0.7,
+        interior_spawn_weight=0.3,
+        zombie_dog_ratio=1.0,
+        zombie_normal_ratio=0.0,
+        zombie_tracker_ratio=0.0,
+        zombie_wall_hugging_ratio=0.0,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 
