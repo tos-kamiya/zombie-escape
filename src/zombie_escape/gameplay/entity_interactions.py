@@ -479,7 +479,12 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         collisions = pygame.sprite.spritecollide(
             shrunk_player, zombie_group, False, collide_circle_custom
         )
-        if any(not zombie.carbonized for zombie in collisions):
+        now = pygame.time.get_ticks()
+        if any(
+            (not zombie.carbonized)
+            and now >= getattr(zombie, "patrol_paralyze_until_ms", 0)
+            for zombie in collisions
+        ):
             if not state.game_over:
                 state.game_over = True
                 state.game_over_at = pygame.time.get_ticks()

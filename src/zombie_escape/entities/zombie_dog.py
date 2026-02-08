@@ -289,15 +289,13 @@ class ZombieDog(pygame.sprite.Sprite):
             self.image = base_surface
             return
         blink_on = (now_ms // PATROL_BOT_PARALYZE_BLINK_MS) % 2 == 0
-        if not blink_on:
-            self.image = base_surface
-            return
         image = base_surface.copy()
-        p = self.image.get_rect().topleft
-        p = (
-            p[0] + int(self.radius),
-            p[1] + int(self.radius),
-        )
+        center = image.get_rect().center
+        offset = int(self.short_axis * 0.4)
+        if blink_on:
+            p = (center[0] - offset, center[1] + offset)
+        else:
+            p = (center[0] + offset, center[1] - offset)
         marker_size = max(6, int(self.short_axis * 0.8))
         draw_lightning_marker(
             image,
