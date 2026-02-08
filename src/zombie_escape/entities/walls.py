@@ -32,6 +32,21 @@ from .movement import (
     _rect_polygon_collision,
 )
 
+_WALL_INDEX_DIRTY = False
+
+
+def _mark_wall_index_dirty() -> None:
+    global _WALL_INDEX_DIRTY
+    _WALL_INDEX_DIRTY = True
+
+
+def consume_wall_index_dirty() -> bool:
+    global _WALL_INDEX_DIRTY
+    if not _WALL_INDEX_DIRTY:
+        return False
+    _WALL_INDEX_DIRTY = False
+    return True
+
 
 class Wall(pygame.sprite.Sprite):
     def __init__(
@@ -83,6 +98,7 @@ class Wall(pygame.sprite.Sprite):
                         self.on_destroy(self)
                     except Exception as exc:
                         print(f"Wall destroy callback failed: {exc}")
+                _mark_wall_index_dirty()
                 self.kill()
 
     def _update_color(self: Self) -> None:
@@ -221,6 +237,7 @@ class SteelBeam(pygame.sprite.Sprite):
             self.health -= amount
             self._update_color()
             if self.health <= 0:
+                _mark_wall_index_dirty()
                 self.kill()
 
     def _update_color(self: Self) -> None:

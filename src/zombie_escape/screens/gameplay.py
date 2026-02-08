@@ -55,6 +55,7 @@ from ..input_utils import (
 )
 from ..gameplay.spawn import _alive_waiting_cars
 from ..world_grid import build_wall_index
+from ..entities.walls import consume_wall_index_dirty
 from ..localization import get_font_settings, translate as tr
 from ..models import Stage
 from ..render import (
@@ -465,6 +466,8 @@ def gameplay_screen(
         game_data.state.time_accel_active = accel_active
         substeps = SURVIVAL_TIME_ACCEL_SUBSTEPS if accel_active else 1
         sub_dt = min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
+        if consume_wall_index_dirty():
+            game_data.wall_index_dirty = True
         if game_data.wall_index is None or game_data.wall_index_dirty:
             game_data.wall_index = build_wall_index(
                 game_data.groups.wall_group, cell_size=game_data.cell_size

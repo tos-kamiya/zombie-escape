@@ -172,7 +172,7 @@ class Survivor(pygame.sprite.Sprite):
 
             def _on_buddy_wall_hit(hit_wall: Wall) -> None:
                 nonlocal inner_wall_hit
-                if not isinstance(hit_wall, Wall):
+                if not hasattr(hit_wall, "_take_damage"):
                     return
                 if hit_wall.alive():
                     dx_to_player = player_pos[0] - self.x

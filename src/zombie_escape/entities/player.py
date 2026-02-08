@@ -109,18 +109,18 @@ class Player(pygame.sprite.Sprite):
 
         def _on_player_wall_hit(hit_wall: Wall | None) -> None:
             nonlocal inner_wall_hit, inner_wall_cell
-            if hit_wall is None or not isinstance(hit_wall, Wall):
+            if hit_wall is None or not hasattr(hit_wall, "_take_damage"):
                 return
             damage = max(1, PLAYER_WALL_DAMAGE)
             if hit_wall.alive():
                 hit_wall._take_damage(amount=damage)
-                if _is_inner_wall(hit_wall):
-                    inner_wall_hit = True
-                    if inner_wall_cell is None and cell_size:
-                        inner_wall_cell = (
-                            int(hit_wall.rect.centerx // cell_size),
-                            int(hit_wall.rect.centery // cell_size),
-                        )
+            if _is_inner_wall(hit_wall):
+                inner_wall_hit = True
+                if inner_wall_cell is None and cell_size:
+                    inner_wall_cell = (
+                        int(hit_wall.rect.centerx // cell_size),
+                        int(hit_wall.rect.centery // cell_size),
+                    )
 
         def _collide_player() -> Wall | None:
             hit_wall = spritecollideany_walls(
