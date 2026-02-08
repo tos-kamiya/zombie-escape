@@ -40,14 +40,16 @@ from ..render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR
 from ..rng import get_rng
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from ..world_grid import apply_cell_edge_nudge
-from .patrol_paralyze import draw_paralyze_marker, update_paralyze_from_patrol_contact
-from .movement import (
-    _circle_wall_collision,
+from .patrol_paralyze import draw_paralyze_marker
+from .movement import _circle_wall_collision
+from .zombie_movement import (
     _zombie_normal_movement,
     _zombie_tracker_movement,
     _zombie_wall_hug_movement,
 )
 from .walls import Wall
+from .zombie_visuals import build_grayscale_image
+from .zombie_vitals import ZombieVitals
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from .patrol_bot import PatrolBot
@@ -57,7 +59,7 @@ RNG = get_rng()
 MovementStrategy = Callable[
     [
         "Zombie",
-        tuple[int, int],
+        tuple[float, float],
         list[Wall],
         Iterable["Zombie"],
         list[Footprint],
@@ -83,7 +85,6 @@ class Zombie(pygame.sprite.Sprite):
         self.radius = ZOMBIE_RADIUS
         self.facing_bin = 0
         self.kind = kind
-        self.carbonized = False
         self.directional_images = build_zombie_directional_surfaces(
             self.radius,
             draw_hands=False,
@@ -98,12 +99,15 @@ class Zombie(pygame.sprite.Sprite):
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
         self.was_in_sight = False
-        self.max_health = 100
-        self.health = self.max_health
-        self.decay_carry = 0.0
-        self.decay_duration_frames = decay_duration_frames
-        self.last_damage_ms: int | None = None
-        self.last_damage_source: str | None = None
+        self.vitals = ZombieVitals(
+            max_health=100,
+            decay_duration_frames=decay_duration_frames,
+            decay_min_speed_ratio=ZOMBIE_DECAY_MIN_SPEED_RATIO,
+            carbonize_decay_frames=ZOMBIE_CARBONIZE_DECAY_FRAMES,
+            on_health_ratio=self._apply_speed_ratio,
+            on_kill=self.kill,
+            on_carbonize=self._apply_carbonize_visuals,
+        )
         if movement_strategy is None:
             if self.kind == ZombieKind.TRACKER:
                 movement_strategy = _zombie_tracker_movement
@@ -139,8 +143,44 @@ class Zombie(pygame.sprite.Sprite):
         )
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
-        self.patrol_damage_frame_counter = 0
-        self.patrol_paralyze_until_ms = 0
+
+    @property
+    def max_health(self: Self) -> int:
+        return self.vitals.max_health
+
+    @property
+    def health(self: Self) -> int:
+        return self.vitals.health
+
+    @property
+    def decay_duration_frames(self: Self) -> float:
+        return self.vitals.decay_duration_frames
+
+    @property
+    def carbonized(self: Self) -> bool:
+        return self.vitals.carbonized
+
+    @property
+    def last_damage_ms(self: Self) -> int | None:
+        return self.vitals.last_damage_ms
+
+    @property
+    def last_damage_source(self: Self) -> str | None:
+        return self.vitals.last_damage_source
+
+    @property
+    def patrol_paralyze_until_ms(self: Self) -> int:
+        return self.vitals.patrol_paralyze_until_ms
+
+    @property
+    def patrol_damage_frame_counter(self: Self) -> int:
+        return self.vitals.patrol_damage_frame_counter
+
+    def _apply_speed_ratio(self: Self, ratio: float) -> None:
+        self.speed = self.initial_speed * ratio
+
+    def _apply_carbonize_visuals(self: Self) -> None:
+        self.image = build_grayscale_image(self.image)
 
     def _update_mode(
         self: Self, player_center: tuple[float, float], sight_range: float
@@ -251,30 +291,12 @@ class Zombie(pygame.sprite.Sprite):
 
     def _apply_decay(self: Self) -> None:
         """Reduce zombie health over time and despawn when depleted."""
-        if self.decay_duration_frames <= 0:
-            return
-        self.decay_carry += self.max_health / self.decay_duration_frames
-        if self.decay_carry >= 1.0:
-            decay_amount = int(self.decay_carry)
-            self.decay_carry -= decay_amount
-            self.health -= decay_amount
-        health_ratio = 0.0 if self.max_health <= 0 else self.health / self.max_health
-        health_ratio = max(0.0, min(1.0, health_ratio))
-        speed_ratio = ZOMBIE_DECAY_MIN_SPEED_RATIO + (
-            1.0 - ZOMBIE_DECAY_MIN_SPEED_RATIO
-        ) * health_ratio
-        self.speed = self.initial_speed * speed_ratio
-        if self.health <= 0:
-            self.kill()
+        self.vitals.apply_decay()
 
     def take_damage(self: Self, amount: int, *, source: str | None = None) -> None:
         if amount <= 0 or not self.alive():
             return
-        self.last_damage_ms = pygame.time.get_ticks()
-        self.last_damage_source = source
-        self.health -= amount
-        if self.health <= 0:
-            self.kill()
+        self.vitals.take_damage(amount, source=source)
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
         if new_bin == self.facing_bin:
@@ -383,7 +405,7 @@ class Zombie(pygame.sprite.Sprite):
         cell_size: int,
         layout: LevelLayout,
     ) -> None:
-        if self.carbonized:
+        if self.vitals.carbonized:
             self._apply_decay()
             return
         now = pygame.time.get_ticks()
@@ -397,23 +419,16 @@ class Zombie(pygame.sprite.Sprite):
             for b in nearby_patrol_bots
             if abs(b.x - self.x) < 100 and abs(b.y - self.y) < 100
         ]
-        _, self.patrol_paralyze_until_ms, self.patrol_damage_frame_counter = (
-            update_paralyze_from_patrol_contact(
-                entity_center=(self.x, self.y),
-                entity_radius=self.radius,
-                patrol_bots=possible_bots,
-                now_ms=now,
-                paralyze_until_ms=self.patrol_paralyze_until_ms,
-                paralyze_duration_ms=PATROL_BOT_PARALYZE_MS,
-                damage_counter=self.patrol_damage_frame_counter,
-                damage_interval_frames=PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,
-                damage_amount=PATROL_BOT_ZOMBIE_DAMAGE,
-                apply_damage=lambda amount: self.take_damage(
-                    amount, source="patrol_bot"
-                ),
-            )
-        )
-        if now < self.patrol_paralyze_until_ms:
+        if self.vitals.update_patrol_paralyze(
+            entity_center=(self.x, self.y),
+            entity_radius=self.radius,
+            patrol_bots=possible_bots,
+            now_ms=now,
+            paralyze_duration_ms=PATROL_BOT_PARALYZE_MS,
+            damage_interval_frames=PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,
+            damage_amount=PATROL_BOT_ZOMBIE_DAMAGE,
+            apply_damage=lambda amount: self.take_damage(amount, source="patrol_bot"),
+        ):
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0
             self._apply_paralyze_overlay(now)
@@ -499,37 +514,15 @@ class Zombie(pygame.sprite.Sprite):
         self.y = final_y
         self.rect.center = (int(self.x), int(self.y))
         if bot_hit:
-            self.patrol_damage_frame_counter = (
-                self.patrol_damage_frame_counter + 1
+            self.vitals.patrol_damage_frame_counter = (
+                self.vitals.patrol_damage_frame_counter + 1
             ) % PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES
-            if self.patrol_damage_frame_counter == 0:
+            if self.vitals.patrol_damage_frame_counter == 0:
                 self.take_damage(PATROL_BOT_ZOMBIE_DAMAGE, source="patrol_bot")
-            self.patrol_paralyze_until_ms = max(
-                self.patrol_paralyze_until_ms,
+            self.vitals.patrol_paralyze_until_ms = max(
+                self.vitals.patrol_paralyze_until_ms,
                 now + PATROL_BOT_PARALYZE_MS,
             )
 
     def carbonize(self: Self) -> None:
-        if self.carbonized:
-            return
-        self.carbonized = True
-        self.speed = 0
-        if self.decay_duration_frames > 0:
-            remaining_ratio = min(
-                1.0, ZOMBIE_CARBONIZE_DECAY_FRAMES / self.decay_duration_frames
-            )
-            remaining_health = max(1, int(round(self.max_health * remaining_ratio)))
-            self.health = min(self.health, remaining_health)
-            self.decay_carry = 0.0
-        self.image = self.directional_images[self.facing_bin].copy()
-        self.image.fill((0, 0, 0, 0))
-        color = (80, 80, 80)
-        center = self.image.get_rect().center
-        pygame.draw.circle(self.image, color, center, self.radius)
-        pygame.draw.circle(
-            self.image,
-            (30, 30, 30),
-            center,
-            self.radius,
-            width=1,
-        )
+        self.vitals.carbonize()
