@@ -22,7 +22,11 @@ from ..entities_constants import (
     SHOES_WIDTH,
     SURVIVOR_MAX_SAFE_PASSENGERS,
 )
-from .constants import FUEL_HINT_DURATION_MS, SURVIVOR_OVERLOAD_DAMAGE_RATIO
+from .constants import (
+    FUEL_HINT_DURATION_MS,
+    LAYER_PLAYERS,
+    SURVIVOR_OVERLOAD_DAMAGE_RATIO,
+)
 from ..colors import BLUE, YELLOW
 from ..localization import translate as tr
 from ..models import GameData
@@ -457,7 +461,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             player.x, player.y = car_destroyed_pos[0], car_destroyed_pos[1]
             player.rect.center = (int(player.x), int(player.y))
             if player not in all_sprites:
-                all_sprites.add(player, layer=2)
+                all_sprites.add(player, layer=LAYER_PLAYERS)
             print("Car destroyed! Player ejected.")
 
         # Clear active car and let the player hunt for another waiting car.

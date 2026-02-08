@@ -34,6 +34,9 @@ from .constants import (
     FALLING_ZOMBIE_DUST_DURATION_MS,
     FALLING_ZOMBIE_DURATION_MS,
     FALLING_ZOMBIE_PRE_FX_MS,
+    LAYER_PLAYERS,
+    LAYER_VEHICLES,
+    LAYER_ZOMBIES,
     MAX_ZOMBIES,
     ZOMBIE_SPAWN_PLAYER_BUFFER,
     ZOMBIE_TRACKER_DECAY_DURATION_FRAMES,
@@ -669,7 +672,7 @@ def spawn_survivors(
             if spritecollideany_walls(survivor, wall_group):
                 continue
             survivor_group.add(survivor)
-            all_sprites.add(survivor, layer=1)
+            all_sprites.add(survivor, layer=LAYER_PLAYERS)
             survivors.append(survivor)
 
     if game_data.stage.buddy_required_count > 0:
@@ -687,7 +690,7 @@ def spawn_survivors(
             if spritecollideany_walls(buddy, wall_group):
                 continue
             survivor_group.add(buddy)
-            all_sprites.add(buddy, layer=2)
+            all_sprites.add(buddy, layer=LAYER_PLAYERS)
             survivors.append(buddy)
 
     return survivors
@@ -737,11 +740,11 @@ def setup_player_and_cars(
         car_pos = _pick_car_position()
         car = Car(*car_pos, appearance=car_appearance)
         waiting_cars.append(car)
-        all_sprites.add(car, layer=1)
+        all_sprites.add(car, layer=LAYER_VEHICLES)
         if not car_candidates:
             break
 
-    all_sprites.add(player, layer=2)
+    all_sprites.add(player, layer=LAYER_PLAYERS)
     return player, waiting_cars
 
 
@@ -786,7 +789,7 @@ def spawn_initial_zombies(
         )
         if not spritecollideany_walls(tentative, wall_group):
             zombie_group.add(tentative)
-            all_sprites.add(tentative, layer=1)
+            all_sprites.add(tentative, layer=LAYER_ZOMBIES)
         interval = max(1, game_data.stage.spawn_interval_ms)
         game_data.state.last_zombie_spawn_time = pygame.time.get_ticks() - interval
         return
@@ -813,7 +816,7 @@ def spawn_initial_zombies(
         if spritecollideany_walls(tentative, wall_group):
             continue
         zombie_group.add(tentative)
-        all_sprites.add(tentative, layer=1)
+        all_sprites.add(tentative, layer=LAYER_ZOMBIES)
 
     interval = max(1, game_data.stage.spawn_interval_ms)
     game_data.state.last_zombie_spawn_time = pygame.time.get_ticks() - interval
@@ -851,7 +854,7 @@ def spawn_initial_patrol_bots(
         if not _is_patrol_spawn_position_clear(game_data, bot):
             continue
         patrol_group.add(bot)
-        all_sprites.add(bot, layer=0)
+        all_sprites.add(bot, layer=LAYER_VEHICLES)
 
 
 def spawn_waiting_car(game_data: GameData) -> Car | None:
@@ -890,7 +893,7 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
             offscreen_attempts -= 1
             continue
         game_data.waiting_cars.append(new_car)
-        all_sprites.add(new_car, layer=1)
+        all_sprites.add(new_car, layer=LAYER_VEHICLES)
         return new_car
     return None
 
@@ -967,7 +970,7 @@ def _spawn_nearby_zombie(
     if spritecollideany_walls(new_zombie, wall_group):
         return None
     zombie_group.add(new_zombie)
-    all_sprites.add(new_zombie, layer=1)
+    all_sprites.add(new_zombie, layer=LAYER_ZOMBIES)
     return new_zombie
 
 
@@ -993,7 +996,7 @@ def spawn_exterior_zombie(
         stage=game_data.stage,
     )
     zombie_group.add(new_zombie)
-    all_sprites.add(new_zombie, layer=1)
+    all_sprites.add(new_zombie, layer=LAYER_ZOMBIES)
     return new_zombie
 
 
@@ -1031,7 +1034,7 @@ def update_falling_zombies(game_data: GameData, config: dict[str, Any]) -> None:
                     variant=getattr(fall, "variant", None),
                 )
                 zombie_group.add(candidate)
-                all_sprites.add(candidate, layer=1)
+                all_sprites.add(candidate, layer=LAYER_ZOMBIES)
 
         state.falling_zombies.remove(fall)
 

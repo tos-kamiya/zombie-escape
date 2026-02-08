@@ -16,15 +16,19 @@ from ..entities import (
     Flashlight,
     FuelCan,
     Player,
+    PatrolBot,
     Shoes,
     SteelBeam,
     Survivor,
     Wall,
+    Zombie,
+    ZombieDog,
 )
 from ..font_utils import load_font, render_text_surface
 from ..localization import get_font_settings
 from ..models import Footprint, GameData
 from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
+from ..entities_constants import PATROL_BOT_RADIUS
 from .hud import _get_fog_scale
 
 
@@ -86,6 +90,8 @@ def draw_level_overview(
     shoes: list[Shoes] | None = None,
     buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
+    patrol_bots: list[PatrolBot] | None = None,
+    zombies: list[pygame.sprite.Sprite] | None = None,
     fall_spawn_cells: set[tuple[int, int]] | None = None,
     palette_key: str | None = None,
 ) -> None:
@@ -204,6 +210,28 @@ def draw_level_overview(
                 continue
             parked_rect = parked.image.get_rect(center=parked.rect.center)
             surface.blit(parked.image, parked_rect)
+    if patrol_bots:
+        for bot in patrol_bots:
+            if bot.alive():
+                pygame.draw.circle(
+                    surface,
+                    (90, 45, 120),
+                    bot.rect.center,
+                    int(PATROL_BOT_RADIUS),
+                )
+    if zombies:
+        zombie_color = (200, 80, 80)
+        zombie_radius = max(2, int(assets.player_radius * 1.2))
+        for zombie in zombies:
+            if not zombie.alive():
+                continue
+            if isinstance(zombie, (Zombie, ZombieDog)):
+                pygame.draw.circle(
+                    surface,
+                    zombie_color,
+                    zombie.rect.center,
+                    zombie_radius,
+                )
 
 
 def draw_debug_overview(
@@ -246,19 +274,11 @@ def draw_debug_overview(
             if survivor.alive() and survivor.is_buddy and not survivor.rescued
         ],
         survivors=list(game_data.groups.survivor_group),
+        patrol_bots=list(game_data.groups.patrol_bot_group),
+        zombies=list(game_data.groups.zombie_group),
         fall_spawn_cells=game_data.layout.fall_spawn_cells,
         palette_key=game_data.state.ambient_palette_key,
     )
-    zombie_color = (200, 80, 80)
-    zombie_radius = max(2, int(assets.player_radius * 1.2))
-    for zombie in game_data.groups.zombie_group:
-        if zombie.alive():
-            pygame.draw.circle(
-                overview_surface,
-                zombie_color,
-                zombie.rect.center,
-                zombie_radius,
-            )
     fov_target = None
     if (
         game_data.player

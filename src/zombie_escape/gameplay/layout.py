@@ -13,7 +13,7 @@ from ..entities_constants import (
     STEEL_BEAM_HEALTH,
 )
 from ..render_assets import RUBBLE_ROTATION_DEG
-from .constants import OUTER_WALL_HEALTH
+from .constants import LAYER_WALLS, OUTER_WALL_HEALTH
 from ..level_blueprints import MapGenerationError, choose_blueprint
 from ..models import GameData
 from ..rng import get_rng
@@ -122,7 +122,7 @@ def generate_level_from_blueprint(
         if beam._added_to_groups:
             return
         wall_group.add(beam)
-        all_sprites.add(beam, layer=0)
+        all_sprites.add(beam, layer=LAYER_WALLS)
         beam._added_to_groups = True
         _invalidate_wall_index()
 
@@ -161,7 +161,7 @@ def generate_level_from_blueprint(
                     on_destroy=(lambda _w, cell=wall_cell: remove_wall_cell(cell)),
                 )
                 wall_group.add(wall)
-                all_sprites.add(wall, layer=0)
+                all_sprites.add(wall, layer=LAYER_WALLS)
                 continue
             if ch == "x":
                 pitfall_cells.add((x, y))
@@ -248,7 +248,7 @@ def generate_level_from_blueprint(
                         ),
                     )
                 wall_group.add(wall)
-                all_sprites.add(wall, layer=0)
+                all_sprites.add(wall, layer=LAYER_WALLS)
             else:
                 if not cell_has_beam:
                     walkable_cells.append((x, y))

@@ -628,7 +628,6 @@ def _build_patrol_bot_arrow_surface(size: int) -> pygame.Surface:
         (tip_x - arrow_height, center_y + half_width),
     ]
     pygame.draw.polygon(surface, PATROL_BOT_ARROW_COLOR, points)
-    pygame.draw.polygon(surface, PATROL_BOT_OUTLINE_COLOR, points, width=1)
     return surface
 
 

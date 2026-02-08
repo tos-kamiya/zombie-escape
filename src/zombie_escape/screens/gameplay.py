@@ -38,7 +38,10 @@ from ..gameplay import (
     update_endurance_timer,
 )
 from ..gameplay.state import frames_to_ms, ms_to_frames
-from ..gameplay.constants import INTRO_MESSAGE_DISPLAY_FRAMES
+from ..gameplay.constants import (
+    INTRO_MESSAGE_DISPLAY_FRAMES,
+    LAYER_ITEMS,
+)
 from ..input_utils import (
     CONTROLLER_BUTTON_DOWN,
     CONTROLLER_DEVICE_ADDED,
@@ -252,7 +255,7 @@ def gameplay_screen(
         )
         if fuel_can:
             game_data.fuel = fuel_can
-            game_data.groups.all_sprites.add(fuel_can, layer=1)
+            game_data.groups.all_sprites.add(fuel_can, layer=LAYER_ITEMS)
             occupied_centers.add(fuel_can.rect.center)
     flashlight_count = stage.initial_flashlight_count
     flashlights = place_flashlights(
@@ -264,7 +267,7 @@ def gameplay_screen(
         count=max(0, flashlight_count),
     )
     game_data.flashlights = flashlights
-    game_data.groups.all_sprites.add(flashlights, layer=1)
+    game_data.groups.all_sprites.add(flashlights, layer=LAYER_ITEMS)
     for flashlight in flashlights:
         occupied_centers.add(flashlight.rect.center)
 
@@ -278,7 +281,7 @@ def gameplay_screen(
         count=max(0, shoes_count),
     )
     game_data.shoes = shoes_list
-    game_data.groups.all_sprites.add(shoes_list, layer=1)
+    game_data.groups.all_sprites.add(shoes_list, layer=LAYER_ITEMS)
 
     spawn_initial_zombies(game_data, player, layout_data, config)
     spawn_initial_patrol_bots(game_data, player, layout_data)

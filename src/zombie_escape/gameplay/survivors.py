@@ -17,6 +17,8 @@ from ..entities_constants import (
     ZOMBIE_RADIUS,
 )
 from .constants import (
+    LAYER_PLAYERS,
+    LAYER_ZOMBIES,
     SURVIVOR_MESSAGE_DURATION_MS,
     SURVIVOR_SPEED_PENALTY_PER_PASSENGER,
 )
@@ -280,13 +282,13 @@ def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> Non
             s = Survivor(*pos)
             if not spritecollideany_walls(s, wall_group):
                 survivor_group.add(s)
-                all_sprites.add(s, layer=1)
+                all_sprites.add(s, layer=LAYER_PLAYERS)
                 placed = True
                 break
         if not placed:
             s = Survivor(*origin)
             survivor_group.add(s)
-            all_sprites.add(s, layer=1)
+            all_sprites.add(s, layer=LAYER_PLAYERS)
 
     game_data.state.survivors_onboard = 0
     apply_passenger_speed_penalty(game_data)
@@ -368,7 +370,7 @@ def handle_survivor_zombie_collisions(
             wall_hugging=collided_zombie.wall_hugging,
         )
         zombie_group.add(new_zombie)
-        game_data.groups.all_sprites.add(new_zombie, layer=1)
+        game_data.groups.all_sprites.add(new_zombie, layer=LAYER_ZOMBIES)
         insert_idx = bisect_left(zombie_xs, new_zombie.rect.centerx)
         zombie_xs.insert(insert_idx, new_zombie.rect.centerx)
         zombies.insert(insert_idx, new_zombie)
@@ -412,6 +414,6 @@ def respawn_buddies_near_player(game_data: GameData) -> None:
 
         buddy = Survivor(*spawn_pos, is_buddy=True)
         buddy.following = True
-        game_data.groups.all_sprites.add(buddy, layer=2)
+        game_data.groups.all_sprites.add(buddy, layer=LAYER_PLAYERS)
         game_data.groups.survivor_group.add(buddy)
     game_data.state.buddy_onboard = 0

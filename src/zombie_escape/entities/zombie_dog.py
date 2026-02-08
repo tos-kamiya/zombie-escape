@@ -283,6 +283,7 @@ class ZombieDog(pygame.sprite.Sprite):
         player_center: tuple[int, int],
         walls: list[Wall],
         nearby_zombies: list[pygame.sprite.Sprite],
+        nearby_patrol_bots: list[pygame.sprite.Sprite] | None = None,
         footprints: list | None = None,
         *,
         cell_size: int,
@@ -294,7 +295,7 @@ class ZombieDog(pygame.sprite.Sprite):
         self._apply_decay()
         if not self.alive():
             return
-        _ = nearby_zombies, footprints
+        _ = nearby_zombies, nearby_patrol_bots, footprints
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
 

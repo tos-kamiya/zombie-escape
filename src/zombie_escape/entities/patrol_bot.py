@@ -86,6 +86,38 @@ class PatrolBot(pygame.sprite.Sprite):
                     break
         return final_x, final_y, hit
 
+    def _resolve_circle_from_wall(
+        self: Self,
+        cx: float,
+        cy: float,
+        radius: float,
+        wall: Wall,
+    ) -> tuple[float, float]:
+        rect = wall.rect
+        closest_x = min(max(cx, rect.left), rect.right)
+        closest_y = min(max(cy, rect.top), rect.bottom)
+        dx = cx - closest_x
+        dy = cy - closest_y
+        dist_sq = dx * dx + dy * dy
+        if dist_sq > 0:
+            dist = dist_sq**0.5
+            if dist >= radius:
+                return cx, cy
+            push = radius - dist
+            return cx + (dx / dist) * push, cy + (dy / dist) * push
+        left_pen = cx - rect.left
+        right_pen = rect.right - cx
+        top_pen = cy - rect.top
+        bottom_pen = rect.bottom - cy
+        min_pen = min(left_pen, right_pen, top_pen, bottom_pen)
+        if min_pen == left_pen:
+            return rect.left - radius, cy
+        if min_pen == right_pen:
+            return rect.right + radius, cy
+        if min_pen == top_pen:
+            return cx, rect.top - radius
+        return cx, rect.bottom + radius
+
     def update(
         self: Self,
         walls: list[Wall],
@@ -259,6 +291,26 @@ class PatrolBot(pygame.sprite.Sprite):
             final_y = self.y - float(self.direction[1]) * backoff
             final_x = min(layout.field_rect.width, max(0.0, final_x))
             final_y = min(layout.field_rect.height, max(0.0, final_y))
+            if hit_wall:
+                for _ in range(4):
+                    moved = False
+                    for wall in walls:
+                        if not _circle_wall_collision(
+                            (final_x, final_y), collision_radius, wall
+                        ):
+                            continue
+                        final_x, final_y = self._resolve_circle_from_wall(
+                            final_x, final_y, collision_radius, wall
+                        )
+                        final_x = min(
+                            layout.field_rect.width, max(0.0, final_x)
+                        )
+                        final_y = min(
+                            layout.field_rect.height, max(0.0, final_y)
+                        )
+                        moved = True
+                    if not moved:
+                        break
 
             # If we hit the outer boundary, reverse direction.
             if hit_outer:

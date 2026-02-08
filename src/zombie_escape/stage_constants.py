@@ -468,11 +468,9 @@ STAGES: list[Stage] = [
         wall_algorithm="default.10%",
         initial_interior_spawn_rate=0.0,
         patrol_bot_spawn_rate=0.08,
-        zombie_normal_ratio=0.0,
+        zombie_normal_ratio=1.0,
         zombie_tracker_ratio=0.0,
         zombie_wall_hugging_ratio=0.0,
-        zombie_dog_ratio=0.0,
-        survivor_rescue_stage=True,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

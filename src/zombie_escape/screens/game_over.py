@@ -87,6 +87,8 @@ def game_over_screen(
                     if survivor.alive() and survivor.is_buddy and not survivor.rescued
                 ],
                 survivors=list(game_data.groups.survivor_group),
+                patrol_bots=list(game_data.groups.patrol_bot_group),
+                zombies=list(game_data.groups.zombie_group),
                 fall_spawn_cells=game_data.layout.fall_spawn_cells,
                 palette_key=state.ambient_palette_key,
             )

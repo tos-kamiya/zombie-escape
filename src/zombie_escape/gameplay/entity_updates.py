@@ -31,9 +31,8 @@ from ..gameplay_constants import (
 from ..models import FallingZombie, GameData
 from ..rng import get_rng
 from ..entities.movement_helpers import pitfall_target
-from ..entities.movement import _circle_wall_collision
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
-from .constants import MAX_ZOMBIES
+from .constants import LAYER_PLAYERS, MAX_ZOMBIES
 from .decay_effects import DecayingEntityEffect, update_decay_effects
 from .spawn import spawn_weighted_zombie, update_falling_zombies
 from .spatial_index import SpatialKind
@@ -170,7 +169,7 @@ def update_entities(
     elif not player.in_car:
         # Ensure player is in all_sprites if not in car
         if player not in all_sprites:
-            all_sprites.add(player, layer=2)
+            all_sprites.add(player, layer=LAYER_PLAYERS)
         player_dx, player_dy = apply_cell_edge_nudge(
             player.x,
             player.y,
@@ -423,10 +422,4 @@ def update_entities(
             layout=game_data.layout,
         )
 
-    def _entity_radius(entity: pygame.sprite.Sprite) -> float:
-        radius = getattr(entity, "body_radius", None)
-        if radius is None:
-            radius = getattr(entity, "radius", None)
-        if radius is None:
-            radius = max(entity.rect.width, entity.rect.height) / 2
-        return float(radius)
+    update_decay_effects(game_data.state.decay_effects, frames=1)
