@@ -24,6 +24,7 @@ from ..entities_constants import (
     ZOMBIE_DOG_SHORT_AXIS_RATIO,
     ZOMBIE_DOG_SIGHT_RANGE,
     ZOMBIE_DOG_WANDER_INTERVAL_MS,
+    PATROL_BOT_PARALYZE_MS,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
 )
@@ -82,6 +83,7 @@ class ZombieDog(pygame.sprite.Sprite):
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
         self.bite_frame_counter = 0
+        self.patrol_paralyze_until_ms = 0
         self.max_health = 100
         self.health = self.max_health
         self.decay_carry = 0.0
@@ -295,7 +297,31 @@ class ZombieDog(pygame.sprite.Sprite):
         self._apply_decay()
         if not self.alive():
             return
-        _ = nearby_zombies, nearby_patrol_bots, footprints
+        _ = nearby_zombies, footprints
+        bot_hit_now = False
+        if nearby_patrol_bots:
+            possible_bots = [
+                b
+                for b in nearby_patrol_bots
+                if abs(b.x - self.x) < 100 and abs(b.y - self.y) < 100
+            ]
+            for bot in possible_bots:
+                dx = self.x - bot.x
+                dy = self.y - bot.y
+                hit_range = self.body_radius + bot.radius
+                if dx * dx + dy * dy <= hit_range * hit_range:
+                    bot_hit_now = True
+                    break
+        now = pygame.time.get_ticks()
+        if bot_hit_now:
+            self.patrol_paralyze_until_ms = max(
+                self.patrol_paralyze_until_ms,
+                now + PATROL_BOT_PARALYZE_MS,
+            )
+        if now < self.patrol_paralyze_until_ms:
+            self.last_move_dx = 0.0
+            self.last_move_dy = 0.0
+            return
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
 
