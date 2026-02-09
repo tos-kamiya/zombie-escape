@@ -16,9 +16,8 @@ from ..entities import (
 )
 from ..entities_constants import (
     HUMANOID_WALL_BUMP_FRAMES,
-    MOVING_FLOOR_CAR_OPPOSED_FACTOR,
+    MOVING_FLOOR_SPEED,
     PLAYER_SPEED,
-    MovingFloorDirection,
     ZombieKind,
     ZOMBIE_DOG_PACK_CHASE_RANGE,
     ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE,
@@ -35,11 +34,7 @@ from ..models import FallingZombie, GameData
 from ..rng import get_rng
 from ..entities.movement_helpers import pitfall_target
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
-from .moving_floor import (
-    apply_moving_floor,
-    get_moving_floor_direction,
-    is_entity_on_moving_floor,
-)
+from .moving_floor import get_moving_floor_drift, is_entity_on_moving_floor
 from .constants import LAYER_PLAYERS, MAX_ZOMBIES
 from .decay_effects import DecayingEntityEffect, update_decay_effects
 from .spawn import spawn_weighted_zombie, update_falling_zombies
@@ -147,29 +142,14 @@ def update_entities(
     # Update player/car movement
     if player.in_car and active_car:
         player.on_moving_floor = False
-        floor_dir = get_moving_floor_direction(
-            active_car,
+        floor_dx, floor_dy = get_moving_floor_drift(
+            active_car.rect,
             game_data.layout,
             cell_size=game_data.cell_size,
+            speed=MOVING_FLOOR_SPEED,
         )
-        if floor_dir is not None:
-            oppose_factor = MOVING_FLOOR_CAR_OPPOSED_FACTOR
-            if floor_dir == MovingFloorDirection.UP:
-                car_dx *= oppose_factor
-                if car_dy > 0:
-                    car_dy *= oppose_factor
-            elif floor_dir == MovingFloorDirection.DOWN:
-                car_dx *= oppose_factor
-                if car_dy < 0:
-                    car_dy *= oppose_factor
-            elif floor_dir == MovingFloorDirection.LEFT:
-                car_dy *= oppose_factor
-                if car_dx > 0:
-                    car_dx *= oppose_factor
-            elif floor_dir == MovingFloorDirection.RIGHT:
-                car_dy *= oppose_factor
-                if car_dx < 0:
-                    car_dx *= oppose_factor
+        car_dx += floor_dx
+        car_dy += floor_dy
         car_dx, car_dy = apply_cell_edge_nudge(
             active_car.x,
             active_car.y,
@@ -202,28 +182,32 @@ def update_entities(
         # Ensure player is in all_sprites if not in car
         if player not in all_sprites:
             all_sprites.add(player, layer=LAYER_PLAYERS)
-        if not apply_moving_floor(
-            player,
+        floor_dx, floor_dy = get_moving_floor_drift(
+            player.rect,
             game_data.layout,
             cell_size=game_data.cell_size,
-        ):
-            player_dx, player_dy = apply_cell_edge_nudge(
-                player.x,
-                player.y,
-                player_dx,
-                player_dy,
-                layout=game_data.layout,
-                cell_size=game_data.cell_size,
-            )
-            player.move(
-                player_dx,
-                player_dy,
-                wall_group,
-                patrol_bot_group=patrol_bot_group,
-                wall_index=wall_index,
-                cell_size=game_data.cell_size,
-                layout=game_data.layout,
-            )
+            speed=MOVING_FLOOR_SPEED,
+        )
+        player_dx += floor_dx
+        player_dy += floor_dy
+        player.on_moving_floor = abs(floor_dx) > 0.0 or abs(floor_dy) > 0.0
+        player_dx, player_dy = apply_cell_edge_nudge(
+            player.x,
+            player.y,
+            player_dx,
+            player_dy,
+            layout=game_data.layout,
+            cell_size=game_data.cell_size,
+        )
+        player.move(
+            player_dx,
+            player_dy,
+            wall_group,
+            patrol_bot_group=patrol_bot_group,
+            wall_index=wall_index,
+            cell_size=game_data.cell_size,
+            layout=game_data.layout,
+        )
     else:
         # Player flagged as in-car but car is gone; drop them back to foot control
         player.in_car = False
@@ -332,16 +316,17 @@ def update_entities(
         target = target_center
         if getattr(zombie, "carbonized", False):
             zombie.on_moving_floor = False
-        if not getattr(zombie, "carbonized", False) and apply_moving_floor(
-            zombie,
+        floor_dx, floor_dy = get_moving_floor_drift(
+            zombie.rect,
             game_data.layout,
             cell_size=game_data.cell_size,
-        ):
-            if hasattr(zombie, "_apply_decay"):
-                zombie._apply_decay()
-                if not zombie.alive():
-                    continue
-            continue
+            speed=MOVING_FLOOR_SPEED,
+        )
+        zombie.on_moving_floor = abs(floor_dx) > 0.0 or abs(floor_dy) > 0.0
+        if zombie.on_moving_floor and hasattr(zombie, "_apply_decay"):
+            zombie._apply_decay()
+            if not zombie.alive():
+                continue
         if isinstance(zombie, ZombieDog):
             target = player.rect.center
             closest_survivor: Survivor | None = None
@@ -413,6 +398,8 @@ def update_entities(
             footprints=game_data.state.footprints,
             cell_size=game_data.cell_size,
             layout=game_data.layout,
+            drift_x=floor_dx,
+            drift_y=floor_dy,
         )
         if not zombie.alive():
             last_damage_ms = getattr(zombie, "last_damage_ms", None)
@@ -467,12 +454,13 @@ def update_entities(
     for bot in patrol_bots_sorted:
         if not bot.alive():
             continue
-        if apply_moving_floor(
-            bot,
+        floor_dx, floor_dy = get_moving_floor_drift(
+            bot.rect,
             game_data.layout,
             cell_size=game_data.cell_size,
-        ):
-            continue
+            speed=MOVING_FLOOR_SPEED,
+        )
+        bot.on_moving_floor = abs(floor_dx) > 0.0 or abs(floor_dy) > 0.0
         bot_search_radius = bot.radius + 120
         nearby_walls = _walls_near((bot.x, bot.y), bot_search_radius)
         bot.update(
@@ -488,6 +476,8 @@ def update_entities(
             cell_size=game_data.cell_size,
             pitfall_cells=pitfall_cells,
             layout=game_data.layout,
+            drift_x=floor_dx,
+            drift_y=floor_dy,
         )
 
     update_decay_effects(game_data.state.decay_effects, frames=1)

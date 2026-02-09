@@ -81,87 +81,78 @@ def _floor_tile_for_entity(
     return direction, tile_rect
 
 
+def get_overlapping_moving_floor_direction(
+    rect: pygame.Rect,
+    layout: LevelLayout,
+    *,
+    cell_size: int,
+) -> MovingFloorDirection | None:
+    """Return moving-floor direction for any tile overlapping the rect."""
+    if cell_size <= 0 or not layout.moving_floor_cells:
+        return None
+    center_x = int(rect.centerx // cell_size)
+    center_y = int(rect.centery // cell_size)
+    direction = layout.moving_floor_cells.get((center_x, center_y))
+    if direction is not None:
+        return direction
+
+    min_x = max(0, int(rect.left // cell_size))
+    max_x = max(0, int((rect.right - 1) // cell_size))
+    min_y = max(0, int(rect.top // cell_size))
+    max_y = max(0, int((rect.bottom - 1) // cell_size))
+    for y in range(min_y, max_y + 1):
+        for x in range(min_x, max_x + 1):
+            direction = layout.moving_floor_cells.get((x, y))
+            if direction is not None:
+                return direction
+    return None
+
+
+def get_moving_floor_drift(
+    rect: pygame.Rect,
+    layout: LevelLayout,
+    *,
+    cell_size: int,
+    speed: float = MOVING_FLOOR_SPEED,
+) -> tuple[float, float]:
+    """Return the drift vector for any moving floor overlapping the rect."""
+    direction = get_overlapping_moving_floor_direction(
+        rect,
+        layout,
+        cell_size=cell_size,
+    )
+    if direction is None:
+        return 0.0, 0.0
+    if direction == MovingFloorDirection.UP:
+        return 0.0, -speed
+    if direction == MovingFloorDirection.DOWN:
+        return 0.0, speed
+    if direction == MovingFloorDirection.LEFT:
+        return -speed, 0.0
+    if direction == MovingFloorDirection.RIGHT:
+        return speed, 0.0
+    return 0.0, 0.0
+
+
 def apply_moving_floor(
     entity: _MovingFloorEntity,
     layout: LevelLayout,
     *,
     cell_size: int,
     speed: float = MOVING_FLOOR_SPEED,
+    drift_factor: float = 1.0,
 ) -> bool:
-    info = _floor_tile_for_entity(entity, layout, cell_size=cell_size)
-    if info is None:
-        setattr(entity, "on_moving_floor", False)
-        return False
-    direction, tile_rect = info
-
-    radius = getattr(entity, "radius", None)
-    if radius is None:
-        radius = max(entity.rect.width, entity.rect.height) / 2
-    min_x = tile_rect.left + radius
-    max_x = tile_rect.right - radius
-    min_y = tile_rect.top + radius
-    max_y = tile_rect.bottom - radius
-
-    dx = 0.0
-    dy = 0.0
-    if direction == MovingFloorDirection.UP:
-        dy = -speed
-        floor_dir = (0, -1)
-    elif direction == MovingFloorDirection.DOWN:
-        dy = speed
-        floor_dir = (0, 1)
-    elif direction == MovingFloorDirection.LEFT:
-        dx = -speed
-        floor_dir = (-1, 0)
-    elif direction == MovingFloorDirection.RIGHT:
-        dx = speed
-        floor_dir = (1, 0)
-    else:
-        floor_dir = (0, 0)
-
-    if hasattr(entity, "direction"):
-        entity.direction = floor_dir
-        if hasattr(entity, "_set_arrow_source"):
-            entity._set_arrow_source(False)
-
-    new_x = min(max(entity.x + dx, min_x), max_x)
-    new_y = min(max(entity.y + dy, min_y), max_y)
-    exiting = False
-    if direction == MovingFloorDirection.UP and entity.y + dy <= min_y:
-        new_y = min_y - 1
-        exiting = True
-    elif direction == MovingFloorDirection.DOWN and entity.y + dy >= max_y:
-        new_y = max_y + 1
-        exiting = True
-    elif direction == MovingFloorDirection.LEFT and entity.x + dx <= min_x:
-        new_x = min_x - 1
-        exiting = True
-    elif direction == MovingFloorDirection.RIGHT and entity.x + dx >= max_x:
-        new_x = max_x + 1
-        exiting = True
-
-    move_x = new_x - entity.x
-    move_y = new_y - entity.y
-
-    entity.x = float(new_x)
-    entity.y = float(new_y)
-    entity.rect.center = (int(entity.x), int(entity.y))
-    setattr(entity, "on_moving_floor", not exiting)
-    if hasattr(entity, "last_move_dx"):
-        entity.last_move_dx = move_x
-    if hasattr(entity, "last_move_dy"):
-        entity.last_move_dy = move_y
-    if hasattr(entity, "_update_facing_from_movement"):
-        entity._update_facing_from_movement(move_x, move_y)
-    if hasattr(entity, "_apply_render_overlays"):
-        entity._apply_render_overlays()
-    if hasattr(entity, "_update_input_facing"):
-        entity._update_input_facing(move_x, move_y)
-    if hasattr(entity, "update_facing_from_input"):
-        entity.update_facing_from_input(move_x, move_y)
-    if hasattr(entity, "_update_facing_for_bump"):
-        entity._update_facing_for_bump(False)
-    return True
+    dx, dy = get_moving_floor_drift(
+        entity.rect,
+        layout,
+        cell_size=cell_size,
+        speed=speed,
+    )
+    dx *= drift_factor
+    dy *= drift_factor
+    on_floor = abs(dx) > 0.0 or abs(dy) > 0.0
+    setattr(entity, "on_moving_floor", on_floor)
+    return on_floor
 
 
 def get_moving_floor_direction(

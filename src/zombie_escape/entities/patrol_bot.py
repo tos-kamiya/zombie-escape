@@ -196,6 +196,8 @@ class PatrolBot(pygame.sprite.Sprite):
         cell_size: int,
         pitfall_cells: set[tuple[int, int]],
         layout,
+        drift_x: float = 0.0,
+        drift_y: float = 0.0,
     ) -> None:
         now = pygame.time.get_ticks()
 
@@ -216,8 +218,8 @@ class PatrolBot(pygame.sprite.Sprite):
             self.last_move_dy = 0.0
             return
 
-        move_x = float(self.direction[0]) * self.speed
-        move_y = float(self.direction[1]) * self.speed
+        move_x = float(self.direction[0]) * self.speed + drift_x
+        move_y = float(self.direction[1]) * self.speed + drift_y
         move_x, move_y = apply_cell_edge_nudge(
             self.x,
             self.y,

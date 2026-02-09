@@ -100,6 +100,8 @@ class Survivor(pygame.sprite.Sprite):
         cell_size: int | None = None,
         layout: "LevelLayout",
         wall_target_cell: tuple[int, int] | None = None,
+        drift_x: float = 0.0,
+        drift_y: float = 0.0,
     ) -> None:
         pitfall_cells = layout.pitfall_cells
         walkable_cells = layout.walkable_cells
@@ -138,8 +140,8 @@ class Survivor(pygame.sprite.Sprite):
                 return
 
             dist = math.sqrt(dist_sq)
-            move_x = (dx / dist) * BUDDY_FOLLOW_SPEED
-            move_y = (dy / dist) * BUDDY_FOLLOW_SPEED
+            move_x = (dx / dist) * BUDDY_FOLLOW_SPEED + drift_x
+            move_y = (dy / dist) * BUDDY_FOLLOW_SPEED + drift_y
 
             if cell_size is not None:
                 move_x, move_y = apply_cell_edge_nudge(
@@ -263,8 +265,8 @@ class Survivor(pygame.sprite.Sprite):
             return
 
         dist = math.sqrt(dist_sq)
-        move_x = (dx / dist) * SURVIVOR_APPROACH_SPEED
-        move_y = (dy / dist) * SURVIVOR_APPROACH_SPEED
+        move_x = (dx / dist) * SURVIVOR_APPROACH_SPEED + drift_x
+        move_y = (dy / dist) * SURVIVOR_APPROACH_SPEED + drift_y
 
         self._update_input_facing(move_x, move_y)
 

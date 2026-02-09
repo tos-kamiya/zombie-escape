@@ -404,6 +404,8 @@ class Zombie(pygame.sprite.Sprite):
         *,
         cell_size: int,
         layout: LevelLayout,
+        drift_x: float = 0.0,
+        drift_y: float = 0.0,
     ) -> None:
         if self.vitals.carbonized:
             self._apply_decay()
@@ -447,6 +449,8 @@ class Zombie(pygame.sprite.Sprite):
             cell_size,
             layout,
         )
+        move_x += drift_x
+        move_y += drift_y
         if dist_to_player_sq <= avoid_radius_sq or self.kind == ZombieKind.WALL_HUGGER:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
         move_x, move_y = apply_cell_edge_nudge(

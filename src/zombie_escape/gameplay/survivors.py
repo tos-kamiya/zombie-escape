@@ -35,7 +35,7 @@ from .utils import (
     is_entity_in_fov,
     rect_visible_on_screen,
 )
-from .moving_floor import apply_moving_floor, is_entity_on_moving_floor
+from .moving_floor import get_moving_floor_drift, is_entity_on_moving_floor
 
 RNG = get_rng()
 
@@ -66,13 +66,15 @@ def update_survivors(
     moving_floor_survivors: list[Survivor] = []
 
     for survivor in survivors:
-        if apply_moving_floor(
-            survivor,
+        drift_x, drift_y = get_moving_floor_drift(
+            survivor.rect,
             game_data.layout,
             cell_size=game_data.cell_size,
-        ):
+        )
+        on_moving_floor = abs(drift_x) > 0.0 or abs(drift_y) > 0.0
+        survivor.on_moving_floor = on_moving_floor
+        if on_moving_floor:
             moving_floor_survivors.append(survivor)
-            continue
         survivor.update_behavior(
             target_pos,
             wall_group,
@@ -81,6 +83,8 @@ def update_survivors(
             cell_size=game_data.cell_size,
             layout=game_data.layout,
             wall_target_cell=wall_target_cell,
+            drift_x=drift_x,
+            drift_y=drift_y,
         )
 
     # Gently prevent survivors from overlapping the player or each other
