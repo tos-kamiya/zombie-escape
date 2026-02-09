@@ -18,68 +18,6 @@ def is_entity_on_moving_floor(entity: object) -> bool:
     return bool(getattr(entity, "on_moving_floor", False))
 
 
-def _floor_tile_for_entity(
-    entity: _MovingFloorEntity,
-    layout: LevelLayout,
-    *,
-    cell_size: int,
-) -> tuple[MovingFloorDirection, pygame.Rect] | None:
-    if cell_size <= 0 or not layout.moving_floor_cells:
-        return None
-    cell_x = int(entity.rect.centerx // cell_size)
-    cell_y = int(entity.rect.centery // cell_size)
-    direction = layout.moving_floor_cells.get((cell_x, cell_y))
-    if direction is None:
-        return None
-    tile_rect = pygame.Rect(
-        cell_x * cell_size,
-        cell_y * cell_size,
-        cell_size,
-        cell_size,
-    )
-    radius = getattr(entity, "radius", None)
-    if radius is not None:
-        cx = float(entity.rect.centerx)
-        cy = float(entity.rect.centery)
-        if direction in (MovingFloorDirection.UP, MovingFloorDirection.DOWN):
-            if cx - radius < tile_rect.left or cx + radius > tile_rect.right:
-                return None
-            if direction == MovingFloorDirection.UP:
-                if cy - radius < tile_rect.top:
-                    return None
-                if cy + radius <= tile_rect.top:
-                    return None
-                if cy - radius >= tile_rect.bottom:
-                    return None
-            else:
-                if cy + radius > tile_rect.bottom:
-                    return None
-                if cy - radius >= tile_rect.bottom:
-                    return None
-                if cy + radius <= tile_rect.top:
-                    return None
-        else:
-            if cy - radius < tile_rect.top or cy + radius > tile_rect.bottom:
-                return None
-            if direction == MovingFloorDirection.LEFT:
-                if cx - radius < tile_rect.left:
-                    return None
-                if cx + radius <= tile_rect.left:
-                    return None
-                if cx - radius >= tile_rect.right:
-                    return None
-            else:
-                if cx + radius > tile_rect.right:
-                    return None
-                if cx - radius >= tile_rect.right:
-                    return None
-                if cx + radius <= tile_rect.left:
-                    return None
-    else:
-        if not tile_rect.contains(entity.rect):
-            return None
-    return direction, tile_rect
-
 
 def get_overlapping_moving_floor_direction(
     rect: pygame.Rect,
@@ -133,35 +71,3 @@ def get_moving_floor_drift(
         return speed, 0.0
     return 0.0, 0.0
 
-
-def apply_moving_floor(
-    entity: _MovingFloorEntity,
-    layout: LevelLayout,
-    *,
-    cell_size: int,
-    speed: float = MOVING_FLOOR_SPEED,
-    drift_factor: float = 1.0,
-) -> bool:
-    dx, dy = get_moving_floor_drift(
-        entity.rect,
-        layout,
-        cell_size=cell_size,
-        speed=speed,
-    )
-    dx *= drift_factor
-    dy *= drift_factor
-    on_floor = abs(dx) > 0.0 or abs(dy) > 0.0
-    setattr(entity, "on_moving_floor", on_floor)
-    return on_floor
-
-
-def get_moving_floor_direction(
-    entity: _MovingFloorEntity,
-    layout: LevelLayout,
-    *,
-    cell_size: int,
-) -> MovingFloorDirection | None:
-    info = _floor_tile_for_entity(entity, layout, cell_size=cell_size)
-    if info is None:
-        return None
-    return info[0]
