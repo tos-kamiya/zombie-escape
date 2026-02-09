@@ -259,9 +259,7 @@ def gameplay_screen(
         if stage.endurance_stage:
             fuel_spawn_count = 0
         fuel_can = place_fuel_can(
-            layout_data["fuel_cells"]
-            or layout_data.get("item_spawn_cells")
-            or layout_data["walkable_cells"],
+            layout_data["fuel_cells"],
             cell_size,
             player,
             cars=game_data.waiting_cars,
@@ -274,9 +272,7 @@ def gameplay_screen(
             occupied_centers.add(fuel_can.rect.center)
     flashlight_count = stage.initial_flashlight_count
     flashlights = place_flashlights(
-        layout_data["flashlight_cells"]
-        or layout_data.get("item_spawn_cells")
-        or layout_data["walkable_cells"],
+        layout_data["flashlight_cells"],
         cell_size,
         player,
         cars=game_data.waiting_cars,
@@ -290,9 +286,7 @@ def gameplay_screen(
 
     shoes_count = stage.initial_shoes_count
     shoes_list = place_shoes(
-        layout_data["shoes_cells"]
-        or layout_data.get("item_spawn_cells")
-        or layout_data["walkable_cells"],
+        layout_data["shoes_cells"],
         cell_size,
         player,
         cars=game_data.waiting_cars,

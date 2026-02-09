@@ -9,7 +9,7 @@ from .level_constants import (
     DEFAULT_STEEL_BEAM_CHANCE,
     DEFAULT_WALL_LINES,
 )
-from .rng import get_rng, seed_rng
+from .rng import get_rng
 
 EXITS_PER_SIDE = 1  # currently fixed to 1 per side (can be tuned)
 WALL_MIN_LEN = 3
@@ -517,7 +517,7 @@ def _expand_zone_cells(
     return cells
 
 
-def _generate_random_blueprint(
+def generate_random_blueprint(
     steel_chance: float,
     *,
     cols: int,
@@ -527,7 +527,11 @@ def _generate_random_blueprint(
     pitfall_zones: list[tuple[int, int, int, int]] | None = None,
     reserved_cells: set[tuple[int, int]] | None = None,
     moving_floor_cells: set[tuple[int, int]] | None = None,
+    fuel_count: int = 1,
+    flashlight_count: int = 2,
+    shoes_count: int = 2,
 ) -> Blueprint:
+    """Generate a single randomized blueprint grid without connectivity validation."""
     grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE)
 
@@ -535,7 +539,14 @@ def _generate_random_blueprint(
     reserved_cells = set(reserved_cells or set())
     if moving_floor_cells:
         reserved_cells.update(moving_floor_cells)
+
+    # Place zone-defined pitfalls
     if pitfall_zones:
+        _place_pitfall_zones(
+            grid,
+            pitfall_zones=pitfall_zones,
+            forbidden_cells=reserved_cells,
+        )
         reserved_cells.update(
             _expand_zone_cells(
                 pitfall_zones,
@@ -554,16 +565,21 @@ def _generate_random_blueprint(
     # (No zombie candidate cells; initial spawns are handled by gameplay.)
 
     # Items
-    fx, fy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
-    grid[fy][fx] = "f"
-    reserved_cells.add((fx, fy))
+    fuel_count = max(0, int(fuel_count))
+    flashlight_count = max(0, int(flashlight_count))
+    shoes_count = max(0, int(shoes_count))
 
-    for _ in range(2):
+    for _ in range(fuel_count):
+        fx, fy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
+        grid[fy][fx] = "f"
+        reserved_cells.add((fx, fy))
+
+    for _ in range(flashlight_count):
         lx, ly = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
         grid[ly][lx] = "l"
         reserved_cells.add((lx, ly))
 
-    for _ in range(2):
+    for _ in range(shoes_count):
         sx, sy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
         grid[sy][sx] = "s"
         reserved_cells.add((sx, sy))
@@ -646,13 +662,7 @@ def _generate_random_blueprint(
         )
         wall_algo = "default"
 
-    # Zone-defined pitfalls are already reserved so walls avoid the zones.
-    # Place zone-defined pitfalls, then density-based pitfalls.
-    _place_pitfall_zones(
-        grid,
-        pitfall_zones=pitfall_zones,
-        forbidden_cells=reserved_cells,
-    )
+    # Place density-based pitfalls.
     _place_pitfall_density(
         grid,
         density=pitfall_density,
@@ -673,45 +683,3 @@ def _generate_random_blueprint(
 
     blueprint_rows = ["".join(row) for row in grid]
     return Blueprint(grid=blueprint_rows, steel_cells=steel_beams)
-
-
-def choose_blueprint(
-    config: dict,
-    *,
-    cols: int,
-    rows: int,
-    wall_algo: str = "default",
-    pitfall_density: float = 0.0,
-    pitfall_zones: list[tuple[int, int, int, int]] | None = None,
-    base_seed: int | None = None,
-    reserved_cells: set[tuple[int, int]] | None = None,
-    moving_floor_cells: set[tuple[int, int]] | None = None,
-) -> Blueprint:
-    # Currently only random generation; hook for future variants.
-    steel_conf = config.get("steel_beams", {})
-    try:
-        steel_chance = float(steel_conf.get("chance", DEFAULT_STEEL_BEAM_CHANCE))
-    except (TypeError, ValueError):
-        steel_chance = DEFAULT_STEEL_BEAM_CHANCE
-
-    for attempt in range(20):
-        if base_seed is not None:
-            seed_rng(base_seed + attempt)
-
-        blueprint = _generate_random_blueprint(
-            steel_chance=steel_chance,
-            cols=cols,
-            rows=rows,
-            wall_algo=wall_algo,
-            pitfall_density=pitfall_density,
-            pitfall_zones=pitfall_zones,
-            reserved_cells=reserved_cells,
-            moving_floor_cells=moving_floor_cells,
-        )
-
-        car_reachable = validate_connectivity(blueprint.grid)
-        if car_reachable is not None:
-            blueprint.car_reachable_cells = car_reachable
-            return blueprint
-
-    raise MapGenerationError("Connectivity validation failed after 20 attempts")

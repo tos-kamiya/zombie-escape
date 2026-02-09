@@ -178,3 +178,37 @@ def _circle_wall_collision(
     if hasattr(wall, "_collides_circle"):
         return wall._collides_circle(center, radius)
     return _circle_rect_collision(center, radius, wall.rect)
+
+
+def _zombie_update_tracker_target(
+    zombie,
+    footprints,
+    walls,
+) -> None:
+    """Compatibility shim for tests; implementation lives in zombie_movement."""
+    from .zombie_movement import _zombie_update_tracker_target as _impl
+
+    _impl(zombie, footprints, walls)
+
+
+def _zombie_wall_hug_movement(
+    zombie,
+    player_center,
+    walls,
+    nearby_zombies,
+    footprints,
+    cell_size,
+    layout,
+):
+    """Compatibility shim for tests; implementation lives in zombie_movement."""
+    from .zombie_movement import _zombie_wall_hug_movement as _impl
+
+    return _impl(
+        zombie,
+        player_center,
+        walls,
+        nearby_zombies,
+        footprints,
+        cell_size,
+        layout,
+    )

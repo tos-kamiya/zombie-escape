@@ -13,11 +13,17 @@ from ..entities_constants import (
     MovingFloorDirection,
     STEEL_BEAM_HEALTH,
 )
+from ..level_constants import DEFAULT_STEEL_BEAM_CHANCE
 from ..render_assets import RUBBLE_ROTATION_DEG
 from .constants import LAYER_WALLS, OUTER_WALL_HEALTH
-from ..level_blueprints import Blueprint, MapGenerationError, choose_blueprint
+from ..level_blueprints import (
+    Blueprint,
+    MapGenerationError,
+    generate_random_blueprint,
+    validate_connectivity,
+)
 from ..models import LevelLayout, Stage
-from ..rng import get_rng
+from ..rng import get_rng, seed_rng
 
 __all__ = ["generate_level_from_blueprint", "MapGenerationError"]
 
@@ -115,16 +121,42 @@ def generate_level_from_blueprint(
     steel_enabled = steel_conf.get("enabled", False)
 
     base_moving_floor_cells = _expand_moving_floor_cells(stage)
-    blueprint_data = choose_blueprint(
-        config,
-        cols=stage.grid_cols,
-        rows=stage.grid_rows,
-        wall_algo=stage.wall_algorithm,
-        pitfall_density=stage.pitfall_density,
-        pitfall_zones=stage.pitfall_zones,
-        base_seed=seed,
-        moving_floor_cells=set(base_moving_floor_cells.keys()),
-    )
+    fuel_count = 0
+    if stage.requires_fuel and not stage.endurance_stage:
+        fuel_count = max(0, int(stage.fuel_spawn_count))
+    flashlight_count = max(0, int(stage.initial_flashlight_count))
+    shoes_count = max(0, int(stage.initial_shoes_count))
+
+    steel_conf = config.get("steel_beams", {})
+    try:
+        steel_chance = float(steel_conf.get("chance", DEFAULT_STEEL_BEAM_CHANCE))
+    except (TypeError, ValueError):
+        steel_chance = DEFAULT_STEEL_BEAM_CHANCE
+
+    # Connectivity validation and retries live here to keep generation shallow.
+    blueprint_data = None
+    for attempt in range(20):
+        if seed is not None:
+            seed_rng(seed + attempt)
+        blueprint = generate_random_blueprint(
+            steel_chance=steel_chance,
+            cols=stage.grid_cols,
+            rows=stage.grid_rows,
+            wall_algo=stage.wall_algorithm,
+            pitfall_density=stage.pitfall_density,
+            pitfall_zones=stage.pitfall_zones,
+            moving_floor_cells=set(base_moving_floor_cells.keys()),
+            fuel_count=fuel_count,
+            flashlight_count=flashlight_count,
+            shoes_count=shoes_count,
+        )
+        car_reachable = validate_connectivity(blueprint.grid)
+        if car_reachable is not None:
+            blueprint.car_reachable_cells = car_reachable
+            blueprint_data = blueprint
+            break
+    if blueprint_data is None:
+        raise MapGenerationError("Connectivity validation failed after 20 attempts")
     blueprint = blueprint_data.grid
     steel_cells_raw = blueprint_data.steel_cells
     car_reachable_cells = blueprint_data.car_reachable_cells
