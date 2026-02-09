@@ -167,9 +167,9 @@
         "name": "#23 Hold the Line",
         "description": "Stay behind the moving line."
       },
-      "moving_floor_test": {
-        "name": "Moving Floor Test",
-        "description": "Debug layout for moving floors."
+      "stage24": {
+        "name": "#24 Ride the Flow",
+        "description": "It's fun to ride. Until it isn't."
       }
     },
     "status": {
