@@ -46,6 +46,10 @@
   - メニュー系は `render_text_scaled_font`、ゲームプレイ系は `render_text_unscaled` を使用。
 - `src/zombie_escape/export_images.py`
   - 画像生成・書き出し関連の開発用ユーティリティ。
+  - ゲーム本編の描画パスとは別実装なので、キャラクタやタイルの描画を変更した場合は
+    エクスポート用の生成処理も同様に更新する必要がある。
+  - 現在はスタジオ用の白床ステージを内部生成し、本編描画（床/エンティティ）を使って
+    スナップショットを切り出して保存する方式。
 - `src/zombie_escape/level_blueprints.py`
   - マップのセル配置生成（外周・出口・内部壁・スポーン候補）。
 - `src/zombie_escape/config.py`

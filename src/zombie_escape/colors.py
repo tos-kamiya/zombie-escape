@@ -54,6 +54,7 @@ def _adjust_color(
 _DEFAULT_AMBIENT_PALETTE_KEY = "default"
 _NO_FLASHLIGHT_PALETTE_KEY = "no_flashlight"
 DAWN_AMBIENT_PALETTE_KEY = "dawn"
+STUDIO_AMBIENT_PALETTE_KEY = "studio"
 
 
 # Base palette used throughout gameplay (matches the previous constants).
@@ -130,10 +131,23 @@ _DAWN_ENVIRONMENT_PALETTE = EnvironmentPalette(
     outer_wall_border=(147, 146, 138),
 )
 
+_STUDIO_ENVIRONMENT_PALETTE = EnvironmentPalette(
+    floor_primary=WHITE,
+    floor_secondary=WHITE,
+    fall_zone_primary=_DEFAULT_ENVIRONMENT_PALETTE.fall_zone_primary,
+    fall_zone_secondary=_DEFAULT_ENVIRONMENT_PALETTE.fall_zone_secondary,
+    outside=WHITE,
+    inner_wall=_DEFAULT_ENVIRONMENT_PALETTE.inner_wall,
+    inner_wall_border=_DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border,
+    outer_wall=_DEFAULT_ENVIRONMENT_PALETTE.outer_wall,
+    outer_wall_border=_DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border,
+)
+
 _ENVIRONMENT_PALETTES: dict[str, EnvironmentPalette] = {
     _DEFAULT_AMBIENT_PALETTE_KEY: _DEFAULT_ENVIRONMENT_PALETTE,
     _NO_FLASHLIGHT_PALETTE_KEY: _GLOOM_ENVIRONMENT_PALETTE,
     DAWN_AMBIENT_PALETTE_KEY: _DAWN_ENVIRONMENT_PALETTE,
+    STUDIO_AMBIENT_PALETTE_KEY: _STUDIO_ENVIRONMENT_PALETTE,
 }
 
 
@@ -181,6 +195,7 @@ __all__ = [
     "ORANGE",
     "DARK_RED",
     "DAWN_AMBIENT_PALETTE_KEY",
+    "STUDIO_AMBIENT_PALETTE_KEY",
     "FOOTPRINT_COLOR",
     "STEEL_BEAM_COLOR",
     "STEEL_BEAM_LINE_COLOR",

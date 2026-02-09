@@ -5,55 +5,37 @@ from pathlib import Path
 
 import pygame
 
-from .entities import SteelBeam
+from .colors import STUDIO_AMBIENT_PALETTE_KEY, get_environment_palette
+from .entities import (
+    Car,
+    Flashlight,
+    FuelCan,
+    PatrolBot,
+    Player,
+    RubbleWall,
+    Shoes,
+    SteelBeam,
+    Survivor,
+    Wall,
+    Zombie,
+    ZombieDog,
+)
 from .entities_constants import (
-    BUDDY_RADIUS,
-    CAR_HEIGHT,
-    CAR_WIDTH,
-    FLASHLIGHT_HEIGHT,
-    FLASHLIGHT_WIDTH,
-    FUEL_CAN_HEIGHT,
-    FUEL_CAN_WIDTH,
     INTERNAL_WALL_BEVEL_DEPTH,
-    PLAYER_RADIUS,
-    SHOES_HEIGHT,
-    SHOES_WIDTH,
+    PATROL_BOT_RADIUS,
     STEEL_BEAM_HEALTH,
-    SURVIVOR_RADIUS,
     ZOMBIE_RADIUS,
+    MovingFloorDirection,
+    ZombieKind,
 )
+from .gameplay.state import initialize_game_state
 from .level_constants import DEFAULT_CELL_SIZE
-from .render_assets import (
-    build_car_directional_surfaces,
-    build_car_surface,
-    build_flashlight_surface,
-    build_fuel_can_surface,
-    build_player_directional_surfaces,
-    build_rubble_wall_surface,
-    build_shoes_surface,
-    build_survivor_directional_surfaces,
-    build_zombie_dog_directional_surfaces,
-    build_zombie_directional_surfaces,
-    draw_humanoid_hand,
-    draw_humanoid_nose,
-    paint_car_surface,
-    paint_wall_surface,
-    resolve_car_color,
-    resolve_wall_colors,
-    RUBBLE_ROTATION_DEG,
-)
-from .colors import FALL_ZONE_FLOOR_PRIMARY, FALL_ZONE_FLOOR_SECONDARY
-from .render_constants import (
-    FALLING_ZOMBIE_COLOR,
-    PITFALL_ABYSS_COLOR,
-    PITFALL_EDGE_DEPTH_OFFSET,
-    PITFALL_EDGE_METAL_COLOR,
-    PITFALL_EDGE_STRIPE_COLOR,
-    PITFALL_EDGE_STRIPE_SPACING,
-    PITFALL_SHADOW_RIM_COLOR,
-    PITFALL_SHADOW_WIDTH,
-    ZOMBIE_NOSE_COLOR,
-)
+from .models import FallingZombie, Stage
+from .render.core import _draw_entities, _draw_falling_fx, _draw_play_area
+from .render_constants import build_render_assets
+from .render.shadows import _get_shadow_layer, draw_single_entity_shadow_by_mode
+from .render_constants import ENTITY_SHADOW_ALPHA, ENTITY_SHADOW_EDGE_SOFTNESS
+from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
 __all__ = ["export_images"]
 
@@ -76,52 +58,160 @@ def _save_surface(surface: pygame.Surface, path: Path, *, scale: int = 1) -> Non
     pygame.image.save(surface, str(path))
 
 
-def _pick_directional_surface(
-    surfaces: list[pygame.Surface], *, bin_index: int = 0
-) -> pygame.Surface:
-    if not surfaces:
-        return pygame.Surface((1, 1), pygame.SRCALPHA)
-    return surfaces[bin_index % len(surfaces)]
+def _studio_grid_size(cell_size: int) -> tuple[int, int]:
+    cols = max(3, math.ceil(SCREEN_WIDTH / cell_size) + 2)
+    rows = max(3, math.ceil(SCREEN_HEIGHT / cell_size) + 2)
+    return cols, rows
 
 
-def _build_pitfall_cell(cell_size: int) -> pygame.Surface:
-    surface = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
-    rect = surface.get_rect()
-    pygame.draw.rect(surface, PITFALL_ABYSS_COLOR, rect)
-
-    for i in range(PITFALL_SHADOW_WIDTH):
-        t = i / (PITFALL_SHADOW_WIDTH - 1.0)
-        color = tuple(
-            int(PITFALL_SHADOW_RIM_COLOR[j] * (1.0 - t) + PITFALL_ABYSS_COLOR[j] * t)
-            for j in range(3)
-        )
-        pygame.draw.line(
-            surface,
-            color,
-            (rect.x + i, rect.y),
-            (rect.x + i, rect.bottom - 1),
-        )
-        pygame.draw.line(
-            surface,
-            color,
-            (rect.right - 1 - i, rect.y),
-            (rect.right - 1 - i, rect.bottom - 1),
-        )
-
-    edge_height = max(1, INTERNAL_WALL_BEVEL_DEPTH - PITFALL_EDGE_DEPTH_OFFSET)
-    pygame.draw.rect(
-        surface, PITFALL_EDGE_METAL_COLOR, (rect.x, rect.y, rect.w, edge_height)
+def _build_studio_stage(cell_size: int) -> Stage:
+    cols, rows = _studio_grid_size(cell_size)
+    return Stage(
+        id="studio",
+        name_key="studio",
+        description_key="studio",
+        available=False,
+        cell_size=cell_size,
+        grid_cols=cols,
+        grid_rows=rows,
     )
-    for sx in range(rect.x - edge_height, rect.right, PITFALL_EDGE_STRIPE_SPACING):
-        pygame.draw.line(
-            surface,
-            PITFALL_EDGE_STRIPE_COLOR,
-            (max(rect.x, sx), rect.y),
-            (min(rect.right - 1, sx + edge_height), rect.y + edge_height - 1),
-            width=2,
-        )
 
-    return surface
+
+def _build_studio_game_data(cell_size: int):
+    stage = _build_studio_stage(cell_size)
+    game_data = initialize_game_state({}, stage)
+    state = game_data.state
+    state.ambient_palette_key = STUDIO_AMBIENT_PALETTE_KEY
+    state.has_fuel = False
+    state.flashlight_count = 0
+    state.shoes_count = 0
+    state.timed_message = None
+    state.fade_in_started_at_ms = None
+    state.show_fps = False
+    state.debug_mode = False
+    state.elapsed_play_ms = 0
+    state.falling_zombies = []
+    state.dust_rings = []
+    state.decay_effects = []
+    state.footprints = []
+    return game_data
+
+
+def _center_camera(camera: object, target_rect: pygame.Rect) -> None:
+    dummy = pygame.sprite.Sprite()
+    dummy.rect = target_rect.copy()
+    camera.update(dummy)
+
+
+def _render_studio_snapshot(
+    *,
+    cell_size: int,
+    target_rect: pygame.Rect,
+    sprites: list[pygame.sprite.Sprite] | None = None,
+    pitfall_cells: set[tuple[int, int]] | None = None,
+    fall_spawn_cells: set[tuple[int, int]] | None = None,
+    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] | None = None,
+    falling_zombies: list[FallingZombie] | None = None,
+    enable_shadows: bool = False,
+) -> pygame.Surface:
+    game_data = _build_studio_game_data(cell_size)
+    assets = build_render_assets(cell_size)
+    screen = pygame.Surface((assets.screen_width, assets.screen_height), pygame.SRCALPHA)
+
+    layout = game_data.layout
+    layout.pitfall_cells = pitfall_cells or set()
+    layout.fall_spawn_cells = fall_spawn_cells or set()
+    layout.moving_floor_cells = moving_floor_cells or {}
+
+    sprites = sprites or []
+    player = None
+    for sprite in sprites:
+        if isinstance(sprite, Player):
+            player = sprite
+        game_data.groups.all_sprites.add(sprite)
+    if player is None:
+        player = Player(-cell_size, -cell_size)
+    game_data.player = player
+
+    padding_x = max(1, int(round(target_rect.width * 0.3)))
+    padding_y = max(1, int(round(target_rect.height * 0.3)))
+    framing_rect = target_rect.inflate(padding_x, padding_y)
+
+    _center_camera(game_data.camera, framing_rect)
+
+    palette = get_environment_palette(game_data.state.ambient_palette_key)
+    screen.fill(palette.outside)
+    _draw_play_area(
+        screen,
+        game_data.camera,
+        assets,
+        palette,
+        layout.field_rect,
+        layout.outside_cells,
+        layout.fall_spawn_cells,
+        layout.pitfall_cells,
+        layout.moving_floor_cells,
+        elapsed_ms=int(game_data.state.elapsed_play_ms),
+    )
+    if enable_shadows:
+        shadow_layer = _get_shadow_layer(screen.get_size())
+        shadow_layer.fill((0, 0, 0, 0))
+        light_offset = max(4, int(min(target_rect.width, target_rect.height) * 0.14))
+        light_source_pos = (
+            float(target_rect.centerx - light_offset),
+            float(target_rect.centery + light_offset),
+        )
+        shadow_alpha = max(1, int(ENTITY_SHADOW_ALPHA * 2.2))
+        drew_shadow = False
+        for sprite in sprites:
+            if not sprite.alive():
+                continue
+            if isinstance(sprite, PatrolBot):
+                shadow_radius = max(1, int(PATROL_BOT_RADIUS * 1.2))
+                offset_scale = 1 / 3
+            else:
+                sprite_radius = getattr(sprite, "radius", None)
+                if sprite_radius is None:
+                    shadow_radius = max(1, int(min(sprite.rect.width, sprite.rect.height) * 0.5 * 1.2))
+                else:
+                    shadow_radius = max(1, int(sprite_radius * 1.8))
+                offset_scale = 1.0
+            drew_shadow |= draw_single_entity_shadow_by_mode(
+                shadow_layer,
+                game_data.camera,
+                entity=sprite,
+                dawn_shadow_mode=False,
+                light_source_pos=light_source_pos,
+                outside_cells=layout.outside_cells,
+                cell_size=game_data.cell_size,
+                shadow_radius=shadow_radius,
+                alpha=shadow_alpha,
+                edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
+                offset_scale=offset_scale,
+            )
+        if drew_shadow:
+            screen.blit(shadow_layer, (0, 0))
+    if falling_zombies:
+        game_data.state.falling_zombies = falling_zombies
+        _draw_falling_fx(
+            screen,
+            game_data.camera,
+            game_data.state.falling_zombies,
+            game_data.state.flashlight_count,
+            game_data.state.dust_rings,
+            int(game_data.state.elapsed_play_ms),
+        )
+    _draw_entities(
+        screen,
+        game_data.camera,
+        game_data.groups.all_sprites,
+        player,
+        has_fuel=game_data.state.has_fuel,
+        show_fuel_indicator=False,
+    )
+
+    screen_rect = game_data.camera.apply_rect(framing_rect)
+    return screen.subsurface(screen_rect).copy()
 
 
 def export_images(
@@ -132,198 +222,292 @@ def export_images(
     saved: list[Path] = []
     out = Path(output_dir)
 
-    player = _pick_directional_surface(
-        build_player_directional_surfaces(radius=PLAYER_RADIUS),
-        bin_index=0,
+    cols, rows = _studio_grid_size(cell_size)
+    center_x = (cols * cell_size) // 2
+    center_y = (rows * cell_size) // 2
+    cell_x = cols // 2
+    cell_y = rows // 2
+
+    player = Player(center_x, center_y)
+    player_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=player.rect,
+        sprites=[player],
+        enable_shadows=True,
     )
     player_path = out / "player.png"
-    _save_surface(player, player_path, scale=output_scale)
+    _save_surface(player_surface, player_path, scale=output_scale)
     saved.append(player_path)
 
-    zombie_base = _pick_directional_surface(
-        build_zombie_directional_surfaces(radius=ZOMBIE_RADIUS, draw_hands=False),
-        bin_index=0,
+    zombie = Zombie(center_x, center_y, kind=ZombieKind.NORMAL)
+    zombie_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=zombie.rect,
+        sprites=[zombie],
+        enable_shadows=True,
     )
     zombie_normal_path = out / "zombie-normal.png"
-    _save_surface(zombie_base, zombie_normal_path, scale=output_scale)
+    _save_surface(zombie_surface, zombie_normal_path, scale=output_scale)
     saved.append(zombie_normal_path)
 
-    tracker = zombie_base.copy()
-    draw_humanoid_nose(
-        tracker,
-        radius=ZOMBIE_RADIUS,
-        angle_rad=0.0,
-        color=ZOMBIE_NOSE_COLOR,
+    tracker = Zombie(center_x, center_y, kind=ZombieKind.TRACKER)
+    tracker._apply_render_overlays()
+    tracker_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=tracker.rect,
+        sprites=[tracker],
+        enable_shadows=True,
     )
     tracker_path = out / "zombie-tracker.png"
-    _save_surface(tracker, tracker_path, scale=output_scale)
+    _save_surface(tracker_surface, tracker_path, scale=output_scale)
     saved.append(tracker_path)
 
-    wall_hugging = zombie_base.copy()
-    draw_humanoid_hand(
-        wall_hugging,
-        radius=ZOMBIE_RADIUS,
-        angle_rad=math.pi / 2.0,
-        color=ZOMBIE_NOSE_COLOR,
+    wall_hugging = Zombie(center_x, center_y, kind=ZombieKind.WALL_HUGGER)
+    wall_hugging.wall_hug_side = 1.0
+    wall_hugging.wall_hug_last_side_has_wall = True
+    wall_hugging._apply_render_overlays()
+    wall_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=wall_hugging.rect,
+        sprites=[wall_hugging],
+        enable_shadows=True,
     )
     wall_path = out / "zombie-wall.png"
-    _save_surface(wall_hugging, wall_path, scale=output_scale)
+    _save_surface(wall_surface, wall_path, scale=output_scale)
     saved.append(wall_path)
 
-    zombie_dog = _pick_directional_surface(
-        build_zombie_dog_directional_surfaces(
-            long_axis=ZOMBIE_RADIUS * 2.0 * 1.2,
-            short_axis=ZOMBIE_RADIUS * 2.0 * 0.6,
-        ),
-        bin_index=10,
+    zombie_dog = ZombieDog(center_x, center_y)
+    zombie_dog_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=zombie_dog.rect,
+        sprites=[zombie_dog],
+        enable_shadows=True,
     )
     zombie_dog_path = out / "zombie-dog.png"
-    _save_surface(zombie_dog, zombie_dog_path, scale=output_scale)
+    _save_surface(zombie_dog_surface, zombie_dog_path, scale=output_scale)
     saved.append(zombie_dog_path)
 
-    buddy = _pick_directional_surface(
-        build_survivor_directional_surfaces(
-            radius=BUDDY_RADIUS,
-            is_buddy=True,
-            draw_hands=True,
-        ),
-        bin_index=0,
+    buddy = Survivor(center_x, center_y, is_buddy=True)
+    buddy_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=buddy.rect,
+        sprites=[buddy],
+        enable_shadows=True,
     )
     buddy_path = out / "buddy.png"
-    _save_surface(buddy, buddy_path, scale=output_scale)
+    _save_surface(buddy_surface, buddy_path, scale=output_scale)
     saved.append(buddy_path)
 
-    survivor = _pick_directional_surface(
-        build_survivor_directional_surfaces(
-            radius=SURVIVOR_RADIUS,
-            is_buddy=False,
-            draw_hands=False,
-        ),
-        bin_index=0,
+    survivor = Survivor(center_x, center_y, is_buddy=False)
+    survivor_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=survivor.rect,
+        sprites=[survivor],
+        enable_shadows=True,
     )
     survivor_path = out / "survivor.png"
-    _save_surface(survivor, survivor_path, scale=output_scale)
+    _save_surface(survivor_surface, survivor_path, scale=output_scale)
     saved.append(survivor_path)
 
-    car_surface = build_car_surface(CAR_WIDTH, CAR_HEIGHT)
-    car_color = resolve_car_color(health_ratio=1.0, appearance="default")
-    paint_car_surface(
-        car_surface,
-        width=CAR_WIDTH,
-        height=CAR_HEIGHT,
-        color=car_color,
-    )
-    car = _pick_directional_surface(
-        build_car_directional_surfaces(car_surface), bin_index=0
+    car = Car(center_x, center_y, appearance="default")
+    car._set_facing_bin(0)
+    car_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=car.rect,
+        sprites=[car],
+        enable_shadows=True,
     )
     car_path = out / "car.png"
-    _save_surface(car, car_path, scale=output_scale)
+    _save_surface(car_surface, car_path, scale=output_scale)
     saved.append(car_path)
 
-    fuel = build_fuel_can_surface(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
+    patrol_bot = PatrolBot(center_x, center_y)
+    patrol_bot_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=patrol_bot.rect,
+        sprites=[patrol_bot],
+        enable_shadows=True,
+    )
+    patrol_bot_path = out / "patrol-bot.png"
+    _save_surface(patrol_bot_surface, patrol_bot_path, scale=output_scale)
+    saved.append(patrol_bot_path)
+
+    fuel = FuelCan(center_x, center_y)
+    fuel_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=fuel.rect,
+        sprites=[fuel],
+    )
     fuel_path = out / "fuel.png"
-    _save_surface(fuel, fuel_path, scale=output_scale)
+    _save_surface(fuel_surface, fuel_path, scale=output_scale)
     saved.append(fuel_path)
 
-    flashlight = build_flashlight_surface(FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT)
+    flashlight = Flashlight(center_x, center_y)
+    flashlight_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=flashlight.rect,
+        sprites=[flashlight],
+    )
     flashlight_path = out / "flashlight.png"
-    _save_surface(flashlight, flashlight_path, scale=output_scale)
+    _save_surface(flashlight_surface, flashlight_path, scale=output_scale)
     saved.append(flashlight_path)
 
-    shoes = build_shoes_surface(SHOES_WIDTH, SHOES_HEIGHT)
+    shoes = Shoes(center_x, center_y)
+    shoes_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=shoes.rect,
+        sprites=[shoes],
+    )
     shoes_path = out / "shoes.png"
-    _save_surface(shoes, shoes_path, scale=output_scale)
+    _save_surface(shoes_surface, shoes_path, scale=output_scale)
     saved.append(shoes_path)
 
-    beam = SteelBeam(0, 0, cell_size, health=STEEL_BEAM_HEALTH, palette=None)
-    beam_path = out / "steel-beam.png"
-    _save_surface(beam.image, beam_path, scale=output_scale)
-    saved.append(beam_path)
-
-    inner_wall = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
-    inner_fill, inner_border = resolve_wall_colors(
-        health_ratio=1.0,
-        palette_category="inner_wall",
+    beam = SteelBeam(
+        center_x - cell_size // 2,
+        center_y - cell_size // 2,
+        cell_size,
+        health=STEEL_BEAM_HEALTH,
         palette=None,
     )
-    paint_wall_surface(
-        inner_wall,
-        fill_color=inner_fill,
-        border_color=inner_border,
+    beam_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=beam.rect,
+        sprites=[beam],
+    )
+    beam_path = out / "steel-beam.png"
+    _save_surface(beam_surface, beam_path, scale=output_scale)
+    saved.append(beam_path)
+
+    inner_wall = Wall(
+        center_x - cell_size // 2,
+        center_y - cell_size // 2,
+        cell_size,
+        cell_size,
+        palette_category="inner_wall",
         bevel_depth=INTERNAL_WALL_BEVEL_DEPTH,
         bevel_mask=(True, True, True, True),
         draw_bottom_side=True,
         bottom_side_ratio=0.1,
         side_shade_ratio=0.9,
     )
+    inner_wall_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=inner_wall.rect,
+        sprites=[inner_wall],
+    )
     inner_wall_path = out / "wall-inner.png"
-    _save_surface(inner_wall, inner_wall_path, scale=output_scale)
+    _save_surface(inner_wall_surface, inner_wall_path, scale=output_scale)
     saved.append(inner_wall_path)
 
-    rubble_wall = build_rubble_wall_surface(
+    rubble_wall = RubbleWall(
+        center_x - cell_size // 2,
+        center_y - cell_size // 2,
         cell_size,
-        fill_color=inner_fill,
-        border_color=inner_border,
-        angle_deg=RUBBLE_ROTATION_DEG,
+        cell_size,
+        palette_category="inner_wall",
+    )
+    rubble_wall_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=rubble_wall.rect,
+        sprites=[rubble_wall],
     )
     rubble_wall_path = out / "wall-rubble.png"
-    _save_surface(rubble_wall, rubble_wall_path, scale=output_scale)
+    _save_surface(rubble_wall_surface, rubble_wall_path, scale=output_scale)
     saved.append(rubble_wall_path)
 
-    outer_wall = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
-    outer_fill, outer_border = resolve_wall_colors(
-        health_ratio=1.0,
+    outer_wall = Wall(
+        center_x - cell_size // 2,
+        center_y - cell_size // 2,
+        cell_size,
+        cell_size,
         palette_category="outer_wall",
-        palette=None,
-    )
-    paint_wall_surface(
-        outer_wall,
-        fill_color=outer_fill,
-        border_color=outer_border,
         bevel_depth=0,
         bevel_mask=(True, True, True, True),
         draw_bottom_side=True,
         bottom_side_ratio=0.1,
         side_shade_ratio=0.9,
     )
+    outer_wall_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=outer_wall.rect,
+        sprites=[outer_wall],
+    )
     outer_wall_path = out / "wall-outer.png"
-    _save_surface(outer_wall, outer_wall_path, scale=output_scale)
+    _save_surface(outer_wall_surface, outer_wall_path, scale=output_scale)
     saved.append(outer_wall_path)
 
-    pitfall = _build_pitfall_cell(cell_size)
+    pitfall_rect = pygame.Rect(
+        cell_x * cell_size,
+        cell_y * cell_size,
+        cell_size,
+        cell_size,
+    )
+    pitfall_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=pitfall_rect,
+        pitfall_cells={(cell_x, cell_y)},
+    )
     pitfall_path = out / "pitfall.png"
-    _save_surface(pitfall, pitfall_path, scale=output_scale)
+    _save_surface(pitfall_surface, pitfall_path, scale=output_scale)
     saved.append(pitfall_path)
 
-    fall_radius = max(1, int(ZOMBIE_RADIUS))
-    fall_size = fall_radius * 2
-    falling = pygame.Surface((fall_size, fall_size), pygame.SRCALPHA)
-    pygame.draw.circle(
-        falling,
-        FALLING_ZOMBIE_COLOR,
-        (fall_radius, fall_radius),
-        fall_radius,
+    fall_target = (center_x, center_y)
+    falling = FallingZombie(
+        start_pos=fall_target,
+        target_pos=fall_target,
+        started_at_ms=0,
+        pre_fx_ms=0,
+        fall_duration_ms=1000,
+        dust_duration_ms=0,
+        kind=ZombieKind.NORMAL,
+        mode="pitfall",
+    )
+    fall_rect = pygame.Rect(0, 0, ZOMBIE_RADIUS * 2, ZOMBIE_RADIUS * 2)
+    fall_rect.center = fall_target
+    falling_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=fall_rect,
+        falling_zombies=[falling],
     )
     falling_path = out / "falling-zombie.png"
-    _save_surface(falling, falling_path, scale=output_scale)
+    _save_surface(falling_surface, falling_path, scale=output_scale)
     saved.append(falling_path)
 
-    fall_zone_size = cell_size * 2
-    fall_zone = pygame.Surface((fall_zone_size, fall_zone_size), pygame.SRCALPHA)
-    for y in range(2):
-        for x in range(2):
-            color = (
-                FALL_ZONE_FLOOR_SECONDARY
-                if (x + y) % 2 == 0
-                else FALL_ZONE_FLOOR_PRIMARY
-            )
-            pygame.draw.rect(
-                fall_zone,
-                color,
-                (x * cell_size, y * cell_size, cell_size, cell_size),
-            )
+    fall_zone_cell_x = max(0, min(cols - 4, cell_x - 2))
+    fall_zone_cell_y = max(0, min(rows - 4, cell_y - 2))
+    fall_zone_cells = {
+        (fall_zone_cell_x + dx, fall_zone_cell_y + dy)
+        for dx in range(4)
+        for dy in range(4)
+    }
+    fall_zone_rect = pygame.Rect(
+        fall_zone_cell_x * cell_size,
+        fall_zone_cell_y * cell_size,
+        cell_size * 4,
+        cell_size * 4,
+    )
+    fall_zone_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=fall_zone_rect,
+        fall_spawn_cells=fall_zone_cells,
+    )
     fall_zone_path = out / "fall-zone.png"
-    _save_surface(fall_zone, fall_zone_path, scale=output_scale)
+    _save_surface(fall_zone_surface, fall_zone_path, scale=output_scale)
     saved.append(fall_zone_path)
+
+    moving_floor_rect = pygame.Rect(
+        cell_x * cell_size,
+        cell_y * cell_size,
+        cell_size,
+        cell_size,
+    )
+    moving_floor_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=moving_floor_rect,
+        moving_floor_cells={(cell_x, cell_y): MovingFloorDirection.RIGHT},
+    )
+    moving_floor_path = out / "moving-floor.png"
+    _save_surface(moving_floor_surface, moving_floor_path, scale=output_scale)
+    saved.append(moving_floor_path)
 
     return saved
