@@ -145,7 +145,7 @@ def generate_level_from_blueprint(
             wall_algo=stage.wall_algorithm,
             pitfall_density=stage.pitfall_density,
             pitfall_zones=stage.pitfall_zones,
-            moving_floor_cells=set(base_moving_floor_cells.keys()),
+            moving_floor_cells=base_moving_floor_cells,
             fuel_count=fuel_count,
             flashlight_count=flashlight_count,
             shoes_count=shoes_count,
@@ -184,6 +184,7 @@ def generate_level_from_blueprint(
         return (nx, ny) in wall_cells
 
     outside_cells: set[tuple[int, int]] = set()
+    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = {}
     walkable_cells: list[tuple[int, int]] = []
     pitfall_cells: set[tuple[int, int]] = set()
     player_cells: list[tuple[int, int]] = []
@@ -332,6 +333,17 @@ def generate_level_from_blueprint(
                 if not cell_has_beam:
                     walkable_cells.append((x, y))
 
+            if ch in {"^", "v", "<", ">"}:
+                if ch == "^":
+                    moving_floor_cells[(x, y)] = MovingFloorDirection.UP
+                elif ch == "v":
+                    moving_floor_cells[(x, y)] = MovingFloorDirection.DOWN
+                elif ch == "<":
+                    moving_floor_cells[(x, y)] = MovingFloorDirection.LEFT
+                else:
+                    moving_floor_cells[(x, y)] = MovingFloorDirection.RIGHT
+                if not cell_has_beam and (x, y) not in walkable_cells:
+                    walkable_cells.append((x, y))
             if ch == "P":
                 player_cells.append((x, y))
             if ch == "C":
@@ -372,15 +384,6 @@ def generate_level_from_blueprint(
         bevel_corners=bevel_corners,
         moving_floor_cells={},
     )
-    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = {}
-    if base_moving_floor_cells:
-        for cell, direction in base_moving_floor_cells.items():
-            x, y = cell
-            if x < 0 or y < 0 or x >= stage.grid_cols or y >= stage.grid_rows:
-                continue
-            if cell in outside_cells or cell in wall_cells or cell in outer_wall_cells:
-                continue
-            moving_floor_cells[cell] = direction
     if moving_floor_cells:
         pitfall_cells.difference_update(moving_floor_cells.keys())
         for cell in moving_floor_cells:

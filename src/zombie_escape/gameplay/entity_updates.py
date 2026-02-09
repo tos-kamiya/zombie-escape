@@ -34,7 +34,7 @@ from ..models import FallingZombie, GameData
 from ..rng import get_rng
 from ..entities.movement_helpers import pitfall_target
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
-from .moving_floor import get_moving_floor_drift, is_entity_on_moving_floor
+from .moving_floor import get_moving_floor_drift
 from .constants import LAYER_PLAYERS, MAX_ZOMBIES
 from .decay_effects import DecayingEntityEffect, update_decay_effects
 from .spawn import spawn_weighted_zombie, update_falling_zombies
@@ -216,7 +216,6 @@ def update_entities(
     # Update camera
     target_for_camera = active_car if player.in_car and active_car else player
     camera.update(target_for_camera)
-    player_on_moving_floor = is_entity_on_moving_floor(player)
 
     if player.inner_wall_hit and player.inner_wall_cell is not None:
         game_data.state.player_wall_target_cell = player.inner_wall_cell
@@ -446,11 +445,7 @@ def update_entities(
             )
             game_data.state.falling_zombies.append(fall)
 
-    active_humans = [
-        survivor
-        for survivor in survivor_group
-        if survivor.alive() and not is_entity_on_moving_floor(survivor)
-    ]
+    active_humans = [survivor for survivor in survivor_group if survivor.alive()]
     for bot in patrol_bots_sorted:
         if not bot.alive():
             continue
@@ -468,9 +463,7 @@ def update_entities(
             patrol_bot_group=patrol_bot_group,
             human_group=active_humans,
             zombie_group=zombies_sorted,
-            player=None
-            if player.in_car or player_on_moving_floor
-            else player,
+            player=None if player.in_car else player,
             car=active_car,
             parked_cars=game_data.waiting_cars,
             cell_size=game_data.cell_size,

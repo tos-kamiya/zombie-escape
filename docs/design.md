@@ -452,6 +452,7 @@
   - `f`: 燃料候補（fuel candidate）
   - `l`: 懐中電灯候補（flashlight candidate）
   - `s`: 靴候補（shoes candidate）
+  - `^`/`v`/`<`/`>`: 動く床（上/下/左/右）
 
 - `generate_random_blueprint(...)`
   - 外周 -> 出口 -> スポーン・アイテム候補（P/C/f/l/s、必要数はステージ設定から指定）予約 -> 落とし穴 -> 壁 -> 鉄筋候補 の順に生成。

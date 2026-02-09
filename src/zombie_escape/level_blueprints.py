@@ -10,6 +10,7 @@ from .level_constants import (
     DEFAULT_WALL_LINES,
 )
 from .rng import get_rng
+from .entities_constants import MovingFloorDirection
 
 EXITS_PER_SIDE = 1  # currently fixed to 1 per side (can be tuned)
 WALL_MIN_LEN = 3
@@ -526,7 +527,7 @@ def generate_random_blueprint(
     pitfall_density: float = 0.0,
     pitfall_zones: list[tuple[int, int, int, int]] | None = None,
     reserved_cells: set[tuple[int, int]] | None = None,
-    moving_floor_cells: set[tuple[int, int]] | None = None,
+    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] | None = None,
     fuel_count: int = 1,
     flashlight_count: int = 2,
     shoes_count: int = 2,
@@ -538,7 +539,21 @@ def generate_random_blueprint(
     # Reserved cells
     reserved_cells = set(reserved_cells or set())
     if moving_floor_cells:
-        reserved_cells.update(moving_floor_cells)
+        reserved_cells.update(moving_floor_cells.keys())
+
+    # Place moving floors first so later steps treat them as reserved cells.
+    if moving_floor_cells:
+        for (mx, my), direction in moving_floor_cells.items():
+            if mx < 0 or my < 0 or mx >= cols or my >= rows:
+                continue
+            if direction == MovingFloorDirection.UP:
+                grid[my][mx] = "^"
+            elif direction == MovingFloorDirection.DOWN:
+                grid[my][mx] = "v"
+            elif direction == MovingFloorDirection.LEFT:
+                grid[my][mx] = "<"
+            elif direction == MovingFloorDirection.RIGHT:
+                grid[my][mx] = ">"
 
     # Place zone-defined pitfalls
     if pitfall_zones:

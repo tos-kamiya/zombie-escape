@@ -343,8 +343,6 @@ def handle_survivor_zombie_collisions(
     for survivor in list(survivor_group):
         if not survivor.alive():
             continue
-        if is_entity_on_moving_floor(survivor):
-            continue
         survivor_radius = survivor.radius
         search_radius = survivor_radius + ZOMBIE_RADIUS
         search_radius_sq = search_radius * search_radius
@@ -359,8 +357,6 @@ def handle_survivor_zombie_collisions(
                 break
             zombie = zombies[idx]
             if not zombie.alive():
-                continue
-            if is_entity_on_moving_floor(zombie):
                 continue
             dy = zombie.rect.centery - survivor.rect.centery
             if abs(dy) > search_radius:
