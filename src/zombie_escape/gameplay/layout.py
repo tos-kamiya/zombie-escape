@@ -380,6 +380,7 @@ def generate_level_from_blueprint(
         wall_cells=wall_cells,
         pitfall_cells=pitfall_cells,
         car_walkable_cells=car_reachable_cells,
+        car_spawn_cells=[],
         fall_spawn_cells=set(),
         bevel_corners=bevel_corners,
         moving_floor_cells={},
@@ -429,35 +430,16 @@ def generate_level_from_blueprint(
         if moving_floor_set
         else list(car_reachable_cells)
     )
-    filtered_car_cells = (
-        [cell for cell in car_cells if cell not in moving_floor_set]
-        if moving_floor_set
-        else list(car_cells)
-    )
-    filtered_fuel_cells = (
-        [cell for cell in fuel_cells if cell not in moving_floor_set]
-        if moving_floor_set
-        else list(fuel_cells)
-    )
-    filtered_flashlight_cells = (
-        [cell for cell in flashlight_cells if cell not in moving_floor_set]
-        if moving_floor_set
-        else list(flashlight_cells)
-    )
-    filtered_shoes_cells = (
-        [cell for cell in shoes_cells if cell not in moving_floor_set]
-        if moving_floor_set
-        else list(shoes_cells)
-    )
+    layout.car_spawn_cells = car_spawn_cells
 
     return (
         layout,
         {
         "player_cells": player_cells,
-        "car_cells": filtered_car_cells,
-        "fuel_cells": filtered_fuel_cells,
-        "flashlight_cells": filtered_flashlight_cells,
-        "shoes_cells": filtered_shoes_cells,
+        "car_cells": list(car_cells),
+        "fuel_cells": list(fuel_cells),
+        "flashlight_cells": list(flashlight_cells),
+        "shoes_cells": list(shoes_cells),
         "walkable_cells": walkable_cells,
         "car_walkable_cells": list(car_reachable_cells),
         "item_spawn_cells": item_spawn_cells,

@@ -835,9 +835,13 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
     player = game_data.player
     if not player:
         return None
-    # Use cells that are 4-way reachable by car
-    car_walkable = list(game_data.layout.car_walkable_cells)
-    walkable_cells = car_walkable if car_walkable else game_data.layout.walkable_cells
+    # Use cells that are 4-way reachable by car (prefer spawn-filtered cells).
+    car_spawn_cells = list(game_data.layout.car_spawn_cells)
+    if car_spawn_cells:
+        walkable_cells = car_spawn_cells
+    else:
+        car_walkable = list(game_data.layout.car_walkable_cells)
+        walkable_cells = car_walkable if car_walkable else game_data.layout.walkable_cells
     if not walkable_cells:
         return None
     wall_group = game_data.groups.wall_group
