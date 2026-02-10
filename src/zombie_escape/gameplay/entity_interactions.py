@@ -9,7 +9,6 @@ import pygame
 from ..entities_constants import (
     BUDDY_FOLLOW_START_DISTANCE,
     BUDDY_FOLLOW_STOP_DISTANCE,
-    BUDDY_MERGE_DISTANCE,
     CAR_HEIGHT,
     CAR_WALL_DAMAGE,
     CAR_WIDTH,

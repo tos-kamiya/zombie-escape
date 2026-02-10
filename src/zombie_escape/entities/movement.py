@@ -187,11 +187,13 @@ def _zombie_update_tracker_target(
     zombie,
     footprints,
     walls,
+    *,
+    now_ms: int,
 ) -> None:
     """Compatibility shim for tests; implementation lives in zombie_movement."""
     from .zombie_movement import _zombie_update_tracker_target as _impl
 
-    _impl(zombie, footprints, walls)
+    _impl(zombie, footprints, walls, now_ms=now_ms)
 
 
 def _zombie_wall_hug_movement(
@@ -202,6 +204,7 @@ def _zombie_wall_hug_movement(
     footprints,
     cell_size,
     layout,
+    now_ms: int,
 ):
     """Compatibility shim for tests; implementation lives in zombie_movement."""
     from .zombie_movement import _zombie_wall_hug_movement as _impl
@@ -214,4 +217,5 @@ def _zombie_wall_hug_movement(
         footprints,
         cell_size,
         layout,
+        now_ms=now_ms,
     )

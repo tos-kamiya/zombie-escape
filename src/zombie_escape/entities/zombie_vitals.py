@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Callable
 
-import pygame
-
 from .patrol_paralyze import update_paralyze_from_patrol_contact
 
 

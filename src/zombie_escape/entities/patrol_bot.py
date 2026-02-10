@@ -15,7 +15,6 @@ from ..entities_constants import (
     PATROL_BOT_SPRITE_SIZE,
     PATROL_BOT_SPEED,
     PATROL_BOT_COLLISION_MARGIN,
-    MovingFloorDirection,
 )
 from ..render_assets import angle_bin_from_vector, build_patrol_bot_directional_surfaces
 from ..render_constants import ANGLE_BINS
@@ -228,12 +227,9 @@ class PatrolBot(pygame.sprite.Sprite):
 
         cell_x = None
         cell_y = None
-        floor_dir = None
         if cell_size > 0:
             cell_x = int(self.rect.centerx // cell_size)
             cell_y = int(self.rect.centery // cell_size)
-            if layout.moving_floor_cells:
-                floor_dir = layout.moving_floor_cells.get((cell_x, cell_y))
         on_floor = abs(drift_x) > 0.0 or abs(drift_y) > 0.0
         forced_floor_dir = False
         if on_floor:

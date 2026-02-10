@@ -37,7 +37,6 @@ from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_dog_directional_surfaces,
 )
-from ..render_constants import ANGLE_BINS
 from ..screen_constants import FPS
 from ..world_grid import apply_cell_edge_nudge
 from .patrol_paralyze import draw_paralyze_marker

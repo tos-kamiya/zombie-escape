@@ -20,7 +20,7 @@ def test_tracker_picks_latest_visible_footprint() -> None:
         _make_footprint((30, 10), 1000),
         _make_footprint((40, 10), 2000),
     ]
-    _zombie_update_tracker_target(zombie, footprints, [])
+    _zombie_update_tracker_target(zombie, footprints, [], now_ms=0)
     assert zombie.tracker_target_pos == (40, 10)
 
 
@@ -33,7 +33,7 @@ def test_tracker_skips_blocked_latest_footprint() -> None:
         _make_footprint((10, 50), 2000),
         _make_footprint((30, 10), 1000),
     ]
-    _zombie_update_tracker_target(zombie, footprints, [wall])
+    _zombie_update_tracker_target(zombie, footprints, [wall], now_ms=0)
     assert zombie.tracker_target_pos == (10, 50)
 
 
@@ -47,5 +47,5 @@ def test_tracker_limits_to_top_k_candidates() -> None:
         _make_footprint((70, 5), 2000),
         _make_footprint((10, 40), 1000),
     ]
-    _zombie_update_tracker_target(zombie, footprints, [wall])
+    _zombie_update_tracker_target(zombie, footprints, [wall], now_ms=0)
     assert zombie.tracker_target_pos is None

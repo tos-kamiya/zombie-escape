@@ -16,7 +16,6 @@ from .entities_constants import (
 from .gameplay_constants import (
     DEFAULT_FLASHLIGHT_SPAWN_COUNT,
     DEFAULT_SHOES_SPAWN_COUNT,
-    SURVIVOR_SPAWN_RATE,
     ZOMBIE_SPAWN_DELAY_MS,
 )
 from .level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
