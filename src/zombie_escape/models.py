@@ -247,6 +247,12 @@ class Stage:
     # Survivor spawning
     survivor_spawn_rate: float = SURVIVOR_SPAWN_RATE
 
+    def __post_init__(self) -> None:
+        if self.requires_fuel:
+            assert self.fuel_spawn_count >= 1, (
+                "requires_fuel stages must set fuel_spawn_count >= 1"
+            )
+
     @property
     def name(self) -> str:
         return tr(self.name_key)

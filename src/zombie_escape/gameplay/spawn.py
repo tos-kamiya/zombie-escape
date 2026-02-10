@@ -622,10 +622,8 @@ def spawn_survivors(
 ) -> list[Survivor]:
     """Populate rescue-stage survivors and buddy-stage buddies."""
     survivors: list[Survivor] = []
-    if not (
-        game_data.stage.survivor_rescue_stage
-        or game_data.stage.buddy_required_count > 0
-    ):
+    spawn_rate = max(0.0, game_data.stage.survivor_spawn_rate)
+    if not (spawn_rate > 0.0 or game_data.stage.buddy_required_count > 0):
         return survivors
 
     walkable = layout_data.get("walkable_cells", [])
@@ -634,11 +632,11 @@ def spawn_survivors(
     all_sprites = game_data.groups.all_sprites
     cell_size = game_data.cell_size
 
-    if game_data.stage.survivor_rescue_stage:
+    if spawn_rate > 0.0:
         positions = find_interior_spawn_positions(
             walkable,
             cell_size,
-            game_data.stage.survivor_spawn_rate,
+            spawn_rate,
         )
         for pos in positions:
             survivor = Survivor(*pos)
