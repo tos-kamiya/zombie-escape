@@ -5,6 +5,7 @@ This folder collects developer-facing setup/build notes.
 ## Contents
 
 - `docs/developer/windows-build.md`: Windows binary build notes (PyInstaller).
+- `docs/developer/zone-from-ascii.md`: ASCII map to zone settings tool.
 
 ## Quick Setup (3.12)
 
