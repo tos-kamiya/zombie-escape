@@ -32,6 +32,10 @@
         "page_switch": "左右: ステージ群切替",
         "confirm": "Enter/Space/South: 決定または実行"
       },
+      "startup": {
+        "release_confirm": "SOUTHボタンを離してください",
+        "waiting": "離すと続行します。"
+      },
       "option_help": {
         "settings": "設定画面を開いて言語や補助オプションを変更します。",
         "quit": "ゲームを終了します。",

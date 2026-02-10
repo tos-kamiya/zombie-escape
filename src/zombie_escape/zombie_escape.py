@@ -40,6 +40,7 @@ from .windowing import (
 )
 from .screens.game_over import game_over_screen
 from .screens.settings import settings_screen
+from .screens.startup_check import startup_check_screen
 from .screens.title import MAX_SEED_DIGITS, title_screen
 from .stage_constants import DEFAULT_STAGE_ID, STAGES
 
@@ -181,7 +182,7 @@ def main() -> None:
             profiler_output=output_path,
         )
 
-    next_screen = ScreenID.TITLE
+    next_screen = ScreenID.STARTUP_CHECK
     transition: ScreenTransition | None = None
     running = True
 
@@ -189,7 +190,16 @@ def main() -> None:
         incoming = transition
         transition = None
 
-        if next_screen == ScreenID.TITLE:
+        if next_screen == ScreenID.STARTUP_CHECK:
+            adjust_menu_logical_size()
+            transition = startup_check_screen(
+                menu_screen,
+                clock,
+                config,
+                FPS,
+                screen_size=menu_screen.get_size(),
+            )
+        elif next_screen == ScreenID.TITLE:
             adjust_menu_logical_size()
             seed_input = None if title_seed_is_auto else title_seed_text
             transition = title_screen(

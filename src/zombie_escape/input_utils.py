@@ -61,6 +61,24 @@ def is_confirm_event(event: pygame.event.Event) -> bool:
     return False
 
 
+def is_confirm_held(
+    controller: pygame.controller.Controller | None,
+    joystick: pygame.joystick.Joystick | None,
+) -> bool:
+    """Return True if the confirm (South/A) button is currently held."""
+    if controller and controller.get_init():
+        if CONTROLLER_BUTTON_A is not None and controller.get_button(
+            CONTROLLER_BUTTON_A
+        ):
+            return True
+    if joystick and joystick.get_init():
+        if joystick.get_numbuttons() > JOY_BUTTON_A and joystick.get_button(
+            JOY_BUTTON_A
+        ):
+            return True
+    return False
+
+
 def is_start_event(event: pygame.event.Event) -> bool:
     if CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN:
         return (

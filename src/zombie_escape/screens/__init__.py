@@ -21,6 +21,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 class ScreenID(Enum):
     """Identifiers for the major screens in the game."""
 
+    STARTUP_CHECK = "startup_check"
     TITLE = "title"
     SETTINGS = "settings"
     GAMEPLAY = "gameplay"

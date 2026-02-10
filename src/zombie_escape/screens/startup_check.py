@@ -1,0 +1,138 @@
+from __future__ import annotations
+
+from typing import Any
+
+import pygame
+from pygame import surface, time
+
+from ..colors import BLACK, LIGHT_GRAY, WHITE
+from ..font_utils import load_font
+from ..localization import get_font_settings
+from ..localization import translate as tr
+from ..input_utils import (
+    CONTROLLER_DEVICE_ADDED,
+    CONTROLLER_DEVICE_REMOVED,
+    init_first_controller,
+    init_first_joystick,
+    is_confirm_held,
+)
+from ..render import blit_text_wrapped, wrap_text
+from ..windowing import adjust_menu_logical_size, present, sync_window_size
+from ..screens import ScreenID, ScreenTransition
+
+
+def startup_check_screen(
+    screen: surface.Surface,
+    clock: time.Clock,
+    _config: dict[str, Any],
+    fps: int,
+    *,
+    screen_size: tuple[int, int],
+) -> ScreenTransition:
+    """Gate entry to title screen if confirm is held on startup."""
+    width, height = screen.get_size()
+    if width <= 0 or height <= 0:
+        width, height = screen_size
+
+    controller = init_first_controller()
+    joystick = init_first_joystick() if controller is None else None
+    pygame.event.pump()
+
+    if not is_confirm_held(controller, joystick):
+        return ScreenTransition(ScreenID.TITLE)
+
+    release_at: int | None = None
+    release_delay_ms = 400
+
+    while True:
+        now = pygame.time.get_ticks()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return ScreenTransition(ScreenID.EXIT)
+            if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
+                sync_window_size(event)
+                adjust_menu_logical_size()
+                width, height = screen.get_size()
+                continue
+            if event.type == pygame.JOYDEVICEADDED or (
+                CONTROLLER_DEVICE_ADDED is not None
+                and event.type == CONTROLLER_DEVICE_ADDED
+            ):
+                if controller is None:
+                    controller = init_first_controller()
+                if controller is None:
+                    joystick = init_first_joystick()
+            if event.type == pygame.JOYDEVICEREMOVED or (
+                CONTROLLER_DEVICE_REMOVED is not None
+                and event.type == CONTROLLER_DEVICE_REMOVED
+            ):
+                if controller and not controller.get_init():
+                    controller = None
+                if joystick and not joystick.get_init():
+                    joystick = None
+
+        pygame.event.pump()
+        if not is_confirm_held(controller, joystick):
+            if release_at is None:
+                release_at = now
+            elif now - release_at >= release_delay_ms:
+                return ScreenTransition(ScreenID.TITLE)
+        else:
+            release_at = None
+
+        screen.fill(BLACK)
+        try:
+            font_settings = get_font_settings()
+
+            def _get_font(size: int) -> pygame.font.Font:
+                return load_font(font_settings.resource, size)
+
+            def _measure_text(
+                text: str, font: pygame.font.Font, max_width: int
+            ) -> tuple[int, int, int]:
+                lines = wrap_text(text, font, max_width)
+                line_height = int(
+                    round(font.get_linesize() * font_settings.line_height_scale)
+                )
+                height = max(1, len(lines)) * line_height
+                width = max((font.size(line)[0] for line in lines if line), default=0)
+                return width, height, line_height
+
+            message = tr("menu.startup.release_confirm")
+            sub_message = tr("menu.startup.waiting")
+            message_font = _get_font(font_settings.scaled_size(20))
+            sub_font = _get_font(font_settings.scaled_size(11))
+            max_width = max(1, width - 48)
+            msg_width, msg_height, _ = _measure_text(
+                message, message_font, max_width
+            )
+            sub_width, sub_height, _ = _measure_text(
+                sub_message, sub_font, max_width
+            )
+            total_height = msg_height + 8 + sub_height
+            top = max(24, height // 2 - total_height // 2)
+            left = max(24, width // 2 - msg_width // 2)
+            blit_text_wrapped(
+                screen,
+                message,
+                message_font,
+                WHITE,
+                (left, top),
+                max_width,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            sub_left = max(24, width // 2 - sub_width // 2)
+            blit_text_wrapped(
+                screen,
+                sub_message,
+                sub_font,
+                LIGHT_GRAY,
+                (sub_left, top + msg_height + 8),
+                max_width,
+                line_height_scale=font_settings.line_height_scale,
+            )
+        except pygame.error as exc:
+            print(f"Error rendering startup check screen: {exc}")
+
+        present(screen)
+        clock.tick(fps)

@@ -32,6 +32,10 @@
         "page_switch": "Left/Right: switch stage groups",
         "confirm": "Enter/Space/South:\n  activate selection"
       },
+      "startup": {
+        "release_confirm": "Release the South button",
+        "waiting": "Continuing after it is released."
+      },
       "option_help": {
         "settings": "Open Settings to adjust assists and localization.",
         "quit": "Close the game.",
