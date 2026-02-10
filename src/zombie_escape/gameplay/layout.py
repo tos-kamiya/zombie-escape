@@ -142,6 +142,7 @@ def generate_level_from_blueprint(
             steel_chance=steel_chance,
             cols=stage.grid_cols,
             rows=stage.grid_rows,
+            exit_sides=stage.exit_sides,
             wall_algo=stage.wall_algorithm,
             pitfall_density=stage.pitfall_density,
             pitfall_zones=stage.pitfall_zones,

@@ -159,7 +159,11 @@ def _init_grid(cols: int, rows: int) -> list[list[str]]:
     return grid
 
 
-def _place_exits(grid: list[list[str]], exits_per_side: int) -> None:
+def _place_exits(
+    grid: list[list[str]],
+    exits_per_side: int,
+    sides: list[str] | None = None,
+) -> None:
     cols, rows = len(grid[0]), len(grid)
     rng = RNG.randint
     used = set()
@@ -173,7 +177,13 @@ def _place_exits(grid: list[list[str]], exits_per_side: int) -> None:
             x = 1 if side == "left" else cols - 2
         return x, y
 
-    for side in ("top", "bottom", "left", "right"):
+    if not sides:
+        sides = ["top", "bottom", "left", "right"]
+    else:
+        sides = [side for side in sides if side in ("top", "bottom", "left", "right")]
+        if not sides:
+            sides = ["top", "bottom", "left", "right"]
+    for side in sides:
         for _ in range(exits_per_side):
             x, y = _pick_pos(side)
             # avoid duplicates; retry a few times
@@ -523,6 +533,7 @@ def generate_random_blueprint(
     *,
     cols: int,
     rows: int,
+    exit_sides: list[str] | None = None,
     wall_algo: str = "default",
     pitfall_density: float = 0.0,
     pitfall_zones: list[tuple[int, int, int, int]] | None = None,
@@ -534,7 +545,7 @@ def generate_random_blueprint(
 ) -> Blueprint:
     """Generate a single randomized blueprint grid without connectivity validation."""
     grid = _init_grid(cols, rows)
-    _place_exits(grid, EXITS_PER_SIDE)
+    _place_exits(grid, EXITS_PER_SIDE, exit_sides)
 
     # Reserved cells
     reserved_cells = set(reserved_cells or set())

@@ -201,6 +201,9 @@ class Stage:
     grid_cols: int = DEFAULT_GRID_COLS
     grid_rows: int = DEFAULT_GRID_ROWS
     wall_algorithm: str = "default"
+    exit_sides: list[str] = field(
+        default_factory=lambda: ["top", "bottom", "left", "right"]
+    )
     wall_rubble_ratio: float = 0.0
     fall_spawn_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
     fall_spawn_floor_ratio: float = 0.0
