@@ -78,8 +78,10 @@
 
 ## 2. 画面遷移とゲームループ
 
-- `ScreenID` は `TITLE`, `SETTINGS`, `GAMEPLAY`, `GAME_OVER`, `EXIT` の5種。
+- `ScreenID` は `STARTUP_CHECK`, `TITLE`, `SETTINGS`, `GAMEPLAY`, `GAME_OVER`, `EXIT` の6種。
 - `zombie_escape.main()` が `ScreenTransition` を受け取りながら画面遷移を管理。
+- 起動直後は `STARTUP_CHECK` に入り、SOUTH（決定）ボタンが押しっぱなしなら解除＋800ms経過まで待機する。
+  解除済みの場合はそのまま `TITLE` へ進む。
 - ゲームプレイ本体は `screens/gameplay.py:gameplay_screen()`。
   - ここで `gameplay/state.py:initialize_game_state()` -> `gameplay/layout.py:generate_level_from_blueprint()` -> 各種スポーン -> メインループへ。
 

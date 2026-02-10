@@ -42,7 +42,7 @@ def startup_check_screen(
         return ScreenTransition(ScreenID.TITLE)
 
     release_at: int | None = None
-    release_delay_ms = 400
+    release_delay_ms = 800
 
     while True:
         now = pygame.time.get_ticks()

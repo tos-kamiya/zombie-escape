@@ -156,6 +156,14 @@ def title_screen(
     selected = min(selected_stage_index, len(options) - 1)
     controller = init_first_controller()
     joystick = init_first_joystick() if controller is None else None
+    pygame.event.pump()
+    # Drop any queued confirm events from startup/controller init glitches.
+    confirm_event_types = [pygame.JOYBUTTONDOWN]
+    if CONTROLLER_BUTTON_DOWN is not None:
+        confirm_event_types.append(CONTROLLER_BUTTON_DOWN)
+    pygame.event.clear(confirm_event_types)
+    pygame.event.clear([pygame.KEYDOWN])
+    confirm_armed_at = pygame.time.get_ticks() + 300
 
     def _render_frame() -> None:
         screen.fill(BLACK)
@@ -579,6 +587,8 @@ def title_screen(
                 elif event.key in (pygame.K_DOWN, pygame.K_s):
                     selected = (selected + 1) % len(options)
                 elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    if pygame.time.get_ticks() < confirm_armed_at:
+                        continue
                     current = options[selected]
                     if current["type"] == "stage" and current.get("available"):
                         seed_value = (
@@ -611,6 +621,8 @@ def title_screen(
                 and event.type == CONTROLLER_BUTTON_DOWN
             ):
                 if is_confirm_event(event):
+                    if pygame.time.get_ticks() < confirm_armed_at:
+                        continue
                     current = options[selected]
                     if current["type"] == "stage" and current.get("available"):
                         seed_value = (
