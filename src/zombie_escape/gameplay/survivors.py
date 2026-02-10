@@ -49,12 +49,9 @@ def update_survivors(
     wall_target_cell: tuple[int, int] | None = None,
     patrol_bot_group: pygame.sprite.Group | None = None,
 ) -> None:
-    if not (
-        game_data.stage.survivor_rescue_stage
-        or game_data.stage.buddy_required_count > 0
-    ):
-        return
     survivor_group = game_data.groups.survivor_group
+    if not survivor_group:
+        return
     wall_group = game_data.groups.wall_group
     player = game_data.player
     assert player is not None
@@ -326,8 +323,6 @@ def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> Non
 def handle_survivor_zombie_collisions(
     game_data: GameData, config: dict[str, Any]
 ) -> None:
-    if not game_data.stage.survivor_rescue_stage:
-        return
     survivor_group = game_data.groups.survivor_group
     if not survivor_group:
         return

@@ -471,8 +471,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 add_survivor_message(game_data, tr("survivors.too_many_aboard"))
                 active_car._take_damage(overload_damage)
 
-    if stage.survivor_rescue_stage:
-        handle_survivor_zombie_collisions(game_data, config)
+    handle_survivor_zombie_collisions(game_data, config)
 
     # Handle car destruction
     if car and car.alive() and car.health <= 0:

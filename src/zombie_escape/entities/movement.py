@@ -17,9 +17,12 @@ def _can_humanoid_jump(
     dy: float,
     jump_range: float,
     cell_size: int,
+    pitfall_cells: Iterable[tuple[int, int]],
     walkable_cells: Iterable[tuple[int, int]],
 ) -> bool:
     """Accurately check if a jump is possible in the given movement direction."""
+    if not pitfall_cells:
+        return False
     move_len = math.hypot(dx, dy)
     if move_len <= 0:
         return False

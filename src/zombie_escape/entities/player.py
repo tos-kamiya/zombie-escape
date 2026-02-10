@@ -98,11 +98,17 @@ class Player(pygame.sprite.Sprite):
         # Pre-calculate jump possibility based on actual movement vector
         can_jump_now = (
             not self.is_jumping
-            and pitfall_cells
             and cell_size
             and walkable_cells
             and _can_humanoid_jump(
-                self.x, self.y, dx, dy, PLAYER_JUMP_RANGE, cell_size, walkable_cells
+                self.x,
+                self.y,
+                dx,
+                dy,
+                PLAYER_JUMP_RANGE,
+                cell_size,
+                pitfall_cells,
+                walkable_cells,
             )
         )
 

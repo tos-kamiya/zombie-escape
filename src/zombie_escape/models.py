@@ -248,7 +248,7 @@ class Stage:
     patrol_bot_spawn_rate: float = 0.0
 
     # Survivor spawning
-    survivor_spawn_rate: float = SURVIVOR_SPAWN_RATE
+    survivor_spawn_rate: float = 0.0
 
     def __post_init__(self) -> None:
         if self.requires_fuel:

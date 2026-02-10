@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import pygame
 
@@ -58,6 +58,7 @@ class Survivor(pygame.sprite.Sprite):
         self.input_facing_bin = 0
         self.wall_bump_counter = 0
         self.wall_bump_flip = 1
+        self._inner_wall_hit = False
         self.wall_bump_hold = 0
         self.directional_images = build_survivor_directional_surfaces(
             self.radius,
@@ -123,146 +124,253 @@ class Survivor(pygame.sprite.Sprite):
                 )
 
         if self.is_buddy:
-            if self.rescued or not self.following:
-                self.rect.center = (int(self.x), int(self.y))
-                return
-
-            target_pos = player_pos
-            if wall_target_cell is not None and cell_size is not None:
-                target_pos = (
-                    wall_target_cell[0] * cell_size + cell_size // 2,
-                    wall_target_cell[1] * cell_size + cell_size // 2,
-                )
-
-            dx = target_pos[0] - self.x
-            dy = target_pos[1] - self.y
-            dist_sq = dx * dx + dy * dy
-            if dist_sq <= 0:
-                self.rect.center = (int(self.x), int(self.y))
-                self._update_facing_for_bump(False)
-                return
-
-            dist = math.sqrt(dist_sq)
-            move_x = (dx / dist) * BUDDY_FOLLOW_SPEED + drift_x
-            move_y = (dy / dist) * BUDDY_FOLLOW_SPEED + drift_y
-
-            if cell_size is not None:
-                move_x, move_y = apply_cell_edge_nudge(
-                    self.x,
-                    self.y,
-                    move_x,
-                    move_y,
-                    layout=layout,
-                    cell_size=cell_size,
-                )
-
-            self._update_input_facing(move_x, move_y)
-            inner_wall_hit = False
-
-            can_jump_now = (
-                not self.is_jumping
-                and pitfall_cells
-                and cell_size
-                and walkable_cells
-                and _can_humanoid_jump(
-                    self.x,
-                    self.y,
-                    move_x,
-                    move_y,
-                    SURVIVOR_JUMP_RANGE,
-                    cell_size,
-                    walkable_cells,
-                )
-            )
-
-            def _on_buddy_wall_hit(hit_wall: Wall) -> None:
-                nonlocal inner_wall_hit
-                if not hasattr(hit_wall, "_take_damage"):
-                    return
-                if hit_wall.alive():
-                    dx_to_player = player_pos[0] - self.x
-                    dy_to_player = player_pos[1] - self.y
-                    if dx_to_player * dx_to_player + dy_to_player * dy_to_player <= (
-                        BUDDY_WALL_DAMAGE_RANGE * BUDDY_WALL_DAMAGE_RANGE
-                    ):
-                        hit_wall._take_damage(amount=max(1, BUDDY_WALL_DAMAGE))
-                if _is_inner_wall(hit_wall):
-                    inner_wall_hit = True
-
-            def _collide_buddy() -> Wall | None:
-                hit_wall = spritecollideany_walls(
-                    self,
-                    walls,
-                    wall_index=wall_index,
-                    cell_size=cell_size,
-                    grid_cols=layout.grid_cols,
-                    grid_rows=layout.grid_rows,
-                )
-                return hit_wall
-
-            move_axis_with_pitfall(
-                sprite=self,
-                axis="x",
-                delta=move_x,
-                collide=_collide_buddy,
+            self._update_buddy_behavior(
+                player_pos,
+                walls,
+                patrol_bot_group=patrol_bot_group,
+                wall_index=wall_index,
                 cell_size=cell_size,
+                layout=layout,
+                wall_target_cell=wall_target_cell,
+                player_collision_radius=player_collision_radius,
+                drift_x=drift_x,
+                drift_y=drift_y,
                 pitfall_cells=pitfall_cells,
-                can_jump_now=bool(can_jump_now),
+                walkable_cells=walkable_cells,
                 now=now,
-                rollback_factor=1.5,
-                on_wall_hit=_on_buddy_wall_hit,
+                level_width=level_width,
+                level_height=level_height,
             )
-
-            move_axis_with_pitfall(
-                sprite=self,
-                axis="y",
-                delta=move_y,
-                collide=_collide_buddy,
+        else:
+            self._update_survivor_behavior(
+                player_pos,
+                walls,
+                patrol_bot_group=patrol_bot_group,
+                wall_index=wall_index,
                 cell_size=cell_size,
+                layout=layout,
+                drift_x=drift_x,
+                drift_y=drift_y,
                 pitfall_cells=pitfall_cells,
-                can_jump_now=bool(can_jump_now),
+                walkable_cells=walkable_cells,
                 now=now,
-                rollback_factor=1.5,
-                on_wall_hit=_on_buddy_wall_hit,
             )
 
-            player_radius = (
-                float(player_collision_radius)
-                if player_collision_radius is not None
-                else PLAYER_RADIUS
-            )
-            overlap_radius = (self.collision_radius + player_radius) * 1.05
-            dx_after = target_pos[0] - self.x
-            dy_after = target_pos[1] - self.y
-            dist_after_sq = dx_after * dx_after + dy_after * dy_after
-            if 0 < dist_after_sq < overlap_radius * overlap_radius:
-                dist_after = math.sqrt(dist_after_sq)
-                push_dist = overlap_radius - dist_after
-                self.x -= (dx_after / dist_after) * push_dist
-                self.y -= (dy_after / dist_after) * push_dist
-                self.rect.center = (int(self.x), int(self.y))
-
-            self.x = min(level_width, max(0, self.x))
-            self.y = min(level_height, max(0, self.y))
+    def _apply_drift_only(
+        self: Self,
+        move_x: float,
+        move_y: float,
+        *,
+        walls: pygame.sprite.Group,
+        wall_index: WallIndex | None,
+        cell_size: int | None,
+        layout: "LevelLayout",
+        pitfall_cells: set[tuple[int, int]],
+        walkable_cells: set[tuple[int, int]],
+        now: int,
+    ) -> None:
+        if move_x == 0.0 and move_y == 0.0:
             self.rect.center = (int(self.x), int(self.y))
-            if inner_wall_hit:
-                self.wall_bump_hold = HUMANOID_WALL_BUMP_HOLD_FRAMES
-            elif self.wall_bump_hold:
-                self.wall_bump_hold -= 1
-                inner_wall_hit = True
-            self._update_facing_for_bump(inner_wall_hit)
-            if not self.is_jumping:
-                overlap_bot = (
-                    bool(
-                        patrol_bot_group
-                        and pygame.sprite.spritecollideany(
-                            self, patrol_bot_group, collided=collide_circle_custom
-                        )
-                    )
-                )
-                self._update_image_scale(1.08 if overlap_bot else 1.0)
             return
 
+        def _collide() -> Wall | None:
+            return self._collide_walls(walls, wall_index, cell_size, layout)
+
+        if cell_size is not None:
+            move_x, move_y = apply_cell_edge_nudge(
+                self.x,
+                self.y,
+                move_x,
+                move_y,
+                layout=layout,
+                cell_size=cell_size,
+            )
+
+        can_jump_now = (
+            not self.is_jumping
+            and cell_size
+            and walkable_cells
+            and _can_humanoid_jump(
+                self.x,
+                self.y,
+                move_x,
+                move_y,
+                SURVIVOR_JUMP_RANGE,
+                cell_size,
+                pitfall_cells,
+                walkable_cells,
+            )
+        )
+
+        self._move_with_pitfall(
+            move_x,
+            move_y,
+            collide=_collide,
+            cell_size=cell_size,
+            pitfall_cells=pitfall_cells,
+            can_jump_now=bool(can_jump_now),
+            now=now,
+        )
+        self.rect.center = (int(self.x), int(self.y))
+
+    def _update_buddy_behavior(
+        self: Self,
+        player_pos: tuple[int, int],
+        walls: pygame.sprite.Group,
+        *,
+        patrol_bot_group: pygame.sprite.Group | None,
+        wall_index: WallIndex | None,
+        cell_size: int | None,
+        layout: "LevelLayout",
+        wall_target_cell: tuple[int, int] | None,
+        player_collision_radius: float | None,
+        drift_x: float,
+        drift_y: float,
+        pitfall_cells: set[tuple[int, int]],
+        walkable_cells: set[tuple[int, int]],
+        now: int,
+        level_width: int,
+        level_height: int,
+    ) -> None:
+        if self.rescued or not self.following:
+            self._apply_drift_only(
+                drift_x,
+                drift_y,
+                walls=walls,
+                wall_index=wall_index,
+                cell_size=cell_size,
+                layout=layout,
+                pitfall_cells=pitfall_cells,
+                walkable_cells=walkable_cells,
+                now=now,
+            )
+            return
+
+        target_pos = player_pos
+        if wall_target_cell is not None and cell_size is not None:
+            target_pos = (
+                wall_target_cell[0] * cell_size + cell_size // 2,
+                wall_target_cell[1] * cell_size + cell_size // 2,
+            )
+
+        dx = target_pos[0] - self.x
+        dy = target_pos[1] - self.y
+        dist_sq = dx * dx + dy * dy
+        if dist_sq <= 0:
+            self._apply_drift_only(
+                drift_x,
+                drift_y,
+                walls=walls,
+                wall_index=wall_index,
+                cell_size=cell_size,
+                layout=layout,
+                pitfall_cells=pitfall_cells,
+                walkable_cells=walkable_cells,
+                now=now,
+            )
+            self._update_facing_for_bump(False)
+            return
+
+        dist = math.sqrt(dist_sq)
+        move_x = (dx / dist) * BUDDY_FOLLOW_SPEED + drift_x
+        move_y = (dy / dist) * BUDDY_FOLLOW_SPEED + drift_y
+
+        if cell_size is not None:
+            move_x, move_y = apply_cell_edge_nudge(
+                self.x,
+                self.y,
+                move_x,
+                move_y,
+                layout=layout,
+                cell_size=cell_size,
+            )
+
+        self._update_input_facing(move_x, move_y)
+        self._inner_wall_hit = False
+
+        can_jump_now = (
+            not self.is_jumping
+            and cell_size
+            and walkable_cells
+            and _can_humanoid_jump(
+                self.x,
+                self.y,
+                move_x,
+                move_y,
+                SURVIVOR_JUMP_RANGE,
+                cell_size,
+                pitfall_cells,
+                walkable_cells,
+            )
+        )
+
+        def _on_buddy_wall_hit(hit_wall: Wall) -> None:
+            if not hasattr(hit_wall, "_take_damage"):
+                return
+            if hit_wall.alive():
+                dx_to_player = player_pos[0] - self.x
+                dy_to_player = player_pos[1] - self.y
+                if dx_to_player * dx_to_player + dy_to_player * dy_to_player <= (
+                    BUDDY_WALL_DAMAGE_RANGE * BUDDY_WALL_DAMAGE_RANGE
+                ):
+                    hit_wall._take_damage(amount=max(1, BUDDY_WALL_DAMAGE))
+            if _is_inner_wall(hit_wall):
+                self._inner_wall_hit = True
+
+        self._move_with_pitfall(
+            move_x,
+            move_y,
+            collide=lambda: self._collide_walls(walls, wall_index, cell_size, layout),
+            cell_size=cell_size,
+            pitfall_cells=pitfall_cells,
+            can_jump_now=bool(can_jump_now),
+            now=now,
+            rollback_factor=1.5,
+            on_wall_hit=_on_buddy_wall_hit,
+        )
+
+        player_radius = (
+            float(player_collision_radius)
+            if player_collision_radius is not None
+            else PLAYER_RADIUS
+        )
+        overlap_radius = (self.collision_radius + player_radius) * 1.05
+        dx_after = target_pos[0] - self.x
+        dy_after = target_pos[1] - self.y
+        dist_after_sq = dx_after * dx_after + dy_after * dy_after
+        if 0 < dist_after_sq < overlap_radius * overlap_radius:
+            dist_after = math.sqrt(dist_after_sq)
+            push_dist = overlap_radius - dist_after
+            self.x -= (dx_after / dist_after) * push_dist
+            self.y -= (dy_after / dist_after) * push_dist
+            self.rect.center = (int(self.x), int(self.y))
+
+        self.x = min(level_width, max(0, self.x))
+        self.y = min(level_height, max(0, self.y))
+        self.rect.center = (int(self.x), int(self.y))
+        if self._inner_wall_hit:
+            self.wall_bump_hold = HUMANOID_WALL_BUMP_HOLD_FRAMES
+        elif self.wall_bump_hold:
+            self.wall_bump_hold -= 1
+            self._inner_wall_hit = True
+        self._update_facing_for_bump(self._inner_wall_hit)
+        self._update_overlap_scale(patrol_bot_group)
+
+    def _update_survivor_behavior(
+        self: Self,
+        player_pos: tuple[int, int],
+        walls: pygame.sprite.Group,
+        *,
+        patrol_bot_group: pygame.sprite.Group | None,
+        wall_index: WallIndex | None,
+        cell_size: int | None,
+        layout: "LevelLayout",
+        drift_x: float,
+        drift_y: float,
+        pitfall_cells: set[tuple[int, int]],
+        walkable_cells: set[tuple[int, int]],
+        now: int,
+    ) -> None:
         dx = player_pos[0] - self.x
         dy = player_pos[1] - self.y
         dist_sq = dx * dx + dy * dy
@@ -270,6 +378,21 @@ class Survivor(pygame.sprite.Sprite):
             dist_sq <= 0
             or dist_sq > SURVIVOR_APPROACH_RADIUS * SURVIVOR_APPROACH_RADIUS
         ):
+            if drift_x != 0.0 or drift_y != 0.0:
+                self._apply_drift_only(
+                    drift_x,
+                    drift_y,
+                    walls=walls,
+                    wall_index=wall_index,
+                    cell_size=cell_size,
+                    layout=layout,
+                    pitfall_cells=pitfall_cells,
+                    walkable_cells=walkable_cells,
+                    now=now,
+                )
+                self._update_input_facing(drift_x, drift_y)
+                self._update_facing_for_bump(False)
+                self._update_overlap_scale(patrol_bot_group)
             return
 
         dist = math.sqrt(dist_sq)
@@ -280,7 +403,6 @@ class Survivor(pygame.sprite.Sprite):
 
         can_jump_now = (
             not self.is_jumping
-            and pitfall_cells
             and cell_size
             and walkable_cells
             and _can_humanoid_jump(
@@ -290,6 +412,7 @@ class Survivor(pygame.sprite.Sprite):
                 move_y,
                 SURVIVOR_JUMP_RANGE,
                 cell_size,
+                pitfall_cells,
                 walkable_cells,
             )
         )
@@ -304,32 +427,10 @@ class Survivor(pygame.sprite.Sprite):
                 cell_size=cell_size,
             )
 
-        def _collide_survivor() -> Wall | None:
-            hit_wall = spritecollideany_walls(
-                self,
-                walls,
-                wall_index=wall_index,
-                cell_size=cell_size,
-                grid_cols=layout.grid_cols,
-                grid_rows=layout.grid_rows,
-            )
-            return hit_wall
-
-        move_axis_with_pitfall(
-            sprite=self,
-            axis="x",
-            delta=move_x,
-            collide=_collide_survivor,
-            cell_size=cell_size,
-            pitfall_cells=pitfall_cells,
-            can_jump_now=bool(can_jump_now),
-            now=now,
-        )
-        move_axis_with_pitfall(
-            sprite=self,
-            axis="y",
-            delta=move_y,
-            collide=_collide_survivor,
+        self._move_with_pitfall(
+            move_x,
+            move_y,
+            collide=lambda: self._collide_walls(walls, wall_index, cell_size, layout),
             cell_size=cell_size,
             pitfall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
@@ -338,16 +439,75 @@ class Survivor(pygame.sprite.Sprite):
 
         self.rect.center = (int(self.x), int(self.y))
         self._update_facing_for_bump(False)
-        if not self.is_jumping:
-            overlap_bot = (
-                bool(
-                    patrol_bot_group
-                    and pygame.sprite.spritecollideany(
-                        self, patrol_bot_group, collided=collide_circle_custom
-                    )
-                )
+        self._update_overlap_scale(patrol_bot_group)
+
+    def _collide_walls(
+        self: Self,
+        walls: pygame.sprite.Group,
+        wall_index: WallIndex | None,
+        cell_size: int | None,
+        layout: "LevelLayout",
+    ) -> Wall | None:
+        return spritecollideany_walls(
+            self,
+            walls,
+            wall_index=wall_index,
+            cell_size=cell_size,
+            grid_cols=layout.grid_cols,
+            grid_rows=layout.grid_rows,
+        )
+
+    def _update_overlap_scale(
+        self: Self, patrol_bot_group: pygame.sprite.Group | None
+    ) -> None:
+        if self.is_jumping:
+            return
+        overlap_bot = bool(
+            patrol_bot_group
+            and pygame.sprite.spritecollideany(
+                self, patrol_bot_group, collided=collide_circle_custom
             )
-            self._update_image_scale(1.08 if overlap_bot else 1.0)
+        )
+        self._update_image_scale(1.08 if overlap_bot else 1.0)
+
+    def _move_with_pitfall(
+        self: Self,
+        move_x: float,
+        move_y: float,
+        *,
+        collide: Callable[[], Wall | None],
+        cell_size: int | None,
+        pitfall_cells: set[tuple[int, int]],
+        can_jump_now: bool,
+        now: int,
+        rollback_factor: float = 1.0,
+        on_wall_hit: Callable[[Wall], None] | None = None,
+    ) -> None:
+        move_axis_with_pitfall(
+            sprite=self,
+            axis="x",
+            delta=move_x,
+            collide=collide,
+            cell_size=cell_size,
+            pitfall_cells=pitfall_cells,
+            can_jump_now=can_jump_now,
+            now=now,
+            rollback_factor=rollback_factor,
+            on_wall_hit=on_wall_hit,
+        )
+        move_axis_with_pitfall(
+            sprite=self,
+            axis="y",
+            delta=move_y,
+            collide=collide,
+            cell_size=cell_size,
+            pitfall_cells=pitfall_cells,
+            can_jump_now=can_jump_now,
+            now=now,
+            rollback_factor=rollback_factor,
+            on_wall_hit=on_wall_hit,
+        )
+
 
     def _update_image_scale(self: Self, scale: float) -> None:
         """Apply scaling to the current directional image."""
