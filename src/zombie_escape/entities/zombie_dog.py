@@ -339,6 +339,8 @@ class ZombieDog(pygame.sprite.Sprite):
         *,
         cell_size: int,
         layout,
+        drift_x: float = 0.0,
+        drift_y: float = 0.0,
     ) -> None:
         if self.vitals.carbonized:
             self._apply_decay()
@@ -421,6 +423,8 @@ class ZombieDog(pygame.sprite.Sprite):
                 self.wander_angle = RNG.uniform(0.0, math.tau)
                 self.wander_change_time = pygame.time.get_ticks()
 
+        move_x += drift_x
+        move_y += drift_y
         if nearby_zombies:
             move_x, move_y = self._avoid_other_zombies(
                 move_x, move_y, list(nearby_zombies)
