@@ -18,7 +18,6 @@ from ..entities_constants import (
     ZOMBIE_CARBONIZE_DECAY_FRAMES,
     ZOMBIE_DOG_DECAY_DURATION_FRAMES,
     ZOMBIE_DOG_DECAY_MIN_SPEED_RATIO,
-    ZOMBIE_DOG_HEAD_RADIUS_RATIO,
     ZOMBIE_DOG_LONG_AXIS_RATIO,
     ZOMBIE_DOG_PATROL_SPEED,
     ZOMBIE_DOG_PACK_CHASE_RANGE,
@@ -65,7 +64,6 @@ class ZombieDog(pygame.sprite.Sprite):
         self.long_axis = base_size * ZOMBIE_DOG_LONG_AXIS_RATIO
         self.short_axis = base_size * ZOMBIE_DOG_SHORT_AXIS_RATIO
         self.radius = self.short_axis * 0.5
-        self.head_radius = self.short_axis * ZOMBIE_DOG_HEAD_RADIUS_RATIO
         self.speed_patrol = ZOMBIE_DOG_PATROL_SPEED
         self.speed_assault = ZOMBIE_DOG_ASSAULT_SPEED
         self.initial_speed_patrol = self.speed_patrol
@@ -137,18 +135,6 @@ class ZombieDog(pygame.sprite.Sprite):
 
     def _apply_carbonize_visuals(self: Self) -> None:
         self.image = build_grayscale_image(self.image)
-
-    def get_collision_circle(self: Self) -> tuple[tuple[int, int], float]:
-        head_x, head_y = self._head_center()
-        return (int(round(head_x)), int(round(head_y))), float(self.head_radius)
-
-    def _head_center(self: Self) -> tuple[float, float]:
-        angle = (self.facing_bin % ANGLE_BINS) * (math.tau / ANGLE_BINS)
-        offset = self.long_axis * 0.5
-        return (
-            self.x + math.cos(angle) * offset,
-            self.y + math.sin(angle) * offset,
-        )
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
         if new_bin == self.facing_bin:
@@ -255,7 +241,7 @@ class ZombieDog(pygame.sprite.Sprite):
     ) -> None:
         if not allow_bite:
             return
-        head_x, head_y = self._head_center()
+        head_x, head_y = self.x, self.y
         for candidate in nearby_zombies:
             if not isinstance(candidate, Zombie):
                 continue
@@ -263,7 +249,7 @@ class ZombieDog(pygame.sprite.Sprite):
                 continue
             dx = candidate.x - head_x
             dy = candidate.y - head_y
-            combined = self.head_radius + candidate.collision_radius
+            combined = self.collision_radius + candidate.collision_radius
             if dx * dx + dy * dy <= combined * combined:
                 candidate.take_damage(ZOMBIE_DOG_BITE_DAMAGE)
                 if (
