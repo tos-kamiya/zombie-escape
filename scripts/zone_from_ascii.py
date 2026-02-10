@@ -5,8 +5,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections import defaultdict
-
+import unicodedata
 
 MOVING_FLOOR_MAP = {
     "^": "up",
@@ -25,6 +24,7 @@ def _read_ascii(path: str | None) -> list[str]:
             lines = handle.read().splitlines()
     else:
         lines = sys.stdin.read().splitlines()
+    lines = [unicodedata.normalize("NFKC", line) for line in lines]
     if not lines:
         raise ValueError("No ASCII input provided.")
     max_width = max(len(line) for line in lines)
