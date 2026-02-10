@@ -70,4 +70,3 @@ def get_moving_floor_drift(
     if direction == MovingFloorDirection.RIGHT:
         return speed, 0.0
     return 0.0, 0.0
-

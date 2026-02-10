@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import sys
 import traceback  # For error reporting
@@ -98,6 +99,13 @@ __all__ = [
 def main() -> None:
     args, remaining = _parse_cli_args(sys.argv[1:])
     sys.argv = [sys.argv[0]] + remaining
+
+    log_level = os.environ.get("ZOMBIE_ESCAPE_LOG_LEVEL")
+    if log_level:
+        logging.basicConfig(
+            level=log_level.upper(),
+            format="%(levelname)s %(name)s: %(message)s",
+        )
 
     os.environ.setdefault("SDL_RENDER_SCALE_QUALITY", "0")
     pygame.init()

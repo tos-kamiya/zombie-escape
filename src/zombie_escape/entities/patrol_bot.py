@@ -15,6 +15,7 @@ from ..entities_constants import (
     PATROL_BOT_SIZE,
     PATROL_BOT_SPEED,
     PATROL_BOT_COLLISION_MARGIN,
+    MovingFloorDirection,
 )
 from ..render_assets import angle_bin_from_vector, build_patrol_bot_directional_surfaces
 from ..render_constants import ANGLE_BINS
@@ -58,6 +59,7 @@ class PatrolBot(pygame.sprite.Sprite):
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
         self.pause_until_ms = 0
+        self._on_moving_floor_last = False
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
         if new_bin == self.facing_bin:
@@ -217,6 +219,24 @@ class PatrolBot(pygame.sprite.Sprite):
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0
             return
+
+        cell_x = None
+        cell_y = None
+        floor_dir = None
+        if cell_size > 0:
+            cell_x = int(self.rect.centerx // cell_size)
+            cell_y = int(self.rect.centery // cell_size)
+            if layout.moving_floor_cells:
+                floor_dir = layout.moving_floor_cells.get((cell_x, cell_y))
+        on_floor = abs(drift_x) > 0.0 or abs(drift_y) > 0.0
+        forced_floor_dir = False
+        if on_floor:
+            if abs(drift_x) >= abs(drift_y) and abs(drift_x) > 0.0:
+                self.direction = (1, 0) if drift_x > 0 else (-1, 0)
+            elif abs(drift_y) > 0.0:
+                self.direction = (0, 1) if drift_y > 0 else (0, -1)
+            self._set_arrow_source(False)
+            forced_floor_dir = True
 
         move_x = float(self.direction[0]) * self.speed + drift_x
         move_y = float(self.direction[1]) * self.speed + drift_y
@@ -387,21 +407,22 @@ class PatrolBot(pygame.sprite.Sprite):
                     if not moved:
                         break
 
-            # If we hit the outer boundary, reverse direction.
-            if hit_outer:
-                self.direction = (-self.direction[0], -self.direction[1])
-                self._set_arrow_source(False)
-            else:
-                pattern = self.turn_patterns[self.turn_pattern_idx]
-                preferred_turn = pattern[self.turn_step_idx]
-                self.turn_step_idx += 1
-                if self.turn_step_idx >= len(pattern):
-                    self.turn_step_idx = 0
-                    self.turn_pattern_idx = (self.turn_pattern_idx + 1) % len(
-                        self.turn_patterns
-                    )
-                self._rotate_direction(turn_right=preferred_turn)
-                # Keep the chosen turn even if it would remain blocked.
+            if not forced_floor_dir:
+                # If we hit the outer boundary, reverse direction.
+                if hit_outer:
+                    self.direction = (-self.direction[0], -self.direction[1])
+                    self._set_arrow_source(False)
+                else:
+                    pattern = self.turn_patterns[self.turn_pattern_idx]
+                    preferred_turn = pattern[self.turn_step_idx]
+                    self.turn_step_idx += 1
+                    if self.turn_step_idx >= len(pattern):
+                        self.turn_step_idx = 0
+                        self.turn_pattern_idx = (self.turn_pattern_idx + 1) % len(
+                            self.turn_patterns
+                        )
+                    self._rotate_direction(turn_right=preferred_turn)
+                    # Keep the chosen turn even if it would remain blocked.
 
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
@@ -414,3 +435,4 @@ class PatrolBot(pygame.sprite.Sprite):
         self.x = final_x
         self.y = final_y
         self.rect.center = (int(self.x), int(self.y))
+        self._on_moving_floor_last = on_floor
