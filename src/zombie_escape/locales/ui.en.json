@@ -246,7 +246,7 @@
     "game_over": {
       "win": "YOU ESCAPED!",
       "lose": "GAME OVER",
-      "prompt": "ESC/SPACE/Select/South: Title · R: Retry",
+      "prompt": "ESC/SPACE/Select/South: Title · R/Start: Retry",
       "scream": "AAAAHHH!!",
       "survivors_summary": "Evacuated: %{count}",
       "endurance_duration": "Time survived %{time}"

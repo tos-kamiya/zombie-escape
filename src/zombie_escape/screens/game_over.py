@@ -14,6 +14,7 @@ from ..input_utils import (
     init_first_controller,
     init_first_joystick,
     is_confirm_event,
+    is_start_event,
     is_select_event,
 )
 from ..localization import translate as tr
@@ -226,5 +227,11 @@ def game_over_screen(
                 CONTROLLER_BUTTON_DOWN is not None
                 and event.type == CONTROLLER_BUTTON_DOWN
             ):
+                if is_start_event(event) and stage is not None:
+                    return ScreenTransition(
+                        ScreenID.GAMEPLAY,
+                        stage=stage,
+                        seed=state.seed,
+                    )
                 if is_select_event(event) or is_confirm_event(event):
                     return ScreenTransition(ScreenID.TITLE)
