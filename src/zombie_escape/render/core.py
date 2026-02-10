@@ -124,39 +124,60 @@ def _draw_fade_in_overlay(screen: surface.Surface, state: GameData | Any) -> Non
 def _build_moving_floor_pattern(
     direction: MovingFloorDirection,
     cell_size: int,
-    offset_px: float,
 ) -> surface.Surface:
-    surface_out = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
-    spacing = max(2, cell_size // 4)
-    phase = offset_px % spacing
+    pattern_size = cell_size * 2
+    surface_out = pygame.Surface((pattern_size, pattern_size), pygame.SRCALPHA)
     thickness = 2
     line_color = MOVING_FLOOR_LINE_COLOR
+    inset = max(2, int(cell_size * 0.12))
+    min_corner = inset
+    max_corner = cell_size - inset
+    mid = cell_size // 2
+    chevron_span = max(3, int(cell_size * 0.12))
+
+    def _draw_chevron(origin_x: int, origin_y: int, center: int) -> None:
+        if direction is MovingFloorDirection.UP:
+            apex_y = center - chevron_span
+            base_y = center + chevron_span
+            points = [
+                (origin_x + min_corner, origin_y + base_y),
+                (origin_x + mid, origin_y + apex_y),
+                (origin_x + max_corner, origin_y + base_y),
+            ]
+        elif direction is MovingFloorDirection.DOWN:
+            apex_y = center + chevron_span
+            base_y = center - chevron_span
+            points = [
+                (origin_x + min_corner, origin_y + base_y),
+                (origin_x + mid, origin_y + apex_y),
+                (origin_x + max_corner, origin_y + base_y),
+            ]
+        elif direction is MovingFloorDirection.RIGHT:
+            apex_x = center + chevron_span
+            base_x = center - chevron_span
+            points = [
+                (origin_x + base_x, origin_y + min_corner),
+                (origin_x + apex_x, origin_y + mid),
+                (origin_x + base_x, origin_y + max_corner),
+            ]
+        else:
+            apex_x = center - chevron_span
+            base_x = center + chevron_span
+            points = [
+                (origin_x + base_x, origin_y + min_corner),
+                (origin_x + apex_x, origin_y + mid),
+                (origin_x + base_x, origin_y + max_corner),
+            ]
+
+        pygame.draw.lines(surface_out, line_color, False, points, thickness)
+
+    spacing = max(6, cell_size // 2)
     if direction in (MovingFloorDirection.UP, MovingFloorDirection.DOWN):
-        start = -spacing + phase
-        y = start
-        while y < cell_size + spacing:
-            y_pos = int(round(y))
-            pygame.draw.line(
-                surface_out,
-                line_color,
-                (0, y_pos),
-                (cell_size, y_pos),
-                thickness,
-            )
-            y += spacing
+        for y in range(-spacing, pattern_size + spacing, spacing):
+            _draw_chevron(0, 0, y)
     else:
-        start = -spacing + phase
-        x = start
-        while x < cell_size + spacing:
-            x_pos = int(round(x))
-            pygame.draw.line(
-                surface_out,
-                line_color,
-                (x_pos, 0),
-                (x_pos, cell_size),
-                thickness,
-            )
-            x += spacing
+        for x in range(-spacing, pattern_size + spacing, spacing):
+            _draw_chevron(0, 0, x)
     return surface_out
 
 
@@ -786,19 +807,22 @@ def _draw_play_area(
                     pygame.draw.rect(screen, MOVING_FLOOR_TILE_COLOR, inner_rect)
                     pattern = pattern_cache.get(direction)
                     if pattern is None:
-                        signed_offset = (
-                            -base_offset_px
-                            if direction
-                            in (MovingFloorDirection.UP, MovingFloorDirection.LEFT)
-                            else base_offset_px
-                        )
-                        pattern = _build_moving_floor_pattern(
-                            direction, grid_snap, signed_offset
-                        )
+                        pattern = _build_moving_floor_pattern(direction, grid_snap)
                         pattern_cache[direction] = pattern
+                    signed_offset = (
+                        base_offset_px
+                        if direction
+                        in (MovingFloorDirection.UP, MovingFloorDirection.LEFT)
+                        else -base_offset_px
+                    )
+                    offset_px = int(signed_offset % grid_snap)
                     clip_prev = screen.get_clip()
                     screen.set_clip(inner_rect)
-                    screen.blit(pattern, sr.topleft)
+                    if direction in (MovingFloorDirection.UP, MovingFloorDirection.DOWN):
+                        blit_pos = (sr.left, sr.top - offset_px)
+                    else:
+                        blit_pos = (sr.left - offset_px, sr.top)
+                    screen.blit(pattern, blit_pos)
                     screen.set_clip(clip_prev)
                     border_rect = inner_rect
                     pygame.draw.rect(
