@@ -99,11 +99,13 @@ def title_screen(
         for stage in stages
         if stage.available
     ]
-    page_size = 5
-    stage_pages = [
-        stage_options_all[i : i + page_size]
-        for i in range(0, len(stage_options_all), page_size)
-    ]
+    first_page_size = 5
+    other_page_size = 10
+    stage_pages: list[list[dict]] = []
+    if stage_options_all:
+        stage_pages.append(stage_options_all[:first_page_size])
+        for i in range(first_page_size, len(stage_options_all), other_page_size):
+            stage_pages.append(stage_options_all[i : i + other_page_size])
     resource_options: list[dict[str, Any]] = [
         {"type": "settings"},
         {"type": "readme"},
@@ -119,14 +121,19 @@ def title_screen(
     def _page_available(page_index: int) -> bool:
         if page_index <= 0:
             return True
-        required = stage_options_all[:page_size]
+        required = stage_options_all[:first_page_size]
         return all(stage_progress.get(option["stage"].id, 0) > 0 for option in required)
+
+    def _page_index_for_stage(stage_idx: int) -> int:
+        if stage_idx < first_page_size:
+            return 0
+        return 1 + (stage_idx - first_page_size) // other_page_size
 
     current_page = 0
     if stage_options_all:
         for idx, opt in enumerate(stage_options_all):
             if opt["stage"].id == default_stage_id:
-                target_page = idx // page_size
+                target_page = _page_index_for_stage(idx)
                 if _page_available(target_page):
                     current_page = target_page
                 break
@@ -232,7 +239,9 @@ def title_screen(
                 (selected_row_height if idx == selected else base_row_height)
                 for idx in range(stage_count)
             ]
-            fixed_stage_block_height = base_row_height * 4 + selected_row_height
+            fixed_stage_block_height = (
+                base_row_height * max(stage_count - 1, 0) + selected_row_height
+            )
             action_header_pos = (
                 list_column_x,
                 stage_rows_start + fixed_stage_block_height + 14 + resource_offset,
@@ -398,28 +407,28 @@ def title_screen(
                     line_height_scale=font_settings.line_height_scale,
                 )
 
-            hint_lines = [tr("menu.hints.navigate")]
-            if len(stage_pages) > 1 and _page_available(1):
-                hint_lines.append(tr("menu.hints.page_switch"))
-            hint_lines.extend(tr("menu.hints.confirm").splitlines())
             hint_size = font_settings.scaled_size(11)
             hint_font = _get_font(hint_size)
             hint_line_height = int(
                 round(hint_font.get_linesize() * font_settings.line_height_scale)
             )
-            # hint_block_height = len(hint_lines) * hint_line_height
             hint_start_y = action_header_pos[1]
             hint_step = hint_line_height
-            for offset, line in enumerate(hint_lines):
-                blit_text_wrapped(
-                    screen,
-                    line,
-                    hint_font,
-                    WHITE,
-                    (info_column_x, hint_start_y + offset * hint_step),
-                    info_column_width,
-                    line_height_scale=font_settings.line_height_scale,
-                )
+            if current_page == 0:
+                hint_lines = [tr("menu.hints.navigate")]
+                if len(stage_pages) > 1 and _page_available(1):
+                    hint_lines.append(tr("menu.hints.page_switch"))
+                hint_lines.extend(tr("menu.hints.confirm").splitlines())
+                for offset, line in enumerate(hint_lines):
+                    blit_text_wrapped(
+                        screen,
+                        line,
+                        hint_font,
+                        WHITE,
+                        (info_column_x, hint_start_y + offset * hint_step),
+                        info_column_width,
+                        line_height_scale=font_settings.line_height_scale,
+                    )
 
             seed_value_display = (
                 current_seed_text if current_seed_text else tr("menu.seed_empty")
@@ -443,19 +452,20 @@ def title_screen(
                 info_column_x, seed_bottom - seed_height, max(seed_width, 1), seed_height
             )
 
-            seed_hint = tr("menu.seed_hint")
-            seed_hint_lines = wrap_text(seed_hint, hint_font, info_column_width)
-            seed_hint_height = len(seed_hint_lines) * hint_line_height
-            seed_hint_top = seed_rect.top - 4 - seed_hint_height
-            blit_text_wrapped(
-                screen,
-                seed_hint,
-                hint_font,
-                LIGHT_GRAY,
-                (info_column_x, seed_hint_top),
-                info_column_width,
-                line_height_scale=font_settings.line_height_scale,
-            )
+            if current_page == 0:
+                seed_hint = tr("menu.seed_hint")
+                seed_hint_lines = wrap_text(seed_hint, hint_font, info_column_width)
+                seed_hint_height = len(seed_hint_lines) * hint_line_height
+                seed_hint_top = seed_rect.top - 4 - seed_hint_height
+                blit_text_wrapped(
+                    screen,
+                    seed_hint,
+                    hint_font,
+                    LIGHT_GRAY,
+                    (info_column_x, seed_hint_top),
+                    info_column_width,
+                    line_height_scale=font_settings.line_height_scale,
+                )
 
             title_text = tr("game.title")
             title_font = _get_font(font_settings.scaled_size(33))
