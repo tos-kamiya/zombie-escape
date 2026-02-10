@@ -397,6 +397,7 @@ def update_entities(
             footprints=game_data.state.footprints,
             cell_size=game_data.cell_size,
             layout=game_data.layout,
+            now_ms=game_data.state.elapsed_play_ms,
             drift_x=floor_dx,
             drift_y=floor_dy,
         )
@@ -471,6 +472,7 @@ def update_entities(
             layout=game_data.layout,
             drift_x=floor_dx,
             drift_y=floor_dy,
+            now_ms=game_data.state.elapsed_play_ms,
         )
 
     update_decay_effects(game_data.state.decay_effects, frames=1)

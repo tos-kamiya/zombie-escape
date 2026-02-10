@@ -881,17 +881,18 @@ def _draw_footprints(
     footprints: list[Footprint],
     *,
     config: dict[str, Any],
+    now_ms: int | None = None,
 ) -> None:
     if not config.get("footprints", {}).get("enabled", True):
         return
-    now = pygame.time.get_ticks()
+    now = pygame.time.get_ticks() if now_ms is None else now_ms
     for fp in footprints:
         if not fp.visible:
             continue
         age = now - fp.time
         fade = 1 - (age / assets.footprint_lifetime_ms)
         fade = max(assets.footprint_min_fade, fade)
-        color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
+        color = tuple(max(0, min(255, int(c * fade))) for c in FOOTPRINT_COLOR)
         fp_rect = pygame.Rect(
             fp.pos[0] - assets.footprint_radius,
             fp.pos[1] - assets.footprint_radius,
@@ -1115,6 +1116,7 @@ def draw(
         assets,
         state.footprints,
         config=config,
+        now_ms=state.elapsed_play_ms,
     )
     _draw_entities(
         screen,

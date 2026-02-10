@@ -63,13 +63,16 @@ def _zombie_tracker_movement(
     footprints: list["Footprint"],
     cell_size: int,
     layout: "LevelLayout",
+    *,
+    now_ms: int | None = None,
 ) -> tuple[float, float]:
+    now = pygame.time.get_ticks() if now_ms is None else now_ms
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if not is_in_sight:
         if zombie.tracker_force_wander:
             last_target_time = zombie.tracker_target_time
             if last_target_time is None:
-                last_target_time = pygame.time.get_ticks()
+                last_target_time = now
             zombie.tracker_relock_after_time = (
                 last_target_time + ZOMBIE_TRACKER_RELOCK_DELAY_MS
             )
@@ -79,8 +82,9 @@ def _zombie_tracker_movement(
                 walls,
                 cell_size=cell_size,
                 layout=layout,
+                now_ms=now,
             )
-        _zombie_update_tracker_target(zombie, footprints, walls)
+        _zombie_update_tracker_target(zombie, footprints, walls, now_ms=now)
         if zombie.tracker_target_pos is not None:
             return _zombie_move_toward(zombie, zombie.tracker_target_pos)
         return _zombie_wander_movement(
@@ -88,6 +92,7 @@ def _zombie_tracker_movement(
             walls,
             cell_size=cell_size,
             layout=layout,
+            now_ms=now,
         )
     return _zombie_move_toward(zombie, player_center)
 
@@ -132,6 +137,7 @@ def _zombie_wall_hug_movement(
     _footprints: list["Footprint"],
     cell_size: int,
     layout: "LevelLayout",
+    now_ms: int | None = None,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if zombie.wall_hug_angle is None:
@@ -173,6 +179,7 @@ def _zombie_wall_hug_movement(
                 walls,
                 cell_size=cell_size,
                 layout=layout,
+                now_ms=now_ms,
             )
 
     sensor_distance = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius
@@ -186,7 +193,7 @@ def _zombie_wall_hug_movement(
     )
     side_has_wall = side_dist < sensor_distance
     forward_has_wall = forward_dist < sensor_distance
-    now = pygame.time.get_ticks()
+    now = pygame.time.get_ticks() if now_ms is None else now_ms
     wall_recent = (
         zombie.wall_hug_last_wall_time is not None
         and now - zombie.wall_hug_last_wall_time <= ZOMBIE_WALL_HUG_LOST_WALL_MS
@@ -233,6 +240,7 @@ def _zombie_normal_movement(
     _footprints: list["Footprint"],
     cell_size: int,
     layout: "LevelLayout",
+    now_ms: int | None = None,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_SIGHT_RANGE)
     if not is_in_sight:
@@ -241,6 +249,7 @@ def _zombie_normal_movement(
             walls,
             cell_size=cell_size,
             layout=layout,
+            now_ms=now_ms,
         )
     return _zombie_move_toward(zombie, player_center)
 
@@ -249,9 +258,11 @@ def _zombie_update_tracker_target(
     zombie: "Zombie",
     footprints: list["Footprint"],
     walls: list["Wall"],
+    *,
+    now_ms: int | None = None,
 ) -> None:
     # footprints are ordered oldest -> newest by time.
-    now = pygame.time.get_ticks()
+    now = pygame.time.get_ticks() if now_ms is None else now_ms
     if now - zombie.tracker_last_scan_time < zombie.tracker_scan_interval_ms:
         return
     zombie.tracker_last_scan_time = now
@@ -343,12 +354,13 @@ def _zombie_wander_movement(
     *,
     cell_size: int,
     layout: "LevelLayout",
+    now_ms: int | None = None,
 ) -> tuple[float, float]:
     grid_cols = layout.grid_cols
     grid_rows = layout.grid_rows
     outer_wall_cells = layout.outer_wall_cells
     pitfall_cells = layout.pitfall_cells
-    now = pygame.time.get_ticks()
+    now = pygame.time.get_ticks() if now_ms is None else now_ms
     changed_angle = False
     if now - zombie.last_wander_change_time > zombie.wander_change_interval:
         zombie.wander_angle = RNG.uniform(0, math.tau)

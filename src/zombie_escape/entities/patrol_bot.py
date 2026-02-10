@@ -202,8 +202,9 @@ class PatrolBot(pygame.sprite.Sprite):
         layout,
         drift_x: float = 0.0,
         drift_y: float = 0.0,
+        now_ms: int | None = None,
     ) -> None:
-        now = pygame.time.get_ticks()
+        now = pygame.time.get_ticks() if now_ms is None else now_ms
 
         if now < self.pause_until_ms:
             if player is not None and getattr(player, "alive", lambda: True)():

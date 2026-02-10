@@ -86,6 +86,7 @@ def draw_level_overview(
     waiting_cars: list[Car] | None,
     footprints: list[Footprint],
     *,
+    now_ms: int | None = None,
     fuel: FuelCan | None = None,
     flashlights: list[Flashlight] | None = None,
     shoes: list[Shoes] | None = None,
@@ -167,14 +168,14 @@ def draw_level_overview(
                     palette=palette,
                 )
                 pygame.draw.rect(surface, fill_color, wall.rect)
-    now = pygame.time.get_ticks()
+    now = pygame.time.get_ticks() if now_ms is None else now_ms
     for fp in footprints:
         if not fp.visible:
             continue
         age = now - fp.time
         fade = 1 - (age / assets.footprint_lifetime_ms)
         fade = max(assets.footprint_min_fade, fade)
-        color = tuple(int(c * fade) for c in FOOTPRINT_COLOR)
+        color = tuple(max(0, min(255, int(c * fade))) for c in FOOTPRINT_COLOR)
         pygame.draw.circle(
             surface,
             color,
@@ -279,6 +280,7 @@ def draw_debug_overview(
         game_data.car,
         game_data.waiting_cars,
         footprints_to_draw,
+        now_ms=game_data.state.elapsed_play_ms,
         fuel=game_data.fuel,
         flashlights=game_data.flashlights or [],
         shoes=game_data.shoes or [],

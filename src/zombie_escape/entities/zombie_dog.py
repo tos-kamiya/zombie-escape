@@ -339,6 +339,7 @@ class ZombieDog(pygame.sprite.Sprite):
         *,
         cell_size: int,
         layout,
+        now_ms: int | None = None,
         drift_x: float = 0.0,
         drift_y: float = 0.0,
     ) -> None:
@@ -356,7 +357,7 @@ class ZombieDog(pygame.sprite.Sprite):
                 for b in nearby_patrol_bots
                 if abs(b.x - self.x) < 100 and abs(b.y - self.y) < 100
             ]
-        now = pygame.time.get_ticks()
+        now = pygame.time.get_ticks() if now_ms is None else now_ms
         if self.vitals.update_patrol_paralyze(
             entity_center=(self.x, self.y),
             entity_radius=self.radius,
