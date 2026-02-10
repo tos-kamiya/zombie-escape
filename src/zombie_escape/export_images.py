@@ -89,7 +89,7 @@ def _build_studio_game_data(cell_size: int):
     state.fade_in_started_at_ms = None
     state.show_fps = False
     state.debug_mode = False
-    state.elapsed_play_ms = 0
+    state.clock.elapsed_ms = 0
     state.falling_zombies = []
     state.dust_rings = []
     state.decay_effects = []
@@ -151,7 +151,7 @@ def _render_studio_snapshot(
         layout.fall_spawn_cells,
         layout.pitfall_cells,
         layout.moving_floor_cells,
-        elapsed_ms=int(game_data.state.elapsed_play_ms),
+        elapsed_ms=int(game_data.state.clock.elapsed_ms),
     )
     if enable_shadows:
         shadow_layer = _get_shadow_layer(screen.get_size())
@@ -199,7 +199,7 @@ def _render_studio_snapshot(
             game_data.state.falling_zombies,
             game_data.state.flashlight_count,
             game_data.state.dust_rings,
-            int(game_data.state.elapsed_play_ms),
+            int(game_data.state.clock.elapsed_ms),
         )
     _draw_entities(
         screen,

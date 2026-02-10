@@ -199,7 +199,7 @@ def gameplay_screen(
             clear_on_input=True,
             color=LIGHT_GRAY,
             align="left",
-            now_ms=game_data.state.elapsed_play_ms,
+            now_ms=game_data.state.clock.elapsed_ms,
         )
     paused_manual = False
     paused_focus = False
@@ -306,13 +306,14 @@ def gameplay_screen(
         dt = frame_ms / 1000.0
         current_fps = clock.get_fps()
         if game_data.state.game_over or game_data.state.game_won:
-            game_data.state.elapsed_play_ms += frame_ms
+            game_data.state.clock.time_scale = 1.0
+            game_data.state.clock.tick(frame_ms)
             if game_data.state.game_won:
                 record_stage_clear(stage.id)
             if game_data.state.game_over and not game_data.state.game_won:
                 if game_data.state.game_over_at is None:
-                    game_data.state.game_over_at = game_data.state.elapsed_play_ms
-                if game_data.state.elapsed_play_ms - game_data.state.game_over_at < 1000:
+                    game_data.state.game_over_at = game_data.state.clock.elapsed_ms
+                if game_data.state.clock.elapsed_ms - game_data.state.game_over_at < 1000:
                     draw(
                         render_assets,
                         screen,
@@ -339,7 +340,7 @@ def gameplay_screen(
                 sync_window_size(event, game_data=game_data)
                 continue
             if event.type == pygame.WINDOWFOCUSLOST:
-                now = game_data.state.elapsed_play_ms
+                now = game_data.state.clock.elapsed_ms
                 if now >= ignore_focus_loss_until:
                     paused_focus = True
             if event.type == pygame.WINDOWFOCUSGAINED:
@@ -501,7 +502,9 @@ def gameplay_screen(
             step_ms = int(sub_dt * 1000)
             if accel_active:
                 step_ms = max(1, step_ms)
-            game_data.state.elapsed_play_ms += step_ms
+            time_scale = 4.0 / max(1, substeps) if accel_active else 1.0
+            game_data.state.clock.time_scale = time_scale
+            step_ms = game_data.state.clock.tick(step_ms)
             update_endurance_timer(game_data, step_ms)
             cleanup_survivor_messages(game_data.state)
             check_interactions(game_data, config)
@@ -554,7 +557,7 @@ def gameplay_screen(
 
         car_hint_conf = config.get("car_hint", {})
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
-        elapsed_ms = game_data.state.elapsed_play_ms
+        elapsed_ms = game_data.state.clock.elapsed_ms
         has_fuel = game_data.state.has_fuel
         hint_enabled = car_hint_conf.get("enabled", True) and not stage.endurance_stage
         hint_target = None

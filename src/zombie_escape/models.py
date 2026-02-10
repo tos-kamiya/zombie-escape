@@ -73,6 +73,19 @@ class DustRing:
     duration_ms: int
 
 
+@dataclass
+class GameClock:
+    """Frame-driven gameplay clock with time scaling."""
+
+    elapsed_ms: int = 0
+    time_scale: float = 1.0
+
+    def tick(self, frame_ms: int) -> int:
+        step = max(1, int(frame_ms * self.time_scale))
+        self.elapsed_ms += step
+        return step
+
+
 @dataclass(frozen=True)
 class Footprint:
     """Tracked player footprint."""
@@ -98,7 +111,7 @@ class ProgressState:
     decay_effects: list["DecayingEntityEffect"]
     last_footprint_pos: tuple[int, int] | None
     footprint_visible_toggle: bool
-    elapsed_play_ms: int
+    clock: GameClock
     has_fuel: bool
     flashlight_count: int
     shoes_count: int

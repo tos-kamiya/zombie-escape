@@ -108,7 +108,7 @@ def _draw_fade_in_overlay(screen: surface.Surface, state: GameData | Any) -> Non
     started_at = getattr(state, "fade_in_started_at_ms", None)
     if started_at is None:
         return
-    elapsed = max(0, int(state.elapsed_play_ms) - int(started_at))
+    elapsed = max(0, int(state.clock.elapsed_ms) - int(started_at))
     if elapsed <= 0:
         alpha = 255
     else:
@@ -1023,7 +1023,7 @@ def draw(
         game_data.layout.fall_spawn_cells,
         game_data.layout.pitfall_cells,
         game_data.layout.moving_floor_cells,
-        elapsed_ms=int(state.elapsed_play_ms),
+        elapsed_ms=int(state.clock.elapsed_ms),
     )
     shadows_enabled = config.get("visual", {}).get("shadows", {}).get("enabled", True)
     if shadows_enabled:
@@ -1116,7 +1116,7 @@ def draw(
         assets,
         state.footprints,
         config=config,
-        now_ms=state.elapsed_play_ms,
+        now_ms=state.clock.elapsed_ms,
     )
     _draw_entities(
         screen,
@@ -1139,7 +1139,7 @@ def draw(
         state.falling_zombies,
         state.flashlight_count,
         state.dust_rings,
-        state.elapsed_play_ms,
+        state.clock.elapsed_ms,
     )
 
     _draw_hint_indicator(
@@ -1203,5 +1203,5 @@ def draw(
         screen,
         assets,
         message=state.timed_message,
-        elapsed_play_ms=state.elapsed_play_ms,
+        elapsed_play_ms=state.clock.elapsed_ms,
     )

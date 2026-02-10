@@ -123,7 +123,7 @@ def update_entities(
     active_car = car if car and car.alive() else None
     pitfall_cells = game_data.layout.pitfall_cells
     field_rect = game_data.layout.field_rect
-    current_time = game_data.state.elapsed_play_ms
+    current_time = game_data.state.clock.elapsed_ms
 
     all_walls = list(wall_group) if wall_index is None else None
 
@@ -207,7 +207,7 @@ def update_entities(
             wall_index=wall_index,
             cell_size=game_data.cell_size,
             layout=game_data.layout,
-            now_ms=game_data.state.elapsed_play_ms,
+            now_ms=game_data.state.clock.elapsed_ms,
         )
     else:
         # Player flagged as in-car but car is gone; drop them back to foot control
@@ -400,7 +400,7 @@ def update_entities(
             footprints=game_data.state.footprints,
             cell_size=game_data.cell_size,
             layout=game_data.layout,
-            now_ms=game_data.state.elapsed_play_ms,
+            now_ms=game_data.state.clock.elapsed_ms,
             drift_x=floor_dx,
             drift_y=floor_dy,
         )
@@ -438,7 +438,7 @@ def update_entities(
             fall = FallingZombie(
                 start_pos=(int(zombie.x), int(zombie.y)),
                 target_pos=pitfall_target_pos,
-                started_at_ms=game_data.state.elapsed_play_ms,
+                started_at_ms=game_data.state.clock.elapsed_ms,
                 pre_fx_ms=0,
                 fall_duration_ms=500,
                 dust_duration_ms=0,
@@ -475,7 +475,7 @@ def update_entities(
             layout=game_data.layout,
             drift_x=floor_dx,
             drift_y=floor_dy,
-            now_ms=game_data.state.elapsed_play_ms,
+            now_ms=game_data.state.clock.elapsed_ms,
         )
 
     update_decay_effects(game_data.state.decay_effects, frames=1)

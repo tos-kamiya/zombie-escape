@@ -280,7 +280,7 @@ def draw_debug_overview(
         game_data.car,
         game_data.waiting_cars,
         footprints_to_draw,
-        now_ms=game_data.state.elapsed_play_ms,
+        now_ms=game_data.state.clock.elapsed_ms,
         fuel=game_data.fuel,
         flashlights=game_data.flashlights or [],
         shoes=game_data.shoes or [],

@@ -41,7 +41,7 @@ def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
     player = game_data.player
     assert player is not None
 
-    now = state.elapsed_play_ms
+    now = state.clock.elapsed_ms
 
     footprints = state.footprints
     if not player.in_car:

@@ -11,7 +11,15 @@ from ..colors import (
 )
 from ..entities_constants import SURVIVOR_MAX_SAFE_PASSENGERS
 from ..localization import translate as tr
-from ..models import GameData, Groups, LevelLayout, ProgressState, Stage, TimedMessage
+from ..models import (
+    GameClock,
+    GameData,
+    Groups,
+    LevelLayout,
+    ProgressState,
+    Stage,
+    TimedMessage,
+)
 from ..screen_constants import FPS
 from ..entities import Camera
 from .ambient import _set_ambient_palette
@@ -77,7 +85,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         decay_effects=[],
         last_footprint_pos=None,
         footprint_visible_toggle=True,
-        elapsed_play_ms=0,
+        clock=GameClock(),
         has_fuel=starts_with_fuel,
         flashlight_count=initial_flashlights,
         shoes_count=0,
@@ -115,11 +123,11 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             clear_on_input=True,
             color=WHITE,
             align="left",
-            now_ms=game_state.elapsed_play_ms,
+            now_ms=game_state.clock.elapsed_ms,
         )
 
     # Start fade-in from black when gameplay begins.
-    game_state.fade_in_started_at_ms = game_state.elapsed_play_ms
+    game_state.fade_in_started_at_ms = game_state.clock.elapsed_ms
 
     prepare_decay_mask()
 
@@ -215,7 +223,7 @@ def update_endurance_timer(game_data: GameData, dt_ms: int) -> None:
     )
     if not state.dawn_ready and state.endurance_elapsed_ms >= state.endurance_goal_ms:
         state.dawn_ready = True
-        state.dawn_prompt_at = state.elapsed_play_ms
+        state.dawn_prompt_at = state.clock.elapsed_ms
         _set_ambient_palette(game_data, DAWN_AMBIENT_PALETTE_KEY, force=True)
     if state.dawn_ready:
         carbonize_outdoor_zombies(game_data)

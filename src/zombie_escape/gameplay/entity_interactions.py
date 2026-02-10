@@ -140,7 +140,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             state.has_fuel = True
             if state.timed_message == need_fuel_text:
                 schedule_timed_message(
-                    state, None, duration_frames=0, now_ms=state.elapsed_play_ms
+                    state, None, duration_frames=0, now_ms=state.clock.elapsed_ms
                 )
             state.hint_expires_at = 0
             state.hint_target_type = None
@@ -249,10 +249,10 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                         duration_frames=SCREAM_MESSAGE_DISPLAY_FRAMES,
                         clear_on_input=False,
                         color=BUDDY_COLOR,
-                        now_ms=state.elapsed_play_ms,
+                        now_ms=state.clock.elapsed_ms,
                     )
                     state.game_over = True
-                    state.game_over_at = state.game_over_at or state.elapsed_play_ms
+                    state.game_over_at = state.game_over_at or state.clock.elapsed_ms
                 else:
                     if walkable_cells:
                         new_cell = RNG.choice(walkable_cells)
@@ -296,7 +296,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     duration_frames=_ms_to_frames(FUEL_HINT_DURATION_MS),
                     clear_on_input=False,
                     color=YELLOW,
-                    now_ms=state.elapsed_play_ms,
+                    now_ms=state.clock.elapsed_ms,
                 )
                 state.hint_target_type = "fuel"
 
@@ -330,7 +330,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                         duration_frames=_ms_to_frames(FUEL_HINT_DURATION_MS),
                         clear_on_input=False,
                         color=YELLOW,
-                        now_ms=state.elapsed_play_ms,
+                        now_ms=state.clock.elapsed_ms,
                     )
                     state.hint_target_type = "fuel"
 
@@ -414,7 +414,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     continue
                 if hasattr(zombie, "take_damage"):
                     zombie.take_damage(
-                        CAR_ZOMBIE_HIT_DAMAGE, now_ms=state.elapsed_play_ms
+                        CAR_ZOMBIE_HIT_DAMAGE, now_ms=state.clock.elapsed_ms
                     )
                 valid_hits.append(zombie)
             if zombies_hit:
@@ -503,7 +503,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         collisions = pygame.sprite.spritecollide(
             shrunk_player, zombie_group, False, collide_circle_custom
         )
-        now = state.elapsed_play_ms
+        now = state.clock.elapsed_ms
         if any(
             (not zombie.carbonized)
             and now >= getattr(zombie, "patrol_paralyze_until_ms", 0)
@@ -511,14 +511,14 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         ):
             if not state.game_over:
                 state.game_over = True
-                state.game_over_at = state.elapsed_play_ms
+                state.game_over_at = state.clock.elapsed_ms
                 schedule_timed_message(
                     state,
                     tr("game_over.scream"),
                     duration_frames=SCREAM_MESSAGE_DISPLAY_FRAMES,
                     clear_on_input=False,
                     color=BLUE,
-                    now_ms=state.elapsed_play_ms,
+                    now_ms=state.clock.elapsed_ms,
                 )
 
     # Player escaping on foot after dawn (Stage 5)
