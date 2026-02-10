@@ -86,7 +86,7 @@ def draw_level_overview(
     waiting_cars: list[Car] | None,
     footprints: list[Footprint],
     *,
-    now_ms: int | None = None,
+    now_ms: int,
     fuel: FuelCan | None = None,
     flashlights: list[Flashlight] | None = None,
     shoes: list[Shoes] | None = None,
@@ -168,7 +168,7 @@ def draw_level_overview(
                     palette=palette,
                 )
                 pygame.draw.rect(surface, fill_color, wall.rect)
-    now = pygame.time.get_ticks() if now_ms is None else now_ms
+    now = now_ms
     for fp in footprints:
         if not fp.visible:
             continue

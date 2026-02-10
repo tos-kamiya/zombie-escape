@@ -139,7 +139,9 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         if _player_near_point(fuel.rect.center, fuel_interaction_radius):
             state.has_fuel = True
             if state.timed_message == need_fuel_text:
-                schedule_timed_message(state, None, duration_frames=0)
+                schedule_timed_message(
+                    state, None, duration_frames=0, now_ms=state.elapsed_play_ms
+                )
             state.hint_expires_at = 0
             state.hint_target_type = None
             fuel.kill()
@@ -247,6 +249,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                         duration_frames=SCREAM_MESSAGE_DISPLAY_FRAMES,
                         clear_on_input=False,
                         color=BUDDY_COLOR,
+                        now_ms=state.elapsed_play_ms,
                     )
                     state.game_over = True
                     state.game_over_at = state.game_over_at or state.elapsed_play_ms
@@ -293,6 +296,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     duration_frames=_ms_to_frames(FUEL_HINT_DURATION_MS),
                     clear_on_input=False,
                     color=YELLOW,
+                    now_ms=state.elapsed_play_ms,
                 )
                 state.hint_target_type = "fuel"
 
@@ -326,6 +330,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                         duration_frames=_ms_to_frames(FUEL_HINT_DURATION_MS),
                         clear_on_input=False,
                         color=YELLOW,
+                        now_ms=state.elapsed_play_ms,
                     )
                     state.hint_target_type = "fuel"
 
@@ -513,6 +518,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     duration_frames=SCREAM_MESSAGE_DISPLAY_FRAMES,
                     clear_on_input=False,
                     color=BLUE,
+                    now_ms=state.elapsed_play_ms,
                 )
 
     # Player escaping on foot after dawn (Stage 5)

@@ -64,9 +64,9 @@ def _zombie_tracker_movement(
     cell_size: int,
     layout: "LevelLayout",
     *,
-    now_ms: int | None = None,
+    now_ms: int,
 ) -> tuple[float, float]:
-    now = pygame.time.get_ticks() if now_ms is None else now_ms
+    now = now_ms
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if not is_in_sight:
         if zombie.tracker_force_wander:
@@ -139,9 +139,9 @@ def _zombie_wall_hug_movement(
     _footprints: list["Footprint"],
     cell_size: int,
     layout: "LevelLayout",
-    now_ms: int | None = None,
+    now_ms: int,
 ) -> tuple[float, float]:
-    now = pygame.time.get_ticks() if now_ms is None else now_ms
+    now = now_ms
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if zombie.wall_hug_angle is None:
         zombie.wall_hug_angle = zombie.wander_angle
@@ -242,7 +242,7 @@ def _zombie_normal_movement(
     _footprints: list["Footprint"],
     cell_size: int,
     layout: "LevelLayout",
-    now_ms: int | None = None,
+    now_ms: int,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_SIGHT_RANGE)
     if not is_in_sight:
@@ -261,10 +261,10 @@ def _zombie_update_tracker_target(
     footprints: list["Footprint"],
     walls: list["Wall"],
     *,
-    now_ms: int | None = None,
+    now_ms: int,
 ) -> None:
     # footprints are ordered oldest -> newest by time.
-    now = pygame.time.get_ticks() if now_ms is None else now_ms
+    now = now_ms
     if now - zombie.tracker_last_scan_time < zombie.tracker_scan_interval_ms:
         return
     zombie.tracker_last_scan_time = now
@@ -356,13 +356,13 @@ def _zombie_wander_movement(
     *,
     cell_size: int,
     layout: "LevelLayout",
-    now_ms: int | None = None,
+    now_ms: int,
 ) -> tuple[float, float]:
     grid_cols = layout.grid_cols
     grid_rows = layout.grid_rows
     outer_wall_cells = layout.outer_wall_cells
     pitfall_cells = layout.pitfall_cells
-    now = pygame.time.get_ticks() if now_ms is None else now_ms
+    now = now_ms
     changed_angle = False
     if now - zombie.last_wander_change_time > zombie.wander_change_interval:
         zombie.wander_angle = RNG.uniform(0, math.tau)

@@ -78,6 +78,7 @@ def game_over_screen(
                 game_data.car,
                 game_data.waiting_cars,
                 footprints_to_draw,
+                now_ms=state.elapsed_play_ms,
                 fuel=game_data.fuel,
                 flashlights=game_data.flashlights or [],
                 shoes=game_data.shoes or [],

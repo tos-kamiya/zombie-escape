@@ -881,11 +881,11 @@ def _draw_footprints(
     footprints: list[Footprint],
     *,
     config: dict[str, Any],
-    now_ms: int | None = None,
+    now_ms: int,
 ) -> None:
     if not config.get("footprints", {}).get("enabled", True):
         return
-    now = pygame.time.get_ticks() if now_ms is None else now_ms
+    now = now_ms
     for fp in footprints:
         if not fp.visible:
             continue

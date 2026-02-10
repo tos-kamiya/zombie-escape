@@ -40,14 +40,12 @@ def schedule_timed_message(
     clear_on_input: bool = False,
     color: tuple[int, int, int] | None = None,
     align: str = "center",
-    now_ms: int | None = None,
+    now_ms: int,
 ) -> None:
     if not text:
         state.timed_message = None
         return
     duration_ms = frames_to_ms(duration_frames)
-    if now_ms is None:
-        now_ms = state.elapsed_play_ms
     state.timed_message = TimedMessage(
         text=text,
         expires_at_ms=now_ms + duration_ms,
@@ -117,6 +115,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             clear_on_input=True,
             color=WHITE,
             align="left",
+            now_ms=game_state.elapsed_play_ms,
         )
 
     # Start fade-in from black when gameplay begins.

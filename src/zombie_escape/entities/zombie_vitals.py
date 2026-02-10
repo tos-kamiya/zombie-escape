@@ -55,11 +55,11 @@ class ZombieVitals:
             self._set_health(self.health - decay_amount)
 
     def take_damage(
-        self, amount: int, *, source: str | None = None, now_ms: int | None = None
+        self, amount: int, *, source: str | None = None, now_ms: int
     ) -> None:
         if amount <= 0:
             return
-        self.last_damage_ms = pygame.time.get_ticks() if now_ms is None else now_ms
+        self.last_damage_ms = now_ms
         self.last_damage_source = source
         self._set_health(self.health - amount)
 

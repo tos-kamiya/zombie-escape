@@ -74,7 +74,7 @@ class Player(pygame.sprite.Sprite):
         wall_index: WallIndex | None = None,
         cell_size: int | None = None,
         layout: LevelLayout,
-        now_ms: int | None = None,
+        now_ms: int,
     ) -> None:
         if self.in_car:
             return
@@ -84,7 +84,7 @@ class Player(pygame.sprite.Sprite):
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
 
-        now = pygame.time.get_ticks() if now_ms is None else now_ms
+        now = now_ms
         if self.is_jumping:
             elapsed = now - self.jump_start_at
             if elapsed >= self.jump_duration:

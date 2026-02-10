@@ -238,7 +238,7 @@ class ZombieDog(pygame.sprite.Sprite):
         nearby_zombies: list[pygame.sprite.Sprite],
         *,
         allow_bite: bool,
-        now_ms: int | None = None,
+        now_ms: int,
     ) -> None:
         if not allow_bite:
             return
@@ -331,7 +331,7 @@ class ZombieDog(pygame.sprite.Sprite):
         *,
         cell_size: int,
         layout,
-        now_ms: int | None = None,
+        now_ms: int,
         drift_x: float = 0.0,
         drift_y: float = 0.0,
     ) -> None:
@@ -349,7 +349,7 @@ class ZombieDog(pygame.sprite.Sprite):
                 for b in nearby_patrol_bots
                 if abs(b.x - self.x) < 100 and abs(b.y - self.y) < 100
             ]
-        now = pygame.time.get_ticks() if now_ms is None else now_ms
+        now = now_ms
         if self.vitals.update_patrol_paralyze(
             entity_center=(self.x, self.y),
             entity_radius=self.collision_radius,
@@ -496,7 +496,7 @@ class ZombieDog(pygame.sprite.Sprite):
     def carbonize(self: Self) -> None:
         self.vitals.carbonize()
 
-    def take_damage(self: Self, amount: int, *, now_ms: int | None = None) -> None:
+    def take_damage(self: Self, amount: int, *, now_ms: int) -> None:
         if amount <= 0 or not self.alive():
             return
         self.vitals.take_damage(amount, now_ms=now_ms)

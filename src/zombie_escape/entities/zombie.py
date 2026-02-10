@@ -303,7 +303,7 @@ class Zombie(pygame.sprite.Sprite):
         amount: int,
         *,
         source: str | None = None,
-        now_ms: int | None = None,
+        now_ms: int,
     ) -> None:
         if amount <= 0 or not self.alive():
             return
@@ -415,14 +415,14 @@ class Zombie(pygame.sprite.Sprite):
         *,
         cell_size: int,
         layout: LevelLayout,
-        now_ms: int | None = None,
+        now_ms: int,
         drift_x: float = 0.0,
         drift_y: float = 0.0,
     ) -> None:
         if self.vitals.carbonized:
             self._apply_decay()
             return
-        now = pygame.time.get_ticks() if now_ms is None else now_ms
+        now = now_ms
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
         self._apply_decay()

@@ -104,14 +104,14 @@ class Survivor(pygame.sprite.Sprite):
         player_collision_radius: float | None = None,
         drift_x: float = 0.0,
         drift_y: float = 0.0,
-        now_ms: int | None = None,
+        now_ms: int,
     ) -> None:
         pitfall_cells = layout.pitfall_cells
         walkable_cells = layout.walkable_cells
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
 
-        now = pygame.time.get_ticks() if now_ms is None else now_ms
+        now = now_ms
         if self.is_jumping:
             elapsed = now - self.jump_start_at
             if elapsed >= self.jump_duration:
