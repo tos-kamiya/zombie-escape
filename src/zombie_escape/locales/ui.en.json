@@ -72,19 +72,19 @@
         "intro": "(No fuel inside, it seems...\nGuess I'll have to\nsurvive until dawn.)"
       },
       "stage6": {
-        "name": "#6 Tracker Run",
+        "name": "#06 Tracker Run",
         "description": "Escape like stage 2, but some zombies follow your trail."
       },
       "stage7": {
-        "name": "#7 Rescue Buddy 2",
+        "name": "#07 Rescue Buddy 2",
         "description": "Rescue your buddy. Wall-hugging zombies appear."
       },
       "stage8": {
-        "name": "#8 Assembly Floor",
+        "name": "#08 Assembly Floor",
         "description": "Narrow corridors. Get surrounded, and there’s no escape."
       },
       "stage9": {
-        "name": "#9 Evacuate Survivors 2",
+        "name": "#09 Evacuate Survivors 2",
         "description": "Evacuate like stage 4, but narrow corridors. Requires fuel.",
         "survivor_conversion_messages": [
           "It hurts!",
@@ -170,6 +170,11 @@
       "stage24": {
         "name": "#24 Ride the Flow",
         "description": "It's fun to ride. Until it isn't."
+      },
+      "stage25": {
+        "name": "#25 Distribution Center",
+        "description": "It’s a wide facility -- search efficiently. This time, there are only two exits.",
+        "intro": "A map shows the floor\ndivided into eight sectors."
       }
     },
     "status": {
