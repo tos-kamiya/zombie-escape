@@ -249,7 +249,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                         color=BUDDY_COLOR,
                     )
                     state.game_over = True
-                    state.game_over_at = state.game_over_at or pygame.time.get_ticks()
+                    state.game_over_at = state.game_over_at or state.elapsed_play_ms
                 else:
                     if walkable_cells:
                         new_cell = RNG.choice(walkable_cells)
@@ -376,12 +376,15 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 norm_dx = 0.0
                 norm_dy = 0.0
             valid_hits = []
-            car_center = active_car.rect.center
-            car_radius = getattr(active_car, "collision_radius", 0.0)
+            if hasattr(active_car, "get_collision_circle"):
+                car_center, car_radius = active_car.get_collision_circle()
+            else:
+                car_center = active_car.rect.center
+                car_radius = getattr(active_car, "collision_radius", 0.0)
             for zombie in zombies_hit:
                 if not zombie.alive():
                     continue
-                zombie_radius = getattr(zombie, "radius", None)
+                zombie_radius = getattr(zombie, "collision_radius", None)
                 if zombie_radius is None:
                     zombie_radius = max(zombie.rect.width, zombie.rect.height) / 2
                 zx = zombie.rect.centerx - car_center[0]
@@ -405,7 +408,9 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 if zx * norm_dx + zy * norm_dy <= 0:
                     continue
                 if hasattr(zombie, "take_damage"):
-                    zombie.take_damage(CAR_ZOMBIE_HIT_DAMAGE)
+                    zombie.take_damage(
+                        CAR_ZOMBIE_HIT_DAMAGE, now_ms=state.elapsed_play_ms
+                    )
                 valid_hits.append(zombie)
             if zombies_hit:
                 non_forward_hits = 0
@@ -420,15 +425,18 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
 
     # Car hitting patrol bots
     if player.in_car and active_car and active_car.health > 0 and patrol_bot_group:
-        car_center_x = active_car.x
-        car_center_y = active_car.y
-        car_radius = getattr(active_car, "collision_radius", 0.0)
+        if hasattr(active_car, "get_collision_circle"):
+            (car_center_x, car_center_y), car_radius = active_car.get_collision_circle()
+        else:
+            car_center_x = active_car.x
+            car_center_y = active_car.y
+            car_radius = getattr(active_car, "collision_radius", 0.0)
         for bot in list(patrol_bot_group):
             if not bot.alive():
                 continue
             dx = bot.x - car_center_x
             dy = bot.y - car_center_y
-            hit_range = car_radius + getattr(bot, "radius", 0.0)
+            hit_range = car_radius + getattr(bot, "collision_radius", 0.0)
             if dx * dx + dy * dy <= hit_range * hit_range:
                 bot.kill()
                 active_car._take_damage(CAR_WALL_DAMAGE)
@@ -498,7 +506,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         ):
             if not state.game_over:
                 state.game_over = True
-                state.game_over_at = pygame.time.get_ticks()
+                state.game_over_at = state.elapsed_play_ms
                 schedule_timed_message(
                     state,
                     tr("game_over.scream"),

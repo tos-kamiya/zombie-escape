@@ -123,7 +123,7 @@ def update_entities(
     active_car = car if car and car.alive() else None
     pitfall_cells = game_data.layout.pitfall_cells
     field_rect = game_data.layout.field_rect
-    current_time = pygame.time.get_ticks()
+    current_time = game_data.state.elapsed_play_ms
 
     all_walls = list(wall_group) if wall_index is None else None
 
@@ -207,6 +207,7 @@ def update_entities(
             wall_index=wall_index,
             cell_size=game_data.cell_size,
             layout=game_data.layout,
+            now_ms=game_data.state.elapsed_play_ms,
         )
     else:
         # Player flagged as in-car but car is gone; drop them back to foot control

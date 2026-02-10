@@ -63,7 +63,6 @@ class PatrolBot(pygame.sprite.Sprite):
         self._on_moving_floor_last = False
         self._stuck_pos: tuple[float, float] | None = None
         self._stuck_started_ms: int | None = None
-        self.collision_radius = float(self.radius)
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
         if new_bin == self.facing_bin:
@@ -445,7 +444,7 @@ class PatrolBot(pygame.sprite.Sprite):
         self._on_moving_floor_last = on_floor
 
         # If position hasn't changed beyond a small threshold for 5s, flip direction.
-        now_ms = pygame.time.get_ticks()
+        now_ms = now
         pos = (self.x, self.y)
         if self._stuck_pos is None:
             self._stuck_pos = pos

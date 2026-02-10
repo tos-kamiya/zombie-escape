@@ -137,7 +137,7 @@ class Zombie(pygame.sprite.Sprite):
             if self.kind == ZombieKind.TRACKER
             else ZOMBIE_WANDER_INTERVAL_MS
         )
-        self.last_wander_change_time = pygame.time.get_ticks()
+        self.last_wander_change_time = 0
         self.wander_change_interval = max(
             0, self.wander_interval_ms + RNG.randint(-500, 500)
         )
@@ -298,10 +298,16 @@ class Zombie(pygame.sprite.Sprite):
         """Reduce zombie health over time and despawn when depleted."""
         self.vitals.apply_decay()
 
-    def take_damage(self: Self, amount: int, *, source: str | None = None) -> None:
+    def take_damage(
+        self: Self,
+        amount: int,
+        *,
+        source: str | None = None,
+        now_ms: int | None = None,
+    ) -> None:
         if amount <= 0 or not self.alive():
             return
-        self.vitals.take_damage(amount, source=source)
+        self.vitals.take_damage(amount, source=source, now_ms=now_ms)
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
         if new_bin == self.facing_bin:
@@ -435,7 +441,9 @@ class Zombie(pygame.sprite.Sprite):
             paralyze_duration_ms=PATROL_BOT_PARALYZE_MS,
             damage_interval_frames=PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,
             damage_amount=PATROL_BOT_ZOMBIE_DAMAGE,
-            apply_damage=lambda amount: self.take_damage(amount, source="patrol_bot"),
+            apply_damage=lambda amount: self.take_damage(
+                amount, source="patrol_bot", now_ms=now
+            ),
         ):
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0
@@ -533,7 +541,9 @@ class Zombie(pygame.sprite.Sprite):
                 self.vitals.patrol_damage_frame_counter + 1
             ) % PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES
             if self.vitals.patrol_damage_frame_counter == 0:
-                self.take_damage(PATROL_BOT_ZOMBIE_DAMAGE, source="patrol_bot")
+                self.take_damage(
+                    PATROL_BOT_ZOMBIE_DAMAGE, source="patrol_bot", now_ms=now
+                )
             self.vitals.patrol_paralyze_until_ms = max(
                 self.vitals.patrol_paralyze_until_ms,
                 now + PATROL_BOT_PARALYZE_MS,

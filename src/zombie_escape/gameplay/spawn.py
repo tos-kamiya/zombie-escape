@@ -767,7 +767,9 @@ def spawn_initial_zombies(
             zombie_group.add(tentative)
             all_sprites.add(tentative, layer=LAYER_ZOMBIES)
         interval = max(1, game_data.stage.spawn_interval_ms)
-        game_data.state.last_zombie_spawn_time = pygame.time.get_ticks() - interval
+        game_data.state.last_zombie_spawn_time = (
+            game_data.state.elapsed_play_ms - interval
+        )
         return
 
     spawn_rate = max(0.0, game_data.stage.initial_interior_spawn_rate)
@@ -793,7 +795,9 @@ def spawn_initial_zombies(
         all_sprites.add(tentative, layer=LAYER_ZOMBIES)
 
     interval = max(1, game_data.stage.spawn_interval_ms)
-    game_data.state.last_zombie_spawn_time = pygame.time.get_ticks() - interval
+    game_data.state.last_zombie_spawn_time = (
+        game_data.state.elapsed_play_ms - interval
+    )
 
 
 def spawn_initial_patrol_bots(

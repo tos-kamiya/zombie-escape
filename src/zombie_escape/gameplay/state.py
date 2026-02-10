@@ -216,7 +216,7 @@ def update_endurance_timer(game_data: GameData, dt_ms: int) -> None:
     )
     if not state.dawn_ready and state.endurance_elapsed_ms >= state.endurance_goal_ms:
         state.dawn_ready = True
-        state.dawn_prompt_at = pygame.time.get_ticks()
+        state.dawn_prompt_at = state.elapsed_play_ms
         _set_ambient_palette(game_data, DAWN_AMBIENT_PALETTE_KEY, force=True)
     if state.dawn_ready:
         carbonize_outdoor_zombies(game_data)

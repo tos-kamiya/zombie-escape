@@ -27,7 +27,7 @@ def update_paralyze_from_patrol_contact(
         if not bot.alive():
             continue
         bx, by = bot.rect.center
-        br = getattr(bot, "radius", None)
+        br = getattr(bot, "collision_radius", None)
         if br is None:
             br = max(bot.rect.width, bot.rect.height) / 2
         dx = ex - bx

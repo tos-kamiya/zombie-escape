@@ -89,6 +89,7 @@ def update_survivors(
             drift_x=drift_x,
             drift_y=drift_y,
             player_collision_radius=player.collision_radius,
+            now_ms=game_data.state.elapsed_play_ms,
         )
 
     # Gently prevent survivors from overlapping the player or each other
@@ -242,7 +243,7 @@ def increase_survivor_capacity(game_data: GameData, increments: int = 1) -> None
 
 
 def add_survivor_message(game_data: GameData, text: str) -> None:
-    expires = pygame.time.get_ticks() + SURVIVOR_MESSAGE_DURATION_MS
+    expires = game_data.state.elapsed_play_ms + SURVIVOR_MESSAGE_DURATION_MS
     game_data.state.survivor_messages.append({"text": text, "expires_at": expires})
 
 
@@ -283,7 +284,7 @@ def random_survivor_conversion_line(stage_id: str) -> str:
 
 
 def cleanup_survivor_messages(state: ProgressState) -> None:
-    now = pygame.time.get_ticks()
+    now = state.elapsed_play_ms
     state.survivor_messages = [
         msg for msg in state.survivor_messages if msg.get("expires_at", 0) > now
     ]

@@ -141,6 +141,7 @@ def _zombie_wall_hug_movement(
     layout: "LevelLayout",
     now_ms: int | None = None,
 ) -> tuple[float, float]:
+    now = pygame.time.get_ticks() if now_ms is None else now_ms
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if zombie.wall_hug_angle is None:
         zombie.wall_hug_angle = zombie.wander_angle
@@ -171,7 +172,7 @@ def _zombie_wall_hug_movement(
                 zombie.wall_hug_side = 1.0 if left_dist <= right_dist else -1.0
             else:
                 zombie.wall_hug_side = RNG.choice([-1.0, 1.0])
-            zombie.wall_hug_last_wall_time = pygame.time.get_ticks()
+            zombie.wall_hug_last_wall_time = now
             zombie.wall_hug_last_side_has_wall = left_wall or right_wall
         else:
             if is_in_sight:
@@ -195,7 +196,6 @@ def _zombie_wall_hug_movement(
     )
     side_has_wall = side_dist < sensor_distance
     forward_has_wall = forward_dist < sensor_distance
-    now = pygame.time.get_ticks() if now_ms is None else now_ms
     wall_recent = (
         zombie.wall_hug_last_wall_time is not None
         and now - zombie.wall_hug_last_wall_time <= ZOMBIE_WALL_HUG_LOST_WALL_MS

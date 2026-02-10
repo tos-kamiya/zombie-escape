@@ -20,7 +20,7 @@ def is_entity_on_moving_floor(entity: object) -> bool:
 
 
 def get_floor_overlap_rect(entity: _MovingFloorEntity) -> pygame.Rect:
-    radius = getattr(entity, "radius", None)
+    radius = getattr(entity, "collision_radius", None)
     if radius is None:
         return entity.rect
     size = max(1, int(radius * 2))

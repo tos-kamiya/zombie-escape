@@ -306,12 +306,13 @@ def gameplay_screen(
         dt = frame_ms / 1000.0
         current_fps = clock.get_fps()
         if game_data.state.game_over or game_data.state.game_won:
+            game_data.state.elapsed_play_ms += frame_ms
             if game_data.state.game_won:
                 record_stage_clear(stage.id)
             if game_data.state.game_over and not game_data.state.game_won:
                 if game_data.state.game_over_at is None:
-                    game_data.state.game_over_at = pygame.time.get_ticks()
-                if pygame.time.get_ticks() - game_data.state.game_over_at < 1000:
+                    game_data.state.game_over_at = game_data.state.elapsed_play_ms
+                if game_data.state.elapsed_play_ms - game_data.state.game_over_at < 1000:
                     draw(
                         render_assets,
                         screen,
@@ -338,7 +339,7 @@ def gameplay_screen(
                 sync_window_size(event, game_data=game_data)
                 continue
             if event.type == pygame.WINDOWFOCUSLOST:
-                now = pygame.time.get_ticks()
+                now = game_data.state.elapsed_play_ms
                 if now >= ignore_focus_loss_until:
                     paused_focus = True
             if event.type == pygame.WINDOWFOCUSGAINED:

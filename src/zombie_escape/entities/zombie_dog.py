@@ -72,7 +72,7 @@ class ZombieDog(pygame.sprite.Sprite):
         self.mode = ZombieDogMode.WANDER
         self.charge_direction = (0.0, 0.0)
         self.wander_angle = RNG.uniform(0.0, math.tau)
-        self.wander_change_time = pygame.time.get_ticks()
+        self.wander_change_time = 0
         self.kind = ZombieKind.DOG
         self.facing_bin = 0
         self.directional_images = build_zombie_dog_directional_surfaces(
@@ -238,6 +238,7 @@ class ZombieDog(pygame.sprite.Sprite):
         nearby_zombies: list[pygame.sprite.Sprite],
         *,
         allow_bite: bool,
+        now_ms: int | None = None,
     ) -> None:
         if not allow_bite:
             return
@@ -251,7 +252,7 @@ class ZombieDog(pygame.sprite.Sprite):
             dy = candidate.y - head_y
             combined = self.collision_radius + candidate.collision_radius
             if dx * dx + dy * dy <= combined * combined:
-                candidate.take_damage(ZOMBIE_DOG_BITE_DAMAGE)
+                candidate.take_damage(ZOMBIE_DOG_BITE_DAMAGE, now_ms=now_ms)
                 if (
                     candidate.alive()
                     and getattr(candidate, "decay_duration_frames", 0) > 0
@@ -263,7 +264,7 @@ class ZombieDog(pygame.sprite.Sprite):
                         / candidate.max_health
                     )
                     if frames_to_zero <= FPS:
-                        candidate.take_damage(candidate.health)
+                        candidate.take_damage(candidate.health, now_ms=now_ms)
 
     def _apply_decay(self: Self) -> None:
         self.vitals.apply_decay()
@@ -357,7 +358,7 @@ class ZombieDog(pygame.sprite.Sprite):
             paralyze_duration_ms=PATROL_BOT_PARALYZE_MS,
             damage_interval_frames=PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,
             damage_amount=PATROL_BOT_ZOMBIE_DAMAGE,
-            apply_damage=self.take_damage,
+            apply_damage=lambda amount: self.take_damage(amount, now_ms=now),
         ):
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0
@@ -388,7 +389,6 @@ class ZombieDog(pygame.sprite.Sprite):
         move_x = 0.0
         move_y = 0.0
         if self.mode == ZombieDogMode.WANDER:
-            now = pygame.time.get_ticks()
             if now - self.wander_change_time > ZOMBIE_DOG_WANDER_INTERVAL_MS:
                 self.wander_change_time = now
                 self.wander_angle = RNG.uniform(0.0, math.tau)
@@ -413,7 +413,7 @@ class ZombieDog(pygame.sprite.Sprite):
             else:
                 self.mode = ZombieDogMode.WANDER
                 self.wander_angle = RNG.uniform(0.0, math.tau)
-                self.wander_change_time = pygame.time.get_ticks()
+                self.wander_change_time = now
 
         move_x += drift_x
         move_y += drift_y
@@ -447,7 +447,7 @@ class ZombieDog(pygame.sprite.Sprite):
         ):
             self.mode = ZombieDogMode.WANDER
             self.wander_angle = RNG.uniform(0.0, math.tau)
-            self.wander_change_time = pygame.time.get_ticks()
+            self.wander_change_time = now
 
         if (
             self.mode == ZombieDogMode.WANDER
@@ -455,7 +455,7 @@ class ZombieDog(pygame.sprite.Sprite):
             and self.last_move_dy == 0.0
         ):
             self.wander_angle = RNG.uniform(0.0, math.tau)
-            self.wander_change_time = pygame.time.get_ticks()
+            self.wander_change_time = now
         if final_x == self.x and final_y == self.y:
             self.wander_angle = RNG.uniform(0.0, math.tau)
             try_dx = math.cos(self.wander_angle) * self.speed_patrol
@@ -490,12 +490,13 @@ class ZombieDog(pygame.sprite.Sprite):
             self._apply_pack_damage(
                 list(nearby_zombies),
                 allow_bite=self.bite_frame_counter == 0,
+                now_ms=now,
             )
 
     def carbonize(self: Self) -> None:
         self.vitals.carbonize()
 
-    def take_damage(self: Self, amount: int) -> None:
+    def take_damage(self: Self, amount: int, *, now_ms: int | None = None) -> None:
         if amount <= 0 or not self.alive():
             return
-        self.vitals.take_damage(amount)
+        self.vitals.take_damage(amount, now_ms=now_ms)
