@@ -3,6 +3,8 @@
 from __future__ import annotations
 from typing import Iterable
 
+import math
+
 try:
     from typing import Self
 except ImportError:  # pragma: no cover - Python 3.10 fallback
@@ -44,7 +46,7 @@ class Car(pygame.sprite.Sprite):
         self.y = float(self.rect.centery)
         self.health = CAR_HEALTH
         self.max_health = CAR_HEALTH
-        self.collision_radius = _car_body_radius(CAR_WIDTH, CAR_HEIGHT)
+        self.collision_radius = float(CAR_WIDTH) / 2.0
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
         self._update_color()
@@ -85,6 +87,18 @@ class Car(pygame.sprite.Sprite):
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=center)
 
+    def _collision_center(self: Self, x: float, y: float) -> tuple[float, float]:
+        angle = (self.facing_bin % ANGLE_BINS) * (math.tau / ANGLE_BINS)
+        offset = (CAR_HEIGHT / 2.0) - self.collision_radius
+        return (
+            x + math.cos(angle) * offset,
+            y + math.sin(angle) * offset,
+        )
+
+    def get_collision_circle(self: Self) -> tuple[tuple[int, int], float]:
+        cx, cy = self._collision_center(self.x, self.y)
+        return (int(round(cx)), int(round(cy))), float(self.collision_radius)
+
     def move(
         self: Self,
         dx: float,
@@ -115,7 +129,7 @@ class Car(pygame.sprite.Sprite):
                 if abs(w.rect.centery - self.y) < 100
                 and abs(w.rect.centerx - new_x) < 100
             ]
-        car_center = (new_x, new_y)
+        car_center = self._collision_center(new_x, new_y)
         for wall in possible_walls:
             if _circle_wall_collision(car_center, self.collision_radius, wall):
                 hit_walls.append(wall)
@@ -148,7 +162,3 @@ class Car(pygame.sprite.Sprite):
         self.last_move_dx = dx
         self.last_move_dy = dy
 
-
-def _car_body_radius(width: float, height: float) -> float:
-    """Approximate car collision radius using only its own dimensions."""
-    return min(width, height) / 2
