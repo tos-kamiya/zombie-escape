@@ -29,7 +29,7 @@ from ..localization import get_font_settings
 from ..models import Footprint, GameData
 from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
 from ..render_constants import MOVING_FLOOR_OVERVIEW_COLOR
-from ..entities_constants import PATROL_BOT_RADIUS
+from ..entities_constants import PATROL_BOT_COLLISION_RADIUS
 from .hud import _get_fog_scale
 
 
@@ -232,7 +232,7 @@ def draw_level_overview(
                     surface,
                     (90, 45, 120),
                     bot.rect.center,
-                    int(PATROL_BOT_RADIUS),
+                    int(PATROL_BOT_COLLISION_RADIUS),
                 )
     if zombies:
         zombie_color = (200, 80, 80)

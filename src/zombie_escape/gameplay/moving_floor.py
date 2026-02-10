@@ -12,10 +12,21 @@ class _MovingFloorEntity(Protocol):
     x: float
     y: float
     rect: pygame.Rect
+    radius: float
 
 
 def is_entity_on_moving_floor(entity: object) -> bool:
     return bool(getattr(entity, "on_moving_floor", False))
+
+
+def get_floor_overlap_rect(entity: _MovingFloorEntity) -> pygame.Rect:
+    radius = getattr(entity, "radius", None)
+    if radius is None:
+        return entity.rect
+    size = max(1, int(radius * 2))
+    rect = pygame.Rect(0, 0, size, size)
+    rect.center = (int(entity.x), int(entity.y))
+    return rect
 
 
 

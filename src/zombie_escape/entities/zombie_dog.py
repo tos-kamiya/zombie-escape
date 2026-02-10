@@ -97,6 +97,7 @@ class ZombieDog(pygame.sprite.Sprite):
             on_kill=self.kill,
             on_carbonize=self._apply_carbonize_visuals,
         )
+        self.collision_radius = float(self.radius)
 
     @property
     def max_health(self: Self) -> int:
@@ -262,7 +263,7 @@ class ZombieDog(pygame.sprite.Sprite):
                 continue
             dx = candidate.x - head_x
             dy = candidate.y - head_y
-            combined = self.head_radius + candidate.radius
+            combined = self.head_radius + candidate.collision_radius
             if dx * dx + dy * dy <= combined * combined:
                 candidate.take_damage(ZOMBIE_DOG_BITE_DAMAGE)
                 if (
@@ -298,14 +299,18 @@ class ZombieDog(pygame.sprite.Sprite):
         final_y = self.y
         if next_x != self.x:
             for wall in possible_walls:
-                if _circle_wall_collision((next_x, final_y), self.radius, wall):
+                if _circle_wall_collision(
+                    (next_x, final_y), self.collision_radius, wall
+                ):
                     hit_x = True
                     next_x = self.x
                     break
             final_x = next_x
         if next_y != self.y:
             for wall in possible_walls:
-                if _circle_wall_collision((final_x, next_y), self.radius, wall):
+                if _circle_wall_collision(
+                    (final_x, next_y), self.collision_radius, wall
+                ):
                     hit_y = True
                     next_y = self.y
                     break
@@ -360,7 +365,7 @@ class ZombieDog(pygame.sprite.Sprite):
         now = pygame.time.get_ticks() if now_ms is None else now_ms
         if self.vitals.update_patrol_paralyze(
             entity_center=(self.x, self.y),
-            entity_radius=self.radius,
+            entity_radius=self.collision_radius,
             patrol_bots=possible_bots,
             now_ms=now,
             paralyze_duration_ms=PATROL_BOT_PARALYZE_MS,

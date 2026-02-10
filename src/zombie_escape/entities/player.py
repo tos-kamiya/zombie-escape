@@ -62,6 +62,7 @@ class Player(pygame.sprite.Sprite):
         self.jump_start_at = 0
         self.jump_duration = JUMP_DURATION_MS
         self.is_jumping = False
+        self.collision_radius = float(self.radius)
 
     def move(
         self: Self,

@@ -73,6 +73,7 @@ class Survivor(pygame.sprite.Sprite):
         self.jump_start_at = 0
         self.jump_duration = JUMP_DURATION_MS
         self.is_jumping = False
+        self.collision_radius = float(self.radius)
 
     def set_following(self: Self) -> None:
         if self.is_buddy and not self.rescued:
@@ -100,6 +101,7 @@ class Survivor(pygame.sprite.Sprite):
         cell_size: int | None = None,
         layout: "LevelLayout",
         wall_target_cell: tuple[int, int] | None = None,
+        player_collision_radius: float | None = None,
         drift_x: float = 0.0,
         drift_y: float = 0.0,
     ) -> None:
@@ -223,7 +225,12 @@ class Survivor(pygame.sprite.Sprite):
                 on_wall_hit=_on_buddy_wall_hit,
             )
 
-            overlap_radius = (self.radius + PLAYER_RADIUS) * 1.05
+            player_radius = (
+                float(player_collision_radius)
+                if player_collision_radius is not None
+                else PLAYER_RADIUS
+            )
+            overlap_radius = (self.collision_radius + player_radius) * 1.05
             dx_after = target_pos[0] - self.x
             dy_after = target_pos[1] - self.y
             dist_after_sq = dx_after * dx_after + dy_after * dy_after

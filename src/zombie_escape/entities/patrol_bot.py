@@ -11,8 +11,8 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
 
 from ..entities_constants import (
     PATROL_BOT_HUMANOID_PAUSE_MS,
-    PATROL_BOT_RADIUS,
-    PATROL_BOT_SIZE,
+    PATROL_BOT_COLLISION_RADIUS,
+    PATROL_BOT_SPRITE_SIZE,
     PATROL_BOT_SPEED,
     PATROL_BOT_COLLISION_MARGIN,
     MovingFloorDirection,
@@ -30,9 +30,10 @@ RNG = get_rng()
 class PatrolBot(pygame.sprite.Sprite):
     def __init__(self: Self, x: float, y: float) -> None:
         super().__init__()
-        self.size = PATROL_BOT_SIZE
-        self.radius = float(PATROL_BOT_RADIUS)
+        self.size = PATROL_BOT_SPRITE_SIZE
+        self.radius = float(PATROL_BOT_COLLISION_RADIUS)
         self.facing_bin = 0
+        self.collision_radius = float(self.radius)
         self.directional_images_player = build_patrol_bot_directional_surfaces(
             self.size, arrow_scale=1.0
         )
@@ -62,6 +63,7 @@ class PatrolBot(pygame.sprite.Sprite):
         self._on_moving_floor_last = False
         self._stuck_pos: tuple[float, float] | None = None
         self._stuck_started_ms: int | None = None
+        self.collision_radius = float(self.radius)
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
         if new_bin == self.facing_bin:
@@ -178,7 +180,7 @@ class PatrolBot(pygame.sprite.Sprite):
         dx = cx - other.x
         dy = cy - other.y
         dist_sq = dx * dx + dy * dy
-        min_dist = radius + other.radius
+        min_dist = radius + other.collision_radius
         if dist_sq <= 0:
             return cx + min_dist, cy
         dist = dist_sq**0.5
@@ -209,14 +211,16 @@ class PatrolBot(pygame.sprite.Sprite):
         if now < self.pause_until_ms:
             if player is not None and getattr(player, "alive", lambda: True)():
                 hx, hy = player.rect.center
-                hr = getattr(player, "radius", None)
+                hr = getattr(player, "collision_radius", None)
                 if hr is None:
                     hr = max(player.rect.width, player.rect.height) / 2
                 dx = self.x - hx
                 dy = self.y - hy
-                hit_range = (self.radius + PATROL_BOT_COLLISION_MARGIN) + float(hr)
+                hit_range = (self.collision_radius + PATROL_BOT_COLLISION_MARGIN) + float(
+                    hr
+                )
                 if dx * dx + dy * dy <= hit_range * hit_range:
-                    center_threshold = self.radius * 0.5
+                    center_threshold = self.collision_radius * 0.5
                     if dx * dx + dy * dy <= center_threshold * center_threshold:
                         self._set_direction_from_player(player)
             self.last_move_dx = 0.0
@@ -257,7 +261,7 @@ class PatrolBot(pygame.sprite.Sprite):
 
         next_x = self.x + move_x
         next_y = self.y + move_y
-        collision_radius = self.radius + PATROL_BOT_COLLISION_MARGIN
+        collision_radius = self.collision_radius + PATROL_BOT_COLLISION_MARGIN
         final_x, final_y, hit_wall = self._handle_axis_collision(
             next_x=next_x,
             next_y=next_y,
@@ -280,7 +284,7 @@ class PatrolBot(pygame.sprite.Sprite):
             for bot in possible_bots:
                 dx = check_x - bot.x
                 dy = check_y - bot.y
-                hit_range = collision_radius + bot.radius
+                hit_range = collision_radius + bot.collision_radius
                 if dx * dx + dy * dy <= hit_range * hit_range:
                     return True
             return False
@@ -339,7 +343,7 @@ class PatrolBot(pygame.sprite.Sprite):
         def _humanoid_collision(check_x: float, check_y: float) -> bool:
             for human in possible_humans:
                 hx, hy = human.rect.center
-                hr = getattr(human, "radius", None)
+                hr = getattr(human, "collision_radius", None)
                 if hr is None:
                     hr = max(human.rect.width, human.rect.height) / 2
                 dx = check_x - hx

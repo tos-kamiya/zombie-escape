@@ -34,7 +34,7 @@ from ..models import FallingZombie, GameData
 from ..rng import get_rng
 from ..entities.movement_helpers import pitfall_target
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
-from .moving_floor import get_moving_floor_drift
+from .moving_floor import get_floor_overlap_rect, get_moving_floor_drift
 from .constants import LAYER_PLAYERS, MAX_ZOMBIES
 from .decay_effects import DecayingEntityEffect, update_decay_effects
 from .spawn import spawn_weighted_zombie, update_falling_zombies
@@ -183,7 +183,7 @@ def update_entities(
         if player not in all_sprites:
             all_sprites.add(player, layer=LAYER_PLAYERS)
         floor_dx, floor_dy = get_moving_floor_drift(
-            player.rect,
+            get_floor_overlap_rect(player),
             game_data.layout,
             cell_size=game_data.cell_size,
             speed=MOVING_FLOOR_SPEED,
@@ -381,7 +381,9 @@ def update_entities(
             search_radius,
             kinds=zombie_kinds,
         )
-        zombie_search_radius = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius + 120
+        zombie_search_radius = (
+            ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.collision_radius + 120
+        )
         nearby_patrol_bots = spatial_index.query_radius(
             (zombie.x, zombie.y),
             zombie_search_radius,
@@ -422,7 +424,7 @@ def update_entities(
             continue
 
         # Check zombie pitfall
-        pull_dist = zombie.radius * 0.5
+        pull_dist = zombie.collision_radius * 0.5
         pitfall_target_pos = pitfall_target(
             x=zombie.x,
             y=zombie.y,
@@ -451,13 +453,13 @@ def update_entities(
         if not bot.alive():
             continue
         floor_dx, floor_dy = get_moving_floor_drift(
-            bot.rect,
+            get_floor_overlap_rect(bot),
             game_data.layout,
             cell_size=game_data.cell_size,
             speed=MOVING_FLOOR_SPEED,
         )
         bot.on_moving_floor = abs(floor_dx) > 0.0 or abs(floor_dy) > 0.0
-        bot_search_radius = bot.radius + 120
+        bot_search_radius = bot.collision_radius + 120
         nearby_walls = _walls_near((bot.x, bot.y), bot_search_radius)
         bot.update(
             nearby_walls,

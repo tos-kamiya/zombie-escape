@@ -23,7 +23,7 @@ from ..entities import (
 from ..entities_constants import (
     INTERNAL_WALL_BEVEL_DEPTH,
     MOVING_FLOOR_SPEED,
-    PATROL_BOT_RADIUS,
+    PATROL_BOT_COLLISION_RADIUS,
     ZOMBIE_RADIUS,
 )
 from ..entities_constants import MovingFloorDirection
@@ -1057,7 +1057,7 @@ def draw(
         # Patrol bot shadows: low profile, small offset, slightly larger than body.
         patrol_bots = game_data.groups.patrol_bot_group
         if patrol_bots:
-            bot_radius = max(1, int(PATROL_BOT_RADIUS * 1.2))
+            bot_radius = max(1, int(PATROL_BOT_COLLISION_RADIUS * 1.2))
             bot_alpha = max(1, int(ENTITY_SHADOW_ALPHA * 0.6))
             for bot in patrol_bots:
                 if not bot.alive():

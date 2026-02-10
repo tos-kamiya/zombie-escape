@@ -121,7 +121,9 @@ def _zombie_wall_hug_wall_distance(
         check_x = zombie.x + direction_x * distance
         check_y = zombie.y + direction_y * distance
         if any(
-            _circle_wall_collision((check_x, check_y), zombie.radius, wall)
+            _circle_wall_collision(
+                (check_x, check_y), zombie.collision_radius, wall
+            )
             for wall in candidates
         ):
             return distance
@@ -143,7 +145,7 @@ def _zombie_wall_hug_movement(
     if zombie.wall_hug_angle is None:
         zombie.wall_hug_angle = zombie.wander_angle
     if zombie.wall_hug_side == 0:
-        sensor_distance = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius
+        sensor_distance = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.collision_radius
         forward_angle = zombie.wall_hug_angle
         probe_offset = math.radians(ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG)
         left_angle = forward_angle + probe_offset
@@ -182,7 +184,7 @@ def _zombie_wall_hug_movement(
                 now_ms=now_ms,
             )
 
-    sensor_distance = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.radius
+    sensor_distance = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.collision_radius
     probe_offset = math.radians(ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG)
     side_angle = zombie.wall_hug_angle + zombie.wall_hug_side * probe_offset
     side_dist = _zombie_wall_hug_wall_distance(
@@ -410,7 +412,9 @@ def _zombie_wander_movement(
                     and abs(wall.rect.centery - next_y) < 120
                 ]
                 return not any(
-                    _circle_wall_collision((next_x, next_y), zombie.radius, wall)
+                    _circle_wall_collision(
+                        (next_x, next_y), zombie.collision_radius, wall
+                    )
                     for wall in nearby_walls
                 )
 

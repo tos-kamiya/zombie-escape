@@ -10,7 +10,6 @@ import pygame
 from ..entities_constants import (
     BUDDY_RADIUS,
     CAR_SPEED,
-    PLAYER_RADIUS,
     SURVIVOR_MAX_SAFE_PASSENGERS,
     SURVIVOR_MIN_SPEED_FACTOR,
     SURVIVOR_RADIUS,
@@ -35,7 +34,11 @@ from .utils import (
     is_entity_in_fov,
     rect_visible_on_screen,
 )
-from .moving_floor import get_moving_floor_drift, is_entity_on_moving_floor
+from .moving_floor import (
+    get_floor_overlap_rect,
+    get_moving_floor_drift,
+    is_entity_on_moving_floor,
+)
 
 RNG = get_rng()
 
@@ -67,7 +70,7 @@ def update_survivors(
 
     for survivor in survivors:
         drift_x, drift_y = get_moving_floor_drift(
-            survivor.rect,
+            get_floor_overlap_rect(survivor),
             game_data.layout,
             cell_size=game_data.cell_size,
         )
@@ -85,6 +88,7 @@ def update_survivors(
             wall_target_cell=wall_target_cell,
             drift_x=drift_x,
             drift_y=drift_y,
+            player_collision_radius=player.collision_radius,
         )
 
     # Gently prevent survivors from overlapping the player or each other
@@ -104,7 +108,7 @@ def update_survivors(
             survivor.y -= (dy / dist) * push
             survivor.rect.center = (int(survivor.x), int(survivor.y))
 
-    player_overlap = (SURVIVOR_RADIUS + PLAYER_RADIUS) * 1.05
+    player_overlap = (SURVIVOR_RADIUS + player.collision_radius) * 1.05
     survivor_overlap = (SURVIVOR_RADIUS * 2) * 1.05
 
     player_point = (player.x, player.y)
@@ -127,7 +131,7 @@ def update_survivors(
             if not hit_wall:
                 return
             cx, cy = survivor.rect.center
-            radius = survivor.radius
+            radius = survivor.collision_radius
             rect = hit_wall.rect
             closest_x = min(max(cx, rect.left), rect.right)
             closest_y = min(max(cy, rect.top), rect.bottom)
@@ -343,7 +347,7 @@ def handle_survivor_zombie_collisions(
     for survivor in list(survivor_group):
         if not survivor.alive():
             continue
-        survivor_radius = survivor.radius
+        survivor_radius = survivor.collision_radius
         search_radius = survivor_radius + ZOMBIE_RADIUS
         search_radius_sq = search_radius * search_radius
 

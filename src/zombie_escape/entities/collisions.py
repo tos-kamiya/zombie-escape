@@ -14,7 +14,7 @@ def _sprite_center_and_radius(
 ) -> tuple[tuple[int, int], float]:
     center = sprite.rect.center
     if hasattr(sprite, "radius"):
-        radius = float(sprite.radius)
+        radius = float(getattr(sprite, "collision_radius", sprite.radius))
     else:
         radius = float(max(sprite.rect.width, sprite.rect.height) / 2)
     return center, radius
@@ -64,7 +64,7 @@ def _collide_sprite_wall(
 ) -> bool:
     if hasattr(sprite, "radius"):
         center = sprite.rect.center
-        radius = float(sprite.radius)
+        radius = float(getattr(sprite, "collision_radius", sprite.radius))
         return _circle_wall_collision(center, radius, wall)
     if hasattr(wall, "collides_rect"):
         return wall.collides_rect(sprite.rect)

@@ -143,6 +143,7 @@ class Zombie(pygame.sprite.Sprite):
         )
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
+        self.collision_radius = float(self.radius)
 
     @property
     def max_health(self: Self) -> int:
@@ -204,7 +205,9 @@ class Zombie(pygame.sprite.Sprite):
         ]
 
         for wall in possible_walls:
-            collides = _circle_wall_collision((next_x, self.y), self.radius, wall)
+            collides = _circle_wall_collision(
+                (next_x, self.y), self.collision_radius, wall
+            )
             if collides:
                 if wall.alive():
                     wall._take_damage(amount=ZOMBIE_WALL_DAMAGE)
@@ -213,7 +216,9 @@ class Zombie(pygame.sprite.Sprite):
                     break
 
         for wall in possible_walls:
-            collides = _circle_wall_collision((final_x, next_y), self.radius, wall)
+            collides = _circle_wall_collision(
+                (final_x, next_y), self.collision_radius, wall
+            )
             if collides:
                 if wall.alive():
                     wall._take_damage(amount=ZOMBIE_WALL_DAMAGE)
@@ -255,8 +260,8 @@ class Zombie(pygame.sprite.Sprite):
             return move_x, move_y
 
         if self.kind == ZombieKind.WALL_HUGGER:
-            other_radius = float(closest.radius)
-            bump_dist_sq = (self.radius + other_radius) ** 2
+            other_radius = float(closest.collision_radius)
+            bump_dist_sq = (self.collision_radius + other_radius) ** 2
             if closest_dist_sq < bump_dist_sq and RNG.random() < 0.1:
                 if self.wall_hug_angle is None:
                     self.wall_hug_angle = self.wander_angle
@@ -327,7 +332,7 @@ class Zombie(pygame.sprite.Sprite):
         if self.kind == ZombieKind.TRACKER:
             draw_humanoid_nose(
                 self.image,
-                radius=self.radius,
+                radius=self.collision_radius,
                 angle_rad=angle_rad,
                 color=ZOMBIE_NOSE_COLOR,
             )
@@ -340,7 +345,7 @@ class Zombie(pygame.sprite.Sprite):
             hand_angle = angle_rad + side_sign * (math.pi / 2.0)
             draw_humanoid_hand(
                 self.image,
-                radius=self.radius,
+                radius=self.collision_radius,
                 angle_rad=hand_angle,
                 color=ZOMBIE_NOSE_COLOR,
             )
@@ -424,7 +429,7 @@ class Zombie(pygame.sprite.Sprite):
         ]
         if self.vitals.update_patrol_paralyze(
             entity_center=(self.x, self.y),
-            entity_radius=self.radius,
+            entity_radius=self.collision_radius,
             patrol_bots=possible_bots,
             now_ms=now,
             paralyze_duration_ms=PATROL_BOT_PARALYZE_MS,
@@ -479,7 +484,7 @@ class Zombie(pygame.sprite.Sprite):
             for bot in possible_bots:
                 dx = check_x - bot.x
                 dy = check_y - bot.y
-                hit_range = self.radius + bot.radius
+                hit_range = self.collision_radius + bot.collision_radius
                 if dx * dx + dy * dy <= hit_range * hit_range:
                     bot_hit = True
                     return True
@@ -492,7 +497,9 @@ class Zombie(pygame.sprite.Sprite):
             if _bot_collision(next_x, final_y):
                 next_x = final_x
             for wall in possible_walls:
-                if _circle_wall_collision((next_x, final_y), self.radius, wall):
+                if _circle_wall_collision(
+                    (next_x, final_y), self.collision_radius, wall
+                ):
                     if wall.alive():
                         wall._take_damage(amount=ZOMBIE_WALL_DAMAGE)
                     if wall.alive():
@@ -504,7 +511,9 @@ class Zombie(pygame.sprite.Sprite):
             if _bot_collision(final_x, next_y):
                 next_y = final_y
             for wall in possible_walls:
-                if _circle_wall_collision((final_x, next_y), self.radius, wall):
+                if _circle_wall_collision(
+                    (final_x, next_y), self.collision_radius, wall
+                ):
                     if wall.alive():
                         wall._take_damage(amount=ZOMBIE_WALL_DAMAGE)
                     if wall.alive():

@@ -29,6 +29,11 @@
   - エンティティ関連の定数（サイズ、速度、当たり判定など）。
 - `src/zombie_escape/models.py`
   - 進行状態やステージ情報のデータ構造（`dataclass`）。
+- `src/zombie_escape/entities/*`
+  - 描画用の `radius` と、衝突判定用の `collision_radius` を分けて扱う方針。
+    - `radius`: 描画（スプライトサイズ/影/演出）に使用。
+    - `collision_radius`: 衝突判定や距離判定に使用。
+    - `collision_radius` が未定義のスプライトは `radius` にフォールバックする。
 - `src/zombie_escape/stage_constants.py`
   - ステージ構成とデフォルト設定の一覧。
 - `src/zombie_escape/windowing.py`

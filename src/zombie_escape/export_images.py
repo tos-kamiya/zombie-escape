@@ -22,7 +22,7 @@ from .entities import (
 )
 from .entities_constants import (
     INTERNAL_WALL_BEVEL_DEPTH,
-    PATROL_BOT_RADIUS,
+    PATROL_BOT_COLLISION_RADIUS,
     STEEL_BEAM_HEALTH,
     ZOMBIE_RADIUS,
     MovingFloorDirection,
@@ -167,7 +167,7 @@ def _render_studio_snapshot(
             if not sprite.alive():
                 continue
             if isinstance(sprite, PatrolBot):
-                shadow_radius = max(1, int(PATROL_BOT_RADIUS * 1.2))
+                shadow_radius = max(1, int(PATROL_BOT_COLLISION_RADIUS * 1.2))
                 offset_scale = 1 / 3
             else:
                 sprite_radius = getattr(sprite, "radius", None)
