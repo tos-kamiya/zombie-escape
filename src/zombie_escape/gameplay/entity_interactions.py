@@ -262,16 +262,8 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     buddy.following = False
 
     if stage.buddy_required_count > 0:
-        near_following_count = 0
-        max_dist_sq = BUDDY_MERGE_DISTANCE * BUDDY_MERGE_DISTANCE
-        for buddy in buddies:
-            if not buddy.following:
-                continue
-            dx = player.x - buddy.x
-            dy = player.y - buddy.y
-            if (dx * dx + dy * dy) <= max_dist_sq:
-                near_following_count += 1
-        state.buddy_merged_count = state.buddy_onboard + near_following_count
+        following_count = sum(1 for buddy in buddies if buddy.following)
+        state.buddy_merged_count = state.buddy_onboard + following_count
     else:
         state.buddy_merged_count = 0
 
