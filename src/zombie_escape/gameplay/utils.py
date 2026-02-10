@@ -68,9 +68,12 @@ def _scatter_positions_on_walkable(
         return positions
 
     clamped_rate = max(0.0, min(1.0, spawn_rate))
-    for cell_x, cell_y in walkable_cells:
-        if RNG.random() >= clamped_rate:
-            continue
+    cells = list(walkable_cells)
+    RNG.shuffle(cells)
+    target_count = int(len(cells) * clamped_rate + 0.5)
+    if target_count <= 0:
+        return positions
+    for cell_x, cell_y in cells[:target_count]:
         jitter_extent = cell_size * jitter_ratio
         jitter_x = RNG.uniform(-jitter_extent, jitter_extent)
         jitter_y = RNG.uniform(-jitter_extent, jitter_extent)
