@@ -517,14 +517,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             move_dx = getattr(active_car, "last_move_dx", 0.0)
             move_dy = getattr(active_car, "last_move_dy", 0.0)
             moving = abs(move_dx) > 0.001 or abs(move_dy) > 0.001
-            move_len = math.hypot(move_dx, move_dy)
-            if move_len > 0:
-                norm_dx = move_dx / move_len
-                norm_dy = move_dy / move_len
-            else:
-                norm_dx = 0.0
-                norm_dy = 0.0
-            valid_hits = []
+            moving_hits = 0
             if hasattr(active_car, "get_collision_circle"):
                 car_center, car_radius = active_car.get_collision_circle()
             else:
@@ -540,8 +533,8 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 zy = zombie.rect.centery - car_center[1]
                 dist = math.hypot(zx, zy)
                 if dist <= 0:
-                    zx = norm_dx if norm_dx or norm_dy else 1.0
-                    zy = norm_dy if norm_dx or norm_dy else 0.0
+                    zx = 1.0
+                    zy = 0.0
                     dist = 1.0
                 overlap = car_radius + zombie_radius - dist
                 allowed_overlap = min(car_radius, zombie_radius) * 0.3
@@ -552,23 +545,15 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     zombie.rect.center = (int(zombie.x), int(zombie.y))
                 if not moving:
                     continue
-                zx = zombie.rect.centerx - car_center[0]
-                zy = zombie.rect.centery - car_center[1]
-                if zx * norm_dx + zy * norm_dy <= 0:
-                    continue
                 if hasattr(zombie, "take_damage"):
                     zombie.take_damage(
                         CAR_ZOMBIE_HIT_DAMAGE, now_ms=state.clock.elapsed_ms
                     )
-                valid_hits.append(zombie)
+                moving_hits += 1
             if zombies_hit:
-                non_forward_hits = 0
-                if moving:
-                    non_forward_hits = len(zombies_hit) - len(valid_hits)
-                else:
-                    non_forward_hits = len(zombies_hit)
-                ram_damage = CAR_ZOMBIE_RAM_DAMAGE * len(valid_hits)
-                contact_damage = CAR_ZOMBIE_CONTACT_DAMAGE * non_forward_hits
+                contact_hits = len(zombies_hit) - moving_hits
+                ram_damage = CAR_ZOMBIE_RAM_DAMAGE * moving_hits
+                contact_damage = CAR_ZOMBIE_CONTACT_DAMAGE * contact_hits
                 total_damage = ram_damage + contact_damage
                 active_car._take_damage(total_damage)
 
