@@ -13,6 +13,7 @@ from ..entities_constants import (
     PATROL_BOT_HUMANOID_PAUSE_MS,
     PATROL_BOT_COLLISION_RADIUS,
     PATROL_BOT_DIRECTION_COMMAND_RADIUS,
+    PATROL_BOT_DIRECTION_COMMAND_HOLD_MS,
     PATROL_BOT_SPRITE_SIZE,
     PATROL_BOT_SPEED,
     PATROL_BOT_COLLISION_MARGIN,
@@ -62,6 +63,7 @@ class PatrolBot(pygame.sprite.Sprite):
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
         self.pause_until_ms = 0
+        self.direction_command_hold_until_ms = 0
         self._on_moving_floor_last = False
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
@@ -99,7 +101,9 @@ class PatrolBot(pygame.sprite.Sprite):
             self.direction = (-dy, dx)
         self._set_arrow_source(False)
 
-    def _set_direction_from_player(self: Self, player: pygame.sprite.Sprite) -> None:
+    def _set_direction_from_player(
+        self: Self, player: pygame.sprite.Sprite, *, now_ms: int
+    ) -> None:
         input_bin = getattr(player, "input_facing_bin", None)
         if input_bin is None:
             return
@@ -110,6 +114,7 @@ class PatrolBot(pygame.sprite.Sprite):
             self.direction = (1, 0) if dx >= 0 else (-1, 0)
         else:
             self.direction = (0, 1) if dy >= 0 else (0, -1)
+        self.direction_command_hold_until_ms = now_ms + PATROL_BOT_DIRECTION_COMMAND_HOLD_MS
         self._update_facing_from_movement(*self.direction)
         self._set_arrow_source(True)
 
@@ -220,7 +225,7 @@ class PatrolBot(pygame.sprite.Sprite):
                 if dx * dx + dy * dy <= hit_range * hit_range:
                     center_threshold = self.direction_command_radius
                     if dx * dx + dy * dy <= center_threshold * center_threshold:
-                        self._set_direction_from_player(player)
+                        self._set_direction_from_player(player, now_ms=now)
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0
             return
@@ -231,14 +236,14 @@ class PatrolBot(pygame.sprite.Sprite):
             cell_x = int(self.rect.centerx // cell_size)
             cell_y = int(self.rect.centery // cell_size)
         on_floor = abs(drift_x) > 0.0 or abs(drift_y) > 0.0
-        forced_floor_dir = False
-        if on_floor:
+        command_hold_active = now < self.direction_command_hold_until_ms
+        forced_floor_dir = on_floor
+        if on_floor and not command_hold_active:
             if abs(drift_x) >= abs(drift_y) and abs(drift_x) > 0.0:
                 self.direction = (1, 0) if drift_x > 0 else (-1, 0)
             elif abs(drift_y) > 0.0:
                 self.direction = (0, 1) if drift_y > 0 else (0, -1)
             self._set_arrow_source(False)
-            forced_floor_dir = True
 
         move_x = float(self.direction[0]) * self.speed + drift_x
         move_y = float(self.direction[1]) * self.speed + drift_y
@@ -250,7 +255,9 @@ class PatrolBot(pygame.sprite.Sprite):
             layout=layout,
             cell_size=cell_size,
         )
-        self._update_facing_from_movement(move_x, move_y)
+        self._update_facing_from_movement(
+            float(self.direction[0]), float(self.direction[1])
+        )
         self.last_move_dx = move_x
         self.last_move_dy = move_y
 
