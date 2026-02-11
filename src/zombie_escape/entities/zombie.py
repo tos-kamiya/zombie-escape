@@ -59,12 +59,13 @@ RNG = get_rng()
 MovementStrategy = Callable[
     [
         "Zombie",
-        tuple[float, float],
         list[Wall],
+        int,
+        LevelLayout,
+        tuple[float, float],
         Iterable["Zombie"],
         list[Footprint],
         int,
-        LevelLayout,
     ],
     tuple[float, float],
 ]
@@ -456,12 +457,12 @@ class Zombie(pygame.sprite.Sprite):
         avoid_radius_sq = avoid_radius * avoid_radius
         move_x, move_y = self.movement_strategy(
             self,
-            player_center,
             walls,
-            nearby_zombies,
-            footprints or [],
             cell_size,
             layout,
+            player_center,
+            nearby_zombies,
+            footprints or [],
             now_ms=now,
         )
         move_x += drift_x

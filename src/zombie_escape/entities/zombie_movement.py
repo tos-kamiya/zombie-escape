@@ -57,12 +57,12 @@ def _line_of_sight_clear(
 
 def _zombie_tracker_movement(
     zombie: "Zombie",
-    player_center: tuple[float, float],
     walls: list["Wall"],
-    nearby_zombies: Iterable["Zombie"],
-    footprints: list["Footprint"],
     cell_size: int,
     layout: "LevelLayout",
+    player_center: tuple[float, float],
+    nearby_zombies: Iterable["Zombie"],
+    footprints: list["Footprint"],
     *,
     now_ms: int,
 ) -> tuple[float, float]:
@@ -80,8 +80,8 @@ def _zombie_tracker_movement(
             return _zombie_wander_movement(
                 zombie,
                 walls,
-                cell_size=cell_size,
-                layout=layout,
+                cell_size,
+                layout,
                 now_ms=now,
             )
         _zombie_update_tracker_target(zombie, footprints, walls, now_ms=now)
@@ -90,8 +90,8 @@ def _zombie_tracker_movement(
         return _zombie_wander_movement(
             zombie,
             walls,
-            cell_size=cell_size,
-            layout=layout,
+            cell_size,
+            layout,
             now_ms=now,
         )
     return _zombie_move_toward(zombie, player_center)
@@ -133,12 +133,12 @@ def _zombie_wall_hug_wall_distance(
 
 def _zombie_wall_hug_movement(
     zombie: "Zombie",
-    player_center: tuple[float, float],
     walls: list["Wall"],
-    _nearby_zombies: Iterable["Zombie"],
-    _footprints: list["Footprint"],
     cell_size: int,
     layout: "LevelLayout",
+    player_center: tuple[float, float],
+    _nearby_zombies: Iterable["Zombie"],
+    _footprints: list["Footprint"],
     now_ms: int,
 ) -> tuple[float, float]:
     now = now_ms
@@ -180,8 +180,8 @@ def _zombie_wall_hug_movement(
             return _zombie_wander_movement(
                 zombie,
                 walls,
-                cell_size=cell_size,
-                layout=layout,
+                cell_size,
+                layout,
                 now_ms=now_ms,
             )
 
@@ -236,12 +236,12 @@ def _zombie_wall_hug_movement(
 
 def _zombie_normal_movement(
     zombie: "Zombie",
-    player_center: tuple[float, float],
     walls: list["Wall"],
-    _nearby_zombies: Iterable["Zombie"],
-    _footprints: list["Footprint"],
     cell_size: int,
     layout: "LevelLayout",
+    player_center: tuple[float, float],
+    _nearby_zombies: Iterable["Zombie"],
+    _footprints: list["Footprint"],
     now_ms: int,
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_SIGHT_RANGE)
@@ -249,8 +249,8 @@ def _zombie_normal_movement(
         return _zombie_wander_movement(
             zombie,
             walls,
-            cell_size=cell_size,
-            layout=layout,
+            cell_size,
+            layout,
             now_ms=now_ms,
         )
     return _zombie_move_toward(zombie, player_center)
@@ -353,9 +353,9 @@ def _zombie_update_tracker_target(
 def _zombie_wander_movement(
     zombie: "Zombie",
     walls: list["Wall"],
-    *,
     cell_size: int,
     layout: "LevelLayout",
+    *,
     now_ms: int,
 ) -> tuple[float, float]:
     grid_cols = layout.grid_cols

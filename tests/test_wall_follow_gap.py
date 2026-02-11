@@ -45,12 +45,12 @@ def test_wall_hug_turns_away_when_too_close() -> None:
     before = zombie.wall_hug_angle
     _zombie_wall_hug_movement(
         zombie,
-        (9999, 9999),
         [wall],
+        DEFAULT_CELL_SIZE,
+        layout,
+        (9999, 9999),
         [],
         [],
-        cell_size=DEFAULT_CELL_SIZE,
-        layout=layout,
         now_ms=0,
     )
     delta = (zombie.wall_hug_angle - before + math.pi) % (2 * math.pi) - math.pi

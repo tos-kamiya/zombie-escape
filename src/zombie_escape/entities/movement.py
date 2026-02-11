@@ -198,12 +198,12 @@ def _zombie_update_tracker_target(
 
 def _zombie_wall_hug_movement(
     zombie,
-    player_center,
     walls,
-    nearby_zombies,
-    footprints,
     cell_size,
     layout,
+    player_center,
+    nearby_zombies,
+    footprints,
     now_ms: int,
 ):
     """Compatibility shim for tests; implementation lives in zombie_movement."""
@@ -211,11 +211,11 @@ def _zombie_wall_hug_movement(
 
     return _impl(
         zombie,
-        player_center,
         walls,
-        nearby_zombies,
-        footprints,
         cell_size,
         layout,
+        player_center,
+        nearby_zombies,
+        footprints,
         now_ms=now_ms,
     )
