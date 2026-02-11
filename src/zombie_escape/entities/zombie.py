@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import Callable, Iterable, TYPE_CHECKING
+from typing import Iterable, Protocol, TYPE_CHECKING
 
 import pygame
 
@@ -56,19 +56,19 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
 
 RNG = get_rng()
 
-MovementStrategy = Callable[
-    [
-        "Zombie",
-        list[Wall],
-        int,
-        LevelLayout,
-        tuple[float, float],
-        Iterable["Zombie"],
-        list[Footprint],
-        int,
-    ],
-    tuple[float, float],
-]
+class MovementStrategy(Protocol):
+    def __call__(
+        self,
+        zombie: "Zombie",
+        walls: list[Wall],
+        cell_size: int,
+        layout: LevelLayout,
+        player_center: tuple[float, float],
+        nearby_zombies: Iterable["Zombie"],
+        footprints: list[Footprint],
+        *,
+        now_ms: int,
+    ) -> tuple[float, float]: ...
 
 
 class Zombie(pygame.sprite.Sprite):
