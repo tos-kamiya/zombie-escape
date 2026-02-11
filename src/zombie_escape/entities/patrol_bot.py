@@ -63,8 +63,6 @@ class PatrolBot(pygame.sprite.Sprite):
         self.last_move_dy = 0.0
         self.pause_until_ms = 0
         self._on_moving_floor_last = False
-        self._stuck_pos: tuple[float, float] | None = None
-        self._stuck_started_ms: int | None = None
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
         if new_bin == self.facing_bin:
@@ -440,21 +438,3 @@ class PatrolBot(pygame.sprite.Sprite):
         self.y = final_y
         self.rect.center = (int(self.x), int(self.y))
         self._on_moving_floor_last = on_floor
-
-        # If position hasn't changed beyond a small threshold for 5s, flip direction.
-        now_ms = now
-        pos = (self.x, self.y)
-        if self._stuck_pos is None:
-            self._stuck_pos = pos
-            self._stuck_started_ms = now_ms
-        else:
-            dx = pos[0] - self._stuck_pos[0]
-            dy = pos[1] - self._stuck_pos[1]
-            if dx * dx + dy * dy > 16.0:
-                self._stuck_pos = pos
-                self._stuck_started_ms = now_ms
-            elif self._stuck_started_ms is not None and now_ms - self._stuck_started_ms >= 5000:
-                self.direction = (-self.direction[0], -self.direction[1])
-                self._set_arrow_source(False)
-                self._stuck_pos = pos
-                self._stuck_started_ms = now_ms
