@@ -45,15 +45,6 @@ def get_overlapping_moving_floor_direction(
     if direction is not None:
         return direction
 
-    min_x = max(0, int(rect.left // cell_size))
-    max_x = max(0, int((rect.right - 1) // cell_size))
-    min_y = max(0, int(rect.top // cell_size))
-    max_y = max(0, int((rect.bottom - 1) // cell_size))
-    for y in range(min_y, max_y + 1):
-        for x in range(min_x, max_x + 1):
-            direction = layout.moving_floor_cells.get((x, y))
-            if direction is not None:
-                return direction
     return None
 
 

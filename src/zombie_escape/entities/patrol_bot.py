@@ -12,6 +12,7 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
 from ..entities_constants import (
     PATROL_BOT_HUMANOID_PAUSE_MS,
     PATROL_BOT_COLLISION_RADIUS,
+    PATROL_BOT_DIRECTION_COMMAND_RADIUS,
     PATROL_BOT_SPRITE_SIZE,
     PATROL_BOT_SPEED,
     PATROL_BOT_COLLISION_MARGIN,
@@ -33,6 +34,8 @@ class PatrolBot(pygame.sprite.Sprite):
         self.radius = float(PATROL_BOT_COLLISION_RADIUS)
         self.facing_bin = 0
         self.collision_radius = float(self.radius)
+        self.direction_command_radius = float(PATROL_BOT_DIRECTION_COMMAND_RADIUS)
+        assert self.direction_command_radius < self.collision_radius
         self.directional_images_player = build_patrol_bot_directional_surfaces(
             self.size, arrow_scale=1.0
         )
@@ -217,7 +220,7 @@ class PatrolBot(pygame.sprite.Sprite):
                     hr
                 )
                 if dx * dx + dy * dy <= hit_range * hit_range:
-                    center_threshold = self.collision_radius * 0.5
+                    center_threshold = self.direction_command_radius
                     if dx * dx + dy * dy <= center_threshold * center_threshold:
                         self._set_direction_from_player(player)
             self.last_move_dx = 0.0

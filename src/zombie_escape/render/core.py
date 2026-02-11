@@ -75,6 +75,10 @@ from .shadows import (
     _get_shadow_layer,
 )
 
+ELECTRIFIED_FLOOR_ACCENT_COLOR = (216, 200, 90)
+ELECTRIFIED_FLOOR_OVERLAY_ALPHA = 26
+ELECTRIFIED_FLOOR_BORDER_ALPHA = 140
+
 
 def blit_message(
     screen: surface.Surface,
@@ -908,7 +912,34 @@ def _draw_play_area(
             )
             sr = camera.apply_rect(world_rect)
             if sr.colliderect(screen_rect):
-                pygame.draw.rect(screen, YELLOW, sr, width=2)
+                inner_rect = sr.inflate(-2, -2)
+                if inner_rect.width > 0 and inner_rect.height > 0:
+                    overlay = pygame.Surface(
+                        (inner_rect.width, inner_rect.height), pygame.SRCALPHA
+                    )
+                    overlay.fill(
+                        (
+                            ELECTRIFIED_FLOOR_ACCENT_COLOR[0],
+                            ELECTRIFIED_FLOOR_ACCENT_COLOR[1],
+                            ELECTRIFIED_FLOOR_ACCENT_COLOR[2],
+                            ELECTRIFIED_FLOOR_OVERLAY_ALPHA,
+                        )
+                    )
+                    screen.blit(overlay, inner_rect.topleft)
+                if sr.width > 0 and sr.height > 0:
+                    border_surface = pygame.Surface((sr.width, sr.height), pygame.SRCALPHA)
+                    pygame.draw.rect(
+                        border_surface,
+                        (
+                            ELECTRIFIED_FLOOR_ACCENT_COLOR[0],
+                            ELECTRIFIED_FLOOR_ACCENT_COLOR[1],
+                            ELECTRIFIED_FLOOR_ACCENT_COLOR[2],
+                            ELECTRIFIED_FLOOR_BORDER_ALPHA,
+                        ),
+                        border_surface.get_rect(),
+                        width=1,
+                    )
+                    screen.blit(border_surface, sr.topleft)
 
     return xs, ys, xe, ye, outside_cells
 
