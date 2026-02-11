@@ -83,8 +83,7 @@ def update_survivors(
             cell_size=game_data.cell_size,
             layout=game_data.layout,
             wall_target_cell=wall_target_cell,
-            drift_x=drift_x,
-            drift_y=drift_y,
+            drift=(drift_x, drift_y),
             player_collision_radius=player.collision_radius,
             now_ms=game_data.state.clock.elapsed_ms,
         )

@@ -331,8 +331,7 @@ class ZombieDog(pygame.sprite.Sprite):
         cell_size: int,
         layout,
         now_ms: int,
-        drift_x: float = 0.0,
-        drift_y: float = 0.0,
+        drift: tuple[float, float] = (0.0, 0.0),
     ) -> None:
         if self.vitals.carbonized:
             self._apply_decay()
@@ -349,6 +348,7 @@ class ZombieDog(pygame.sprite.Sprite):
                 if abs(b.x - self.x) < 100 and abs(b.y - self.y) < 100
             ]
         now = now_ms
+        drift_x, drift_y = drift
         if self.vitals.update_patrol_paralyze(
             entity_center=(self.x, self.y),
             entity_radius=self.collision_radius,

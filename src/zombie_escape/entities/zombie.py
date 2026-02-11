@@ -417,13 +417,13 @@ class Zombie(pygame.sprite.Sprite):
         cell_size: int,
         layout: LevelLayout,
         now_ms: int,
-        drift_x: float = 0.0,
-        drift_y: float = 0.0,
+        drift: tuple[float, float] = (0.0, 0.0),
     ) -> None:
         if self.vitals.carbonized:
             self._apply_decay()
             return
         now = now_ms
+        drift_x, drift_y = drift
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
         self._apply_decay()

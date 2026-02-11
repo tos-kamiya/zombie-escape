@@ -103,8 +103,7 @@ class Survivor(pygame.sprite.Sprite):
         layout: "LevelLayout",
         wall_target_cell: tuple[int, int] | None = None,
         player_collision_radius: float | None = None,
-        drift_x: float = 0.0,
-        drift_y: float = 0.0,
+        drift: tuple[float, float] = (0.0, 0.0),
         now_ms: int,
     ) -> None:
         pitfall_cells = layout.pitfall_cells
@@ -113,6 +112,7 @@ class Survivor(pygame.sprite.Sprite):
         level_height = layout.field_rect.height
 
         now = now_ms
+        drift_x, drift_y = drift
         if self.is_jumping:
             elapsed = now - self.jump_start_at
             if elapsed >= self.jump_duration:
@@ -133,8 +133,7 @@ class Survivor(pygame.sprite.Sprite):
                 layout=layout,
                 wall_target_cell=wall_target_cell,
                 player_collision_radius=player_collision_radius,
-                drift_x=drift_x,
-                drift_y=drift_y,
+                drift=drift,
                 pitfall_cells=pitfall_cells,
                 walkable_cells=walkable_cells,
                 now=now,
@@ -149,8 +148,7 @@ class Survivor(pygame.sprite.Sprite):
                 wall_index=wall_index,
                 cell_size=cell_size,
                 layout=layout,
-                drift_x=drift_x,
-                drift_y=drift_y,
+                drift=drift,
                 pitfall_cells=pitfall_cells,
                 walkable_cells=walkable_cells,
                 now=now,
@@ -158,8 +156,7 @@ class Survivor(pygame.sprite.Sprite):
 
     def _apply_drift_only(
         self: Self,
-        move_x: float,
-        move_y: float,
+        drift: tuple[float, float],
         *,
         walls: pygame.sprite.Group,
         wall_index: WallIndex | None,
@@ -169,6 +166,7 @@ class Survivor(pygame.sprite.Sprite):
         walkable_cells: set[tuple[int, int]],
         now: int,
     ) -> None:
+        move_x, move_y = drift
         if move_x == 0.0 and move_y == 0.0:
             self.rect.center = (int(self.x), int(self.y))
             return
@@ -224,18 +222,17 @@ class Survivor(pygame.sprite.Sprite):
         layout: "LevelLayout",
         wall_target_cell: tuple[int, int] | None,
         player_collision_radius: float | None,
-        drift_x: float,
-        drift_y: float,
+        drift: tuple[float, float],
         pitfall_cells: set[tuple[int, int]],
         walkable_cells: set[tuple[int, int]],
         now: int,
         level_width: int,
         level_height: int,
     ) -> None:
+        drift_x, drift_y = drift
         if self.rescued or not self.following:
             self._apply_drift_only(
-                drift_x,
-                drift_y,
+                drift,
                 walls=walls,
                 wall_index=wall_index,
                 cell_size=cell_size,
@@ -258,8 +255,7 @@ class Survivor(pygame.sprite.Sprite):
         dist_sq = dx * dx + dy * dy
         if dist_sq <= 0:
             self._apply_drift_only(
-                drift_x,
-                drift_y,
+                drift,
                 walls=walls,
                 wall_index=wall_index,
                 cell_size=cell_size,
@@ -365,12 +361,12 @@ class Survivor(pygame.sprite.Sprite):
         wall_index: WallIndex | None,
         cell_size: int | None,
         layout: "LevelLayout",
-        drift_x: float,
-        drift_y: float,
+        drift: tuple[float, float],
         pitfall_cells: set[tuple[int, int]],
         walkable_cells: set[tuple[int, int]],
         now: int,
     ) -> None:
+        drift_x, drift_y = drift
         dx = player_pos[0] - self.x
         dy = player_pos[1] - self.y
         dist_sq = dx * dx + dy * dy
@@ -380,8 +376,7 @@ class Survivor(pygame.sprite.Sprite):
         ):
             if drift_x != 0.0 or drift_y != 0.0:
                 self._apply_drift_only(
-                    drift_x,
-                    drift_y,
+                    drift,
                     walls=walls,
                     wall_index=wall_index,
                     cell_size=cell_size,

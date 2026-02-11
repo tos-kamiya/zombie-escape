@@ -401,8 +401,7 @@ def update_entities(
             cell_size=game_data.cell_size,
             layout=game_data.layout,
             now_ms=game_data.state.clock.elapsed_ms,
-            drift_x=floor_dx,
-            drift_y=floor_dy,
+            drift=(floor_dx, floor_dy),
         )
         if not zombie.alive():
             last_damage_ms = getattr(zombie, "last_damage_ms", None)
@@ -466,15 +465,13 @@ def update_entities(
             nearby_walls,
             patrol_bot_group=patrol_bot_group,
             human_group=active_humans,
-            zombie_group=zombies_sorted,
             player=None if player.in_car else player,
             car=active_car,
             parked_cars=game_data.waiting_cars,
             cell_size=game_data.cell_size,
             pitfall_cells=pitfall_cells,
             layout=game_data.layout,
-            drift_x=floor_dx,
-            drift_y=floor_dy,
+            drift=(floor_dx, floor_dy),
             now_ms=game_data.state.clock.elapsed_ms,
         )
 

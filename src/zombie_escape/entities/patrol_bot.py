@@ -193,18 +193,17 @@ class PatrolBot(pygame.sprite.Sprite):
         *,
         patrol_bot_group: pygame.sprite.Group | None = None,
         human_group: pygame.sprite.Group | None = None,
-        zombie_group: list[pygame.sprite.Sprite] | None = None,
         player: pygame.sprite.Sprite | None = None,
         car: pygame.sprite.Sprite | None = None,
         parked_cars: list[pygame.sprite.Sprite] | None = None,
         cell_size: int,
         pitfall_cells: set[tuple[int, int]],
         layout,
-        drift_x: float = 0.0,
-        drift_y: float = 0.0,
+        drift: tuple[float, float] = (0.0, 0.0),
         now_ms: int,
     ) -> None:
         now = now_ms
+        drift_x, drift_y = drift
 
         if now < self.pause_until_ms:
             if player is not None and getattr(player, "alive", lambda: True)():
