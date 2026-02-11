@@ -88,6 +88,9 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     stage = game_data.stage
     cell_size = game_data.cell_size
     need_fuel_text = tr("hud.need_fuel")
+    survivor_boarding_enabled = (
+        stage.survivor_rescue_stage or stage.survivor_spawn_rate > 0.0
+    )
     maintain_waiting_car_supply(game_data)
     active_car = car if car and car.alive() else None
     waiting_cars = game_data.waiting_cars
@@ -438,7 +441,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 active_car._take_damage(CAR_WALL_DAMAGE)
 
     if (
-        stage.survivor_rescue_stage
+        survivor_boarding_enabled
         and player.in_car
         and active_car
         and shrunk_car
@@ -468,7 +471,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     if car and car.alive() and car.health <= 0:
         car_destroyed_pos = car.rect.center
         car.kill()
-        if stage.survivor_rescue_stage:
+        if survivor_boarding_enabled:
             drop_survivors_from_car(game_data, car_destroyed_pos)
         if player.in_car:
             player.in_car = False
@@ -537,7 +540,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 state.buddy_rescued = min(
                     stage.buddy_required_count, state.buddy_merged_count
                 )
-            if stage.survivor_rescue_stage and state.survivors_onboard:
+            if survivor_boarding_enabled and state.survivors_onboard:
                 state.survivors_rescued += state.survivors_onboard
                 state.survivors_onboard = 0
                 apply_passenger_speed_penalty(game_data)

@@ -555,6 +555,26 @@ STAGES: list[Stage] = [
         survivor_spawn_rate=0.05,
         exit_sides=["top", "bottom"],
     ),
+    Stage(
+        id="stage26",
+        name_key="stages.stage26.name",
+        description_key="stages.stage26.description",
+        available=True,
+        grid_cols=20,
+        grid_rows=20,
+        wall_algorithm="empty",
+        requires_fuel=True,
+        buddy_required_count=1,
+        survivor_spawn_rate=0.05,
+        initial_interior_spawn_rate=0.02,
+        exterior_spawn_weight=0.9,
+        interior_spawn_weight=0.1,
+        zombie_normal_ratio=1.0,
+        zombie_tracker_ratio=0.0,
+        zombie_wall_hugging_ratio=0.0,
+        zombie_dog_ratio=0.0,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 
