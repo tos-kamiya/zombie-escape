@@ -573,27 +573,6 @@ STAGES: list[Stage] = [
         zombie_dog_ratio=0.0,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
-    Stage(
-        id="debug_pitfall_spawn",
-        name_key="stages.debug_pitfall_spawn.name",
-        description_key="stages.debug_pitfall_spawn.description",
-        available=True,
-        grid_cols=20,
-        grid_rows=20,
-        wall_algorithm="empty",
-        requires_fuel=False,
-        fuel_spawn_count=0,
-        initial_interior_spawn_rate=0.0,
-        spawn_interval_ms=60_000,
-        exterior_spawn_weight=0.0,
-        interior_spawn_weight=0.0,
-        interior_fall_spawn_weight=0.0,
-        zombie_normal_ratio=1.0,
-        zombie_tracker_ratio=0.0,
-        zombie_wall_hugging_ratio=0.0,
-        zombie_dog_ratio=0.0,
-        pitfall_zones=[(10, 10, 1, 1)],
-    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 

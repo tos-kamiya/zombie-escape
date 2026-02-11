@@ -51,22 +51,6 @@ from .utils import (
 )
 
 RNG = get_rng()
-_DEBUG_PITFALL_SPAWN_OFFSET_INDEX = 0
-_DEBUG_PITFALL_SPAWN_OFFSETS: tuple[tuple[float, float], ...] = (
-    (0.0, 0.0),
-    (-0.30, 0.0),
-    (0.30, 0.0),
-    (0.0, -0.30),
-    (0.0, 0.30),
-    (-0.40, -0.40),
-    (0.40, -0.40),
-    (-0.40, 0.40),
-    (0.40, 0.40),
-    (-0.46, 0.0),
-    (0.46, 0.0),
-    (0.0, -0.46),
-    (0.0, 0.46),
-)
 
 FallScheduleResult = Literal["scheduled", "no_position", "blocked", "no_player"]
 
@@ -701,22 +685,6 @@ def setup_player_and_cars(
         )
 
     player_pos = _pick_center(layout_data["player_cells"] or walkable_cells)
-    if game_data.stage.id == "debug_pitfall_spawn" and game_data.layout.pitfall_cells:
-        global _DEBUG_PITFALL_SPAWN_OFFSET_INDEX
-        debug_cell = min(game_data.layout.pitfall_cells)
-        center_x, center_y = _cell_center(debug_cell, cell_size)
-        offset_x_ratio, offset_y_ratio = _DEBUG_PITFALL_SPAWN_OFFSETS[
-            _DEBUG_PITFALL_SPAWN_OFFSET_INDEX % len(_DEBUG_PITFALL_SPAWN_OFFSETS)
-        ]
-        _DEBUG_PITFALL_SPAWN_OFFSET_INDEX += 1
-        player_pos = (
-            int(center_x + offset_x_ratio * cell_size),
-            int(center_y + offset_y_ratio * cell_size),
-        )
-        print(
-            "Debug pitfall spawn offset:",
-            f"({offset_x_ratio:+.2f}, {offset_y_ratio:+.2f})",
-        )
     player = Player(*player_pos)
 
     car_spawn_cells = (

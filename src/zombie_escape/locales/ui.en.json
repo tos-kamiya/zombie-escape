@@ -179,10 +179,6 @@
         "name": "#25 Distribution Center",
         "description": "It’s a wide facility -- search efficiently. This time, there are only two exits.",
         "intro": "A map shows the floor\ndivided into eight sectors."
-      },
-      "debug_pitfall_spawn": {
-        "name": "Debug: Pitfall Spawn",
-        "description": "Debug stage that starts the player inside a pitfall cell."
       }
     },
     "status": {
