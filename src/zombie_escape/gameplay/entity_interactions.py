@@ -254,6 +254,100 @@ def _handle_escape_conditions(
             state.game_won = True
 
 
+def _handle_buddy_interactions(
+    *,
+    game_data: GameData,
+    player: pygame.sprite.Sprite,
+    active_car: Car | None,
+    shrunk_car: pygame.sprite.Sprite | None,
+    zombie_group: pygame.sprite.Group,
+    survivor_group: pygame.sprite.Group,
+    camera: Any,
+    walkable_cells: list[tuple[int, int]],
+    cell_center: callable,
+) -> None:
+    stage = game_data.stage
+    state = game_data.state
+    buddies = [
+        survivor
+        for survivor in survivor_group
+        if survivor.alive() and survivor.is_buddy and not survivor.rescued
+    ]
+    if stage.buddy_required_count > 0 and buddies:
+        for buddy in list(buddies):
+            if not buddy.alive():
+                continue
+            buddy_on_screen = rect_visible_on_screen(camera, buddy.rect)
+            if not player.in_car:
+                dist_to_player_sq = (player.x - buddy.x) ** 2 + (player.y - buddy.y) ** 2
+                if buddy.following:
+                    if (
+                        dist_to_player_sq
+                        >= BUDDY_FOLLOW_STOP_DISTANCE * BUDDY_FOLLOW_STOP_DISTANCE
+                    ):
+                        buddy.following = False
+                elif (
+                    dist_to_player_sq
+                    <= BUDDY_FOLLOW_START_DISTANCE * BUDDY_FOLLOW_START_DISTANCE
+                ):
+                    buddy.set_following()
+            elif player.in_car and active_car and shrunk_car:
+                g = pygame.sprite.Group()
+                g.add(buddy)
+                if pygame.sprite.spritecollide(
+                    shrunk_car, g, False, collide_circle_custom
+                ):
+                    prospective_passengers = state.survivors_onboard + 1
+                    capacity_limit = state.survivor_capacity
+                    if prospective_passengers > capacity_limit:
+                        overload_damage = max(
+                            1,
+                            int(active_car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO),
+                        )
+                        add_survivor_message(game_data, tr("survivors.too_many_aboard"))
+                        active_car._take_damage(overload_damage)
+                    state.buddy_onboard += 1
+                    buddy.kill()
+                    continue
+
+            if buddy.alive() and pygame.sprite.spritecollide(
+                buddy, zombie_group, False, collide_circle_custom
+            ):
+                if player.in_car and active_car:
+                    fov_target = active_car
+                else:
+                    fov_target = player
+                buddy_in_fov = is_entity_in_fov(
+                    buddy.rect,
+                    fov_target=fov_target,
+                    flashlight_count=state.flashlight_count,
+                )
+                if buddy_on_screen and buddy_in_fov:
+                    schedule_timed_message(
+                        state,
+                        tr("game_over.scream"),
+                        duration_frames=SCREAM_MESSAGE_DISPLAY_FRAMES,
+                        clear_on_input=False,
+                        color=BUDDY_COLOR,
+                        now_ms=state.clock.elapsed_ms,
+                    )
+                    state.game_over = True
+                    state.game_over_at = state.game_over_at or state.clock.elapsed_ms
+                else:
+                    if walkable_cells:
+                        new_cell = RNG.choice(walkable_cells)
+                        buddy.teleport(cell_center(new_cell))
+                    else:
+                        buddy.teleport(game_data.layout.field_rect.center)
+                    buddy.following = False
+
+    if stage.buddy_required_count > 0:
+        following_count = sum(1 for buddy in buddies if buddy.following)
+        state.buddy_merged_count = state.buddy_onboard + following_count
+    else:
+        state.buddy_merged_count = 0
+
+
 def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     """Check and handle interactions between entities."""
     player = game_data.player
@@ -336,88 +430,17 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
 
     sync_ambient_palette_with_flashlights(game_data)
 
-    buddies = [
-        survivor
-        for survivor in survivor_group
-        if survivor.alive() and survivor.is_buddy and not survivor.rescued
-    ]
-    # Buddy interactions (Stage 3)
-    if stage.buddy_required_count > 0 and buddies:
-        for buddy in list(buddies):
-            if not buddy.alive():
-                continue
-            buddy_on_screen = rect_visible_on_screen(camera, buddy.rect)
-            if not player.in_car:
-                dist_to_player_sq = (player.x - buddy.x) ** 2 + (
-                    player.y - buddy.y
-                ) ** 2
-                if buddy.following:
-                    if (
-                        dist_to_player_sq
-                        >= BUDDY_FOLLOW_STOP_DISTANCE * BUDDY_FOLLOW_STOP_DISTANCE
-                    ):
-                        buddy.following = False
-                elif (
-                    dist_to_player_sq
-                    <= BUDDY_FOLLOW_START_DISTANCE * BUDDY_FOLLOW_START_DISTANCE
-                ):
-                    buddy.set_following()
-            elif player.in_car and active_car and shrunk_car:
-                g = pygame.sprite.Group()
-                g.add(buddy)
-                if pygame.sprite.spritecollide(
-                    shrunk_car, g, False, collide_circle_custom
-                ):
-                    prospective_passengers = state.survivors_onboard + 1
-                    capacity_limit = state.survivor_capacity
-                    if prospective_passengers > capacity_limit:
-                        overload_damage = max(
-                            1,
-                            int(active_car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO),
-                        )
-                        add_survivor_message(game_data, tr("survivors.too_many_aboard"))
-                        active_car._take_damage(overload_damage)
-                    state.buddy_onboard += 1
-                    buddy.kill()
-                    continue
-
-            if buddy.alive() and pygame.sprite.spritecollide(
-                buddy, zombie_group, False, collide_circle_custom
-            ):
-                fov_target = None
-                if player.in_car and active_car:
-                    fov_target = active_car
-                else:
-                    fov_target = player
-                buddy_in_fov = is_entity_in_fov(
-                    buddy.rect,
-                    fov_target=fov_target,
-                    flashlight_count=state.flashlight_count,
-                )
-                if buddy_on_screen and buddy_in_fov:
-                    schedule_timed_message(
-                        state,
-                        tr("game_over.scream"),
-                        duration_frames=SCREAM_MESSAGE_DISPLAY_FRAMES,
-                        clear_on_input=False,
-                        color=BUDDY_COLOR,
-                        now_ms=state.clock.elapsed_ms,
-                    )
-                    state.game_over = True
-                    state.game_over_at = state.game_over_at or state.clock.elapsed_ms
-                else:
-                    if walkable_cells:
-                        new_cell = RNG.choice(walkable_cells)
-                        buddy.teleport(_cell_center(new_cell))
-                    else:
-                        buddy.teleport(game_data.layout.field_rect.center)
-                    buddy.following = False
-
-    if stage.buddy_required_count > 0:
-        following_count = sum(1 for buddy in buddies if buddy.following)
-        state.buddy_merged_count = state.buddy_onboard + following_count
-    else:
-        state.buddy_merged_count = 0
+    _handle_buddy_interactions(
+        game_data=game_data,
+        player=player,
+        active_car=active_car,
+        shrunk_car=shrunk_car,
+        zombie_group=zombie_group,
+        survivor_group=survivor_group,
+        camera=camera,
+        walkable_cells=walkable_cells,
+        cell_center=_cell_center,
+    )
 
     # Player entering an active car already under control
     if (
