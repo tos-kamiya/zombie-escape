@@ -300,24 +300,47 @@ def drop_survivors_from_car(game_data: GameData, origin: tuple[int, int]) -> Non
     wall_group = game_data.groups.wall_group
     survivor_group = game_data.groups.survivor_group
     all_sprites = game_data.groups.all_sprites
+    pitfall_cells = game_data.layout.pitfall_cells
+    cell_size = game_data.cell_size
+    walkable_cells = game_data.layout.walkable_cells
 
-    for survivor_idx in range(count):
+    def _in_pitfall(pos: tuple[float, float]) -> bool:
+        if cell_size <= 0 or not pitfall_cells:
+            return False
+        cell = (int(pos[0] // cell_size), int(pos[1] // cell_size))
+        return cell in pitfall_cells
+
+    safe_origin = origin
+    if _in_pitfall((origin[0], origin[1])) and walkable_cells and cell_size > 0:
+        nearest = min(
+            walkable_cells,
+            key=lambda cell: (
+                ((cell[0] + 0.5) * cell_size - origin[0]) ** 2
+                + ((cell[1] + 0.5) * cell_size - origin[1]) ** 2
+            ),
+        )
+        safe_origin = (
+            int((nearest[0] + 0.5) * cell_size),
+            int((nearest[1] + 0.5) * cell_size),
+        )
+
+    for _ in range(count):
         placed = False
-        for attempt in range(6):
+        for _ in range(6):
             angle = RNG.uniform(0, math.tau)
             dist = RNG.uniform(16, 40)
             pos = (
-                origin[0] + math.cos(angle) * dist,
-                origin[1] + math.sin(angle) * dist,
+                safe_origin[0] + math.cos(angle) * dist,
+                safe_origin[1] + math.sin(angle) * dist,
             )
             s = Survivor(*pos)
-            if not spritecollideany_walls(s, wall_group):
+            if not spritecollideany_walls(s, wall_group) and not _in_pitfall(pos):
                 survivor_group.add(s)
                 all_sprites.add(s, layer=LAYER_PLAYERS)
                 placed = True
                 break
         if not placed:
-            s = Survivor(*origin)
+            s = Survivor(*safe_origin)
             survivor_group.add(s)
             all_sprites.add(s, layer=LAYER_PLAYERS)
 

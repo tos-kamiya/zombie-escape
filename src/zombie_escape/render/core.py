@@ -32,7 +32,7 @@ from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
 from ..screen_constants import FPS
 from ..localization import get_font_settings
 from ..localization import translate as tr
-from ..models import DustRing, FallingZombie, Footprint, GameData, Stage
+from ..models import DustRing, FallingEntity, Footprint, GameData, Stage
 from ..render_assets import RenderAssets
 from ..render_constants import (
     ENTITY_SHADOW_ALPHA,
@@ -619,7 +619,7 @@ def _draw_fall_whirlwind(
 def _draw_falling_fx(
     screen: surface.Surface,
     camera: Camera,
-    falling_zombies: list[FallingZombie],
+    falling_zombies: list[FallingEntity],
     flashlight_count: int,
     dust_rings: list[DustRing],
     now_ms: int,
@@ -716,6 +716,8 @@ def _draw_play_area(
     fall_spawn_cells: set[tuple[int, int]],
     pitfall_cells: set[tuple[int, int]],
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection],
+    electrified_cells: set[tuple[int, int]],
+    cell_size: int,
     *,
     elapsed_ms: int,
 ) -> tuple[int, int, int, int, set[tuple[int, int]]]:
@@ -759,6 +761,7 @@ def _draw_play_area(
 
     base_offset_px = (elapsed_ms / 1000.0) * MOVING_FLOOR_SPEED * FPS
     pattern_cache: dict[MovingFloorDirection, surface.Surface] = {}
+    screen_rect = screen.get_rect()
 
     for y in range(start_y, end_y):
         for x in range(start_x, end_x):
@@ -774,7 +777,7 @@ def _draw_play_area(
                     grid_snap,
                 )
                 sr = camera.apply_rect(r)
-                if sr.colliderect(screen.get_rect()):
+                if sr.colliderect(screen_rect):
                     pygame.draw.rect(screen, palette.outside, sr)
                 continue
 
@@ -792,7 +795,7 @@ def _draw_play_area(
                     grid_snap,
                 )
                 sr = camera.apply_rect(r)
-                if sr.colliderect(screen.get_rect()):
+                if sr.colliderect(screen_rect):
                     if (x, y) in fall_spawn_cells:
                         color = (
                             palette.fall_zone_secondary
@@ -846,7 +849,7 @@ def _draw_play_area(
                     grid_snap,
                 )
                 sr = camera.apply_rect(r)
-                if not sr.colliderect(screen.get_rect()):
+                if not sr.colliderect(screen_rect):
                     continue
                 pygame.draw.rect(screen, PITFALL_ABYSS_COLOR, sr)
 
@@ -892,8 +895,20 @@ def _draw_play_area(
                 grid_snap,
             )
             sr = camera.apply_rect(r)
-            if sr.colliderect(screen.get_rect()):
+            if sr.colliderect(screen_rect):
                 pygame.draw.rect(screen, color, sr)
+
+    if cell_size > 0 and electrified_cells:
+        for cell_x, cell_y in electrified_cells:
+            world_rect = pygame.Rect(
+                cell_x * cell_size,
+                cell_y * cell_size,
+                cell_size,
+                cell_size,
+            )
+            sr = camera.apply_rect(world_rect)
+            if sr.colliderect(screen_rect):
+                pygame.draw.rect(screen, YELLOW, sr, width=2)
 
     return xs, ys, xe, ye, outside_cells
 
@@ -1047,6 +1062,8 @@ def draw(
         game_data.layout.fall_spawn_cells,
         game_data.layout.pitfall_cells,
         game_data.layout.moving_floor_cells,
+        state.electrified_cells,
+        game_data.cell_size,
         elapsed_ms=int(state.clock.elapsed_ms),
     )
     shadows_enabled = config.get("visual", {}).get("shadows", {}).get("enabled", True)

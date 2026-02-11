@@ -106,6 +106,7 @@ class Survivor(pygame.sprite.Sprite):
         drift: tuple[float, float] = (0.0, 0.0),
         now_ms: int,
     ) -> None:
+        self.pending_pitfall_fall = False
         pitfall_cells = layout.pitfall_cells
         walkable_cells = layout.walkable_cells
         level_width = layout.field_rect.width

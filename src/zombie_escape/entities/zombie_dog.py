@@ -326,6 +326,7 @@ class ZombieDog(pygame.sprite.Sprite):
         walls: list[Wall],
         nearby_zombies: list[pygame.sprite.Sprite],
         nearby_patrol_bots: list[pygame.sprite.Sprite] | None = None,
+        electrified_cells: set[tuple[int, int]] | None = None,
         footprints: list | None = None,
         *,
         cell_size: int,
@@ -340,19 +341,14 @@ class ZombieDog(pygame.sprite.Sprite):
         if not self.alive():
             return
         _ = nearby_zombies, footprints
-        possible_bots = []
-        if nearby_patrol_bots:
-            possible_bots = [
-                b
-                for b in nearby_patrol_bots
-                if abs(b.x - self.x) < 100 and abs(b.y - self.y) < 100
-            ]
         now = now_ms
         drift_x, drift_y = drift
-        if self.vitals.update_patrol_paralyze(
-            entity_center=(self.x, self.y),
-            entity_radius=self.collision_radius,
-            patrol_bots=possible_bots,
+        on_electrified_floor = False
+        if cell_size > 0 and electrified_cells:
+            current_cell = (int(self.x // cell_size), int(self.y // cell_size))
+            on_electrified_floor = current_cell in electrified_cells
+        if self.vitals.update_patrol_floor_paralyze(
+            on_electrified_floor=on_electrified_floor,
             now_ms=now,
             paralyze_duration_ms=PATROL_BOT_PARALYZE_MS,
             damage_interval_frames=PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,

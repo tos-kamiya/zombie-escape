@@ -7,6 +7,50 @@ import pygame
 T = TypeVar("T")
 
 
+def _sprite_in_pitfall(
+    sprite: pygame.sprite.Sprite,
+    *,
+    cell_size: int,
+    pitfall_cells: set[tuple[int, int]],
+) -> bool:
+    cx = int(sprite.rect.centerx // cell_size)
+    cy = int(sprite.rect.centery // cell_size)
+    return (cx, cy) in pitfall_cells
+
+
+def _repel_from_pitfall_center(
+    *,
+    sprite: pygame.sprite.Sprite,
+    axis: Literal["x", "y"],
+    delta: float,
+    rollback_factor: float,
+    cell_size: int,
+    clamp_range: tuple[float, float] | None,
+) -> None:
+    cell_x = int(sprite.rect.centerx // cell_size)
+    cell_y = int(sprite.rect.centery // cell_size)
+    center_x = (cell_x + 0.5) * cell_size
+    center_y = (cell_y + 0.5) * cell_size
+    if axis == "x":
+        offset = sprite.x - center_x  # type: ignore[attr-defined]
+    else:
+        offset = sprite.y - center_y  # type: ignore[attr-defined]
+    if abs(offset) < 0.01:
+        offset = -delta if delta else -1.0
+    direction = 1.0 if offset > 0 else -1.0
+    repel_amount = max(1.0, abs(delta) * rollback_factor)
+    if axis == "x":
+        sprite.x += direction * repel_amount  # type: ignore[attr-defined]
+        if clamp_range is not None:
+            sprite.x = min(clamp_range[1], max(clamp_range[0], sprite.x))  # type: ignore[attr-defined]
+        sprite.rect.centerx = int(sprite.x)  # type: ignore[attr-defined]
+    else:
+        sprite.y += direction * repel_amount  # type: ignore[attr-defined]
+        if clamp_range is not None:
+            sprite.y = min(clamp_range[1], max(clamp_range[0], sprite.y))  # type: ignore[attr-defined]
+        sprite.rect.centery = int(sprite.y)  # type: ignore[attr-defined]
+
+
 def pitfall_target(
     *,
     x: float,
@@ -99,7 +143,16 @@ def move_axis_with_pitfall(
     if hit or blocked_by_pitfall:
         if hit and on_wall_hit is not None:
             on_wall_hit(hit)
-        if axis == "x":
+        if blocked_by_pitfall and cell_size:
+            _repel_from_pitfall_center(
+                sprite=sprite,
+                axis=axis,
+                delta=delta,
+                rollback_factor=rollback_factor,
+                cell_size=cell_size,
+                clamp_range=clamp_range,
+            )
+        elif axis == "x":
             sprite.x -= delta * rollback_factor  # type: ignore[attr-defined]
             if clamp_range is not None:
                 sprite.x = min(clamp_range[1], max(clamp_range[0], sprite.x))  # type: ignore[attr-defined]
@@ -109,3 +162,9 @@ def move_axis_with_pitfall(
             if clamp_range is not None:
                 sprite.y = min(clamp_range[1], max(clamp_range[0], sprite.y))  # type: ignore[attr-defined]
             sprite.rect.centery = int(sprite.y)  # type: ignore[attr-defined]
+        if blocked_by_pitfall and cell_size and _sprite_in_pitfall(
+            sprite,
+            cell_size=cell_size,
+            pitfall_cells=pitfall_cells,
+        ):
+            sprite.pending_pitfall_fall = True  # type: ignore[attr-defined]

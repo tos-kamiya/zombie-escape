@@ -49,8 +49,8 @@ class LevelLayout:
 
 
 @dataclass
-class FallingZombie:
-    """Represents a zombie falling toward a target position or into a pit."""
+class FallingEntity:
+    """Represents an entity falling toward a target position or into a pit."""
 
     start_pos: tuple[int, int]
     target_pos: tuple[int, int]
@@ -58,7 +58,7 @@ class FallingZombie:
     pre_fx_ms: int
     fall_duration_ms: int
     dust_duration_ms: int
-    kind: ZombieKind
+    kind: ZombieKind | None
     dust_started: bool = False
     mode: str = "spawn"  # "spawn" (falling in) or "pitfall" (falling out)
 
@@ -134,9 +134,10 @@ class ProgressState:
     dawn_carbonized: bool
     debug_mode: bool
     show_fps: bool
-    falling_zombies: list[FallingZombie]
+    falling_zombies: list[FallingEntity]
     falling_spawn_carry: int
     dust_rings: list[DustRing]
+    electrified_cells: set[tuple[int, int]]
     player_wall_target_cell: tuple[int, int] | None
     player_wall_target_ttl: int
 
@@ -266,7 +267,7 @@ class Stage:
 
 __all__ = [
     "LevelLayout",
-    "FallingZombie",
+    "FallingEntity",
     "DustRing",
     "ProgressState",
     "Groups",

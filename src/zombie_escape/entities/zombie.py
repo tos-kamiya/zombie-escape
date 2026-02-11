@@ -412,6 +412,7 @@ class Zombie(pygame.sprite.Sprite):
         walls: list[Wall],
         nearby_zombies: Iterable[Zombie],
         nearby_patrol_bots: Iterable["PatrolBot"],
+        electrified_cells: set[tuple[int, int]] | None = None,
         footprints: list[Footprint] | None = None,
         *,
         cell_size: int,
@@ -429,15 +430,13 @@ class Zombie(pygame.sprite.Sprite):
         self._apply_decay()
         if not self.alive():
             return
-        possible_bots = [
-            b
-            for b in nearby_patrol_bots
-            if abs(b.x - self.x) < 100 and abs(b.y - self.y) < 100
-        ]
-        if self.vitals.update_patrol_paralyze(
-            entity_center=(self.x, self.y),
-            entity_radius=self.collision_radius,
-            patrol_bots=possible_bots,
+        _ = nearby_patrol_bots
+        on_electrified_floor = False
+        if cell_size > 0 and electrified_cells:
+            current_cell = (int(self.x // cell_size), int(self.y // cell_size))
+            on_electrified_floor = current_cell in electrified_cells
+        if self.vitals.update_patrol_floor_paralyze(
+            on_electrified_floor=on_electrified_floor,
             now_ms=now,
             paralyze_duration_ms=PATROL_BOT_PARALYZE_MS,
             damage_interval_frames=PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,
@@ -486,25 +485,11 @@ class Zombie(pygame.sprite.Sprite):
             for w in walls
             if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100
         ]
-        bot_hit = False
-
-        def _bot_collision(check_x: float, check_y: float) -> bool:
-            nonlocal bot_hit
-            for bot in possible_bots:
-                dx = check_x - bot.x
-                dy = check_y - bot.y
-                hit_range = self.collision_radius + bot.collision_radius
-                if dx * dx + dy * dy <= hit_range * hit_range:
-                    bot_hit = True
-                    return True
-            return False
 
         final_x = self.x
         final_y = self.y
         if move_x:
             next_x = final_x + move_x
-            if _bot_collision(next_x, final_y):
-                next_x = final_x
             for wall in possible_walls:
                 if _circle_wall_collision(
                     (next_x, final_y), self.collision_radius, wall
@@ -517,8 +502,6 @@ class Zombie(pygame.sprite.Sprite):
             final_x = next_x
         if move_y:
             next_y = final_y + move_y
-            if _bot_collision(final_x, next_y):
-                next_y = final_y
             for wall in possible_walls:
                 if _circle_wall_collision(
                     (final_x, next_y), self.collision_radius, wall
@@ -537,18 +520,6 @@ class Zombie(pygame.sprite.Sprite):
         self.x = final_x
         self.y = final_y
         self.rect.center = (int(self.x), int(self.y))
-        if bot_hit:
-            self.vitals.patrol_damage_frame_counter = (
-                self.vitals.patrol_damage_frame_counter + 1
-            ) % PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES
-            if self.vitals.patrol_damage_frame_counter == 0:
-                self.take_damage(
-                    PATROL_BOT_ZOMBIE_DAMAGE, source="patrol_bot", now_ms=now
-                )
-            self.vitals.patrol_paralyze_until_ms = max(
-                self.vitals.patrol_paralyze_until_ms,
-                now + PATROL_BOT_PARALYZE_MS,
-            )
 
     def carbonize(self: Self) -> None:
         self.vitals.carbonize()

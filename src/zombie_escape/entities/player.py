@@ -78,6 +78,7 @@ class Player(pygame.sprite.Sprite):
     ) -> None:
         if self.in_car:
             return
+        self.pending_pitfall_fall = False
 
         pitfall_cells = layout.pitfall_cells
         walkable_cells = layout.walkable_cells

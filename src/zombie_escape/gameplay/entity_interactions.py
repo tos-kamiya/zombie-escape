@@ -188,17 +188,22 @@ def _handle_car_destruction(
     state = game_data.state
     if not (car and car.alive() and car.health <= 0):
         return
+    fell_into_pitfall = bool(getattr(car, "pending_pitfall_fall", False))
     car_destroyed_pos = car.rect.center
+    eject_pos = getattr(car, "pitfall_eject_pos", None) or car_destroyed_pos
     car.kill()
     if survivor_boarding_enabled:
-        drop_survivors_from_car(game_data, car_destroyed_pos)
+        drop_survivors_from_car(game_data, eject_pos)
     if player.in_car:
         player.in_car = False
-        player.x, player.y = car_destroyed_pos[0], car_destroyed_pos[1]
+        player.x, player.y = eject_pos[0], eject_pos[1]
         player.rect.center = (int(player.x), int(player.y))
         if player not in all_sprites:
             all_sprites.add(player, layer=LAYER_PLAYERS)
-        print("Car destroyed! Player ejected.")
+        if fell_into_pitfall:
+            print("Car fell into pitfall! Player ejected.")
+        else:
+            print("Car destroyed! Player ejected.")
 
     # Clear active car and let the player hunt for another waiting car.
     game_data.car = None

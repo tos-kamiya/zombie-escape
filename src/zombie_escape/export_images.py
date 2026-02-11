@@ -30,7 +30,7 @@ from .entities_constants import (
 )
 from .gameplay.state import initialize_game_state
 from .level_constants import DEFAULT_CELL_SIZE
-from .models import FallingZombie, Stage
+from .models import FallingEntity, Stage
 from .render.core import _draw_entities, _draw_falling_fx, _draw_play_area
 from .render_constants import build_render_assets
 from .render.shadows import _get_shadow_layer, draw_single_entity_shadow_by_mode
@@ -111,7 +111,7 @@ def _render_studio_snapshot(
     pitfall_cells: set[tuple[int, int]] | None = None,
     fall_spawn_cells: set[tuple[int, int]] | None = None,
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] | None = None,
-    falling_zombies: list[FallingZombie] | None = None,
+    falling_zombies: list[FallingEntity] | None = None,
     enable_shadows: bool = False,
 ) -> pygame.Surface:
     game_data = _build_studio_game_data(cell_size)
@@ -151,6 +151,8 @@ def _render_studio_snapshot(
         layout.fall_spawn_cells,
         layout.pitfall_cells,
         layout.moving_floor_cells,
+        set(),
+        game_data.cell_size,
         elapsed_ms=int(game_data.state.clock.elapsed_ms),
     )
     if enable_shadows:
@@ -452,14 +454,14 @@ def export_images(
     saved.append(pitfall_path)
 
     fall_target = (center_x, center_y)
-    falling = FallingZombie(
+    falling = FallingEntity(
         start_pos=fall_target,
         target_pos=fall_target,
         started_at_ms=0,
         pre_fx_ms=0,
         fall_duration_ms=1000,
         dust_duration_ms=0,
-        kind=ZombieKind.NORMAL,
+        kind=None,
         mode="pitfall",
     )
     fall_rect = pygame.Rect(0, 0, ZOMBIE_RADIUS * 2, ZOMBIE_RADIUS * 2)

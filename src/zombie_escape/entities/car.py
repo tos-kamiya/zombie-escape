@@ -15,6 +15,7 @@ import pygame
 from ..entities_constants import (
     CAR_HEALTH,
     CAR_HEIGHT,
+    CAR_PITFALL_FALL_CENTER_RATIO,
     CAR_SPEED,
     CAR_WALL_DAMAGE,
     CAR_WIDTH,
@@ -49,6 +50,9 @@ class Car(pygame.sprite.Sprite):
         self.collision_radius = float(CAR_WIDTH) / 2.0
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
+        self.last_safe_pos: tuple[float, float] = (self.x, self.y)
+        self.pending_pitfall_fall = False
+        self.pitfall_eject_pos: tuple[int, int] | None = None
         self._update_color()
 
     def _take_damage(self: Self, amount: float) -> None:
@@ -99,6 +103,34 @@ class Car(pygame.sprite.Sprite):
         cx, cy = self._collision_center(self.x, self.y)
         return (int(round(cx)), int(round(cy))), float(self.collision_radius)
 
+    def _pitfall_cell_at_position(
+        self: Self,
+        x: float,
+        y: float,
+        *,
+        cell_size: int,
+        pitfall_cells: set[tuple[int, int]],
+    ) -> tuple[int, int] | None:
+        cx, cy = self._collision_center(x, y)
+        cell = (int(cx // cell_size), int(cy // cell_size))
+        if cell in pitfall_cells:
+            return cell
+        return None
+
+    def _is_pitfall_fall_position(
+        self: Self,
+        x: float,
+        y: float,
+        *,
+        cell_size: int,
+        pitfall_cell: tuple[int, int],
+    ) -> bool:
+        cx, cy = self._collision_center(x, y)
+        pit_x = (pitfall_cell[0] + 0.5) * cell_size
+        pit_y = (pitfall_cell[1] + 0.5) * cell_size
+        threshold = cell_size * CAR_PITFALL_FALL_CENTER_RATIO
+        return math.hypot(cx - pit_x, cy - pit_y) <= threshold
+
     def move(
         self: Self,
         dx: float,
@@ -111,6 +143,8 @@ class Car(pygame.sprite.Sprite):
     ) -> None:
         if self.health <= 0:
             return
+        self.pending_pitfall_fall = False
+        self.pitfall_eject_pos = None
         if dx == 0 and dy == 0:
             self.rect.center = (int(self.x), int(self.y))
             self.last_move_dx = 0.0
@@ -134,13 +168,19 @@ class Car(pygame.sprite.Sprite):
             if _circle_wall_collision(car_center, self.collision_radius, wall):
                 hit_walls.append(wall)
 
-        in_pitfall = False
+        entered_pitfall = False
         if pitfall_cells and cell_size:
-            cx, cy = int(new_x // cell_size), int(new_y // cell_size)
-            if (cx, cy) in pitfall_cells:
-                in_pitfall = True
+            entered_pitfall = (
+                self._pitfall_cell_at_position(
+                    new_x,
+                    new_y,
+                    cell_size=cell_size,
+                    pitfall_cells=pitfall_cells,
+                )
+                is not None
+            )
 
-        if hit_walls or in_pitfall:
+        if hit_walls or entered_pitfall:
             if hit_walls:
                 self._take_damage(CAR_WALL_DAMAGE)
                 hit_walls.sort(
@@ -156,9 +196,53 @@ class Car(pygame.sprite.Sprite):
                 new_x = self.x - dx * 0.5
                 new_y = self.y - dy * 0.5
 
+        if pitfall_cells and cell_size:
+            pitfall_cell = self._pitfall_cell_at_position(
+                new_x,
+                new_y,
+                cell_size=cell_size,
+                pitfall_cells=pitfall_cells,
+            )
+            if pitfall_cell is not None:
+                if self._is_pitfall_fall_position(
+                    new_x,
+                    new_y,
+                    cell_size=cell_size,
+                    pitfall_cell=pitfall_cell,
+                ):
+                    self.pending_pitfall_fall = True
+                    safe_x, safe_y = self.last_safe_pos
+                    self.pitfall_eject_pos = (int(safe_x), int(safe_y))
+                else:
+                    bounce_x = self.x - dx * 0.5
+                    bounce_y = self.y - dy * 0.5
+                    bounce_cell = self._pitfall_cell_at_position(
+                        bounce_x,
+                        bounce_y,
+                        cell_size=cell_size,
+                        pitfall_cells=pitfall_cells,
+                    )
+                    if bounce_cell is None:
+                        new_x = bounce_x
+                        new_y = bounce_y
+                    else:
+                        safe_x, safe_y = self.last_safe_pos
+                        new_x = safe_x
+                        new_y = safe_y
+
         self.x = new_x
         self.y = new_y
         self.rect.center = (int(self.x), int(self.y))
+        if not (
+            pitfall_cells
+            and cell_size
+            and self._pitfall_cell_at_position(
+                self.x,
+                self.y,
+                cell_size=cell_size,
+                pitfall_cells=pitfall_cells,
+            )
+        ):
+            self.last_safe_pos = (self.x, self.y)
         self.last_move_dx = dx
         self.last_move_dy = dy
-

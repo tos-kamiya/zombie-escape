@@ -30,7 +30,7 @@ from ..gameplay_constants import (
     SHOES_SPEED_MULTIPLIER_ONE,
     SHOES_SPEED_MULTIPLIER_TWO,
 )
-from ..models import FallingZombie, GameData
+from ..models import FallingEntity, GameData
 from ..rng import get_rng
 from ..entities.movement_helpers import pitfall_target
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
@@ -40,7 +40,11 @@ from .decay_effects import DecayingEntityEffect, update_decay_effects
 from .spawn import spawn_weighted_zombie, update_falling_zombies
 from .spatial_index import SpatialKind
 from .survivors import update_survivors
-from .utils import is_entity_in_fov, rect_visible_on_screen
+from .utils import (
+    find_nearby_offscreen_spawn_position,
+    is_entity_in_fov,
+    rect_visible_on_screen,
+)
 
 RNG = get_rng()
 
@@ -167,6 +171,8 @@ def update_entities(
             cell_size=game_data.cell_size,
             pitfall_cells=pitfall_cells,
         )
+        if getattr(active_car, "pending_pitfall_fall", False):
+            active_car.health = 0
         if field_rect is not None:
             car_allow_rect = field_rect.inflate(
                 active_car.rect.width, active_car.rect.height
@@ -182,6 +188,7 @@ def update_entities(
         # Ensure player is in all_sprites if not in car
         if player not in all_sprites:
             all_sprites.add(player, layer=LAYER_PLAYERS)
+        player.pending_pitfall_fall = False
         floor_dx, floor_dy = get_moving_floor_drift(
             get_floor_overlap_rect(player),
             game_data.layout,
@@ -209,6 +216,34 @@ def update_entities(
             layout=game_data.layout,
             now_ms=game_data.state.clock.elapsed_ms,
         )
+        if getattr(player, "pending_pitfall_fall", False) and not game_data.state.game_over:
+            pull_dist = player.collision_radius * 0.5
+            pitfall_target_pos = pitfall_target(
+                x=player.x,
+                y=player.y,
+                cell_size=game_data.cell_size,
+                pitfall_cells=pitfall_cells,
+                pull_distance=pull_dist,
+            )
+            if pitfall_target_pos is None:
+                pitfall_target_pos = player.rect.center
+            game_data.state.falling_zombies.append(
+                FallingEntity(
+                    start_pos=(int(player.x), int(player.y)),
+                    target_pos=pitfall_target_pos,
+                    started_at_ms=game_data.state.clock.elapsed_ms,
+                    pre_fx_ms=0,
+                    fall_duration_ms=500,
+                    dust_duration_ms=0,
+                    kind=None,
+                    mode="pitfall",
+                )
+            )
+            if player in all_sprites:
+                all_sprites.remove(player)
+            game_data.state.game_over = True
+            game_data.state.game_over_at = game_data.state.clock.elapsed_ms
+            print("Player fell into pitfall!")
     else:
         # Player flagged as in-car but car is gone; drop them back to foot control
         player.in_car = False
@@ -238,6 +273,52 @@ def update_entities(
         wall_target_cell=wall_target_cell,
         patrol_bot_group=patrol_bot_group,
     )
+    for survivor in list(survivor_group):
+        if not survivor.alive():
+            continue
+        if getattr(survivor, "pending_pitfall_fall", False):
+            visible = rect_visible_on_screen(camera, survivor.rect)
+            fov_target = active_car if player.in_car and active_car else player
+            in_fov = is_entity_in_fov(
+                survivor.rect,
+                fov_target=fov_target,
+                flashlight_count=game_data.state.flashlight_count,
+            )
+            if not (visible and in_fov):
+                spawn_pos = find_nearby_offscreen_spawn_position(
+                    game_data.layout.walkable_cells,
+                    game_data.cell_size,
+                    camera=camera,
+                )
+                survivor.teleport(spawn_pos)
+                continue
+            pull_dist = survivor.collision_radius * 0.5
+            pitfall_target_pos = pitfall_target(
+                x=survivor.x,
+                y=survivor.y,
+                cell_size=game_data.cell_size,
+                pitfall_cells=pitfall_cells,
+                pull_distance=pull_dist,
+            )
+            if pitfall_target_pos is None:
+                pitfall_target_pos = survivor.rect.center
+            game_data.state.falling_zombies.append(
+                FallingEntity(
+                    start_pos=(int(survivor.x), int(survivor.y)),
+                    target_pos=pitfall_target_pos,
+                    started_at_ms=game_data.state.clock.elapsed_ms,
+                    pre_fx_ms=0,
+                    fall_duration_ms=500,
+                    dust_duration_ms=0,
+                    kind=None,
+                    mode="pitfall",
+                )
+            )
+            survivor.kill()
+            if getattr(survivor, "is_buddy", False):
+                print("Buddy fell into pitfall!")
+            else:
+                print("Survivor fell into pitfall!")
     update_falling_zombies(game_data, config)
 
     # Spawn new zombies if needed
@@ -277,6 +358,21 @@ def update_entities(
     patrol_bots_sorted: list[PatrolBot] = sorted(
         list(patrol_bot_group), key=lambda b: b.x
     )
+    electrified_cells: set[tuple[int, int]] = set()
+    if game_data.cell_size > 0:
+        for bot in patrol_bots_sorted:
+            if not bot.alive():
+                continue
+            cell = (
+                int(bot.rect.centerx // game_data.cell_size),
+                int(bot.rect.centery // game_data.cell_size),
+            )
+            if (
+                0 <= cell[0] < game_data.layout.grid_cols
+                and 0 <= cell[1] < game_data.layout.grid_rows
+            ):
+                electrified_cells.add(cell)
+    game_data.state.electrified_cells = electrified_cells
 
     tracker_buckets: dict[tuple[int, int, int], list[Zombie]] = {}
     tracker_cell_size = ZOMBIE_TRACKER_CROWD_BAND_WIDTH
@@ -397,6 +493,7 @@ def update_entities(
             nearby_walls,
             dog_candidates,
             nearby_patrol_bots,
+            electrified_cells,
             footprints=game_data.state.footprints,
             cell_size=game_data.cell_size,
             layout=game_data.layout,
@@ -434,7 +531,7 @@ def update_entities(
         )
         if pitfall_target_pos is not None:
             zombie.kill()
-            fall = FallingZombie(
+            fall = FallingEntity(
                 start_pos=(int(zombie.x), int(zombie.y)),
                 target_pos=pitfall_target_pos,
                 started_at_ms=game_data.state.clock.elapsed_ms,

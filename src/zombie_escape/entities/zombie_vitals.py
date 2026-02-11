@@ -102,3 +102,30 @@ class ZombieVitals:
             )
         )
         return now_ms < self.patrol_paralyze_until_ms
+
+    def update_patrol_floor_paralyze(
+        self,
+        *,
+        on_electrified_floor: bool,
+        now_ms: int,
+        paralyze_duration_ms: int,
+        damage_interval_frames: int,
+        damage_amount: int,
+        apply_damage: Callable[[int], None] | None,
+    ) -> bool:
+        if on_electrified_floor:
+            self.patrol_paralyze_until_ms = max(
+                self.patrol_paralyze_until_ms,
+                now_ms + paralyze_duration_ms,
+            )
+            if (
+                damage_interval_frames > 0
+                and apply_damage is not None
+                and damage_amount > 0
+            ):
+                self.patrol_damage_frame_counter = (
+                    self.patrol_damage_frame_counter + 1
+                ) % damage_interval_frames
+                if self.patrol_damage_frame_counter == 0:
+                    apply_damage(damage_amount)
+        return now_ms < self.patrol_paralyze_until_ms

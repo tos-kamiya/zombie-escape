@@ -29,7 +29,7 @@ from ..gameplay_constants import (
     DEFAULT_SHOES_SPAWN_COUNT,
 )
 from ..level_constants import DEFAULT_CELL_SIZE, DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
-from ..models import DustRing, FallingZombie, GameData, Stage
+from ..models import DustRing, FallingEntity, GameData, Stage
 from ..rng import get_rng
 from .constants import (
     FALLING_ZOMBIE_DUST_DURATION_MS,
@@ -51,6 +51,22 @@ from .utils import (
 )
 
 RNG = get_rng()
+_DEBUG_PITFALL_SPAWN_OFFSET_INDEX = 0
+_DEBUG_PITFALL_SPAWN_OFFSETS: tuple[tuple[float, float], ...] = (
+    (0.0, 0.0),
+    (-0.30, 0.0),
+    (0.30, 0.0),
+    (0.0, -0.30),
+    (0.0, 0.30),
+    (-0.40, -0.40),
+    (0.40, -0.40),
+    (-0.40, 0.40),
+    (0.40, 0.40),
+    (-0.46, 0.0),
+    (0.46, 0.0),
+    (0.0, -0.46),
+    (0.0, 0.46),
+)
 
 FallScheduleResult = Literal["scheduled", "no_position", "blocked", "no_player"]
 
@@ -268,7 +284,7 @@ def _schedule_falling_zombie(
         return "no_position"
     # start_offset removed; animation handles "falling" via scaling now.
     start_pos = (int(spawn_pos[0]), int(spawn_pos[1]))
-    fall = FallingZombie(
+    fall = FallingEntity(
         start_pos=start_pos,
         target_pos=(int(spawn_pos[0]), int(spawn_pos[1])),
         started_at_ms=game_data.state.clock.elapsed_ms,
@@ -685,6 +701,22 @@ def setup_player_and_cars(
         )
 
     player_pos = _pick_center(layout_data["player_cells"] or walkable_cells)
+    if game_data.stage.id == "debug_pitfall_spawn" and game_data.layout.pitfall_cells:
+        global _DEBUG_PITFALL_SPAWN_OFFSET_INDEX
+        debug_cell = min(game_data.layout.pitfall_cells)
+        center_x, center_y = _cell_center(debug_cell, cell_size)
+        offset_x_ratio, offset_y_ratio = _DEBUG_PITFALL_SPAWN_OFFSETS[
+            _DEBUG_PITFALL_SPAWN_OFFSET_INDEX % len(_DEBUG_PITFALL_SPAWN_OFFSETS)
+        ]
+        _DEBUG_PITFALL_SPAWN_OFFSET_INDEX += 1
+        player_pos = (
+            int(center_x + offset_x_ratio * cell_size),
+            int(center_y + offset_y_ratio * cell_size),
+        )
+        print(
+            "Debug pitfall spawn offset:",
+            f"({offset_x_ratio:+.2f}, {offset_y_ratio:+.2f})",
+        )
     player = Player(*player_pos)
 
     car_spawn_cells = (
