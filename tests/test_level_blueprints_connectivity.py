@@ -43,3 +43,27 @@ def test_validate_connectivity_returns_reachable_cells_when_valid() -> None:
     reachable = validate_connectivity(grid)
     assert reachable is not None
     assert (3, 1) in reachable  # exit cell
+
+
+def test_validate_car_connectivity_treats_moving_floor_as_blocked() -> None:
+    grid = [
+        "BBBBBBB",
+        "B.C...B",
+        "B^^^^^B",
+        "B..E..B",
+        "BBBBBBB",
+    ]
+
+    assert validate_car_connectivity(grid) is None
+
+
+def test_validate_humanoid_connectivity_treats_moving_floor_as_blocked() -> None:
+    grid = [
+        "BBBBBBB",
+        "B.P...B",
+        "B^^^^^B",
+        "B..E..B",
+        "BBBBBBB",
+    ]
+
+    assert validate_humanoid_connectivity(grid) is False

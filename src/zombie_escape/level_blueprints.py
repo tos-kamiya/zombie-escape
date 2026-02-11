@@ -47,7 +47,7 @@ def validate_car_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
             ch = grid[y][x]
             if ch == "C":
                 start_pos = (x, y)
-            if ch not in ("x", "B", "O"):
+            if ch not in ("x", "B", "O", "^", "v", "<", ">"):
                 passable_cells.add((x, y))
                 if ch == "E":
                     exit_cells.add((x, y))
@@ -85,7 +85,7 @@ def validate_humanoid_connectivity(grid: list[str]) -> bool:
             ch = grid[y][x]
             if ch == "P":
                 start_pos = (x, y)
-            if ch not in ("x", "B"):
+            if ch not in ("x", "B", "^", "v", "<", ">"):
                 passable_cells.add((x, y))
 
     if start_pos is None:
