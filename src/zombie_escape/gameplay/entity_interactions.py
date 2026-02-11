@@ -521,8 +521,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 active_car.health = active_car.max_health
                 active_car._update_color()
                 removed_any = True
-                if stage.survivor_rescue_stage:
-                    capacity_increments += 1
+                capacity_increments += 1
             if removed_any:
                 if capacity_increments:
                     increase_survivor_capacity(game_data, capacity_increments)

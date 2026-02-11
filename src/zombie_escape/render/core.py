@@ -1195,7 +1195,6 @@ def draw(
         has_fuel=has_fuel,
         buddy_merged_count=state.buddy_merged_count,
         buddy_required=stage.buddy_required_count if stage else 0,
-        survivors_onboard=state.survivors_onboard,
     )
     if objective_lines:
         _draw_objective(objective_lines, screen=screen)
@@ -1205,6 +1204,10 @@ def draw(
         has_fuel=has_fuel,
         flashlight_count=flashlight_count,
         shoes_count=state.shoes_count,
+        player_in_car=player.in_car,
+        buddy_onboard=state.buddy_onboard,
+        survivors_onboard=state.survivors_onboard,
+        passenger_capacity=state.survivor_capacity,
     )
     _draw_survivor_messages(screen, assets, list(state.survivor_messages))
     _draw_endurance_timer(screen, assets, stage=stage, state=state)

@@ -9,6 +9,8 @@ from pygame import sprite, surface
 from ..colors import LIGHT_GRAY, ORANGE, YELLOW
 from ..entities import Camera, Car, Player
 from ..entities_constants import (
+    CAR_HEIGHT,
+    CAR_WIDTH,
     FLASHLIGHT_HEIGHT,
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
@@ -24,9 +26,12 @@ from ..entities_constants import ZombieKind
 from ..models import Stage, TimedMessage
 from ..render_assets import (
     RenderAssets,
+    build_car_surface,
     build_flashlight_surface,
     build_fuel_can_surface,
     build_shoes_surface,
+    paint_car_surface,
+    resolve_car_color,
 )
 from ..render_constants import (
     FLASHLIGHT_FOG_SCALE_ONE,
@@ -66,6 +71,14 @@ def _get_hud_icon(kind: str) -> surface.Surface:
         return cached
     if kind == "fuel":
         icon = build_fuel_can_surface(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
+    elif kind == "car":
+        icon = build_car_surface(CAR_WIDTH, CAR_HEIGHT)
+        paint_car_surface(
+            icon,
+            width=CAR_WIDTH,
+            height=CAR_HEIGHT,
+            color=resolve_car_color(health_ratio=1.0, appearance="default"),
+        )
     elif kind == "flashlight":
         icon = build_flashlight_surface(FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT)
     elif kind == "shoes":
@@ -201,7 +214,54 @@ def _draw_inventory_icons(
     has_fuel: bool,
     flashlight_count: int,
     shoes_count: int,
+    player_in_car: bool = False,
+    buddy_onboard: int = 0,
+    survivors_onboard: int = 0,
+    passenger_capacity: int = 0,
 ) -> None:
+    spacing = 3
+    padding = 8
+    y = 8
+    right_edge = assets.screen_width - padding
+
+    passenger_icon: surface.Surface | None = None
+    passenger_surface: surface.Surface | None = None
+    passenger_bottom_pad = 0
+    if player_in_car:
+        try:
+            font_settings = get_font_settings()
+            font = load_font(
+                font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
+            )
+            passenger_text = tr(
+                "hud.passengers_compact",
+                crew=max(0, int(buddy_onboard)),
+                survivors=max(0, int(survivors_onboard)),
+                limit=max(0, int(passenger_capacity)),
+            )
+            passenger_surface = render_text_surface(
+                font,
+                passenger_text,
+                LIGHT_GRAY,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            raw_text_surface = font.render(passenger_text, False, LIGHT_GRAY)
+            line_height = int(
+                round(font.get_linesize() * max(0.0, font_settings.line_height_scale))
+            )
+            extra_height = max(0, line_height - raw_text_surface.get_height())
+            passenger_bottom_pad = extra_height - (extra_height // 2)
+            passenger_icon = _get_hud_icon("car")
+        except pygame.error as e:
+            print(f"Error rendering passenger info: {e}")
+
+    reserved_right = right_edge
+    if passenger_icon is not None and passenger_surface is not None:
+        passenger_width = (
+            passenger_icon.get_width() + spacing + passenger_surface.get_width()
+        )
+        reserved_right -= passenger_width + (spacing * 2)
+
     icons: list[surface.Surface] = []
     if has_fuel:
         icons.append(_get_hud_icon("fuel"))
@@ -209,18 +269,24 @@ def _draw_inventory_icons(
         icons.append(_get_hud_icon("flashlight"))
     for _ in range(max(0, int(shoes_count))):
         icons.append(_get_hud_icon("shoes"))
-    if not icons:
-        return
-    spacing = 3
-    padding = 8
-    total_width = sum(icon.get_width() for icon in icons)
-    total_width += spacing * max(0, len(icons) - 1)
-    start_x = assets.screen_width - padding - total_width
-    y = 8
-    x = max(padding, start_x)
-    for icon in icons:
-        screen.blit(icon, (x, y))
-        x += icon.get_width() + spacing
+    if icons:
+        total_width = sum(icon.get_width() for icon in icons)
+        total_width += spacing * max(0, len(icons) - 1)
+        start_x = reserved_right - total_width
+        x = max(padding, start_x)
+        for icon in icons:
+            screen.blit(icon, (x, y))
+            x += icon.get_width() + spacing
+
+    if passenger_icon is not None and passenger_surface is not None:
+        text_rect = passenger_surface.get_rect(right=right_edge)
+        icon_rect = passenger_icon.get_rect(
+            right=text_rect.left - spacing,
+            top=y,
+        )
+        text_rect.bottom = icon_rect.bottom + passenger_bottom_pad
+        screen.blit(passenger_icon, icon_rect)
+        screen.blit(passenger_surface, text_rect)
 
 
 def _draw_endurance_timer(
@@ -435,7 +501,6 @@ def _build_objective_lines(
     has_fuel: bool,
     buddy_merged_count: int,
     buddy_required: int,
-    survivors_onboard: int,
 ) -> list[str]:
     objective_lines: list[str] = []
     if stage and stage.endurance_stage:
@@ -494,11 +559,6 @@ def _build_objective_lines(
     else:
         objective_lines.append(tr("objectives.escape"))
 
-    if stage and stage.survivor_rescue_stage and (survivors_onboard is not None):
-        limit = state.survivor_capacity
-        objective_lines.append(
-            tr("objectives.survivors_onboard", count=survivors_onboard, limit=limit)
-        )
     return objective_lines
 
 

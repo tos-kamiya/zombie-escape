@@ -231,7 +231,13 @@ def apply_passenger_speed_penalty(game_data: GameData) -> None:
 def increase_survivor_capacity(game_data: GameData, increments: int = 1) -> None:
     if increments <= 0:
         return
-    if not game_data.stage.survivor_rescue_stage:
+    stage = game_data.stage
+    supports_passengers = (
+        stage.survivor_rescue_stage
+        or stage.survivor_spawn_rate > 0.0
+        or stage.buddy_required_count > 0
+    )
+    if not supports_passengers:
         return
     state = game_data.state
     state.survivor_capacity += increments * SURVIVOR_MAX_SAFE_PASSENGERS

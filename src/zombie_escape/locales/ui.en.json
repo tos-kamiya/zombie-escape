@@ -195,7 +195,8 @@
       "pause_hint": "P/Start: Resume · ESC/Select: Return to Title",
       "endurance_timer_label": "Until dawn %{time}",
       "time_accel": ">> 4x",
-      "time_accel_hint": "Hold Shift/R1: 4x"
+      "time_accel_hint": "Hold Shift/R1: 4x",
+      "passengers_compact": "%{crew}+%{survivors} (/%{limit})"
     },
     "survivors": {
       "too_many_aboard": "Too many aboard!"
