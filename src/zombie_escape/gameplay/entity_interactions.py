@@ -69,6 +69,191 @@ CAR_ZOMBIE_CONTACT_DAMAGE = 1
 CAR_ZOMBIE_HIT_DAMAGE = 20
 
 
+def _handle_fuel_pickup(
+    *,
+    game_data: GameData,
+    player: pygame.sprite.Sprite,
+    fuel: pygame.sprite.Sprite | None,
+    fuel_interaction_radius: float,
+    need_fuel_text: str,
+    player_near_point: callable,
+) -> None:
+    state = game_data.state
+    if not (fuel and fuel.alive() and not state.has_fuel and not player.in_car):
+        return
+    if not player_near_point(fuel.rect.center, fuel_interaction_radius):
+        return
+    state.has_fuel = True
+    if state.timed_message == need_fuel_text:
+        schedule_timed_message(state, None, duration_frames=0, now_ms=state.clock.elapsed_ms)
+    state.hint_expires_at = 0
+    state.hint_target_type = None
+    fuel.kill()
+    game_data.fuel = None
+    print("Fuel acquired!")
+
+
+def _handle_player_item_pickups(
+    *,
+    game_data: GameData,
+    player: pygame.sprite.Sprite,
+    flashlights: list[pygame.sprite.Sprite],
+    shoes_list: list[pygame.sprite.Sprite],
+    flashlight_interaction_radius: float,
+    shoes_interaction_radius: float,
+    player_near_point: callable,
+) -> None:
+    state = game_data.state
+    if player.in_car:
+        return
+    for flashlight in list(flashlights):
+        if not flashlight.alive():
+            continue
+        if not player_near_point(flashlight.rect.center, flashlight_interaction_radius):
+            continue
+        state.flashlight_count += 1
+        state.hint_expires_at = 0
+        state.hint_target_type = None
+        flashlight.kill()
+        try:
+            flashlights.remove(flashlight)
+        except ValueError:
+            pass
+        print("Flashlight acquired!")
+        break
+
+    for shoes in list(shoes_list):
+        if not shoes.alive():
+            continue
+        if not player_near_point(shoes.rect.center, shoes_interaction_radius):
+            continue
+        state.shoes_count += 1
+        state.hint_expires_at = 0
+        state.hint_target_type = None
+        shoes.kill()
+        try:
+            shoes_list.remove(shoes)
+        except ValueError:
+            pass
+        print("Shoes acquired!")
+        break
+
+
+def _board_survivors_if_colliding(
+    *,
+    game_data: GameData,
+    player: pygame.sprite.Sprite,
+    active_car: Car | None,
+    shrunk_car: pygame.sprite.Sprite | None,
+    survivor_group: pygame.sprite.Group,
+    survivor_boarding_enabled: bool,
+) -> None:
+    if not (
+        survivor_boarding_enabled
+        and player.in_car
+        and active_car
+        and shrunk_car
+        and survivor_group
+    ):
+        return
+    state = game_data.state
+    boarded_candidates = pygame.sprite.spritecollide(
+        shrunk_car, survivor_group, False, collide_circle_custom
+    )
+    boarded = list(boarded_candidates)
+    for survivor in boarded:
+        survivor.kill()
+    if not boarded:
+        return
+    state.survivors_onboard += len(boarded)
+    apply_passenger_speed_penalty(game_data)
+    capacity_limit = state.survivor_capacity
+    if state.survivors_onboard > capacity_limit:
+        overload_damage = max(
+            1,
+            int(active_car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO),
+        )
+        add_survivor_message(game_data, tr("survivors.too_many_aboard"))
+        active_car._take_damage(overload_damage)
+
+
+def _handle_car_destruction(
+    *,
+    game_data: GameData,
+    player: pygame.sprite.Sprite,
+    car: Car | None,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    survivor_boarding_enabled: bool,
+) -> None:
+    state = game_data.state
+    if not (car and car.alive() and car.health <= 0):
+        return
+    car_destroyed_pos = car.rect.center
+    car.kill()
+    if survivor_boarding_enabled:
+        drop_survivors_from_car(game_data, car_destroyed_pos)
+    if player.in_car:
+        player.in_car = False
+        player.x, player.y = car_destroyed_pos[0], car_destroyed_pos[1]
+        player.rect.center = (int(player.x), int(player.y))
+        if player not in all_sprites:
+            all_sprites.add(player, layer=LAYER_PLAYERS)
+        print("Car destroyed! Player ejected.")
+
+    # Clear active car and let the player hunt for another waiting car.
+    game_data.car = None
+    state.survivor_capacity = SURVIVOR_MAX_SAFE_PASSENGERS
+    apply_passenger_speed_penalty(game_data)
+
+    # Bring back the buddies near the player after losing the car
+    respawn_buddies_near_player(game_data)
+    maintain_waiting_car_supply(game_data)
+
+
+def _handle_escape_conditions(
+    *,
+    game_data: GameData,
+    player: pygame.sprite.Sprite,
+    car: Car | None,
+    outside_cells: set[tuple[int, int]],
+    survivor_boarding_enabled: bool,
+    rect_center_cell: callable,
+) -> None:
+    stage = game_data.stage
+    state = game_data.state
+    # Player escaping on foot after dawn (Stage 5)
+    if (
+        stage.endurance_stage
+        and state.dawn_ready
+        and not player.in_car
+        and outside_cells
+        and (player_cell := rect_center_cell(player.rect)) is not None
+        and player_cell in outside_cells
+    ):
+        buddy_ready = True
+        if stage.buddy_required_count > 0:
+            buddy_ready = state.buddy_merged_count >= stage.buddy_required_count
+        if buddy_ready:
+            state.game_won = True
+
+    # Player escaping the level
+    if player.in_car and car and car.alive() and state.has_fuel:
+        buddy_ready = True
+        if stage.buddy_required_count > 0:
+            buddy_ready = state.buddy_merged_count >= stage.buddy_required_count
+        car_cell = rect_center_cell(car.rect)
+        if buddy_ready and car_cell is not None and car_cell in outside_cells:
+            if stage.buddy_required_count > 0:
+                state.buddy_rescued = min(
+                    stage.buddy_required_count, state.buddy_merged_count
+                )
+            if survivor_boarding_enabled and state.survivors_onboard:
+                state.survivors_rescued += state.survivors_onboard
+                state.survivors_onboard = 0
+                apply_passenger_speed_penalty(game_data)
+            state.game_won = True
+
+
 def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     """Check and handle interactions between entities."""
     player = game_data.player
@@ -131,58 +316,23 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     def _player_near_car(car_obj: Car | None) -> bool:
         return _player_near_sprite(car_obj, car_interaction_radius)
 
-    # Fuel pickup
-    if (
-        fuel
-        and fuel.alive()
-        and not state.has_fuel
-        and not player.in_car
-    ):
-        if _player_near_point(fuel.rect.center, fuel_interaction_radius):
-            state.has_fuel = True
-            if state.timed_message == need_fuel_text:
-                schedule_timed_message(
-                    state, None, duration_frames=0, now_ms=state.clock.elapsed_ms
-                )
-            state.hint_expires_at = 0
-            state.hint_target_type = None
-            fuel.kill()
-            game_data.fuel = None
-            print("Fuel acquired!")
-
-    # Flashlight pickup
-    if not player.in_car:
-        for flashlight in list(flashlights):
-            if not flashlight.alive():
-                continue
-            if _player_near_point(
-                flashlight.rect.center, flashlight_interaction_radius
-            ):
-                state.flashlight_count += 1
-                state.hint_expires_at = 0
-                state.hint_target_type = None
-                flashlight.kill()
-                try:
-                    flashlights.remove(flashlight)
-                except ValueError:
-                    pass
-                print("Flashlight acquired!")
-                break
-
-        for shoes in list(shoes_list):
-            if not shoes.alive():
-                continue
-            if _player_near_point(shoes.rect.center, shoes_interaction_radius):
-                state.shoes_count += 1
-                state.hint_expires_at = 0
-                state.hint_target_type = None
-                shoes.kill()
-                try:
-                    shoes_list.remove(shoes)
-                except ValueError:
-                    pass
-                print("Shoes acquired!")
-                break
+    _handle_fuel_pickup(
+        game_data=game_data,
+        player=player,
+        fuel=fuel,
+        fuel_interaction_radius=fuel_interaction_radius,
+        need_fuel_text=need_fuel_text,
+        player_near_point=_player_near_point,
+    )
+    _handle_player_item_pickups(
+        game_data=game_data,
+        player=player,
+        flashlights=flashlights,
+        shoes_list=shoes_list,
+        flashlight_interaction_radius=flashlight_interaction_radius,
+        shoes_interaction_radius=shoes_interaction_radius,
+        player_near_point=_player_near_point,
+    )
 
     sync_ambient_palette_with_flashlights(game_data)
 
@@ -440,55 +590,24 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 bot.kill()
                 active_car._take_damage(CAR_WALL_DAMAGE)
 
-    if (
-        survivor_boarding_enabled
-        and player.in_car
-        and active_car
-        and shrunk_car
-        and survivor_group
-    ):
-        boarded_candidates = pygame.sprite.spritecollide(
-            shrunk_car, survivor_group, False, collide_circle_custom
-        )
-        boarded = list(boarded_candidates)
-        for survivor in boarded:
-            survivor.kill()
-        if boarded:
-            state.survivors_onboard += len(boarded)
-            apply_passenger_speed_penalty(game_data)
-            capacity_limit = state.survivor_capacity
-            if state.survivors_onboard > capacity_limit:
-                overload_damage = max(
-                    1,
-                    int(active_car.max_health * SURVIVOR_OVERLOAD_DAMAGE_RATIO),
-                )
-                add_survivor_message(game_data, tr("survivors.too_many_aboard"))
-                active_car._take_damage(overload_damage)
+    _board_survivors_if_colliding(
+        game_data=game_data,
+        player=player,
+        active_car=active_car,
+        shrunk_car=shrunk_car,
+        survivor_group=survivor_group,
+        survivor_boarding_enabled=survivor_boarding_enabled,
+    )
 
     handle_survivor_zombie_collisions(game_data, config)
 
-    # Handle car destruction
-    if car and car.alive() and car.health <= 0:
-        car_destroyed_pos = car.rect.center
-        car.kill()
-        if survivor_boarding_enabled:
-            drop_survivors_from_car(game_data, car_destroyed_pos)
-        if player.in_car:
-            player.in_car = False
-            player.x, player.y = car_destroyed_pos[0], car_destroyed_pos[1]
-            player.rect.center = (int(player.x), int(player.y))
-            if player not in all_sprites:
-                all_sprites.add(player, layer=LAYER_PLAYERS)
-            print("Car destroyed! Player ejected.")
-
-        # Clear active car and let the player hunt for another waiting car.
-        game_data.car = None
-        state.survivor_capacity = SURVIVOR_MAX_SAFE_PASSENGERS
-        apply_passenger_speed_penalty(game_data)
-
-        # Bring back the buddies near the player after losing the car
-        respawn_buddies_near_player(game_data)
-        maintain_waiting_car_supply(game_data)
+    _handle_car_destruction(
+        game_data=game_data,
+        player=player,
+        car=car,
+        all_sprites=all_sprites,
+        survivor_boarding_enabled=survivor_boarding_enabled,
+    )
 
     # Player getting caught by zombies
     if not player.in_car and player in all_sprites:
@@ -514,36 +633,13 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     now_ms=state.clock.elapsed_ms,
                 )
 
-    # Player escaping on foot after dawn (Stage 5)
-    if (
-        stage.endurance_stage
-        and state.dawn_ready
-        and not player.in_car
-        and outside_cells
-        and (player_cell := _rect_center_cell(player.rect)) is not None
-        and player_cell in outside_cells
-    ):
-        buddy_ready = True
-        if stage.buddy_required_count > 0:
-            buddy_ready = state.buddy_merged_count >= stage.buddy_required_count
-        if buddy_ready:
-            state.game_won = True
-
-    # Player escaping the level
-    if player.in_car and car and car.alive() and state.has_fuel:
-        buddy_ready = True
-        if stage.buddy_required_count > 0:
-            buddy_ready = state.buddy_merged_count >= stage.buddy_required_count
-        car_cell = _rect_center_cell(car.rect)
-        if buddy_ready and car_cell is not None and car_cell in outside_cells:
-            if stage.buddy_required_count > 0:
-                state.buddy_rescued = min(
-                    stage.buddy_required_count, state.buddy_merged_count
-                )
-            if survivor_boarding_enabled and state.survivors_onboard:
-                state.survivors_rescued += state.survivors_onboard
-                state.survivors_onboard = 0
-                apply_passenger_speed_penalty(game_data)
-            state.game_won = True
+    _handle_escape_conditions(
+        game_data=game_data,
+        player=player,
+        car=car,
+        outside_cells=outside_cells,
+        survivor_boarding_enabled=survivor_boarding_enabled,
+        rect_center_cell=_rect_center_cell,
+    )
 
     return None
