@@ -15,3 +15,7 @@ Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/righ
 | Zombie Dog | <img src="../imgs/exports/zombie-dog.png" width="80"> | Stage 21 | Fast charging zombie that also chases nearby zombies. |
 | Patrol Bot | <img src="../imgs/exports/patrol-bot.png" width="80"> | Stage 22 | A dependable robot that can spot suspicious individuals; it paralyzes and damages zombies. Standing on the center lets you direct its facing. |
 | Moving Floor | <img src="../imgs/exports/moving-floor.png" width="80"> | Stage 24 | A floor you can ride to move quickly in its direction. |
+
+## Control Recommendation (Stage 21+)
+
+From Stage 21 onward (when zombie dogs appear), a gamepad is recommended. Zombie dogs can rush in quickly from outside your view, so with a keyboard, you might end up hitting the keys harder than you mean to.
