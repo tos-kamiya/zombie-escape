@@ -341,8 +341,13 @@
   - 壁セルに隣接するタイル端に近い場合、移動ベクトルをタイル中心へ3%だけ補正する（全キャラ共通）。
 - 壁インデックス（`build_wall_index`）は `GameData.wall_index` にキャッシュされ、
   **壁が破壊されたときにのみ**再構築される（`wall_index_dirty` フラグ）。
-- `check_interactions(game_data, config)` (`gameplay/interactions.py`)
+- `check_interactions(game_data, config)` (`gameplay/entity_interactions.py`)
   - アイテム収集、車両/救助/敗北判定などの相互作用。
+  - 主な処理は責務ごとに分割され、`_handle_fuel_pickup` / `_handle_player_item_pickups` /
+    `_handle_buddy_interactions` / `_board_survivors_if_colliding` /
+    `_handle_car_destruction` / `_handle_escape_conditions` が呼ばれる。
+  - 生存者の車乗車は `survivor_rescue_stage` に加えて `survivor_spawn_rate > 0` のステージでも有効。
+  - 車とゾンビの衝突は車の `collision_radius` ベースで判定し、移動中接触でゾンビにヒットダメージを与える。
 - `update_survivors(game_data, config)` (`gameplay/survivors.py`)
   - サバイバー/相棒の移動と追従。
   - 落とし穴を壁と同様の障害物として避ける。
