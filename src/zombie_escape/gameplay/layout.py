@@ -151,7 +151,10 @@ def generate_level_from_blueprint(
             flashlight_count=flashlight_count,
             shoes_count=shoes_count,
         )
-        car_reachable = validate_connectivity(blueprint.grid)
+        car_reachable = validate_connectivity(
+            blueprint.grid,
+            requires_fuel=stage.requires_fuel and not stage.endurance_stage,
+        )
         if car_reachable is not None:
             blueprint.car_reachable_cells = car_reachable
             blueprint_data = blueprint

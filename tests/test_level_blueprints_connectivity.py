@@ -67,3 +67,27 @@ def test_validate_humanoid_connectivity_treats_moving_floor_as_blocked() -> None
     ]
 
     assert validate_humanoid_connectivity(grid) is False
+
+
+def test_validate_connectivity_requires_reachable_fuel_when_enabled() -> None:
+    grid = [
+        "BBBBBBB",
+        "BP....B",
+        "BxxxxBB",
+        "Bf.CE.B",
+        "BBBBBBB",
+    ]
+
+    assert validate_connectivity(grid, requires_fuel=True) is None
+
+
+def test_validate_connectivity_non_fuel_treats_player_as_fuel_start() -> None:
+    grid = [
+        "BBBBBBB",
+        "BP.CE.B",
+        "B.....B",
+        "BBBBBBB",
+    ]
+
+    reachable = validate_connectivity(grid, requires_fuel=False)
+    assert reachable is not None

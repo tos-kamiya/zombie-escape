@@ -79,48 +79,141 @@ def validate_humanoid_connectivity(grid: list[str]) -> bool:
 
     start_pos = None
     passable_cells = set()
-
     for y in range(rows):
         for x in range(cols):
             ch = grid[y][x]
             if ch == "P":
                 start_pos = (x, y)
-            if ch not in ("x", "B", "^", "v", "<", ">"):
+            if ch not in ("x", "B"):
                 passable_cells.add((x, y))
 
     if start_pos is None:
         return False
 
+    reachable = _humanoid_reachable_cells(grid, start_pos, passable_cells=passable_cells)
+    return len(passable_cells) == len(reachable)
+
+
+def _humanoid_reachable_cells(
+    grid: list[str],
+    start_pos: tuple[int, int],
+    *,
+    passable_cells: set[tuple[int, int]] | None = None,
+) -> set[tuple[int, int]]:
+    rows = len(grid)
+    cols = len(grid[0])
+    if passable_cells is None:
+        passable_cells = {
+            (x, y)
+            for y in range(rows)
+            for x in range(cols)
+            if grid[y][x] not in ("x", "B")
+        }
+    if start_pos not in passable_cells:
+        return set()
+
+    floor_blocked_offsets: dict[str, set[tuple[int, int]]] = {
+        "^": {(0, 1), (-1, 1), (1, 1)},
+        "v": {(0, -1), (-1, -1), (1, -1)},
+        "<": {(1, 0), (1, -1), (1, 1)},
+        ">": {(-1, 0), (-1, -1), (-1, 1)},
+    }
+    neighbor_offsets = (
+        (0, 1),
+        (0, -1),
+        (1, 0),
+        (-1, 0),
+        (1, 1),
+        (1, -1),
+        (-1, 1),
+        (-1, -1),
+    )
+
     reachable = {start_pos}
     queue = deque([start_pos])
     while queue:
         x, y = queue.popleft()
-        for dx, dy in (
-            (0, 1),
-            (0, -1),
-            (1, 0),
-            (-1, 0),
-            (1, 1),
-            (1, -1),
-            (-1, 1),
-            (-1, -1),
-        ):
+        current_cell = grid[y][x]
+        blocked_offsets = floor_blocked_offsets.get(current_cell, set())
+        for dx, dy in neighbor_offsets:
+            if (dx, dy) in blocked_offsets:
+                continue
             nx, ny = x + dx, y + dy
-            if (nx, ny) in passable_cells and (nx, ny) not in reachable:
-                reachable.add((nx, ny))
-                queue.append((nx, ny))
+            next_cell = (nx, ny)
+            if next_cell in passable_cells and next_cell not in reachable:
+                reachable.add(next_cell)
+                queue.append(next_cell)
+    return reachable
 
-    return len(passable_cells) == len(reachable)
+
+def validate_humanoid_objective_connectivity(
+    grid: list[str],
+    *,
+    requires_fuel: bool,
+) -> bool:
+    """Check objective pathing for humans with moving-floor constraints.
+
+    - requires_fuel=True: P -> any reachable f -> any C
+    - requires_fuel=False: treat P as the fuel start, then P -> any C
+    """
+    rows = len(grid)
+    cols = len(grid[0])
+    passable_cells = {
+        (x, y)
+        for y in range(rows)
+        for x in range(cols)
+        if grid[y][x] not in ("x", "B")
+    }
+    player_cells = [
+        (x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "P"
+    ]
+    car_cells = {(x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "C"}
+    fuel_cells = {(x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "f"}
+
+    if len(player_cells) != 1 or not car_cells:
+        return False
+    player_start = player_cells[0]
+
+    from_player = _humanoid_reachable_cells(
+        grid,
+        player_start,
+        passable_cells=passable_cells,
+    )
+    if requires_fuel:
+        if not fuel_cells:
+            return False
+        fuel_starts = [cell for cell in fuel_cells if cell in from_player]
+        if not fuel_starts:
+            return False
+    else:
+        fuel_starts = [player_start]
+
+    for fuel_start in fuel_starts:
+        from_fuel = _humanoid_reachable_cells(
+            grid,
+            fuel_start,
+            passable_cells=passable_cells,
+        )
+        if any(car_cell in from_fuel for car_cell in car_cells):
+            return True
+    return False
 
 
-def validate_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
+def validate_connectivity(
+    grid: list[str],
+    *,
+    requires_fuel: bool = False,
+) -> set[tuple[int, int]] | None:
     """Validate both car and humanoid movement conditions.
     Returns car reachable cells if both pass, otherwise None.
     """
     car_reachable = validate_car_connectivity(grid)
     if car_reachable is None:
         return None
-    if not validate_humanoid_connectivity(grid):
+    if not validate_humanoid_objective_connectivity(
+        grid,
+        requires_fuel=requires_fuel,
+    ):
         return None
     return car_reachable
 
