@@ -32,7 +32,14 @@ from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
 from ..screen_constants import FPS
 from ..localization import get_font_settings
 from ..localization import translate as tr
-from ..models import DustRing, FallingEntity, Footprint, GameData, Stage
+from ..models import (
+    DustRing,
+    FallingEntity,
+    Footprint,
+    GameData,
+    LineformerMergeEffect,
+    Stage,
+)
 from ..render_assets import RenderAssets
 from ..render_constants import (
     ENTITY_SHADOW_ALPHA,
@@ -701,6 +708,31 @@ def _draw_falling_fx(
         pygame.draw.circle(screen, color, screen_center, radius, width=2)
 
 
+def _draw_lineformer_merge_fx(
+    screen: surface.Surface,
+    camera: Camera,
+    merge_effects: list[LineformerMergeEffect],
+    now_ms: int,
+) -> None:
+    if not merge_effects:
+        return
+    for fx in merge_effects:
+        duration = max(1, int(fx.duration_ms))
+        elapsed = max(0, now_ms - fx.started_at_ms)
+        if elapsed >= duration:
+            continue
+        t = max(0.0, min(1.0, elapsed / duration))
+        x = fx.start_pos[0] + (fx.target_pos[0] - fx.start_pos[0]) * t
+        y = fx.start_pos[1] + (fx.target_pos[1] - fx.start_pos[1]) * t
+        alpha = int(200 * (1.0 - t))
+        radius = max(2, int(ZOMBIE_RADIUS * (0.9 - 0.3 * t)))
+        color = (75, 75, 75, max(0, min(255, alpha)))
+        world_rect = pygame.Rect(0, 0, 1, 1)
+        world_rect.center = (int(x), int(y))
+        screen_center = camera.apply_rect(world_rect).center
+        pygame.draw.circle(screen, color, screen_center, radius)
+
+
 def _draw_decay_fx(
     screen: surface.Surface,
     camera: Camera,
@@ -1273,6 +1305,12 @@ def draw(
         state.falling_zombies,
         state.flashlight_count,
         state.dust_rings,
+        state.clock.elapsed_ms,
+    )
+    _draw_lineformer_merge_fx(
+        screen,
+        camera,
+        state.lineformer_merge_effects,
         state.clock.elapsed_ms,
     )
 

@@ -129,6 +129,12 @@ def update_entities(
     pitfall_cells = game_data.layout.pitfall_cells
     field_rect = game_data.layout.field_rect
     current_time = game_data.state.clock.elapsed_ms
+    if game_data.state.lineformer_merge_effects:
+        game_data.state.lineformer_merge_effects = [
+            fx
+            for fx in game_data.state.lineformer_merge_effects
+            if current_time - fx.started_at_ms < fx.duration_ms
+        ]
 
     all_walls = list(wall_group) if wall_index is None else None
 

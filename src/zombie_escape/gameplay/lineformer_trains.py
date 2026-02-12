@@ -18,6 +18,10 @@ from ..entities_constants import (
     ZombieKind,
 )
 from .constants import LAYER_ZOMBIES, MAX_ZOMBIES
+from .constants import (
+    LINEFORMER_MERGE_EFFECT_DURATION_MS,
+    LINEFORMER_MERGE_EFFECT_TRAVEL_RATIO,
+)
 from ..rng import get_rng
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -225,12 +229,35 @@ class LineformerTrainManager:
         src_train: LineformerTrain,
         dst_train: LineformerTrain,
         *,
+        game_data: "GameData",
         heads: dict[int, Zombie],
+        now_ms: int,
+        merge_target_pos: tuple[float, float] | None = None,
     ) -> None:
         if src_train.train_id == dst_train.train_id:
             return
         src_head = heads.get(src_train.head_id)
         if src_head is not None and src_head.alive():
+            target_pos = merge_target_pos
+            if target_pos is None:
+                target_pos = self._train_tail_position(dst_train, heads=heads)
+            if target_pos is not None:
+                from ..models import LineformerMergeEffect
+
+                shift_dx = float(target_pos[0]) - src_head.x
+                shift_dy = float(target_pos[1]) - src_head.y
+                effect_target = (
+                    src_head.x + shift_dx * LINEFORMER_MERGE_EFFECT_TRAVEL_RATIO,
+                    src_head.y + shift_dy * LINEFORMER_MERGE_EFFECT_TRAVEL_RATIO,
+                )
+                game_data.state.lineformer_merge_effects.append(
+                    LineformerMergeEffect(
+                        start_pos=(src_head.x, src_head.y),
+                        target_pos=effect_target,
+                        started_at_ms=now_ms,
+                        duration_ms=LINEFORMER_MERGE_EFFECT_DURATION_MS,
+                    )
+                )
             dst_train.marker_positions.append((src_head.x, src_head.y))
             dst_train.marker_angles.append(0.0)
             src_head.kill()
@@ -318,7 +345,14 @@ class LineformerTrainManager:
                                         ZOMBIE_LINEFORMER_JOIN_RADIUS
                                         * ZOMBIE_LINEFORMER_JOIN_RADIUS
                                     ):
-                                        self._merge_train_into(train, dst_train, heads=heads)
+                                        self._merge_train_into(
+                                            train,
+                                            dst_train,
+                                            game_data=game_data,
+                                            heads=heads,
+                                            now_ms=now_ms,
+                                            merge_target_pos=tail_pos,
+                                        )
                                         continue
                         train.target_id = None
                         head.lineformer_follow_target_id = None

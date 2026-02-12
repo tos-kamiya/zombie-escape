@@ -80,6 +80,16 @@ class DustRing:
 
 
 @dataclass
+class LineformerMergeEffect:
+    """Short trail effect shown when a lone lineformer merges into a train."""
+
+    start_pos: tuple[float, float]
+    target_pos: tuple[float, float]
+    started_at_ms: int
+    duration_ms: int
+
+
+@dataclass
 class GameClock:
     """Frame-driven gameplay clock with time scaling."""
 
@@ -144,6 +154,7 @@ class ProgressState:
     falling_zombies: list[FallingEntity]
     falling_spawn_carry: int
     dust_rings: list[DustRing]
+    lineformer_merge_effects: list[LineformerMergeEffect]
     electrified_cells: set[tuple[int, int]]
     player_wall_target_cell: tuple[int, int] | None
     player_wall_target_ttl: int
@@ -281,6 +292,7 @@ __all__ = [
     "LevelLayout",
     "FallingEntity",
     "DustRing",
+    "LineformerMergeEffect",
     "ProgressState",
     "Groups",
     "GameData",
