@@ -12,7 +12,6 @@ from ..entities_constants import (
     PLAYER_SPEED,
     ZOMBIE_DECAY_DURATION_FRAMES,
     ZOMBIE_LINEFORMER_DISSOLVE_SPAWN_MS,
-    ZOMBIE_LINEFORMER_FOLLOW_DISTANCE,
     ZOMBIE_LINEFORMER_JOIN_RADIUS,
     ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
     ZOMBIE_SPEED,
@@ -25,9 +24,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from ..models import GameData
 
 RNG = get_rng()
-_MARKER_HISTORY_SAMPLE_GAP = 5
-_MIN_STEP_SPEED = 0.25
-_MAX_HISTORY_STEP = 64
+_MARKER_HISTORY_SAMPLE_GAP = 10
+_MARKER_HISTORY_RECORD_MANHATTAN_THRESHOLD = 2.0
 
 
 @dataclass
@@ -101,13 +99,6 @@ class LineformerTrainManager:
         if train_id is not None:
             return train_id, None
         return None, target_id
-
-    def _history_step_for_head(self, head: Zombie | None) -> int:
-        if head is None:
-            return _MARKER_HISTORY_SAMPLE_GAP
-        speed = max(_MIN_STEP_SPEED, float(getattr(head, "speed", ZOMBIE_SPEED)))
-        step = int(round(float(ZOMBIE_LINEFORMER_FOLLOW_DISTANCE) / speed))
-        return max(2, min(_MAX_HISTORY_STEP, step))
 
     def _ensure_history_capacity(self, train: LineformerTrain, *, sample_step: int | None = None) -> None:
         marker_count = max(0, len(train.marker_positions))
@@ -330,8 +321,15 @@ class LineformerTrainManager:
             head = heads.get(train.head_id)
             if head is None:
                 continue
-            sample_step = self._history_step_for_head(head)
-            train.history.append((head.x, head.y))
+            sample_step = _MARKER_HISTORY_SAMPLE_GAP
+            current_pos = (head.x, head.y)
+            if not train.history:
+                train.history.append(current_pos)
+            else:
+                last_x, last_y = train.history[-1]
+                manhattan = abs(current_pos[0] - last_x) + abs(current_pos[1] - last_y)
+                if manhattan > _MARKER_HISTORY_RECORD_MANHATTAN_THRESHOLD:
+                    train.history.append(current_pos)
             self._ensure_history_capacity(train, sample_step=sample_step)
             if not train.marker_positions:
                 continue
