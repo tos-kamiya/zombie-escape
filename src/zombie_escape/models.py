@@ -24,9 +24,16 @@ from .localization import translate as tr
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from .entities import Camera, Car, Flashlight, FuelCan, Player, Shoes
     from .gameplay.decay_effects import DecayingEntityEffect
+    from .gameplay.lineformer_trains import LineformerTrainManager
     from .gameplay.spatial_index import SpatialIndex
     from .level_blueprints import Blueprint
     from .world_grid import WallIndex
+
+
+def _make_lineformer_manager():
+    from .gameplay.lineformer_trains import LineformerTrainManager
+
+    return LineformerTrainManager()
 
 
 @dataclass
@@ -185,6 +192,9 @@ class GameData:
     car: Car | None = None
     waiting_cars: list[Car] = field(default_factory=list)
     last_logged_waiting_cars: int | None = None
+    lineformer_trains: "LineformerTrainManager" = field(
+        default_factory=_make_lineformer_manager
+    )
 
 
 @dataclass(frozen=True)

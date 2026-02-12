@@ -308,6 +308,35 @@ def _zombie_lineformer_movement(
     return _zombie_move_toward(zombie, (target.x, target.y))
 
 
+def _zombie_lineformer_train_head_movement(
+    zombie: "Zombie",
+    walls: list["Wall"],
+    cell_size: int,
+    layout: "LevelLayout",
+    _player_center: tuple[float, float],
+    _nearby_zombies: Iterable["Zombie"],
+    _footprints: list["Footprint"],
+    *,
+    now_ms: int,
+) -> tuple[float, float]:
+    target_pos = zombie.lineformer_target_pos
+    if target_pos is None:
+        return _zombie_wander_movement(
+            zombie,
+            walls,
+            cell_size,
+            layout,
+            now_ms=now_ms,
+        )
+    dx = target_pos[0] - zombie.x
+    dy = target_pos[1] - zombie.y
+    distance_sq = dx * dx + dy * dy
+    follow_max = ZOMBIE_LINEFORMER_FOLLOW_DISTANCE + ZOMBIE_LINEFORMER_FOLLOW_TOLERANCE
+    if distance_sq <= follow_max * follow_max:
+        return 0.0, 0.0
+    return _zombie_move_toward(zombie, target_pos)
+
+
 def _line_of_sight_clear(
     start: tuple[float, float],
     end: tuple[float, float],

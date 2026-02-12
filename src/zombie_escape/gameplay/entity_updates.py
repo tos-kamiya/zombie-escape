@@ -360,6 +360,11 @@ def update_entities(
                 if rect_visible_on_screen(camera, survivor.rect):
                     survivors_on_screen.append(survivor)
 
+    game_data.lineformer_trains.pre_update(
+        game_data,
+        config=config,
+        now_ms=current_time,
+    )
     zombies_sorted: list[Zombie | ZombieDog] = sorted(
         list(zombie_group), key=lambda z: z.x
     )
@@ -554,6 +559,8 @@ def update_entities(
                 mode="pitfall",
             )
             game_data.state.falling_zombies.append(fall)
+
+    game_data.lineformer_trains.post_update(zombie_group)
 
     active_humans = [survivor for survivor in survivor_group if survivor.alive()]
     for bot in patrol_bots_sorted:

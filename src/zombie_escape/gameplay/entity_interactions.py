@@ -270,6 +270,7 @@ def _handle_buddy_interactions(
     camera: Any,
     walkable_cells: list[tuple[int, int]],
     cell_center: callable,
+    lineformer_trains: Any,
 ) -> None:
     stage = game_data.stage
     state = game_data.state
@@ -321,9 +322,13 @@ def _handle_buddy_interactions(
                     buddy, zombie_group, False, collide_circle_custom
                 )
             now = state.clock.elapsed_ms
+            marker_caught = lineformer_trains.any_marker_collides_circle(
+                center=(buddy.x, buddy.y),
+                radius=max(1.0, float(getattr(buddy, "collision_radius", HUMANOID_RADIUS))),
+            )
             buddy_caught = any(
                 is_active_zombie_threat(zombie, now_ms=now) for zombie in collisions
-            )
+            ) or marker_caught
             if buddy.alive() and buddy_caught:
                 if player.in_car and active_car:
                     fov_target = active_car
@@ -452,6 +457,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         camera=camera,
         walkable_cells=walkable_cells,
         cell_center=_cell_center,
+        lineformer_trains=game_data.lineformer_trains,
     )
 
     # Player entering an active car already under control
@@ -557,6 +563,10 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             else:
                 car_center = active_car.rect.center
                 car_radius = getattr(active_car, "collision_radius", 0.0)
+            marker_hits = game_data.lineformer_trains.pop_markers_colliding_circle(
+                center=(float(car_center[0]), float(car_center[1])),
+                radius=float(car_radius),
+            )
             for zombie in zombies_hit:
                 if not zombie.alive():
                     continue
@@ -586,10 +596,13 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 moving_hits += 1
             if zombies_hit:
                 contact_hits = len(zombies_hit) - moving_hits
+                contact_hits += marker_hits
                 ram_damage = CAR_ZOMBIE_RAM_DAMAGE * moving_hits
                 contact_damage = CAR_ZOMBIE_CONTACT_DAMAGE * contact_hits
                 total_damage = ram_damage + contact_damage
                 active_car._take_damage(total_damage)
+            elif marker_hits > 0:
+                active_car._take_damage(CAR_ZOMBIE_CONTACT_DAMAGE * marker_hits)
 
     # Car hitting patrol bots
     if player.in_car and active_car and active_car.health > 0 and patrol_bot_group:
@@ -635,9 +648,13 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             shrunk_player, zombie_group, False, collide_circle_custom
         )
         now = state.clock.elapsed_ms
+        marker_hit = game_data.lineformer_trains.any_marker_collides_circle(
+            center=(player.x, player.y),
+            radius=max(1.0, float(getattr(player, "collision_radius", HUMANOID_RADIUS))),
+        )
         if any(
             is_active_zombie_threat(zombie, now_ms=now) for zombie in collisions
-        ):
+        ) or marker_hit:
             if not state.game_over:
                 state.game_over = True
                 state.game_over_at = state.clock.elapsed_ms

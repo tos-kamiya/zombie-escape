@@ -52,6 +52,8 @@ from ..render_constants import (
     PLAYER_SHADOW_ALPHA_MULT,
     PLAYER_SHADOW_RADIUS_MULT,
     FADE_IN_DURATION_MS,
+    ZOMBIE_BODY_COLOR,
+    ZOMBIE_OUTLINE_COLOR,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -1001,6 +1003,61 @@ def _draw_entities(
     return player_screen_rect or camera.apply_rect(player.rect)
 
 
+def _draw_lineformer_train_markers(
+    screen: surface.Surface,
+    camera: Camera,
+    marker_draw_data: list[tuple[float, float, float]],
+) -> None:
+    if not marker_draw_data:
+        return
+    marker_radius = max(2, int(ZOMBIE_RADIUS))
+    screen_rect_inflated = screen.get_rect().inflate(100, 100)
+    for world_x, world_y, angle_rad in marker_draw_data:
+        world_rect = pygame.Rect(
+            int(world_x - marker_radius),
+            int(world_y - marker_radius),
+            marker_radius * 2,
+            marker_radius * 2,
+        )
+        marker_rect = camera.apply_rect(world_rect)
+        if not marker_rect.colliderect(screen_rect_inflated):
+            continue
+        center_x, center_y = marker_rect.center
+        pygame.draw.circle(screen, ZOMBIE_BODY_COLOR, (center_x, center_y), marker_radius)
+        pygame.draw.circle(
+            screen,
+            ZOMBIE_OUTLINE_COLOR,
+            (center_x, center_y),
+            marker_radius,
+            width=1,
+        )
+        offset = int(round(marker_radius * 0.3))
+        side_offset = int(round(marker_radius * 0.7))
+        arm_len = int(round(marker_radius * 0.9))
+        arm2_len = int(round(marker_radius * 0.6))
+        forward_x = math.cos(angle_rad)
+        forward_y = math.sin(angle_rad)
+        right_x = -forward_y
+        right_y = forward_x
+        elbow_x = center_x + forward_x * offset + right_x * side_offset
+        elbow_y = center_y + forward_y * offset + right_y * side_offset
+        hand_x = elbow_x + right_x * arm_len
+        hand_y = elbow_y + right_y * arm_len
+        tip_x = hand_x - right_x * (arm2_len * 0.59) + forward_x * (arm2_len * 0.81)
+        tip_y = hand_y - right_y * (arm2_len * 0.59) + forward_y * (arm2_len * 0.81)
+        pygame.draw.lines(
+            screen,
+            ZOMBIE_OUTLINE_COLOR,
+            False,
+            [
+                (int(elbow_x), int(elbow_y)),
+                (int(hand_x), int(hand_y)),
+                (int(tip_x), int(tip_y)),
+            ],
+            width=2,
+        )
+
+
 def _draw_fuel_indicator(
     screen: surface.Surface,
     player_screen_rect: pygame.Rect,
@@ -1197,6 +1254,11 @@ def draw(
         player,
         has_fuel=has_fuel,
         show_fuel_indicator=not (stage and stage.endurance_stage),
+    )
+    _draw_lineformer_train_markers(
+        screen,
+        camera,
+        game_data.lineformer_trains.iter_marker_draw_data(),
     )
 
     _draw_decay_fx(

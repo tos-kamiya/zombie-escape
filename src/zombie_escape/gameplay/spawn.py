@@ -17,6 +17,7 @@ from ..entities import (
     random_position_outside_building,
     spritecollideany_walls,
 )
+from ..entities.zombie_movement import _zombie_lineformer_train_head_movement
 from ..entities_constants import (
     FAST_ZOMBIE_BASE_SPEED,
     PLAYER_SPEED,
@@ -362,13 +363,60 @@ def _create_zombie(
             x=float(start_pos[0]),
             y=float(start_pos[1]),
         )
+    movement_strategy = None
+    if kind == ZombieKind.LINEFORMER:
+        movement_strategy = _zombie_lineformer_train_head_movement
     return Zombie(
         x=float(start_pos[0]),
         y=float(start_pos[1]),
         speed=base_speed,
         kind=kind,
+        movement_strategy=movement_strategy,
         decay_duration_frames=decay_duration_frames,
     )
+
+
+def _spawn_lineformer_request(
+    game_data: GameData,
+    config: dict[str, Any],
+    *,
+    start_pos: tuple[int, int],
+    allow_player_overlap: bool = False,
+    check_walls: bool = True,
+) -> Zombie | None:
+    zombie_group = game_data.groups.zombie_group
+    all_sprites = game_data.groups.all_sprites
+    wall_group = game_data.groups.wall_group
+    manager = game_data.lineformer_trains
+    train_id, target_id = manager.resolve_spawn_target(zombie_group, start_pos)
+    if train_id is not None:
+        if manager.append_marker(train_id, start_pos):
+            return manager.get_train_head(train_id, zombie_group)
+        return None
+    candidate = _create_zombie(
+        config,
+        start_pos=start_pos,
+        stage=game_data.stage,
+        kind=ZombieKind.LINEFORMER,
+    )
+    if not isinstance(candidate, Zombie):
+        return None
+    if check_walls and spritecollideany_walls(candidate, wall_group):
+        return None
+    if not _is_spawn_position_clear(
+        game_data,
+        candidate,
+        allow_player_overlap=allow_player_overlap,
+    ):
+        return None
+    zombie_group.add(candidate)
+    all_sprites.add(candidate, layer=LAYER_ZOMBIES)
+    manager.create_train_for_head(
+        candidate,
+        target_id=target_id,
+        now_ms=game_data.state.clock.elapsed_ms,
+    )
+    return candidate
 
 
 def place_fuel_can(
@@ -800,6 +848,14 @@ def spawn_initial_zombies(
 
     for spawn_index, pos in enumerate(positions):
         kind = _pick_zombie_variant(game_data.stage)
+        if kind == ZombieKind.LINEFORMER:
+            _spawn_lineformer_request(
+                game_data,
+                config,
+                start_pos=(int(pos[0]), int(pos[1])),
+                check_walls=True,
+            )
+            continue
         tentative = _create_zombie(
             config,
             start_pos=pos,
@@ -966,10 +1022,19 @@ def _spawn_nearby_zombie(
         min_player_dist=ZOMBIE_SPAWN_PLAYER_BUFFER,
         attempts=50,
     )
+    kind = _pick_zombie_variant(game_data.stage)
+    if kind == ZombieKind.LINEFORMER:
+        return _spawn_lineformer_request(
+            game_data,
+            config,
+            start_pos=spawn_pos,
+            check_walls=True,
+        )
     new_zombie = _create_zombie(
         config,
         start_pos=spawn_pos,
         stage=game_data.stage,
+        kind=kind,
     )
     if spritecollideany_walls(new_zombie, wall_group):
         return None
@@ -994,10 +1059,19 @@ def spawn_exterior_zombie(
         level_rect.height,
         hint_pos=(player.x, player.y),
     )
+    kind = _pick_zombie_variant(game_data.stage)
+    if kind == ZombieKind.LINEFORMER:
+        return _spawn_lineformer_request(
+            game_data,
+            config,
+            start_pos=spawn_pos,
+            check_walls=False,
+        )
     new_zombie = _create_zombie(
         config,
         start_pos=spawn_pos,
         stage=game_data.stage,
+        kind=kind,
     )
     zombie_group.add(new_zombie)
     all_sprites.add(new_zombie, layer=LAYER_ZOMBIES)
@@ -1029,6 +1103,16 @@ def update_falling_zombies(game_data: GameData, config: dict[str, Any]) -> None:
 
         if getattr(fall, "mode", "spawn") == "spawn":
             if len(zombie_group) < MAX_ZOMBIES:
+                if fall.kind == ZombieKind.LINEFORMER:
+                    _spawn_lineformer_request(
+                        game_data,
+                        config,
+                        start_pos=fall.target_pos,
+                        allow_player_overlap=True,
+                        check_walls=False,
+                    )
+                    state.falling_zombies.remove(fall)
+                    continue
                 candidate = _create_zombie(
                     config,
                     start_pos=fall.target_pos,
