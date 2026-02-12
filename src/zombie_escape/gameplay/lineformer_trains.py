@@ -244,6 +244,22 @@ class LineformerTrainManager:
         self._ensure_history_capacity(dst_train)
         self.trains.pop(src_train.train_id, None)
 
+    def _train_length(self, train: LineformerTrain) -> int:
+        return 1 + len(train.marker_positions)
+
+    def _train_tail_position(
+        self,
+        train: LineformerTrain,
+        *,
+        heads: dict[int, Zombie],
+    ) -> tuple[float, float] | None:
+        if train.marker_positions:
+            return train.marker_positions[-1]
+        head = heads.get(train.head_id)
+        if head is None:
+            return None
+        return (head.x, head.y)
+
     def pre_update(self, game_data: "GameData", *, config: dict, now_ms: int) -> None:
         zombie_group = game_data.groups.zombie_group
         targets = self._iter_non_lineformer_targets(zombie_group)
@@ -275,8 +291,19 @@ class LineformerTrainManager:
                     if owner_train_id is not None and owner_train_id != train.train_id:
                         dst_train = self.trains.get(owner_train_id)
                         if dst_train is not None and dst_train.state == "active":
-                            self._merge_train_into(train, dst_train, heads=heads)
-                            continue
+                            # Merge only when this train is a lone head and close to the
+                            # destination train's tail to avoid visible teleport jumps.
+                            if self._train_length(train) == 1:
+                                tail_pos = self._train_tail_position(dst_train, heads=heads)
+                                if tail_pos is not None:
+                                    dx = tail_pos[0] - head.x
+                                    dy = tail_pos[1] - head.y
+                                    if dx * dx + dy * dy <= (
+                                        ZOMBIE_LINEFORMER_JOIN_RADIUS
+                                        * ZOMBIE_LINEFORMER_JOIN_RADIUS
+                                    ):
+                                        self._merge_train_into(train, dst_train, heads=heads)
+                                        continue
                     head.lineformer_target_pos = (target.x, target.y)
                     head.lineformer_last_target_seen_ms = now_ms
                 else:
