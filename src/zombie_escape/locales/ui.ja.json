@@ -184,9 +184,9 @@
         "name": "#26 外向きスパイラル",
         "description": "ゾンビの湧きタイミングを見切り、外へ出るか、内を目指すか。"
       },
-      "stage_debug_20": {
-        "name": "デバッグ 20x20",
-        "description": "20x20の小型テストステージ。lineformerが主に出現。"
+      "stage27": {
+        "name": "#27 行列ゾンビ",
+        "description": "並びたいらしい。"
       }
     },
     "status": {

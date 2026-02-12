@@ -184,9 +184,9 @@
         "name": "#26 Spiral Drift",
         "description": "Read the timing of zombie spawns. Head outward, or push inward?"
       },
-      "stage_debug_20": {
-        "name": "Debug 20x20",
-        "description": "Compact test field (20x20). Lineformer zombies are the main population."
+      "stage27": {
+        "name": "#27 Lineformer",
+        "description": "They like to line up."
       }
     },
     "status": {
