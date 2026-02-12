@@ -62,11 +62,16 @@ class LineformerTrainManager:
         self,
         pos: tuple[float, float],
         targets: list[Zombie],
+        *,
+        excluded_target_ids: set[int] | None = None,
     ) -> Zombie | None:
         best: Zombie | None = None
         best_dist_sq = ZOMBIE_LINEFORMER_JOIN_RADIUS * ZOMBIE_LINEFORMER_JOIN_RADIUS
         px, py = pos
+        excluded = excluded_target_ids or set()
         for target in targets:
+            if target.lineformer_id in excluded:
+                continue
             dx = target.x - px
             dy = target.y - py
             dist_sq = dx * dx + dy * dy
@@ -272,9 +277,27 @@ class LineformerTrainManager:
             if head is None:
                 self._start_dissolving(train, now_ms=now_ms)
             elif train.state == "active":
+                is_sole_train = self._train_length(train) == 1
                 target = target_by_id.get(train.target_id) if train.target_id is not None else None
                 if target is None:
-                    target = self._find_nearest_target((head.x, head.y), targets)
+                    reserved_targets = {
+                        target_id
+                        for target_id, owner_train_id in self.target_to_train.items()
+                        if owner_train_id != train.train_id
+                    }
+                    if is_sole_train:
+                        target = self._find_nearest_target(
+                            (head.x, head.y),
+                            targets,
+                            excluded_target_ids=reserved_targets,
+                        )
+                        # Fallback for merge behavior:
+                        # a lone train may temporarily lock onto a reserved target so it
+                        # can merge when it reaches the other train's tail.
+                        if target is None:
+                            target = self._find_nearest_target((head.x, head.y), targets)
+                    else:
+                        target = self._find_nearest_target((head.x, head.y), targets)
                     train.target_id = target.lineformer_id if target is not None else None
                 head.lineformer_follow_target_id = train.target_id
                 if target is not None:
@@ -295,6 +318,13 @@ class LineformerTrainManager:
                                     ):
                                         self._merge_train_into(train, dst_train, heads=heads)
                                         continue
+                        train.target_id = None
+                        head.lineformer_follow_target_id = None
+                        head.lineformer_target_pos = None
+                        head.lineformer_last_target_seen_ms = None
+                        if train.marker_positions:
+                            self._start_dissolving(train, now_ms=now_ms)
+                        continue
                     head.lineformer_target_pos = (target.x, target.y)
                     head.lineformer_last_target_seen_ms = now_ms
                 else:
