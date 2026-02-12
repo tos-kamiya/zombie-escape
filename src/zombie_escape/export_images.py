@@ -278,6 +278,19 @@ def export_images(
     _save_surface(wall_surface, wall_path, scale=output_scale)
     saved.append(wall_path)
 
+    lineformer = Zombie(center_x, center_y, kind=ZombieKind.LINEFORMER)
+    lineformer.lineformer_target_pos = (center_x + cell_size, center_y)
+    lineformer._apply_render_overlays()
+    lineformer_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=lineformer.rect,
+        sprites=[lineformer],
+        enable_shadows=True,
+    )
+    lineformer_path = out / "zombie-lineformer.png"
+    _save_surface(lineformer_surface, lineformer_path, scale=output_scale)
+    saved.append(lineformer_path)
+
     zombie_dog = ZombieDog(center_x, center_y)
     zombie_dog_surface = _render_studio_snapshot(
         cell_size=cell_size,

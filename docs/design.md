@@ -126,6 +126,7 @@
 
 - プレイ特性: `requires_fuel`, `buddy_required_count`, `survivor_rescue_stage`, `endurance_stage`, `intro_key`
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`, `survivor_spawn_rate`
+- スポーン数: `zombie_spawn_count_per_interval`（スポーンタイミングごとの湧き数、デフォルト1）
 - 内外/落下スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`, `interior_fall_spawn_weight`（重みを分け合う）
 - サバイバル設定: `endurance_goal_ms`, `fuel_spawn_count`
 - 初期アイテム: `initial_flashlight_count`, `initial_shoes_count`
@@ -178,7 +179,7 @@
 
 ### 4.2 ゾンビ
 
-- `Zombie`（通常/追跡/壁沿いの3系統を movement_strategy で切り替え）
+- `Zombie`（通常/追跡/壁沿い/列形成の4系統を movement_strategy で切り替え）
   - 耐久値と減衰（decay）を持ち、時間経過で消滅する。
 - `ZombieDog`: レモン型のゾンビ犬。16方向画像で描画し、当たり判定は頭のみ。
   - 耐久値と減衰（decay）を持ち、時間経過で消滅する。
@@ -256,9 +257,12 @@
   - 一定時間壁を検知できなければ徘徊に切り替える。右手/左手の選択は個体ごとにランダム。
 - 列形成移動 (`zombie_lineformer_movement`)
   - lineformer は近隣のゾンビを追従し、列の末尾へ接続する。
+  - 探索半径は共通（`ZOMBIE_LINEFORMER_JOIN_RADIUS`）で、ゾンビ列参加・人間ターゲット追従の両方に同じ距離を使う。
   - 追従対象が一定時間見つからない場合は列を離脱して徘徊へ戻る。
   - 追従対象が lineformer で、かつ追従対象を持たない場合は列が崩壊したとみなし離脱する。
   - 列の先頭は常に non-lineformer（通常/追跡/壁沿い）で、lineformer は先頭にならない。
+  - 同一ターゲットを追う lineformer が近傍に複数いる場合は、重複側を離脱させて 1 対 1 の追従を維持する。
+  - 列に接続できない場合は、プレイヤー/生存者（相棒含む）などの人間ターゲットへ追従を試みる。
   - ループ追従が発生した場合はフールプルーフとして離脱する。
 
 補助要素:
@@ -270,7 +274,8 @@
 - `Zombie.update()` 側で壁衝突・近接回避・外周逸脱時の補正を処理。
 - 落とし穴（`pitfall_cells`）に中心座標が入った場合、ゾンビは即座に消滅し、縮小しながら穴へ吸い込まれる落下アニメーション（`mode="pitfall"`）が再生される。
 - wander中は落とし穴を避ける（次セルが落とし穴なら反転して回避し、回避不能ならそのフレームは停止）。追跡/直進時は落下し得る。
-- `create_zombie()` で `stage.zombie_tracker_ratio` を参照し追跡型の出現率を決定。
+- `create_zombie()` は `Stage` の各 `zombie_*_ratio` を参照して変種を選ぶ。
+- スポーンタイミング到達時は `stage.zombie_spawn_count_per_interval` 回だけスポーン試行を行う（成功時のみタイマー更新）。
 
 ### 5.1 追跡ゾンビの行列対策
 
@@ -408,7 +413,10 @@
   5. 足跡のフェード描画
   6. Sprite 群を `Camera` でオフセットして描画
      - レイヤーは `gameplay/constants.py` の `LAYER_*` 定数で管理（壁/アイテム/車&ロボット/ゾンビ/プレイヤー&生存者）。
-  7. 追跡型/壁沿いゾンビには識別用の装飾を追加（追跡は鼻ライン、壁沿いは壁側の手）
+  7. 追跡型/壁沿い/lineformer ゾンビには識別用の装飾を追加
+     - 追跡型: 鼻ライン
+     - 壁沿い: 壁側の手
+     - lineformer: 進行/追従方向へ「く」の字の右腕ライン（輪郭色）
   8. ヒント矢印 (`_draw_hint_arrow`)
   9. 霧 (`fog_surfaces`。ハッチは半径に応じて線形に濃くなる)
      - 開始半径は `FOG_HATCH_LINEAR_START_RATIO`、最大濃度は `FOG_HATCH_DENSITY_SCALE` で制御。

@@ -664,6 +664,7 @@ STAGES: list[Stage] = [
         initial_shoes_count=1,
         waiting_car_target_count=1,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
+        zombie_spawn_count_per_interval=2,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

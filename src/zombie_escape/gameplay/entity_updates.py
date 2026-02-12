@@ -330,7 +330,14 @@ def update_entities(
         and not spawn_blocked
         and current_time - game_data.state.last_zombie_spawn_time > spawn_interval
     ):
-        if spawn_weighted_zombie(game_data, config):
+        spawn_count = max(1, int(stage.zombie_spawn_count_per_interval))
+        spawned_any = False
+        for _ in range(spawn_count):
+            if len(zombie_group) >= MAX_ZOMBIES:
+                break
+            if spawn_weighted_zombie(game_data, config):
+                spawned_any = True
+        if spawned_any:
             game_data.state.last_zombie_spawn_time = current_time
 
     # Update zombies

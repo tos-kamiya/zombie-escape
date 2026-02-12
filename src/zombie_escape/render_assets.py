@@ -56,7 +56,7 @@ _ZOMBIE_DOG_DIRECTIONAL_CACHE: dict[
 ] = {}
 _PATROL_BOT_DIRECTIONAL_CACHE: dict[tuple[int, int], list[pygame.Surface]] = {}
 _RUBBLE_SURFACE_CACHE: dict[tuple, pygame.Surface] = {}
-_ZOMBIE_OVERLAY_PADDING_RATIO = 3.0
+_HUMANOID_SURFACE_EXTENT_RATIO = 2.0
 
 RUBBLE_ROTATION_DEG = 5.0
 RUBBLE_OFFSET_RATIO = 0.06
@@ -129,7 +129,7 @@ def _build_capped_surface(
     outline_color: tuple[int, int, int] = HUMANOID_OUTLINE_COLOR,
 ) -> pygame.Surface:
     hand_radius, hand_distance = _hand_defaults(radius)
-    max_extent = max(radius, hand_distance + hand_radius)
+    max_extent = max(radius, int(round(radius * _HUMANOID_SURFACE_EXTENT_RATIO)))
     size = max_extent * 2 + 2
     surface = pygame.Surface((size, size), pygame.SRCALPHA)
     center = (max_extent + 1, max_extent + 1)
@@ -574,20 +574,8 @@ def build_zombie_directional_surfaces(
         draw_hands=draw_hands,
         outline_color=ZOMBIE_OUTLINE_COLOR,
     )
-    padding = max(0, int(round(radius * _ZOMBIE_OVERLAY_PADDING_RATIO)))
-    if padding <= 0:
-        _ZOMBIE_DIRECTIONAL_CACHE[cache_key] = surfaces
-        return surfaces
-    padded_surfaces: list[pygame.Surface] = []
-    for surface in surfaces:
-        padded = pygame.Surface(
-            (surface.get_width() + padding * 2, surface.get_height() + padding * 2),
-            pygame.SRCALPHA,
-        )
-        padded.blit(surface, (padding, padding))
-        padded_surfaces.append(padded)
-    _ZOMBIE_DIRECTIONAL_CACHE[cache_key] = padded_surfaces
-    return padded_surfaces
+    _ZOMBIE_DIRECTIONAL_CACHE[cache_key] = surfaces
+    return surfaces
 
 
 def build_zombie_dog_directional_surfaces(

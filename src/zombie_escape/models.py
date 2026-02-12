@@ -234,6 +234,7 @@ class Stage:
     # - spawn weights: pick area by weight (normalized).
     # - zombie ratios: pick variant by weight (normalized).
     spawn_interval_ms: int = ZOMBIE_SPAWN_DELAY_MS
+    zombie_spawn_count_per_interval: int = 1
     initial_interior_spawn_rate: float = 0.015
     exterior_spawn_weight: float = 1.0
     interior_spawn_weight: float = 0.0
