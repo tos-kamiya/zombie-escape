@@ -707,6 +707,10 @@ def generate_random_blueprint(
     sparse_density = DEFAULT_SPARSE_WALL_DENSITY
     wall_line_count = DEFAULT_WALL_LINES
     original_wall_algo = wall_algo
+    if wall_algo == "normal":
+        wall_algo = "default"
+    elif wall_algo.startswith("normal."):
+        wall_algo = f"default.{wall_algo[len('normal.'):]}"
     if wall_algo == "sparse":
         print("WARNING: 'sparse' is deprecated. Use 'sparse_moore' instead.")
         wall_algo = "sparse_moore"
