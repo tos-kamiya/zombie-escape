@@ -259,6 +259,8 @@ class Zombie(pygame.sprite.Sprite):
         for other in zombies:
             if other is self or not other.alive():
                 continue
+            if self.kind != ZombieKind.LINEFORMER and other.kind == ZombieKind.LINEFORMER:
+                continue
             dx = other.x - next_x
             dy = other.y - next_y
             if (

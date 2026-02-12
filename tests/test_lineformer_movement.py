@@ -161,3 +161,13 @@ def test_lineformer_does_not_follow_human_outside_search_radius() -> None:
     )
 
     assert follower.lineformer_target_pos is None
+
+
+def test_non_lineformer_ignores_lineformer_for_repulsion() -> None:
+    normal = Zombie(100, 100, kind=ZombieKind.NORMAL)
+    lineformer = Zombie(101, 100, kind=ZombieKind.LINEFORMER)
+
+    move_x, move_y = normal._avoid_other_zombies(1.0, 0.0, [lineformer])
+
+    assert move_x == 1.0
+    assert move_y == 0.0
