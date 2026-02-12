@@ -1258,7 +1258,7 @@ def draw(
     _draw_lineformer_train_markers(
         screen,
         camera,
-        game_data.lineformer_trains.iter_marker_draw_data(),
+        game_data.lineformer_trains.iter_marker_draw_data(game_data.groups.zombie_group),
     )
 
     _draw_decay_fx(

@@ -26,6 +26,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
 RNG = get_rng()
 _MARKER_HISTORY_SAMPLE_GAP = 10
 _MARKER_HISTORY_RECORD_MANHATTAN_THRESHOLD = 2.0
+_MARKER_DRAW_SHIFT_ALPHA = 0.45
+_MARKER_DRAW_SHIFT_MAX = ZOMBIE_LINEFORMER_JOIN_RADIUS
 
 
 @dataclass
@@ -383,12 +385,33 @@ class LineformerTrainManager:
                 else:
                     train.marker_angles.append(angle)
 
-    def iter_marker_draw_data(self) -> list[tuple[float, float, float]]:
+    def iter_marker_draw_data(self, zombie_group) -> list[tuple[float, float, float]]:
         draw_data: list[tuple[float, float, float]] = []
+        heads = {
+            z.lineformer_id: z
+            for z in zombie_group
+            if isinstance(z, Zombie)
+            and z.alive()
+            and z.kind == ZombieKind.LINEFORMER
+            and getattr(z, "lineformer_train_id", None) is not None
+        }
         for train in self.trains.values():
+            shift_x = 0.0
+            shift_y = 0.0
+            if train.marker_positions:
+                head = heads.get(train.head_id)
+                if head is not None:
+                    base_x, base_y = train.marker_positions[0]
+                    shift_x = (head.x - base_x) * _MARKER_DRAW_SHIFT_ALPHA
+                    shift_y = (head.y - base_y) * _MARKER_DRAW_SHIFT_ALPHA
+                    shift_dist = math.hypot(shift_x, shift_y)
+                    if shift_dist > _MARKER_DRAW_SHIFT_MAX and shift_dist > 0:
+                        scale = _MARKER_DRAW_SHIFT_MAX / shift_dist
+                        shift_x *= scale
+                        shift_y *= scale
             for idx, marker_pos in enumerate(train.marker_positions):
                 angle = train.marker_angles[idx] if idx < len(train.marker_angles) else 0.0
-                draw_data.append((marker_pos[0], marker_pos[1], angle))
+                draw_data.append((marker_pos[0] + shift_x, marker_pos[1] + shift_y, angle))
         return draw_data
 
     def total_marker_count(self) -> int:
