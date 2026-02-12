@@ -56,6 +56,7 @@ _ZOMBIE_DOG_DIRECTIONAL_CACHE: dict[
 ] = {}
 _PATROL_BOT_DIRECTIONAL_CACHE: dict[tuple[int, int], list[pygame.Surface]] = {}
 _RUBBLE_SURFACE_CACHE: dict[tuple, pygame.Surface] = {}
+_ZOMBIE_OVERLAY_PADDING_RATIO = 3.0
 
 RUBBLE_ROTATION_DEG = 5.0
 RUBBLE_OFFSET_RATIO = 0.06
@@ -476,6 +477,42 @@ def draw_humanoid_nose(
     )
 
 
+def draw_lineformer_direction_arm(
+    surface: pygame.Surface,
+    *,
+    radius: int,
+    angle_rad: float,
+    color: tuple[int, int, int],
+) -> None:
+    center_x, center_y = surface.get_rect().center
+    scale = 1.0
+    offset = int(round(radius * 0.3 * scale))
+    side_offset = int(round(radius * 0.7 * scale))
+    arm_len = int(round(radius * 0.9 * scale))
+    arm2_len = int(round(radius * 0.6 * scale))
+    forward_x = math.cos(angle_rad)
+    forward_y = math.sin(angle_rad)
+    right_x = -forward_y
+    right_y = forward_x
+    elbow_x = center_x + forward_x * offset + right_x * side_offset
+    elbow_y = center_y + forward_y * offset + right_y * side_offset
+    hand_x = elbow_x + right_x * (arm_len * 1.0) + forward_x * (arm_len * 0)
+    hand_y = elbow_y + right_y * (arm_len * 1.0) + forward_y * (arm_len * 0)
+    tip_x = hand_x - right_x * (arm2_len * 0.59) + forward_x * (arm2_len * 0.81)
+    tip_y = hand_y - right_y * (arm2_len * 0.59) + forward_y * (arm2_len * 0.81)
+    pygame.draw.lines(
+        surface,
+        color,
+        False,
+        [
+            (int(elbow_x), int(elbow_y)),
+            (int(hand_x), int(hand_y)),
+            (int(tip_x), int(tip_y)),
+        ],
+        width=2,
+    )
+
+
 def draw_lightning_marker(
     surface: pygame.Surface,
     *,
@@ -537,8 +574,20 @@ def build_zombie_directional_surfaces(
         draw_hands=draw_hands,
         outline_color=ZOMBIE_OUTLINE_COLOR,
     )
-    _ZOMBIE_DIRECTIONAL_CACHE[cache_key] = surfaces
-    return surfaces
+    padding = max(0, int(round(radius * _ZOMBIE_OVERLAY_PADDING_RATIO)))
+    if padding <= 0:
+        _ZOMBIE_DIRECTIONAL_CACHE[cache_key] = surfaces
+        return surfaces
+    padded_surfaces: list[pygame.Surface] = []
+    for surface in surfaces:
+        padded = pygame.Surface(
+            (surface.get_width() + padding * 2, surface.get_height() + padding * 2),
+            pygame.SRCALPHA,
+        )
+        padded.blit(surface, (padding, padding))
+        padded_surfaces.append(padded)
+    _ZOMBIE_DIRECTIONAL_CACHE[cache_key] = padded_surfaces
+    return padded_surfaces
 
 
 def build_zombie_dog_directional_surfaces(
@@ -996,6 +1045,7 @@ __all__ = [
     "build_player_directional_surfaces",
     "draw_humanoid_hand",
     "draw_humanoid_nose",
+    "draw_lineformer_direction_arm",
     "draw_lightning_marker",
     "build_survivor_directional_surfaces",
     "build_zombie_directional_surfaces",

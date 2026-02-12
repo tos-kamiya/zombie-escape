@@ -22,6 +22,7 @@ from ..entities_constants import (
     PLAYER_SPEED,
     ZombieKind,
     ZOMBIE_DECAY_DURATION_FRAMES,
+    ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
     ZOMBIE_SPEED,
 )
 from ..gameplay_constants import (
@@ -88,26 +89,44 @@ def _pick_zombie_variant(stage: Stage | None) -> ZombieKind:
     normal_ratio = 1.0
     tracker_ratio = 0.0
     wall_hugging_ratio = 0.0
+    lineformer_ratio = 0.0
     dog_ratio = 0.0
     if stage is not None:
         normal_ratio = max(0.0, min(1.0, stage.zombie_normal_ratio))
         tracker_ratio = max(0.0, min(1.0, stage.zombie_tracker_ratio))
         wall_hugging_ratio = max(0.0, min(1.0, stage.zombie_wall_hugging_ratio))
+        lineformer_ratio = max(0.0, min(1.0, stage.zombie_lineformer_ratio))
         dog_ratio = max(0.0, min(1.0, stage.zombie_dog_ratio))
-        if normal_ratio + tracker_ratio + wall_hugging_ratio + dog_ratio <= 0:
+        if (
+            normal_ratio
+            + tracker_ratio
+            + wall_hugging_ratio
+            + lineformer_ratio
+            + dog_ratio
+            <= 0
+        ):
             normal_ratio = 1.0
             tracker_ratio = 0.0
             wall_hugging_ratio = 0.0
+            lineformer_ratio = 0.0
             dog_ratio = 0.0
         if (
             normal_ratio == 1.0
-            and (tracker_ratio > 0.0 or wall_hugging_ratio > 0.0 or dog_ratio > 0.0)
-            and tracker_ratio + wall_hugging_ratio + dog_ratio <= 1.0
+            and (
+                tracker_ratio > 0.0
+                or wall_hugging_ratio > 0.0
+                or lineformer_ratio > 0.0
+                or dog_ratio > 0.0
+            )
+            and tracker_ratio + wall_hugging_ratio + lineformer_ratio + dog_ratio <= 1.0
         ):
             normal_ratio = max(
-                0.0, 1.0 - tracker_ratio - wall_hugging_ratio - dog_ratio
+                0.0,
+                1.0 - tracker_ratio - wall_hugging_ratio - lineformer_ratio - dog_ratio,
             )
-    total_ratio = normal_ratio + tracker_ratio + wall_hugging_ratio + dog_ratio
+    total_ratio = (
+        normal_ratio + tracker_ratio + wall_hugging_ratio + lineformer_ratio + dog_ratio
+    )
     if total_ratio <= 0:
         return ZombieKind.NORMAL
     pick = RNG.random() * total_ratio
@@ -117,6 +136,8 @@ def _pick_zombie_variant(stage: Stage | None) -> ZombieKind:
         return ZombieKind.TRACKER
     if pick < normal_ratio + tracker_ratio + wall_hugging_ratio:
         return ZombieKind.WALL_HUGGER
+    if pick < normal_ratio + tracker_ratio + wall_hugging_ratio + lineformer_ratio:
+        return ZombieKind.LINEFORMER
     return ZombieKind.DOG
 
 
@@ -296,7 +317,6 @@ def _create_zombie(
         base_speed = RNG.uniform(ZOMBIE_SPEED, FAST_ZOMBIE_BASE_SPEED)
     else:
         base_speed = ZOMBIE_SPEED
-    base_speed = min(base_speed, PLAYER_SPEED - 0.05)
     if stage is not None:
         decay_duration_frames = max(
             1.0,
@@ -306,6 +326,9 @@ def _create_zombie(
         decay_duration_frames = ZOMBIE_DECAY_DURATION_FRAMES
     if kind is None:
         kind = _pick_zombie_variant(stage)
+    if kind == ZombieKind.LINEFORMER:
+        base_speed *= ZOMBIE_LINEFORMER_SPEED_MULTIPLIER
+    base_speed = min(base_speed, PLAYER_SPEED - 0.05)
     if kind == ZombieKind.TRACKER:
         ratio = (
             ZOMBIE_TRACKER_DECAY_DURATION_FRAMES / ZOMBIE_DECAY_DURATION_FRAMES

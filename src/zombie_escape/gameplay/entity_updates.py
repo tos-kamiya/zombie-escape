@@ -21,6 +21,7 @@ from ..entities_constants import (
     ZombieKind,
     ZOMBIE_DOG_PACK_CHASE_RANGE,
     ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE,
+    ZOMBIE_LINEFORMER_JOIN_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_TRACKER_CROWD_BAND_WIDTH,
     ZOMBIE_TRACKER_GRID_CROWD_COUNT,
@@ -471,6 +472,8 @@ def update_entities(
                     )
         if isinstance(zombie, ZombieDog):
             search_radius = max(ZOMBIE_DOG_PACK_CHASE_RANGE, base_radius)
+        elif zombie.kind == ZombieKind.LINEFORMER:
+            search_radius = max(ZOMBIE_LINEFORMER_JOIN_RADIUS, base_radius)
         else:
             search_radius = base_radius
         nearby_candidates = spatial_index.query_radius(

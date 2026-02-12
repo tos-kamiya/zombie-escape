@@ -240,6 +240,7 @@ class Stage:
     interior_fall_spawn_weight: float = 0.0
     zombie_tracker_ratio: float = 0.0
     zombie_wall_hugging_ratio: float = 0.0
+    zombie_lineformer_ratio: float = 0.0
     zombie_normal_ratio: float = 1.0
     zombie_dog_ratio: float = 0.0
     zombie_decay_duration_frames: int = ZOMBIE_DECAY_DURATION_FRAMES

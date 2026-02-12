@@ -144,9 +144,12 @@ def _draw_status_bar(
             kinds = [getattr(z, "kind", None) for z in zombies]
             tracker = sum(1 for kind in kinds if kind == ZombieKind.TRACKER)
             wall = sum(1 for kind in kinds if kind == ZombieKind.WALL_HUGGER)
+            lineformer = sum(1 for kind in kinds if kind == ZombieKind.LINEFORMER)
             dog_count = sum(1 for kind in kinds if kind == ZombieKind.DOG)
-            normal = max(0, total - tracker - wall - dog_count)
-            debug_counts = f"Z:{total} N:{normal} T:{tracker} W:{wall} D:{dog_count}"
+            normal = max(0, total - tracker - wall - lineformer - dog_count)
+            debug_counts = (
+                f"Z:{total} N:{normal} T:{tracker} W:{wall} L:{lineformer} D:{dog_count}"
+            )
             if falling_spawn_carry is not None:
                 debug_counts = f"{debug_counts} C:{max(0, falling_spawn_carry)}"
             parts.append(debug_counts)

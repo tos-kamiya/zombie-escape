@@ -33,16 +33,18 @@ from ..models import Footprint, LevelLayout
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_directional_surfaces,
+    draw_lineformer_direction_arm,
     draw_humanoid_hand,
     draw_humanoid_nose,
 )
-from ..render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR
+from ..render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR, ZOMBIE_OUTLINE_COLOR
 from ..rng import get_rng
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from ..world_grid import apply_cell_edge_nudge
 from .patrol_paralyze import draw_paralyze_marker
 from .movement import _circle_wall_collision
 from .zombie_movement import (
+    _zombie_lineformer_movement,
     _zombie_normal_movement,
     _zombie_tracker_movement,
     _zombie_wall_hug_movement,
@@ -72,6 +74,8 @@ class MovementStrategy(Protocol):
 
 
 class Zombie(pygame.sprite.Sprite):
+    _next_lineformer_id = 1
+
     def __init__(
         self: Self,
         x: float,
@@ -114,9 +118,19 @@ class Zombie(pygame.sprite.Sprite):
                 movement_strategy = _zombie_tracker_movement
             elif self.kind == ZombieKind.WALL_HUGGER:
                 movement_strategy = _zombie_wall_hug_movement
+            elif self.kind == ZombieKind.LINEFORMER:
+                movement_strategy = _zombie_lineformer_movement
             else:
                 movement_strategy = _zombie_normal_movement
         self.movement_strategy = movement_strategy
+        self.lineformer_id = Zombie._next_lineformer_id
+        Zombie._next_lineformer_id += 1
+        self.lineformer_follow_target_id: int | None = None
+        self.lineformer_head_id: int | None = None
+        self.lineformer_rank = 0
+        self.lineformer_target_pos: tuple[float, float] | None = None
+        self.lineformer_last_target_seen_ms: int | None = None
+        self.lineformer_join_cooldown_until_ms = 0
         self.tracker_target_pos: tuple[float, float] | None = None
         self.tracker_target_time: int | None = None
         self.tracker_last_scan_time = 0
@@ -330,7 +344,7 @@ class Zombie(pygame.sprite.Sprite):
             self.kind == ZombieKind.WALL_HUGGER
             and self.wall_hug_side != 0
             and self.wall_hug_last_side_has_wall
-        )
+        ) or self.kind == ZombieKind.LINEFORMER
         if not needs_overlay:
             self.image = base_surface
             return
@@ -355,6 +369,18 @@ class Zombie(pygame.sprite.Sprite):
                 radius=self.collision_radius,
                 angle_rad=hand_angle,
                 color=ZOMBIE_NOSE_COLOR,
+            )
+        if self.kind == ZombieKind.LINEFORMER:
+            target_angle = angle_rad
+            if self.lineformer_target_pos is not None:
+                target_dx = self.lineformer_target_pos[0] - self.x
+                target_dy = self.lineformer_target_pos[1] - self.y
+                target_angle = math.atan2(target_dy, target_dx)
+            draw_lineformer_direction_arm(
+                self.image,
+                radius=int(self.collision_radius),
+                angle_rad=target_angle,
+                color=ZOMBIE_OUTLINE_COLOR,
             )
 
     def _apply_paralyze_overlay(self: Self, now_ms: int) -> None:

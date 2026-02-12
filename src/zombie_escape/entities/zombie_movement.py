@@ -6,6 +6,12 @@ from typing import Iterable, TYPE_CHECKING
 import pygame
 
 from ..entities_constants import (
+    ZombieKind,
+    ZOMBIE_LINEFORMER_JOIN_COOLDOWN_MS,
+    ZOMBIE_LINEFORMER_JOIN_RADIUS,
+    ZOMBIE_LINEFORMER_MAX_CHAIN_DEPTH,
+    ZOMBIE_LINEFORMER_TARGET_LOST_MS,
+    ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_TRACKER_FAR_SCENT_RADIUS,
     ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS,
@@ -28,6 +34,276 @@ if TYPE_CHECKING:
     from . import Wall, Zombie
 
 RNG = get_rng()
+
+
+def _lineformer_leave_line(zombie: "Zombie", *, now_ms: int) -> None:
+    zombie.lineformer_follow_target_id = None
+    zombie.lineformer_head_id = None
+    zombie.lineformer_rank = 0
+    zombie.lineformer_target_pos = None
+    zombie.lineformer_last_target_seen_ms = None
+    zombie.lineformer_join_cooldown_until_ms = (
+        now_ms + ZOMBIE_LINEFORMER_JOIN_COOLDOWN_MS
+    )
+
+
+def _lineformer_find_join_target(
+    zombie: "Zombie",
+    nearby_zombies: Iterable["Zombie"],
+    *,
+    now_ms: int,
+) -> "Zombie | None":
+    if now_ms < zombie.lineformer_join_cooldown_until_ms:
+        return None
+    join_radius_sq = ZOMBIE_LINEFORMER_JOIN_RADIUS * ZOMBIE_LINEFORMER_JOIN_RADIUS
+    lineformer_targets: list[tuple[float, Zombie]] = []
+    non_lineformer_targets: list[tuple[float, Zombie]] = []
+    nearby_lineformers: list[Zombie] = []
+    for other in nearby_zombies:
+        if other is zombie:
+            continue
+        if not hasattr(other, "lineformer_id"):
+            continue
+        if not other.alive():
+            continue
+        if other.kind == ZombieKind.DOG:
+            continue
+        dx = other.x - zombie.x
+        dy = other.y - zombie.y
+        dist_sq = dx * dx + dy * dy
+        if dist_sq > join_radius_sq:
+            continue
+        if other.kind == ZombieKind.LINEFORMER:
+            nearby_lineformers.append(other)
+            if other.lineformer_follow_target_id is None:
+                continue
+            lineformer_targets.append((dist_sq, other))
+        else:
+            non_lineformer_targets.append((dist_sq, other))
+    if lineformer_targets:
+        # Prefer appending to an actual tail node (nobody follows it in local neighborhood).
+        followed_ids = {
+            lf.lineformer_follow_target_id
+            for lf in nearby_lineformers
+            if lf.lineformer_follow_target_id is not None
+        }
+        tail_targets = [
+            entry for entry in lineformer_targets if entry[1].lineformer_id not in followed_ids
+        ]
+        candidates = tail_targets if tail_targets else lineformer_targets
+        candidates.sort(key=lambda item: item[0])
+        return candidates[0][1]
+    if non_lineformer_targets:
+        non_lineformer_targets.sort(key=lambda item: item[0])
+        return non_lineformer_targets[0][1]
+    return None
+
+
+def _lineformer_chain_broken(
+    zombie: "Zombie",
+    target: "Zombie",
+    zombie_by_id: dict[int, "Zombie"],
+) -> bool:
+    if target.kind != ZombieKind.LINEFORMER:
+        return False
+    if target.lineformer_follow_target_id is None:
+        return True
+    visited = {zombie.lineformer_id}
+    current = target
+    depth = 0
+    while current.kind == ZombieKind.LINEFORMER:
+        depth += 1
+        if depth > ZOMBIE_LINEFORMER_MAX_CHAIN_DEPTH:
+            return True
+        current_id = current.lineformer_id
+        if current_id in visited:
+            return True
+        visited.add(current_id)
+        next_id = current.lineformer_follow_target_id
+        if next_id is None:
+            return True
+        next_target = zombie_by_id.get(next_id)
+        if next_target is None:
+            return False
+        current = next_target
+    return False
+
+
+def _lineformer_has_duplicate_target(
+    zombie: "Zombie",
+    candidates: list["Zombie"],
+    *,
+    target_id: int,
+) -> bool:
+    for other in candidates:
+        if other is zombie or not other.alive():
+            continue
+        if other.kind != ZombieKind.LINEFORMER:
+            continue
+        if other.lineformer_follow_target_id != target_id:
+            continue
+        # Deterministic tie-break: lower id keeps the slot.
+        if other.lineformer_id < zombie.lineformer_id:
+            return True
+    return False
+
+
+def _lineformer_follow_human_or_wander(
+    zombie: "Zombie",
+    walls: list["Wall"],
+    cell_size: int,
+    layout: "LevelLayout",
+    human_target: tuple[float, float],
+    *,
+    now_ms: int,
+) -> tuple[float, float]:
+    dx = human_target[0] - zombie.x
+    dy = human_target[1] - zombie.y
+    human_range_sq = ZOMBIE_LINEFORMER_JOIN_RADIUS * ZOMBIE_LINEFORMER_JOIN_RADIUS
+    dist_sq = dx * dx + dy * dy
+    if dist_sq > human_range_sq:
+        zombie.lineformer_target_pos = None
+        return _zombie_wander_movement(
+            zombie,
+            walls,
+            cell_size,
+            layout,
+            now_ms=now_ms,
+        )
+    zombie.lineformer_target_pos = human_target
+    if dist_sq <= 1.0:
+        zombie.lineformer_target_pos = None
+        return _zombie_wander_movement(
+            zombie,
+            walls,
+            cell_size,
+            layout,
+            now_ms=now_ms,
+        )
+    return _zombie_move_toward(zombie, human_target)
+
+
+def _zombie_lineformer_movement(
+    zombie: "Zombie",
+    walls: list["Wall"],
+    cell_size: int,
+    layout: "LevelLayout",
+    player_center: tuple[float, float],
+    nearby_zombies: Iterable["Zombie"],
+    _footprints: list["Footprint"],
+    *,
+    now_ms: int,
+) -> tuple[float, float]:
+    candidates = [other for other in nearby_zombies if isinstance(other, type(zombie))]
+    candidates.append(zombie)
+    zombie_by_id = {
+        other.lineformer_id: other
+        for other in candidates
+        if other.alive()
+    }
+    if zombie.lineformer_follow_target_id is None:
+        zombie.lineformer_target_pos = None
+        join_target = _lineformer_find_join_target(zombie, candidates, now_ms=now_ms)
+        if join_target is None:
+            return _lineformer_follow_human_or_wander(
+                zombie,
+                walls,
+                cell_size,
+                layout,
+                player_center,
+                now_ms=now_ms,
+            )
+        if join_target.kind == ZombieKind.LINEFORMER:
+            if join_target.lineformer_head_id is None:
+                return _lineformer_follow_human_or_wander(
+                    zombie,
+                    walls,
+                    cell_size,
+                    layout,
+                    player_center,
+                    now_ms=now_ms,
+                )
+            zombie.lineformer_head_id = join_target.lineformer_head_id
+            zombie.lineformer_rank = join_target.lineformer_rank + 1
+        else:
+            zombie.lineformer_head_id = join_target.lineformer_id
+            zombie.lineformer_rank = 1
+        zombie.lineformer_follow_target_id = join_target.lineformer_id
+        zombie.lineformer_last_target_seen_ms = now_ms
+
+    target_id = zombie.lineformer_follow_target_id
+    if target_id is None:
+        return _lineformer_follow_human_or_wander(
+            zombie,
+            walls,
+            cell_size,
+            layout,
+            player_center,
+            now_ms=now_ms,
+        )
+    if _lineformer_has_duplicate_target(zombie, candidates, target_id=target_id):
+        _lineformer_leave_line(zombie, now_ms=now_ms)
+        return _lineformer_follow_human_or_wander(
+            zombie,
+            walls,
+            cell_size,
+            layout,
+            player_center,
+            now_ms=now_ms,
+        )
+    target = zombie_by_id.get(target_id)
+    if target is None or not target.alive():
+        zombie.lineformer_target_pos = None
+        last_seen = zombie.lineformer_last_target_seen_ms
+        if last_seen is None or now_ms - last_seen >= ZOMBIE_LINEFORMER_TARGET_LOST_MS:
+            _lineformer_leave_line(zombie, now_ms=now_ms)
+        return _lineformer_follow_human_or_wander(
+            zombie,
+            walls,
+            cell_size,
+            layout,
+            player_center,
+            now_ms=now_ms,
+        )
+
+    zombie.lineformer_last_target_seen_ms = now_ms
+    zombie.lineformer_target_pos = (target.x, target.y)
+    if zombie.lineformer_head_id is None:
+        _lineformer_leave_line(zombie, now_ms=now_ms)
+        return _lineformer_follow_human_or_wander(
+            zombie,
+            walls,
+            cell_size,
+            layout,
+            player_center,
+            now_ms=now_ms,
+        )
+    if target.kind == ZombieKind.LINEFORMER and target.lineformer_follow_target_id is None:
+        _lineformer_leave_line(zombie, now_ms=now_ms)
+        return _lineformer_follow_human_or_wander(
+            zombie,
+            walls,
+            cell_size,
+            layout,
+            player_center,
+            now_ms=now_ms,
+        )
+    if _lineformer_chain_broken(zombie, target, zombie_by_id):
+        _lineformer_leave_line(zombie, now_ms=now_ms)
+        return _lineformer_follow_human_or_wander(
+            zombie,
+            walls,
+            cell_size,
+            layout,
+            player_center,
+            now_ms=now_ms,
+        )
+    dx = target.x - zombie.x
+    dy = target.y - zombie.y
+    desired_gap = ZOMBIE_SEPARATION_DISTANCE * 0.9
+    if dx * dx + dy * dy <= desired_gap * desired_gap:
+        return 0.0, 0.0
+    return _zombie_move_toward(zombie, (target.x, target.y))
 
 
 def _line_of_sight_clear(
