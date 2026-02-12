@@ -19,6 +19,7 @@ __all__ = [
     "rect_visible_on_screen",
     "fov_radius_for_flashlights",
     "is_entity_in_fov",
+    "is_active_zombie_threat",
     "find_interior_spawn_positions",
     "find_nearby_offscreen_spawn_position",
     "find_exterior_spawn_position",
@@ -54,6 +55,13 @@ def is_entity_in_fov(
     dx = entity_rect.centerx - fov_target.rect.centerx
     dy = entity_rect.centery - fov_target.rect.centery
     return (dx * dx + dy * dy) <= fov_radius * fov_radius
+
+
+def is_active_zombie_threat(zombie: pygame.sprite.Sprite, *, now_ms: int) -> bool:
+    """Return True only when the zombie can currently threaten humans."""
+    return (not getattr(zombie, "carbonized", False)) and now_ms >= getattr(
+        zombie, "patrol_paralyze_until_ms", 0
+    )
 
 
 def _scatter_positions_on_walkable(

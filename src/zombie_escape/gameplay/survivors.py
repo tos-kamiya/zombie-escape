@@ -31,6 +31,7 @@ from .spawn import _create_zombie
 from .spatial_index import SpatialKind
 from .utils import (
     find_nearby_offscreen_spawn_position,
+    is_active_zombie_threat,
     is_entity_in_fov,
     rect_visible_on_screen,
 )
@@ -387,7 +388,7 @@ def handle_survivor_zombie_collisions(
             zombie = zombies[idx]
             if not zombie.alive():
                 continue
-            if now < getattr(zombie, "patrol_paralyze_until_ms", 0):
+            if not is_active_zombie_threat(zombie, now_ms=now):
                 continue
             dy = zombie.rect.centery - survivor.rect.centery
             if abs(dy) > search_radius:

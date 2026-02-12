@@ -44,7 +44,7 @@ from .survivors import (
     increase_survivor_capacity,
     respawn_buddies_near_player,
 )
-from .utils import is_entity_in_fov, rect_visible_on_screen
+from .utils import is_active_zombie_threat, is_entity_in_fov, rect_visible_on_screen
 from .ambient import sync_ambient_palette_with_flashlights
 from .constants import SCREAM_MESSAGE_DISPLAY_FRAMES
 from .state import schedule_timed_message
@@ -315,9 +315,16 @@ def _handle_buddy_interactions(
                     buddy.kill()
                     continue
 
-            if buddy.alive() and pygame.sprite.spritecollide(
-                buddy, zombie_group, False, collide_circle_custom
-            ):
+            collisions: list[pygame.sprite.Sprite] = []
+            if buddy.alive():
+                collisions = pygame.sprite.spritecollide(
+                    buddy, zombie_group, False, collide_circle_custom
+                )
+            now = state.clock.elapsed_ms
+            buddy_caught = any(
+                is_active_zombie_threat(zombie, now_ms=now) for zombie in collisions
+            )
+            if buddy.alive() and buddy_caught:
                 if player.in_car and active_car:
                     fov_target = active_car
                 else:
@@ -334,10 +341,10 @@ def _handle_buddy_interactions(
                         duration_frames=SCREAM_MESSAGE_DISPLAY_FRAMES,
                         clear_on_input=False,
                         color=BUDDY_COLOR,
-                        now_ms=state.clock.elapsed_ms,
+                        now_ms=now,
                     )
                     state.game_over = True
-                    state.game_over_at = state.game_over_at or state.clock.elapsed_ms
+                    state.game_over_at = state.game_over_at or now
                 else:
                     if walkable_cells:
                         new_cell = RNG.choice(walkable_cells)
@@ -629,9 +636,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         )
         now = state.clock.elapsed_ms
         if any(
-            (not zombie.carbonized)
-            and now >= getattr(zombie, "patrol_paralyze_until_ms", 0)
-            for zombie in collisions
+            is_active_zombie_threat(zombie, now_ms=now) for zombie in collisions
         ):
             if not state.game_over:
                 state.game_over = True
