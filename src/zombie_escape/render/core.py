@@ -1330,6 +1330,7 @@ def draw(
         seed=state.seed,
         debug_mode=state.debug_mode,
         zombie_group=game_data.groups.zombie_group,
+        lineformer_marker_count=game_data.lineformer_trains.total_marker_count(),
         falling_spawn_carry=state.falling_spawn_carry,
         show_fps=state.show_fps,
         fps=fps,

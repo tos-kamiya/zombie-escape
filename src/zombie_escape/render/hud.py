@@ -99,6 +99,7 @@ def _draw_status_bar(
     seed: int | None = None,
     debug_mode: bool = False,
     zombie_group: sprite.Group | None = None,
+    lineformer_marker_count: int | None = None,
     falling_spawn_carry: int | None = None,
     show_fps: bool = False,
     fps: float | None = None,
@@ -145,10 +146,13 @@ def _draw_status_bar(
         tracker = sum(1 for kind in kinds if kind == ZombieKind.TRACKER)
         wall = sum(1 for kind in kinds if kind == ZombieKind.WALL_HUGGER)
         lineformer = sum(1 for kind in kinds if kind == ZombieKind.LINEFORMER)
+        marker_count = max(0, int(lineformer_marker_count or 0))
+        lineformer_total = lineformer + marker_count
         dog_count = sum(1 for kind in kinds if kind == ZombieKind.DOG)
         normal = max(0, total - tracker - wall - lineformer - dog_count)
         debug_counts = (
-            f"Z:{total} N:{normal} T:{tracker} W:{wall} L:{lineformer} D:{dog_count}"
+            f"Z:{total} N:{normal} T:{tracker} W:{wall} "
+            f"L:{lineformer}({lineformer_total}) D:{dog_count}"
         )
         if falling_spawn_carry is not None:
             debug_counts = f"{debug_counts} C:{max(0, falling_spawn_carry)}"

@@ -363,6 +363,9 @@ class LineformerTrainManager:
                 draw_data.append((marker_pos[0], marker_pos[1], angle))
         return draw_data
 
+    def total_marker_count(self) -> int:
+        return sum(len(train.marker_positions) for train in self.trains.values())
+
     def any_marker_collides_circle(
         self,
         *,
