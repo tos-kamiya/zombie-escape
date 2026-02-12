@@ -137,22 +137,21 @@ def _draw_status_bar(
         parts.append(tr("status.fast"))
     if steel_on:
         parts.append(tr("status.steel"))
-    if debug_mode:
-        if zombie_group is not None:
-            zombies = [z for z in zombie_group if z.alive()]
-            total = len(zombies)
-            kinds = [getattr(z, "kind", None) for z in zombies]
-            tracker = sum(1 for kind in kinds if kind == ZombieKind.TRACKER)
-            wall = sum(1 for kind in kinds if kind == ZombieKind.WALL_HUGGER)
-            lineformer = sum(1 for kind in kinds if kind == ZombieKind.LINEFORMER)
-            dog_count = sum(1 for kind in kinds if kind == ZombieKind.DOG)
-            normal = max(0, total - tracker - wall - lineformer - dog_count)
-            debug_counts = (
-                f"Z:{total} N:{normal} T:{tracker} W:{wall} L:{lineformer} D:{dog_count}"
-            )
-            if falling_spawn_carry is not None:
-                debug_counts = f"{debug_counts} C:{max(0, falling_spawn_carry)}"
-            parts.append(debug_counts)
+    debug_counts: str | None = None
+    if debug_mode and zombie_group is not None:
+        zombies = [z for z in zombie_group if z.alive()]
+        total = len(zombies)
+        kinds = [getattr(z, "kind", None) for z in zombies]
+        tracker = sum(1 for kind in kinds if kind == ZombieKind.TRACKER)
+        wall = sum(1 for kind in kinds if kind == ZombieKind.WALL_HUGGER)
+        lineformer = sum(1 for kind in kinds if kind == ZombieKind.LINEFORMER)
+        dog_count = sum(1 for kind in kinds if kind == ZombieKind.DOG)
+        normal = max(0, total - tracker - wall - lineformer - dog_count)
+        debug_counts = (
+            f"Z:{total} N:{normal} T:{tracker} W:{wall} L:{lineformer} D:{dog_count}"
+        )
+        if falling_spawn_carry is not None:
+            debug_counts = f"{debug_counts} C:{max(0, falling_spawn_carry)}"
     status_text = " | ".join(parts)
     color = LIGHT_GRAY
 
@@ -178,16 +177,21 @@ def _draw_status_bar(
                 right=bar_rect.right - 12, centery=bar_rect.centery
             )
             screen.blit(seed_surface, seed_rect)
+        overlay_parts: list[str] = []
         if show_fps and fps is not None:
-            fps_text = f"FPS:{fps:.1f}"
-            fps_surface = render_text_surface(
+            overlay_parts.append(f"FPS:{fps:.1f}")
+        if debug_counts:
+            overlay_parts.append(debug_counts)
+        if overlay_parts:
+            overlay_text = " | ".join(overlay_parts)
+            overlay_surface = render_text_surface(
                 font,
-                fps_text,
+                overlay_text,
                 LIGHT_GRAY,
                 line_height_scale=font_settings.line_height_scale,
             )
-            fps_rect = fps_surface.get_rect(left=12, bottom=max(2, bar_rect.top))
-            screen.blit(fps_surface, fps_rect)
+            overlay_rect = overlay_surface.get_rect(left=12, bottom=max(2, bar_rect.top))
+            screen.blit(overlay_surface, overlay_rect)
     except pygame.error as e:
         print(f"Error rendering status bar: {e}")
 
