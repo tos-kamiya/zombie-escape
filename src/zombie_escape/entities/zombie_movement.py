@@ -7,11 +7,12 @@ import pygame
 
 from ..entities_constants import (
     ZombieKind,
+    ZOMBIE_LINEFORMER_FOLLOW_DISTANCE,
+    ZOMBIE_LINEFORMER_FOLLOW_TOLERANCE,
     ZOMBIE_LINEFORMER_JOIN_COOLDOWN_MS,
     ZOMBIE_LINEFORMER_JOIN_RADIUS,
     ZOMBIE_LINEFORMER_MAX_CHAIN_DEPTH,
     ZOMBIE_LINEFORMER_TARGET_LOST_MS,
-    ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_TRACKER_FAR_SCENT_RADIUS,
     ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS,
@@ -300,8 +301,9 @@ def _zombie_lineformer_movement(
         )
     dx = target.x - zombie.x
     dy = target.y - zombie.y
-    desired_gap = ZOMBIE_SEPARATION_DISTANCE * 0.9
-    if dx * dx + dy * dy <= desired_gap * desired_gap:
+    distance_sq = dx * dx + dy * dy
+    follow_max = ZOMBIE_LINEFORMER_FOLLOW_DISTANCE + ZOMBIE_LINEFORMER_FOLLOW_TOLERANCE
+    if distance_sq <= follow_max * follow_max:
         return 0.0, 0.0
     return _zombie_move_toward(zombie, (target.x, target.y))
 
