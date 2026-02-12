@@ -179,6 +179,10 @@
         "name": "#25 Distribution Center",
         "description": "It’s a wide facility -- search efficiently. This time, there are only two exits.",
         "intro": "A map shows the floor\ndivided into eight sectors."
+      },
+      "stage26": {
+        "name": "#26 Spiral Drift(tentative)",
+        "description": "Read the timing of zombie spawns. Head outward, or push inward?"
       }
     },
     "status": {
