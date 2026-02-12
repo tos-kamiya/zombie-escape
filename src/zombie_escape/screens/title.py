@@ -568,13 +568,13 @@ def title_screen(
                     toggle_fullscreen()
                     adjust_menu_logical_size()
                     continue
-                if event.key == pygame.K_LEFT:
+                if event.key in (pygame.K_LEFT, pygame.K_a):
                     if current_page > 0:
                         current_page -= 1
                         options, stage_options = _build_options(current_page)
                         selected = 0
                     continue
-                if event.key == pygame.K_RIGHT:
+                if event.key in (pygame.K_RIGHT, pygame.K_d):
                     if current_page < len(stage_pages) - 1 and _page_available(
                         current_page + 1
                     ):
