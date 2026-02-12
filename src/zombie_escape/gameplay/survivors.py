@@ -367,6 +367,7 @@ def handle_survivor_zombie_collisions(
     car = game_data.car
     active_car = car if car and car.alive() else None
     fov_target = active_car if player and player.in_car and active_car else player
+    now = game_data.state.clock.elapsed_ms
 
     for survivor in list(survivor_group):
         if not survivor.alive():
@@ -385,6 +386,8 @@ def handle_survivor_zombie_collisions(
                 break
             zombie = zombies[idx]
             if not zombie.alive():
+                continue
+            if now < getattr(zombie, "patrol_paralyze_until_ms", 0):
                 continue
             dy = zombie.rect.centery - survivor.rect.centery
             if abs(dy) > search_radius:

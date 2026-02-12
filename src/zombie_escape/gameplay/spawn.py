@@ -739,6 +739,33 @@ def spawn_initial_zombies(
     if not spawn_cells:
         return
 
+    def _apply_initial_health_gradient(
+        zombie: Zombie | ZombieDog,
+        *,
+        index: int,
+        total: int,
+        now_ms: int,
+    ) -> None:
+        if total <= 0:
+            return
+        if total == 1:
+            target_ratio = 1.0
+        else:
+            progress = index / (total - 1)
+            target_ratio = 1.0 - (0.5 * progress)
+        max_health = max(1, int(getattr(zombie, "max_health", 1)))
+        current_health = max(0, int(getattr(zombie, "health", max_health)))
+        target_health = max(1, min(max_health, int(round(max_health * target_ratio))))
+        damage = max(0, current_health - target_health)
+        if damage <= 0:
+            return
+        if isinstance(zombie, Zombie):
+            zombie.take_damage(
+                damage, source="initial_spawn_gradient", now_ms=now_ms
+            )
+        else:
+            zombie.take_damage(damage, now_ms=now_ms)
+
     spawn_rate = max(0.0, game_data.stage.initial_interior_spawn_rate)
     positions = find_interior_spawn_positions(
         spawn_cells,
@@ -748,7 +775,7 @@ def spawn_initial_zombies(
         min_player_dist=ZOMBIE_SPAWN_PLAYER_BUFFER,
     )
 
-    for pos in positions:
+    for spawn_index, pos in enumerate(positions):
         kind = _pick_zombie_variant(game_data.stage)
         tentative = _create_zombie(
             config,
@@ -758,6 +785,12 @@ def spawn_initial_zombies(
         )
         if spritecollideany_walls(tentative, wall_group):
             continue
+        _apply_initial_health_gradient(
+            tentative,
+            index=spawn_index,
+            total=len(positions),
+            now_ms=game_data.state.clock.elapsed_ms,
+        )
         zombie_group.add(tentative)
         all_sprites.add(tentative, layer=LAYER_ZOMBIES)
 
