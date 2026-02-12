@@ -106,6 +106,7 @@
 - 落下スポーン補助: `falling_spawn_carry`（落下スポーン位置が見つからない場合に繰り越すカウント）
 - スポーンタイミング: `last_zombie_spawn_time`
 - 演出: `dust_rings`
+- 演出: `lineformer_merge_effects`（lineformer 合流時の短時間移動エフェクト）
 - 巡回ロボット床効果: `electrified_cells`（巡回ロボットが現在いるセル集合。毎フレーム再計算）
 
 ### 3.2 ゲーム状態 (models.GameData)
@@ -119,6 +120,7 @@
 - `cell_size`, `level_width`, `level_height`: ステージ別のタイルサイズに応じたワールド寸法
 - `fuel`, `flashlights`, `shoes`, `player`, `car`, `waiting_cars` など
 - ログ補助: `last_logged_waiting_cars`
+- lineformer 列管理: `lineformer_trains`（先頭実体＋後続マーカー列の管理）
 
 ### 3.3 ステージ定義 (models.Stage)
 
@@ -255,15 +257,15 @@
   - 視界外は前方と±45度のプローブで壁までの距離を測り、目標ギャップ(約4px)を維持するよう旋回する。
   - 壁が遠い場合は壁側へ寄り、近すぎる場合は離れる方向へ補正する。
   - 一定時間壁を検知できなければ徘徊に切り替える。右手/左手の選択は個体ごとにランダム。
-- 列形成移動 (`zombie_lineformer_movement`)
-  - lineformer は近隣のゾンビを追従し、列の末尾へ接続する。
-  - 探索半径は共通（`ZOMBIE_LINEFORMER_JOIN_RADIUS`）で、ゾンビ列参加・人間ターゲット追従の両方に同じ距離を使う。
-  - 追従対象が一定時間見つからない場合は列を離脱して徘徊へ戻る。
-  - 追従対象が lineformer で、かつ追従対象を持たない場合は列が崩壊したとみなし離脱する。
-  - 列の先頭は常に non-lineformer（通常/追跡/壁沿い）で、lineformer は先頭にならない。
-  - 同一ターゲットを追う lineformer が近傍に複数いる場合は、重複側を離脱させて 1 対 1 の追従を維持する。
-  - 列に接続できない場合は、プレイヤー/生存者（相棒含む）などの人間ターゲットへ追従を試みる。
-  - ループ追従が発生した場合はフールプルーフとして離脱する。
+- 列形成移動（トレイン管理）
+  - lineformer は `LineformerTrainManager` で列単位に管理する（`gameplay/lineformer_trains.py`）。
+  - 列は「先頭1体のみ実体Zombie」、2体目以降は「マーカー（座標列）」として管理する。
+  - 新規lineformerは、近傍の non-lineformer ゾンビを探索し、既存列の対象ならその列末尾マーカーへ追加する。
+  - 列先頭の追従対象は他列と競合しないよう調整される。競合時はそのフレームではターゲットを外し、次フレームで再探索する。
+  - 単独列が他列末尾へ近づいた場合は合流し、合流元先頭は短時間の遷移エフェクトを出して消える。
+  - 先頭消失時は列を `dissolving` とし、前から1体ずつ実体lineformerとして再スポーンさせる。
+  - マーカーは履歴点を間引いて追従位置を作る（履歴記録はマンハッタン閾値超過時のみ）。
+  - マーカーは非スプライトで、当たり判定は player/buddy/car のみを対象にする。
 
 補助要素:
 
@@ -417,6 +419,9 @@
      - 追跡型: 鼻ライン
      - 壁沿い: 壁側の手
      - lineformer: 進行/追従方向へ「く」の字の右腕ライン（輪郭色）
+  7.5 lineformer トレインのマーカー描画（実体ではない後続要素）
+     - マーカーはトレイン履歴から算出した位置を描画し、先頭との差分シフトで見た目の飛びを緩和する。
+     - 合流時は `lineformer_merge_effects` の短時間エフェクト（灰色の移動丸）を重ねて描画する。
   8. ヒント矢印 (`_draw_hint_arrow`)
   9. 霧 (`fog_surfaces`。ハッチは半径に応じて線形に濃くなる)
      - 開始半径は `FOG_HATCH_LINEAR_START_RATIO`、最大濃度は `FOG_HATCH_DENSITY_SCALE` で制御。
@@ -428,6 +433,7 @@
 
 - `_draw_status_bar()`
   - 設定フラグやステージ番号、シード値を表示。
+  - debug表示時の `L` は `L:<実体数>(<実体+マーカー総数>)` を表示する。
 - HUD/ゲームプレイ画面のテキストは `render_text_unscaled` で非拡大描画する。
 - 導入セリフ/短時間メッセージ (`_draw_timed_message` in `render/hud.py`)
   - `TimedMessage` の `align` に応じて左寄せ/中央寄せで描画。
