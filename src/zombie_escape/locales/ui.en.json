@@ -187,10 +187,6 @@
       "stage27": {
         "name": "#27 Lineformer",
         "description": "They like to line up."
-      },
-      "stage28": {
-        "name": "#28 Empty Can Run",
-        "description": "Grab an empty can, refill it at a station, then escape by car."
       }
     },
     "status": {
