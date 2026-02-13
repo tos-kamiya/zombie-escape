@@ -20,7 +20,9 @@ from ..entities_constants import (
     ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG,
     ZOMBIE_WALL_HUG_PROBE_STEP,
     ZOMBIE_WALL_HUG_SENSOR_DISTANCE,
+    ZOMBIE_WALL_HUG_SENSOR_DIST_RATIO,
     ZOMBIE_WALL_HUG_TARGET_GAP,
+    ZOMBIE_WALL_HUG_TURN_STEP_DEG,
 )
 from ..gameplay.constants import FOOTPRINT_STEP_DISTANCE
 from ..rng import get_rng
@@ -181,10 +183,19 @@ def _zombie_wall_hug_movement(
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if zombie.wall_hug_angle is None:
         zombie.wall_hug_angle = zombie.wander_angle
+
+    # Scale sensor distance with cell size to handle larger grids (e.g. 60px)
+    dynamic_sensor_dist = max(ZOMBIE_WALL_HUG_SENSOR_DISTANCE, cell_size * ZOMBIE_WALL_HUG_SENSOR_DIST_RATIO)
+    sensor_distance = dynamic_sensor_dist + zombie.collision_radius
+    probe_offset = math.radians(ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG)
+
+    # Adjust target gap for the diagonal probe angle (45 deg)
+    # Perpendicular gap = diagonal_dist * cos(45).
+    # To get a 4px perpendicular gap, we need 4.0 / cos(45) ~= 5.66px diagonal gap.
+    target_gap_diagonal = ZOMBIE_WALL_HUG_TARGET_GAP / math.cos(probe_offset)
+
     if zombie.wall_hug_side == 0:
-        sensor_distance = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.collision_radius
         forward_angle = zombie.wall_hug_angle
-        probe_offset = math.radians(ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG)
         left_angle = forward_angle + probe_offset
         right_angle = forward_angle - probe_offset
         left_dist = _zombie_wall_hug_wall_distance(
@@ -221,8 +232,6 @@ def _zombie_wall_hug_movement(
                 now_ms=now_ms,
             )
 
-    sensor_distance = ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.collision_radius
-    probe_offset = math.radians(ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG)
     side_angle = zombie.wall_hug_angle + zombie.wall_hug_side * probe_offset
     side_dist = _zombie_wall_hug_wall_distance(
         zombie, walls, side_angle, sensor_distance
@@ -239,14 +248,14 @@ def _zombie_wall_hug_movement(
     if is_in_sight:
         return _zombie_move_toward(zombie, player_center)
 
-    turn_step = math.radians(5)
+    turn_step = math.radians(ZOMBIE_WALL_HUG_TURN_STEP_DEG)
     if side_has_wall or forward_has_wall:
         zombie.wall_hug_last_wall_time = now
     if side_has_wall:
         zombie.wall_hug_last_side_has_wall = True
-        gap_error = ZOMBIE_WALL_HUG_TARGET_GAP - side_dist
+        gap_error = target_gap_diagonal - side_dist
         if abs(gap_error) > 0.1:
-            ratio = min(1.0, abs(gap_error) / ZOMBIE_WALL_HUG_TARGET_GAP)
+            ratio = min(1.0, abs(gap_error) / target_gap_diagonal)
             turn = turn_step * ratio
             if gap_error > 0:
                 zombie.wall_hug_angle -= zombie.wall_hug_side * turn
