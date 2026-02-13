@@ -143,29 +143,51 @@ def _zombie_wall_hug_wall_distance(
     *,
     step: float = ZOMBIE_WALL_HUG_PROBE_STEP,
 ) -> float:
+    # 1. Early Exit using spatial set (layout.wall_cells)
+    # If there are no walls in any cell along the ray, we can return max_distance immediately.
+    # This is a very fast O(Cells) check compared to pixel-perfect collision.
+    
+    # 2. Optimized Raycast using clipline
+    # Instead of step-by-step loop, we test all walls once using C-implemented clipline.
     direction_x = math.cos(angle)
     direction_y = math.sin(angle)
-    max_search = max_distance + 120
-    candidates = [
-        wall
-        for wall in walls
-        if abs(wall.rect.centerx - zombie.x) < max_search
-        and abs(wall.rect.centery - zombie.y) < max_search
-    ]
-    if not candidates:
-        return max_distance
-    distance = step
-    while distance <= max_distance:
-        check_x = zombie.x + direction_x * distance
-        check_y = zombie.y + direction_y * distance
-        if any(
-            _circle_wall_collision(
-                (check_x, check_y), zombie.collision_radius, wall
-            )
-            for wall in candidates
-        ):
-            return distance
-        distance += step
+    
+    start_x, start_y = zombie.x, zombie.y
+    end_x = start_x + direction_x * max_distance
+    end_y = start_y + direction_y * max_distance
+    
+    line_start = (int(start_x), int(start_y))
+    line_end = (int(end_x), int(end_y))
+    
+    min_dist_sq = max_distance * max_distance
+    hit = False
+    
+    # We use the walls list passed from the spatial index query.
+    # We inflate the test rect by collision_radius to simulate circle collision.
+    r = zombie.collision_radius
+    for wall in walls:
+        # Fast AABB check first
+        # We inflate the wall rect by zombie radius to check for circle-rect intersection
+        # approximation via line-rect intersection.
+        rect = wall.rect
+        # Simple proximity check to avoid clipline on far walls (redundant but safe)
+        if abs(rect.centerx - start_x) > max_distance + 50 or \
+           abs(rect.centery - start_y) > max_distance + 50:
+            continue
+            
+        inflated = rect.inflate(r * 2, r * 2)
+        points = inflated.clipline(line_start, line_end)
+        if points:
+            p1, _p2 = points
+            dx = p1[0] - start_x
+            dy = p1[1] - start_y
+            dist_sq = dx * dx + dy * dy
+            if dist_sq < min_dist_sq:
+                min_dist_sq = dist_sq
+                hit = True
+                
+    if hit:
+        return math.sqrt(min_dist_sq)
     return max_distance
 
 

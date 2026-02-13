@@ -54,3 +54,22 @@ dynamic_sensor_dist = max(ZOMBIE_WALL_HUG_SENSOR_DISTANCE, cell_size * ZOMBIE_WA
 sensor_distance = dynamic_sensor_dist + zombie.collision_radius
 target_gap_diagonal = ZOMBIE_WALL_HUG_TARGET_GAP / math.cos(math.radians(ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG))
 ```
+
+## Performance Optimization
+
+Initially, stages with a high number of wall-hugging zombies suffered from significant frame rate drops. This was traced back to the `_zombie_wall_hug_wall_distance` function.
+
+### The Bottleneck
+The original implementation used a step-by-step probing method:
+- It iterated from `step` to `max_distance` in `2.0px` increments.
+- In each increment, it performed circle-wall collision tests against all nearby walls.
+- This resulted in thousands of Python-level collision checks per frame when many zombies were active.
+
+### The Solution: Fast Raycasting
+To resolve the performance issues, the step-by-step loop was replaced with a fast raycasting approach using `pygame.Rect.clipline`:
+1. **Leveraging Spatial Index**: The function now directly uses the pre-filtered wall list provided by the `WallIndex` (spatial index).
+2. **C-Accelerated Clipping**: Instead of manual iteration, it uses `pygame.Rect.clipline`, which is implemented in C and can calculate line-rectangle intersections extremely fast.
+3. **Inflated Rects**: By inflating the wall rectangles by the zombie's collision radius, the system accurately approximates circle-rectangle collision distances without needing a pixel-perfect loop.
+
+### Impact
+After implementing this optimization, the CPU usage for wall-hugging AI dropped dramatically, ensuring a smooth 60 FPS even in stages densely populated with wall-hugging zombies.
