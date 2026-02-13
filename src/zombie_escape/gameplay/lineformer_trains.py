@@ -18,20 +18,19 @@ from ..entities_constants import (
     ZombieKind,
 )
 from .constants import LAYER_ZOMBIES, MAX_ZOMBIES
-from .constants import (
-    LINEFORMER_MERGE_EFFECT_DURATION_MS,
-    LINEFORMER_MERGE_EFFECT_TRAVEL_RATIO,
-)
+from .constants import FOOTPRINT_STEP_DISTANCE
 from ..rng import get_rng
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from ..models import GameData
 
 RNG = get_rng()
-_MARKER_HISTORY_SAMPLE_GAP = 7
-_MARKER_HISTORY_RECORD_MANHATTAN_THRESHOLD = 3.0
+_MARKER_HISTORY_RECORD_DISTANCE = FOOTPRINT_STEP_DISTANCE * 0.5
+_MARKER_TRAIL_SPACING = FOOTPRINT_STEP_DISTANCE * 0.5
 _MARKER_DRAW_SHIFT_ALPHA = 0.45
 _MARKER_DRAW_SHIFT_MAX = ZOMBIE_LINEFORMER_JOIN_RADIUS
+_MERGE_APPROACH_DISTANCE = ZOMBIE_LINEFORMER_JOIN_RADIUS
+_MERGE_TRAIL_SNAP_DISTANCE = ZOMBIE_LINEFORMER_JOIN_RADIUS * 0.75
 
 
 @dataclass
@@ -111,13 +110,39 @@ class LineformerTrainManager:
             return train_id, None
         return None, target_id
 
-    def _ensure_history_capacity(self, train: LineformerTrain, *, sample_step: int | None = None) -> None:
+    def _ensure_history_capacity(self, train: LineformerTrain) -> None:
         marker_count = max(0, len(train.marker_positions))
-        step = _MARKER_HISTORY_SAMPLE_GAP if sample_step is None else max(1, sample_step)
-        required = max(64, (marker_count + 2) * step + 8)
+        step = max(1.0, float(_MARKER_HISTORY_RECORD_DISTANCE))
+        spacing = max(1.0, float(_MARKER_TRAIL_SPACING))
+        required_points = int(math.ceil(((marker_count + 2) * spacing) / step)) + 8
+        required = max(64, required_points)
         if train.history.maxlen is not None and train.history.maxlen >= required:
             return
         train.history = deque(train.history, maxlen=required)
+
+    @staticmethod
+    def _sample_polyline_at_distance(
+        points: list[tuple[float, float]],
+        distance_from_head: float,
+    ) -> tuple[float, float]:
+        if not points:
+            return (0.0, 0.0)
+        if len(points) == 1 or distance_from_head <= 0.0:
+            return points[0]
+        remaining = distance_from_head
+        for idx in range(len(points) - 1):
+            ax, ay = points[idx]
+            bx, by = points[idx + 1]
+            seg_dx = bx - ax
+            seg_dy = by - ay
+            seg_len = math.hypot(seg_dx, seg_dy)
+            if seg_len <= 1e-6:
+                continue
+            if remaining <= seg_len:
+                t = remaining / seg_len
+                return (ax + seg_dx * t, ay + seg_dy * t)
+            remaining -= seg_len
+        return points[-1]
 
     def append_marker(self, train_id: int, pos: tuple[float, float]) -> bool:
         train = self.trains.get(train_id)
@@ -229,37 +254,17 @@ class LineformerTrainManager:
         src_train: LineformerTrain,
         dst_train: LineformerTrain,
         *,
-        game_data: "GameData",
         heads: dict[int, Zombie],
-        now_ms: int,
-        merge_target_pos: tuple[float, float] | None = None,
     ) -> None:
         if src_train.train_id == dst_train.train_id:
             return
         src_head = heads.get(src_train.head_id)
         if src_head is not None and src_head.alive():
-            target_pos = merge_target_pos
-            if target_pos is None:
-                target_pos = self._train_tail_position(dst_train, heads=heads)
-            if target_pos is not None:
-                from ..models import LineformerMergeEffect
-
-                shift_dx = float(target_pos[0]) - src_head.x
-                shift_dy = float(target_pos[1]) - src_head.y
-                effect_target = (
-                    src_head.x + shift_dx * LINEFORMER_MERGE_EFFECT_TRAVEL_RATIO,
-                    src_head.y + shift_dy * LINEFORMER_MERGE_EFFECT_TRAVEL_RATIO,
-                )
-                game_data.state.lineformer_merge_effects.append(
-                    LineformerMergeEffect(
-                        start_pos=(src_head.x, src_head.y),
-                        target_pos=effect_target,
-                        started_at_ms=now_ms,
-                        duration_ms=LINEFORMER_MERGE_EFFECT_DURATION_MS,
-                    )
-                )
             dst_train.marker_positions.append((src_head.x, src_head.y))
             dst_train.marker_angles.append(0.0)
+            # Keep the former lone-head position as the oldest trajectory point so the
+            # appended tail marker can slide on the trail instead of hard teleporting.
+            dst_train.history.appendleft((src_head.x, src_head.y))
             src_head.kill()
         if src_train.marker_positions:
             dst_train.marker_positions.extend(src_train.marker_positions)
@@ -284,6 +289,31 @@ class LineformerTrainManager:
         if head is None:
             return None
         return (head.x, head.y)
+
+    @staticmethod
+    def _within_distance_sq(
+        a: tuple[float, float],
+        b: tuple[float, float],
+        *,
+        distance: float,
+    ) -> bool:
+        dx = b[0] - a[0]
+        dy = b[1] - a[1]
+        return dx * dx + dy * dy <= distance * distance
+
+    def _is_close_to_any_trail_point(
+        self,
+        pos: tuple[float, float],
+        dst_train: LineformerTrain,
+    ) -> bool:
+        for hist_pos in dst_train.history:
+            if self._within_distance_sq(
+                pos,
+                hist_pos,
+                distance=_MERGE_TRAIL_SNAP_DISTANCE,
+            ):
+                return True
+        return False
 
     def pre_update(self, game_data: "GameData", *, config: dict, now_ms: int) -> None:
         zombie_group = game_data.groups.zombie_group
@@ -339,19 +369,21 @@ class LineformerTrainManager:
                             if self._train_length(train) == 1:
                                 tail_pos = self._train_tail_position(dst_train, heads=heads)
                                 if tail_pos is not None:
-                                    dx = tail_pos[0] - head.x
-                                    dy = tail_pos[1] - head.y
-                                    if dx * dx + dy * dy <= (
-                                        ZOMBIE_LINEFORMER_JOIN_RADIUS
-                                        * ZOMBIE_LINEFORMER_JOIN_RADIUS
+                                    if self._within_distance_sq(
+                                        (head.x, head.y),
+                                        tail_pos,
+                                        distance=_MERGE_APPROACH_DISTANCE,
                                     ):
+                                        if not self._is_close_to_any_trail_point(
+                                            (head.x, head.y),
+                                            dst_train,
+                                        ):
+                                            continue
+                                        head.x, head.y = tail_pos
                                         self._merge_train_into(
                                             train,
                                             dst_train,
-                                            game_data=game_data,
                                             heads=heads,
-                                            now_ms=now_ms,
-                                            merge_target_pos=tail_pos,
                                         )
                                         continue
                         train.target_id = None
@@ -387,25 +419,32 @@ class LineformerTrainManager:
             head = heads.get(train.head_id)
             if head is None:
                 continue
-            sample_step = _MARKER_HISTORY_SAMPLE_GAP
             current_pos = (head.x, head.y)
             if not train.history:
                 train.history.append(current_pos)
             else:
                 last_x, last_y = train.history[-1]
-                manhattan = abs(current_pos[0] - last_x) + abs(current_pos[1] - last_y)
-                if manhattan > _MARKER_HISTORY_RECORD_MANHATTAN_THRESHOLD:
+                dx = current_pos[0] - last_x
+                dy = current_pos[1] - last_y
+                dist_sq = dx * dx + dy * dy
+                if dist_sq >= _MARKER_HISTORY_RECORD_DISTANCE * _MARKER_HISTORY_RECORD_DISTANCE:
                     train.history.append(current_pos)
-            self._ensure_history_capacity(train, sample_step=sample_step)
+            self._ensure_history_capacity(train)
             if not train.marker_positions:
                 continue
-            history_list = list(train.history)
-            if not history_list:
-                history_list = [(head.x, head.y)]
-            newest_idx = len(history_list) - 1
+            history_from_newest = list(reversed(train.history))
+            trail_points = [current_pos]
+            if history_from_newest:
+                newest_record = history_from_newest[0]
+                if abs(newest_record[0] - current_pos[0]) > 1e-6 or abs(
+                    newest_record[1] - current_pos[1]
+                ) > 1e-6:
+                    trail_points.extend(history_from_newest)
+                else:
+                    trail_points.extend(history_from_newest[1:])
             for idx in range(len(train.marker_positions)):
-                sample_index = max(0, newest_idx - (idx + 1) * sample_step)
-                marker_pos = history_list[sample_index]
+                follow_distance = (idx + 1) * _MARKER_TRAIL_SPACING
+                marker_pos = self._sample_polyline_at_distance(trail_points, follow_distance)
                 train.marker_positions[idx] = marker_pos
                 lead_pos = (head.x, head.y) if idx == 0 else train.marker_positions[idx - 1]
                 dx = lead_pos[0] - marker_pos[0]

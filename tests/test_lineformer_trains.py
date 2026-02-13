@@ -63,7 +63,7 @@ def test_active_train_merges_into_existing_target_owner_train() -> None:
     zombie_group = game_data.groups.zombie_group
 
     target = Zombie(100, 100, kind=ZombieKind.NORMAL)
-    head_a = Zombie(90, 100, kind=ZombieKind.LINEFORMER)
+    head_a = Zombie(95, 100, kind=ZombieKind.LINEFORMER)
     head_b = Zombie(110, 100, kind=ZombieKind.LINEFORMER)
     zombie_group.add(target, head_a, head_b)
 
@@ -83,7 +83,67 @@ def test_active_train_merges_into_existing_target_owner_train() -> None:
     assert train_a not in manager.trains
     assert train_b in manager.trains
     assert len(manager.trains[train_b].marker_positions) >= 1
-    assert len(game_data.state.lineformer_merge_effects) == 1
+    assert manager.trains[train_b].history[0] == (head_a.x, head_a.y)
+    assert len(game_data.state.lineformer_merge_effects) == 0
+
+
+def test_lone_train_does_not_merge_when_not_near_destination_trail() -> None:
+    game_data = _make_game_data()
+    manager = game_data.lineformer_trains
+    zombie_group = game_data.groups.zombie_group
+
+    target = Zombie(100, 100, kind=ZombieKind.NORMAL)
+    head_a = Zombie(95, 100, kind=ZombieKind.LINEFORMER)
+    head_b = Zombie(120, 100, kind=ZombieKind.LINEFORMER)
+    zombie_group.add(target, head_a, head_b)
+
+    train_a = manager.create_train_for_head(
+        head_a,
+        target_id=target.lineformer_id,
+        now_ms=0,
+    )
+    train_b = manager.create_train_for_head(
+        head_b,
+        target_id=target.lineformer_id,
+        now_ms=0,
+    )
+    dst_train = manager.trains[train_b]
+    dst_train.marker_positions.append((100.0, 100.0))
+    dst_train.history.clear()
+    dst_train.history.append((200.0, 200.0))
+    dst_train.history.append((220.0, 200.0))
+
+    manager.pre_update(game_data, config={}, now_ms=100)
+
+    assert train_a in manager.trains
+    assert train_b in manager.trains
+
+
+def test_marker_position_interpolates_along_discrete_history() -> None:
+    game_data = _make_game_data()
+    manager = game_data.lineformer_trains
+    zombie_group = game_data.groups.zombie_group
+
+    head = Zombie(100, 100, kind=ZombieKind.LINEFORMER)
+    zombie_group.add(head)
+    train_id = manager.create_train_for_head(
+        head,
+        target_id=None,
+        now_ms=0,
+    )
+    assert manager.append_marker(train_id, (100, 100))
+    train = manager.trains[train_id]
+    train.history.clear()
+    train.history.append((80.0, 100.0))
+    train.history.append((100.0, 100.0))
+    head.x = 110.0
+    head.y = 100.0
+
+    manager.post_update(zombie_group)
+
+    marker_x, marker_y = train.marker_positions[0]
+    assert marker_x == 90.0
+    assert marker_y == 100.0
 
 
 def test_train_with_markers_does_not_merge_even_if_same_target() -> None:
