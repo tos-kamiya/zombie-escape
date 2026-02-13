@@ -4,6 +4,7 @@ from collections import deque
 from dataclasses import dataclass, field
 
 from .level_constants import (
+    DEFAULT_CORRIDOR_BREAK_RATIO,
     DEFAULT_GRID_WIRE_WALL_LINES,
     DEFAULT_SPARSE_WALL_DENSITY,
     DEFAULT_STEEL_BEAM_CHANCE,
@@ -493,12 +494,121 @@ def _place_walls_sparse_ortho(
             grid[y][x] = "1"
 
 
+def _place_walls_corridor(
+    grid: list[list[str]],
+    *,
+    break_ratio: float = DEFAULT_CORRIDOR_BREAK_RATIO,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Generate a maze-like corridor layout, then open extra loops."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+
+    interior_min_x = 2
+    interior_max_x = cols - 3
+    interior_min_y = 2
+    interior_max_y = rows - 3
+
+    if interior_min_x > interior_max_x or interior_min_y > interior_max_y:
+        return
+
+    def _can_carve(x: int, y: int) -> bool:
+        if x < interior_min_x or x > interior_max_x:
+            return False
+        if y < interior_min_y or y > interior_max_y:
+            return False
+        if (x, y) in forbidden:
+            return False
+        return grid[y][x] in {".", "1"}
+
+    def _set_floor(x: int, y: int) -> None:
+        if grid[y][x] == "1":
+            grid[y][x] = "."
+
+    # Fill non-reserved interior floors with walls first.
+    for y in range(interior_min_y, interior_max_y + 1):
+        for x in range(interior_min_x, interior_max_x + 1):
+            if (x, y) in forbidden:
+                continue
+            if grid[y][x] == ".":
+                grid[y][x] = "1"
+
+    nodes = [
+        (x, y)
+        for y in range(interior_min_y, interior_max_y + 1)
+        for x in range(interior_min_x, interior_max_x + 1)
+        if (x - interior_min_x) % 2 == 0
+        and (y - interior_min_y) % 2 == 0
+        and _can_carve(x, y)
+    ]
+    if not nodes:
+        return
+
+    unvisited = set(nodes)
+    while unvisited:
+        start = RNG.choice(tuple(unvisited))
+        stack = [start]
+        unvisited.remove(start)
+        _set_floor(*start)
+
+        while stack:
+            x, y = stack[-1]
+            directions = [(2, 0), (-2, 0), (0, 2), (0, -2)]
+            RNG.shuffle(directions)
+            moved = False
+            for dx, dy in directions:
+                nx = x + dx
+                ny = y + dy
+                if (nx, ny) not in unvisited:
+                    continue
+                if not _can_carve(nx, ny):
+                    continue
+                wx = x + dx // 2
+                wy = y + dy // 2
+                if not _can_carve(wx, wy):
+                    continue
+                _set_floor(wx, wy)
+                _set_floor(nx, ny)
+                unvisited.remove((nx, ny))
+                stack.append((nx, ny))
+                moved = True
+                break
+            if not moved:
+                stack.pop()
+
+    # Add a limited number of wall breaks to create loops.
+    clamped_break_ratio = max(0.0, min(0.2, break_ratio))
+    for y in range(interior_min_y, interior_max_y + 1):
+        for x in range(interior_min_x, interior_max_x + 1):
+            if grid[y][x] != "1" or (x, y) in forbidden:
+                continue
+            if RNG.random() >= clamped_break_ratio:
+                continue
+            has_horizontal = _can_carve(x - 1, y) and _can_carve(x + 1, y)
+            has_vertical = _can_carve(x, y - 1) and _can_carve(x, y + 1)
+            if has_horizontal or has_vertical:
+                grid[y][x] = "."
+
+    # Keep all reserved cells passable.
+    if forbidden_cells:
+        for cell_x, cell_y in forbidden_cells:
+            if (
+                interior_min_x <= cell_x <= interior_max_x
+                and interior_min_y <= cell_y <= interior_max_y
+                and grid[cell_y][cell_x] == "1"
+            ):
+                grid[cell_y][cell_x] = "."
+
+
 WALL_ALGORITHMS = {
     "default": _place_walls_default,
     "empty": _place_walls_empty,
     "grid_wire": _place_walls_grid_wire,
     "sparse_moore": _place_walls_sparse_moore,
     "sparse_ortho": _place_walls_sparse_ortho,
+    "corridor": _place_walls_corridor,
 }
 
 
@@ -706,6 +816,7 @@ def generate_random_blueprint(
     # Select and run the wall placement algorithm (after reserving spawns)
     sparse_density = DEFAULT_SPARSE_WALL_DENSITY
     wall_line_count = DEFAULT_WALL_LINES
+    corridor_break_ratio = DEFAULT_CORRIDOR_BREAK_RATIO
     original_wall_algo = wall_algo
     if wall_algo == "normal":
         wall_algo = "default"
@@ -778,6 +889,31 @@ def generate_random_blueprint(
                 f"Got '{wall_algo}'. Falling back to default sparse density."
             )
             wall_algo = base
+    if wall_algo.startswith("corridor."):
+        _, suffix = wall_algo.split(".", 1)
+        if suffix.endswith("%") and suffix[:-1].isdigit():
+            percent = int(suffix[:-1])
+            if 0 <= percent <= 200:
+                corridor_break_ratio = max(
+                    0.0,
+                    min(
+                        0.2,
+                        percent * 0.003,
+                    ),
+                )
+                wall_algo = "corridor"
+            else:
+                print(
+                    "WARNING: Corridor break ratio must be 0-200%. "
+                    f"Got '{suffix}'. Falling back to default corridor break ratio."
+                )
+                wall_algo = "corridor"
+        else:
+            print(
+                "WARNING: Invalid corridor format. Use 'corridor.<int>%'. "
+                f"Got '{wall_algo}'. Falling back to default corridor break ratio."
+            )
+            wall_algo = "corridor"
 
     if wall_algo not in WALL_ALGORITHMS:
         print(
@@ -797,6 +933,12 @@ def generate_random_blueprint(
         algo_func(grid, density=sparse_density, forbidden_cells=reserved_cells)
     elif wall_algo in {"default", "grid_wire"}:
         algo_func(grid, line_count=wall_line_count, forbidden_cells=reserved_cells)
+    elif wall_algo == "corridor":
+        algo_func(
+            grid,
+            break_ratio=corridor_break_ratio,
+            forbidden_cells=reserved_cells,
+        )
     else:
         algo_func(grid, forbidden_cells=reserved_cells)
 
