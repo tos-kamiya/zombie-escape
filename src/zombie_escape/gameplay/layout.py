@@ -124,11 +124,11 @@ def generate_level_from_blueprint(
     base_moving_floor_cells = _expand_moving_floor_cells(stage)
     fuel_count = 0
     empty_fuel_can_count = 0
-    filling_station_count = 0
+    fuel_station_count = 0
     if stage.fuel_mode < FuelMode.START_FULL and not stage.endurance_stage:
         if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
             empty_fuel_can_count = max(1, int(stage.empty_fuel_can_spawn_count))
-            filling_station_count = max(1, int(stage.filling_station_spawn_count))
+            fuel_station_count = max(1, int(stage.fuel_station_spawn_count))
         else:
             fuel_count = max(0, int(stage.fuel_spawn_count))
     flashlight_count = max(0, int(stage.initial_flashlight_count))
@@ -156,7 +156,7 @@ def generate_level_from_blueprint(
             moving_floor_cells=base_moving_floor_cells,
             fuel_count=fuel_count,
             empty_fuel_can_count=empty_fuel_can_count,
-            filling_station_count=filling_station_count,
+            fuel_station_count=fuel_station_count,
             flashlight_count=flashlight_count,
             shoes_count=shoes_count,
         )
@@ -455,7 +455,7 @@ def generate_level_from_blueprint(
         "car_cells": list(car_cells),
         "fuel_cells": list(fuel_cells),
         "empty_fuel_can_cells": list(empty_fuel_can_cells),
-        "filling_station_cells": list(fuel_cells),
+        "fuel_station_cells": list(fuel_cells),
         "flashlight_cells": list(flashlight_cells),
         "shoes_cells": list(shoes_cells),
         "walkable_cells": walkable_cells,

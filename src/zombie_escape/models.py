@@ -260,7 +260,7 @@ class Stage:
     # Items
     fuel_spawn_count: int = 1
     empty_fuel_can_spawn_count: int = 1
-    filling_station_spawn_count: int = 1
+    fuel_station_spawn_count: int = 1
     initial_flashlight_count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT
     initial_shoes_count: int = DEFAULT_SHOES_SPAWN_COUNT
     waiting_car_target_count: int = 1
@@ -300,8 +300,8 @@ class Stage:
             assert self.empty_fuel_can_spawn_count >= 1, (
                 "refuel_chain stages must set empty_fuel_can_spawn_count >= 1"
             )
-            assert self.filling_station_spawn_count >= 1, (
-                "refuel_chain stages must set filling_station_spawn_count >= 1"
+            assert self.fuel_station_spawn_count >= 1, (
+                "refuel_chain stages must set fuel_station_spawn_count >= 1"
             )
 
     @property

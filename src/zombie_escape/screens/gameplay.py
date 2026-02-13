@@ -157,11 +157,11 @@ def _spawn_stage_items(
     if stage.fuel_mode < FuelMode.START_FULL:
         fuel_spawn_count = stage.fuel_spawn_count
         empty_fuel_can_spawn_count = stage.empty_fuel_can_spawn_count
-        filling_station_spawn_count = stage.filling_station_spawn_count
+        fuel_station_spawn_count = stage.fuel_station_spawn_count
         if stage.endurance_stage:
             fuel_spawn_count = 0
             empty_fuel_can_spawn_count = 0
-            filling_station_spawn_count = 0
+            fuel_station_spawn_count = 0
         if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
             empty_fuel_can = place_empty_fuel_can(
                 layout_data["empty_fuel_can_cells"],
@@ -176,12 +176,12 @@ def _spawn_stage_items(
                 game_data.groups.all_sprites.add(empty_fuel_can, layer=LAYER_ITEMS)
                 occupied_centers.add(empty_fuel_can.rect.center)
             fuel_station = place_fuel_station(
-                layout_data["filling_station_cells"],
+                layout_data["fuel_station_cells"],
                 cell_size,
                 player,
                 cars=game_data.waiting_cars,
                 reserved_centers=occupied_centers,
-                count=filling_station_spawn_count,
+                count=fuel_station_spawn_count,
             )
             if fuel_station:
                 game_data.fuel_station = fuel_station

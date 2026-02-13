@@ -133,7 +133,7 @@
   - `endurance_goal_ms`
   - `fuel_spawn_count`（`FuelMode.FUEL_CAN` で使う燃料缶候補数）
   - `empty_fuel_can_spawn_count`（`FuelMode.REFUEL_CHAIN` で使う空の燃料缶候補数）
-  - `filling_station_spawn_count`（`FuelMode.REFUEL_CHAIN` で使う給油所候補数）
+  - `fuel_station_spawn_count`（`FuelMode.REFUEL_CHAIN` で使う給油所候補数）
 - 初期アイテム: `initial_flashlight_count`, `initial_shoes_count`
 - 待機車両: `waiting_car_target_count`（ステージ別の待機車両数の目安）
 - 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）

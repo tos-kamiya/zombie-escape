@@ -133,11 +133,11 @@ def _build_valid_blueprint_grid(stage: object, *, base_seed: int) -> list[str]:
     moving_floor_cells = _moving_floor_cells_for_stage(stage)
     fuel_count = 0
     empty_fuel_can_count = 0
-    filling_station_count = 0
+    fuel_station_count = 0
     if stage.fuel_mode < FuelMode.START_FULL:
         if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
             empty_fuel_can_count = max(1, int(stage.empty_fuel_can_spawn_count))
-            filling_station_count = max(1, int(stage.filling_station_spawn_count))
+            fuel_station_count = max(1, int(stage.fuel_station_spawn_count))
         else:
             fuel_count = int(stage.fuel_spawn_count)
 
@@ -154,7 +154,7 @@ def _build_valid_blueprint_grid(stage: object, *, base_seed: int) -> list[str]:
             moving_floor_cells=moving_floor_cells,
             fuel_count=fuel_count,
             empty_fuel_can_count=empty_fuel_can_count,
-            filling_station_count=filling_station_count,
+            fuel_station_count=fuel_station_count,
             flashlight_count=int(stage.initial_flashlight_count),
             shoes_count=int(stage.initial_shoes_count),
         )

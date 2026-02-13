@@ -28,5 +28,5 @@ def test_stage_refuel_chain_requires_distinct_item_counts() -> None:
             name_key="stages.stage1.name",
             description_key="stages.stage1.description",
             fuel_mode=FuelMode.REFUEL_CHAIN,
-            filling_station_spawn_count=0,
+            fuel_station_spawn_count=0,
         )

@@ -773,7 +773,7 @@ def generate_random_blueprint(
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] | None = None,
     fuel_count: int = 1,
     empty_fuel_can_count: int = 0,
-    filling_station_count: int = 0,
+    fuel_station_count: int = 0,
     flashlight_count: int = 2,
     shoes_count: int = 2,
 ) -> Blueprint:
@@ -827,7 +827,7 @@ def generate_random_blueprint(
     # Items
     fuel_count = max(0, int(fuel_count))
     empty_fuel_can_count = max(0, int(empty_fuel_can_count))
-    filling_station_count = max(0, int(filling_station_count))
+    fuel_station_count = max(0, int(fuel_station_count))
     flashlight_count = max(0, int(flashlight_count))
     shoes_count = max(0, int(shoes_count))
 
@@ -841,7 +841,7 @@ def generate_random_blueprint(
         grid[fy][fx] = "f"
         reserved_cells.add((fx, fy))
 
-    for _ in range(filling_station_count):
+    for _ in range(fuel_station_count):
         fx, fy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
         grid[fy][fx] = "f"
         reserved_cells.add((fx, fy))
