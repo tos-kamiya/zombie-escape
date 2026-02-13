@@ -15,6 +15,17 @@ Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/righ
 | Zombie Dog | <img src="../imgs/exports/zombie-dog.png" width="80"> | Stage 21 | Fast charging zombie that also chases nearby zombies. |
 | Patrol Bot | <img src="../imgs/exports/patrol-bot.png" width="80"> | Stage 22 | A dependable robot that can spot suspicious individuals; it paralyzes and damages zombies. Standing on the center lets you direct its facing. |
 | Moving Floor | <img src="../imgs/exports/moving-floor.png" width="80"> | Stage 24 | A floor you can ride to move quickly in its direction. |
+| Empty Fuel Can | <img src="../imgs/exports/empty-fuel-can.png" width="80"> | Stage 26 | Pickup item used in stages where the empty fuel can appears. |
+| Fuel Station | <img src="../imgs/exports/fuel-station.png" width="80"> | Stage 26 | Refills the empty fuel can in stages where the empty fuel can appears. |
+
+## Fuel Rule Change (Stages with Empty Fuel Can)
+
+In stages where the empty fuel can appears, fuel handling is different:
+
+- Regular fuel-can stages: `Player -> fuel can -> car`
+- Stages where the empty fuel can appears: `Player -> empty fuel can -> fuel station -> car`
+
+You cannot skip the station in stages where the empty fuel can appears.
 
 ## Control Recommendation (Stage 21+)
 
