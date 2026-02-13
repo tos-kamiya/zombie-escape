@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pygame
 from pygame import sprite, surface
 
@@ -31,6 +33,9 @@ from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wal
 from ..render_constants import MOVING_FLOOR_OVERVIEW_COLOR
 from ..entities_constants import PATROL_BOT_COLLISION_RADIUS
 from .hud import _get_fog_scale
+
+if TYPE_CHECKING:  # pragma: no cover - typing-only imports
+    from ..gameplay.lineformer_trains import LineformerTrainManager
 
 
 def compute_floor_cells(
@@ -94,6 +99,7 @@ def draw_level_overview(
     survivors: list[Survivor] | None = None,
     patrol_bots: list[PatrolBot] | None = None,
     zombies: list[pygame.sprite.Sprite] | None = None,
+    lineformer_trains: "LineformerTrainManager | None" = None,
     fall_spawn_cells: set[tuple[int, int]] | None = None,
     moving_floor_cells: dict[tuple[int, int], object] | None = None,
     palette_key: str | None = None,
@@ -236,6 +242,7 @@ def draw_level_overview(
                 )
     if zombies:
         zombie_color = (200, 80, 80)
+        lineformer_marker_color = (150, 50, 50)
         zombie_radius = max(2, int(assets.player_radius * 1.2))
         for zombie in zombies:
             if not zombie.alive():
@@ -246,6 +253,16 @@ def draw_level_overview(
                     zombie_color,
                     zombie.rect.center,
                     zombie_radius,
+                )
+        if lineformer_trains is not None:
+            marker_radius = max(1, zombie_radius - 1)
+            marker_draw_data = lineformer_trains.iter_marker_draw_data(zombies)
+            for marker_x, marker_y, _ in marker_draw_data:
+                pygame.draw.circle(
+                    surface,
+                    lineformer_marker_color,
+                    (int(marker_x), int(marker_y)),
+                    marker_radius,
                 )
 
 
@@ -292,6 +309,7 @@ def draw_debug_overview(
         survivors=list(game_data.groups.survivor_group),
         patrol_bots=list(game_data.groups.patrol_bot_group),
         zombies=list(game_data.groups.zombie_group),
+        lineformer_trains=game_data.lineformer_trains,
         fall_spawn_cells=game_data.layout.fall_spawn_cells,
         moving_floor_cells=game_data.layout.moving_floor_cells,
         palette_key=game_data.state.ambient_palette_key,
