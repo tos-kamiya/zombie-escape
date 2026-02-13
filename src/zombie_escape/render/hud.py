@@ -181,21 +181,29 @@ def _draw_status_bar(
                 right=bar_rect.right - 12, centery=bar_rect.centery
             )
             screen.blit(seed_surface, seed_rect)
-        overlay_parts: list[str] = []
-        if show_fps and fps is not None:
-            overlay_parts.append(f"FPS:{fps:.1f}")
-        if debug_counts:
-            overlay_parts.append(debug_counts)
-        if overlay_parts:
-            overlay_text = " | ".join(overlay_parts)
-            overlay_surface = render_text_surface(
+        overlay_bottom = max(2, bar_rect.top)
+        overlay_left = 12
+        if show_fps:
+            fps_text = f"FPS:{fps:.1f}" if fps is not None else "FPS:-.-"
+            fps_surface = render_text_surface(
                 font,
-                overlay_text,
+                fps_text,
                 LIGHT_GRAY,
                 line_height_scale=font_settings.line_height_scale,
             )
-            overlay_rect = overlay_surface.get_rect(left=12, bottom=max(2, bar_rect.top))
-            screen.blit(overlay_surface, overlay_rect)
+            fps_rect = fps_surface.get_rect(left=overlay_left, bottom=overlay_bottom)
+            screen.blit(fps_surface, fps_rect)
+            fps_max_width = font.size("FPS:999.9")[0]
+            overlay_left += fps_max_width + 8
+        if debug_counts:
+            debug_surface = render_text_surface(
+                font,
+                debug_counts,
+                LIGHT_GRAY,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            debug_rect = debug_surface.get_rect(left=overlay_left, bottom=overlay_bottom)
+            screen.blit(debug_surface, debug_rect)
     except pygame.error as e:
         print(f"Error rendering status bar: {e}")
 
