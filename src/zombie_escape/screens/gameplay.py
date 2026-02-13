@@ -258,8 +258,10 @@ def gameplay_screen(
     cell_size = game_data.cell_size
     if stage.requires_fuel:
         fuel_spawn_count = stage.fuel_spawn_count
+        fuel_station_spawn_count = stage.fuel_station_spawn_count
         if stage.endurance_stage:
             fuel_spawn_count = 0
+            fuel_station_spawn_count = 0
         if stage.requires_refuel:
             empty_fuel_can = place_empty_fuel_can(
                 layout_data["fuel_cells"],
@@ -279,7 +281,7 @@ def gameplay_screen(
                 player,
                 cars=game_data.waiting_cars,
                 reserved_centers=occupied_centers,
-                count=fuel_spawn_count,
+                count=fuel_station_spawn_count,
             )
             if fuel_station:
                 game_data.fuel_station = fuel_station

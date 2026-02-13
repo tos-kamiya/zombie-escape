@@ -125,11 +125,11 @@
 
 `Stage` はステージ属性を保持する `dataclass`。
 
-- プレイ特性: `requires_fuel`, `requires_refuel`, `buddy_required_count`, `survivor_rescue_stage`, `endurance_stage`, `intro_key`
+- プレイ特性: `fuel_objective`（`none`/`fuel_can`/`refuel_chain`）, `buddy_required_count`, `survivor_rescue_stage`, `endurance_stage`, `intro_key`
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`, `survivor_spawn_rate`
 - スポーン数: `zombie_spawn_count_per_interval`（スポーンタイミングごとの湧き数、デフォルト1）
 - 内外/落下スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`, `interior_fall_spawn_weight`（重みを分け合う）
-- サバイバル設定: `endurance_goal_ms`, `fuel_spawn_count`
+- サバイバル設定: `endurance_goal_ms`, `fuel_spawn_count`, `fuel_station_spawn_count`
 - 初期アイテム: `initial_flashlight_count`, `initial_shoes_count`
 - 待機車両: `waiting_car_target_count`（ステージ別の待機車両数の目安）
 - 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）

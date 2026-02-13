@@ -132,7 +132,7 @@ def _build_valid_blueprint_grid(stage: object, *, base_seed: int) -> list[str]:
     moving_floor_cells = _moving_floor_cells_for_stage(stage)
     fuel_count = int(stage.fuel_spawn_count) if stage.requires_fuel else 0
     if getattr(stage, "requires_refuel", False):
-        fuel_count = max(2, fuel_count)
+        fuel_count = max(2, fuel_count + int(stage.fuel_station_spawn_count))
 
     for attempt in range(20):
         seed_rng(base_seed + attempt)

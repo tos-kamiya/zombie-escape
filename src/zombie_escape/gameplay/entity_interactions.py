@@ -104,7 +104,7 @@ def _handle_empty_fuel_can_pickup(
     empty_fuel_can: pygame.sprite.Sprite | None,
     interaction_radius: float,
     player_near_point: callable,
-) -> None:
+) -> bool:
     state = game_data.state
     if not (
         empty_fuel_can
@@ -113,15 +113,16 @@ def _handle_empty_fuel_can_pickup(
         and not state.has_fuel
         and not player.in_car
     ):
-        return
+        return False
     if not player_near_point(empty_fuel_can.rect.center, interaction_radius):
-        return
+        return False
     state.has_empty_fuel_can = True
     state.hint_expires_at = 0
     state.hint_target_type = None
     empty_fuel_can.kill()
     game_data.empty_fuel_can = None
     print("Empty fuel can acquired!")
+    return True
 
 
 def _handle_fuel_station_refuel(
@@ -132,7 +133,7 @@ def _handle_fuel_station_refuel(
     interaction_radius: float,
     need_fuel_text: str,
     player_near_point: callable,
-) -> None:
+    ) -> bool:
     state = game_data.state
     if not (
         fuel_station
@@ -141,9 +142,9 @@ def _handle_fuel_station_refuel(
         and not state.has_fuel
         and not player.in_car
     ):
-        return
+        return False
     if not player_near_point(fuel_station.rect.center, interaction_radius):
-        return
+        return False
     state.has_empty_fuel_can = False
     state.has_fuel = True
     if state.timed_message == need_fuel_text:
@@ -153,6 +154,7 @@ def _handle_fuel_station_refuel(
     state.hint_expires_at = 0
     state.hint_target_type = None
     print("Fuel can filled at station!")
+    return True
 
 
 def _handle_player_item_pickups(
@@ -498,21 +500,22 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         return _player_near_sprite(car_obj, car_interaction_radius)
 
     if stage.requires_refuel:
-        _handle_empty_fuel_can_pickup(
+        picked_empty_this_frame = _handle_empty_fuel_can_pickup(
             game_data=game_data,
             player=player,
             empty_fuel_can=empty_fuel_can,
             interaction_radius=empty_fuel_can_interaction_radius,
             player_near_point=_player_near_point,
         )
-        _handle_fuel_station_refuel(
-            game_data=game_data,
-            player=player,
-            fuel_station=fuel_station,
-            interaction_radius=fuel_station_interaction_radius,
-            need_fuel_text=need_fuel_text,
-            player_near_point=_player_near_point,
-        )
+        if not picked_empty_this_frame:
+            _handle_fuel_station_refuel(
+                game_data=game_data,
+                player=player,
+                fuel_station=fuel_station,
+                interaction_radius=fuel_station_interaction_radius,
+                need_fuel_text=need_fuel_text,
+                player_near_point=_player_near_point,
+            )
     else:
         _handle_fuel_pickup(
             game_data=game_data,

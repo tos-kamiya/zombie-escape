@@ -5,6 +5,7 @@ from zombie_escape.level_blueprints import (
     validate_connectivity,
     validate_humanoid_connectivity,
 )
+from zombie_escape.models import FuelObjective
 
 
 def test_validate_car_connectivity_blocks_pitfalls() -> None:
@@ -78,7 +79,7 @@ def test_validate_connectivity_requires_reachable_fuel_when_enabled() -> None:
         "BBBBBBB",
     ]
 
-    assert validate_connectivity(grid, requires_fuel=True) is None
+    assert validate_connectivity(grid, fuel_objective=FuelObjective.FUEL_CAN) is None
 
 
 def test_validate_connectivity_non_fuel_treats_player_as_fuel_start() -> None:
@@ -89,7 +90,7 @@ def test_validate_connectivity_non_fuel_treats_player_as_fuel_start() -> None:
         "BBBBBBB",
     ]
 
-    reachable = validate_connectivity(grid, requires_fuel=False)
+    reachable = validate_connectivity(grid, fuel_objective=FuelObjective.NONE)
     assert reachable is not None
 
 
@@ -101,7 +102,9 @@ def test_validate_connectivity_refuel_requires_two_reachable_fuel_points() -> No
         "BBBBBBBBB",
     ]
 
-    assert validate_connectivity(grid, requires_fuel=True, requires_refuel=True) is None
+    assert (
+        validate_connectivity(grid, fuel_objective=FuelObjective.REFUEL_CHAIN) is None
+    )
 
 
 def test_validate_connectivity_refuel_respects_one_way_flow() -> None:
@@ -113,4 +116,6 @@ def test_validate_connectivity_refuel_respects_one_way_flow() -> None:
         "BBBBBBBBBBB",
     ]
 
-    assert validate_connectivity(grid, requires_fuel=True, requires_refuel=True) is None
+    assert (
+        validate_connectivity(grid, fuel_objective=FuelObjective.REFUEL_CHAIN) is None
+    )
