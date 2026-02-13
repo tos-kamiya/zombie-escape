@@ -84,7 +84,6 @@ def test_active_train_merges_into_existing_target_owner_train() -> None:
     assert train_b in manager.trains
     assert len(manager.trains[train_b].marker_positions) >= 1
     assert manager.trains[train_b].history[0] == (head_a.x, head_a.y)
-    assert len(game_data.state.lineformer_merge_effects) == 0
 
 
 def test_lone_train_does_not_merge_when_not_near_destination_trail() -> None:

@@ -112,7 +112,6 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         falling_zombies=[],
         falling_spawn_carry=0,
         dust_rings=[],
-        lineformer_merge_effects=[],
         electrified_cells=set(),
         player_wall_target_cell=None,
         player_wall_target_ttl=0,
