@@ -1025,7 +1025,13 @@ def paint_steel_beam_surface(
 
 def build_fuel_can_surface(width: int, height: int) -> pygame.Surface:
     surface = pygame.Surface((width, height), pygame.SRCALPHA)
-    _draw_fuel_can_body(surface, width, height, fill_color=YELLOW)
+    _draw_fuel_can_body(
+        surface,
+        width,
+        height,
+        fill_color=YELLOW,
+        emboss_color=(185, 155, 20),
+    )
     _draw_fuel_can_cap(surface, width, height, fill_color=BLACK)
     return surface
 
@@ -1044,6 +1050,7 @@ def _draw_fuel_can_body(
     height: int,
     *,
     fill_color: tuple[int, int, int],
+    emboss_color: tuple[int, int, int] | None = None,
 ) -> None:
     x1 = max(1, int(round(width * 0.10)))
     y1 = max(1, int(round(height * 0.10)))
@@ -1065,6 +1072,19 @@ def _draw_fuel_can_body(
     ]
     pygame.draw.polygon(surface, fill_color, body_points)
     pygame.draw.polygon(surface, BLACK, body_points, width=1)
+    # Add a subtle embossed "X" highlight like a jerrycan rib.
+    x_left = x1 + max(2, int(round((x3 - x1) * 0.22)))
+    x_right = x3 - max(2, int(round((x3 - x1) * 0.22)))
+    y_top = y1 + max(3, int(round((y4 - y1) * 0.24)))
+    y_bottom = y4 - max(3, int(round((y4 - y1) * 0.20)))
+    if x_right > x_left and y_bottom > y_top:
+        highlight = emboss_color or tuple(min(255, c + 36) for c in fill_color)
+        pygame.draw.line(
+            surface, highlight, (x_left, y_top), (x_right, y_bottom), width=1
+        )
+        pygame.draw.line(
+            surface, highlight, (x_left, y_bottom), (x_right, y_top), width=1
+        )
 
 
 def _draw_fuel_can_cap(
