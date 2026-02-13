@@ -160,6 +160,36 @@ def _handle_fuel_station_refuel(
     return True
 
 
+def _handle_fuel_station_without_can_hint(
+    *,
+    game_data: GameData,
+    player: pygame.sprite.Sprite,
+    fuel_station: pygame.sprite.Sprite | None,
+    interaction_radius: float,
+    need_empty_can_text: str,
+    player_near_point: callable,
+) -> None:
+    state = game_data.state
+    if not (
+        fuel_station
+        and fuel_station.alive()
+        and state.fuel_progress == FuelProgress.NONE
+        and not player.in_car
+    ):
+        return
+    if not player_near_point(fuel_station.rect.center, interaction_radius):
+        return
+    schedule_timed_message(
+        state,
+        need_empty_can_text,
+        duration_frames=_ms_to_frames(FUEL_HINT_DURATION_MS),
+        clear_on_input=False,
+        color=YELLOW,
+        now_ms=state.clock.elapsed_ms,
+    )
+    state.hint_target_type = "empty_fuel_can"
+
+
 def _handle_player_item_pickups(
     *,
     game_data: GameData,
@@ -458,6 +488,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     stage = game_data.stage
     cell_size = game_data.cell_size
     need_fuel_text = tr("hud.need_fuel")
+    need_empty_can_text = tr("hud.need_empty_fuel_can")
     survivor_boarding_enabled = (
         stage.survivor_rescue_stage or stage.survivor_spawn_rate > 0.0
     )
@@ -522,6 +553,14 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 fuel_station=fuel_station,
                 interaction_radius=fuel_station_interaction_radius,
                 need_fuel_text=need_fuel_text,
+                player_near_point=_player_near_point,
+            )
+            _handle_fuel_station_without_can_hint(
+                game_data=game_data,
+                player=player,
+                fuel_station=fuel_station,
+                interaction_radius=fuel_station_interaction_radius,
+                need_empty_can_text=need_empty_can_text,
                 player_near_point=_player_near_point,
             )
     else:

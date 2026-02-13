@@ -209,6 +209,7 @@ def _render_studio_snapshot(
         game_data.groups.all_sprites,
         player,
         has_fuel=(game_data.state.fuel_progress == FuelProgress.FULL_CAN),
+        has_empty_fuel_can=(game_data.state.fuel_progress == FuelProgress.EMPTY_CAN),
         show_fuel_indicator=False,
     )
 

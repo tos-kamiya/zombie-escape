@@ -990,6 +990,7 @@ def _draw_entities(
     player: Player,
     *,
     has_fuel: bool,
+    has_empty_fuel_can: bool,
     show_fuel_indicator: bool,
 ) -> pygame.Rect:
     screen_rect_inflated = screen.get_rect().inflate(100, 100)
@@ -1005,6 +1006,7 @@ def _draw_entities(
                     screen,
                     player_screen_rect,
                     has_fuel=has_fuel,
+                    has_empty_fuel_can=has_empty_fuel_can,
                     in_car=player.in_car,
                 )
     return player_screen_rect or camera.apply_rect(player.rect)
@@ -1070,9 +1072,12 @@ def _draw_fuel_indicator(
     player_screen_rect: pygame.Rect,
     *,
     has_fuel: bool,
+    has_empty_fuel_can: bool,
     in_car: bool,
 ) -> None:
-    if not has_fuel or in_car:
+    if in_car:
+        return
+    if not has_fuel and not has_empty_fuel_can:
         return
     indicator_size = 4
     padding = 1
@@ -1082,8 +1087,14 @@ def _draw_fuel_indicator(
         indicator_size,
         indicator_size,
     )
-    pygame.draw.rect(screen, YELLOW, indicator_rect)
-    pygame.draw.rect(screen, (180, 160, 40), indicator_rect, width=1)
+    if has_fuel:
+        fill_color = YELLOW
+        border_color = (180, 160, 40)
+    else:
+        fill_color = (235, 235, 235)
+        border_color = (180, 180, 180)
+    pygame.draw.rect(screen, fill_color, indicator_rect)
+    pygame.draw.rect(screen, border_color, indicator_rect, width=1)
 
 
 def _draw_fog_of_war(
@@ -1261,6 +1272,7 @@ def draw(
         all_sprites,
         player,
         has_fuel=has_fuel,
+        has_empty_fuel_can=has_empty_fuel_can,
         show_fuel_indicator=not (stage and stage.endurance_stage),
     )
     _draw_lineformer_train_markers(
