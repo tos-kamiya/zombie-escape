@@ -131,9 +131,15 @@ def _humanoid_reachable_cells(
 
 def _build_valid_blueprint_grid(stage: object, *, base_seed: int) -> list[str]:
     moving_floor_cells = _moving_floor_cells_for_stage(stage)
-    fuel_count = int(stage.fuel_spawn_count) if stage.fuel_mode < FuelMode.START_FULL else 0
-    if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
-        fuel_count = max(2, fuel_count + int(stage.fuel_station_spawn_count))
+    fuel_count = 0
+    empty_fuel_can_count = 0
+    filling_station_count = 0
+    if stage.fuel_mode < FuelMode.START_FULL:
+        if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
+            empty_fuel_can_count = max(1, int(stage.empty_fuel_can_spawn_count))
+            filling_station_count = max(1, int(stage.filling_station_spawn_count))
+        else:
+            fuel_count = int(stage.fuel_spawn_count)
 
     for attempt in range(20):
         seed_rng(base_seed + attempt)
@@ -147,6 +153,8 @@ def _build_valid_blueprint_grid(stage: object, *, base_seed: int) -> list[str]:
             pitfall_zones=stage.pitfall_zones,
             moving_floor_cells=moving_floor_cells,
             fuel_count=fuel_count,
+            empty_fuel_can_count=empty_fuel_can_count,
+            filling_station_count=filling_station_count,
             flashlight_count=int(stage.initial_flashlight_count),
             shoes_count=int(stage.initial_shoes_count),
         )
@@ -165,6 +173,7 @@ def test_stage_blueprint_reachability(stage: object) -> None:
     car_cells = _find_cells(grid, "C")
     exit_cells = _find_cells(grid, "E")
     fuel_cells = _find_cells(grid, "f")
+    empty_fuel_can_cells = _find_cells(grid, "e")
 
     assert len(player_cells) == 1
     assert len(car_cells) >= 1
@@ -174,15 +183,16 @@ def test_stage_blueprint_reachability(stage: object) -> None:
     humanoid_from_player = _humanoid_reachable_cells(grid, player_start)
 
     if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
-        assert len(fuel_cells) >= 2, f"{stage.id}: requires refuel but fuel cells < 2"
-        empty_candidates = [cell for cell in fuel_cells if cell in humanoid_from_player]
+        assert empty_fuel_can_cells, f"{stage.id}: refuel chain requires empty-can cells"
+        assert fuel_cells, f"{stage.id}: refuel chain requires station cells"
+        empty_candidates = [
+            cell for cell in empty_fuel_can_cells if cell in humanoid_from_player
+        ]
         assert empty_candidates, f"{stage.id}: player cannot reach any empty-can candidate"
         can_reach_car_after_refuel = False
         for empty_cell in empty_candidates:
             humanoid_from_empty = _humanoid_reachable_cells(grid, empty_cell)
-            station_candidates = [
-                cell for cell in fuel_cells if cell != empty_cell and cell in humanoid_from_empty
-            ]
+            station_candidates = [cell for cell in fuel_cells if cell in humanoid_from_empty]
             for station_cell in station_candidates:
                 humanoid_from_station = _humanoid_reachable_cells(grid, station_cell)
                 if any(car_cell in humanoid_from_station for car_cell in car_cells):
@@ -191,7 +201,7 @@ def test_stage_blueprint_reachability(stage: object) -> None:
             if can_reach_car_after_refuel:
                 break
         assert can_reach_car_after_refuel, (
-            f"{stage.id}: no valid chain P->f1->f2->C found for refuel objective"
+            f"{stage.id}: no valid chain P->e->f->C found for refuel objective"
         )
     elif stage.fuel_mode == FuelMode.FUEL_CAN:
         assert fuel_cells, f"{stage.id}: requires fuel but no fuel cell exists"

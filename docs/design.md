@@ -129,7 +129,11 @@
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`, `survivor_spawn_rate`
 - スポーン数: `zombie_spawn_count_per_interval`（スポーンタイミングごとの湧き数、デフォルト1）
 - 内外/落下スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`, `interior_fall_spawn_weight`（重みを分け合う）
-- サバイバル設定: `endurance_goal_ms`, `fuel_spawn_count`, `fuel_station_spawn_count`
+- サバイバル設定:
+  - `endurance_goal_ms`
+  - `fuel_spawn_count`（`FuelMode.FUEL_CAN` で使う燃料缶候補数）
+  - `empty_fuel_can_spawn_count`（`FuelMode.REFUEL_CHAIN` で使う空の燃料缶候補数）
+  - `filling_station_spawn_count`（`FuelMode.REFUEL_CHAIN` で使う給油所候補数）
 - 初期アイテム: `initial_flashlight_count`, `initial_shoes_count`
 - 待機車両: `waiting_car_target_count`（ステージ別の待機車両数の目安）
 - 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）
@@ -368,6 +372,12 @@
   - 主な処理は責務ごとに分割され、`_handle_fuel_pickup` / `_handle_empty_fuel_can_pickup` / `_handle_fuel_station_refuel` / `_handle_player_item_pickups` /
     `_handle_buddy_interactions` / `_board_survivors_if_colliding` /
     `_handle_car_destruction` / `_handle_escape_conditions` が呼ばれる。
+  - 燃料チェーン (`FuelMode.REFUEL_CHAIN`) の基本フロー:
+    - `fuel_progress = NONE` のとき、空の燃料缶 (`empty_fuel_can`) を拾うと `EMPTY_CAN` に遷移する。
+    - `fuel_progress = EMPTY_CAN` のとき、給油機 (`fuel_station`) に接触すると `FULL_CAN` に遷移する。
+    - `fuel_progress = NONE` のまま給油機に接触した場合は、`hud.need_empty_fuel_can` のメッセージを表示し、ヒント対象を `empty_fuel_can` に設定する。
+  - 通常燃料モード (`FuelMode.FUEL_CAN`) では燃料缶 (`fuel`) の直接取得で `FULL_CAN` に遷移する。
+  - いずれのモードでも、燃料状態が更新されたタイミングで `hint_expires_at` / `hint_target_type` をクリアし、既存の燃料ヒント表示を解除する。
   - 生存者の車乗車は `survivor_rescue_stage` に加えて `survivor_spawn_rate > 0` のステージでも有効。
   - 車とゾンビの衝突は車の `collision_radius` ベースで判定し、移動中接触でゾンビにヒットダメージを与える。
   - 車の耐久値は `entities_constants.py` の `CAR_HEALTH` で定義される。
@@ -498,13 +508,16 @@
   - `P`: プレイヤー候補（player spawn candidate）
   - `C`: 車候補（car spawn candidate）
   - `x`: 落とし穴（pitfall trap）
+  - `e`: 空の燃料缶候補（empty fuel can candidate）
   - `f`: 燃料候補（fuel candidate）
+    - `FuelMode.FUEL_CAN` では「燃料缶候補」
+    - `FuelMode.REFUEL_CHAIN` では「給油所候補」
   - `l`: 懐中電灯候補（flashlight candidate）
   - `s`: 靴候補（shoes candidate）
   - `^`/`v`/`<`/`>`: 動く床（上/下/左/右）
 
 - `generate_random_blueprint(...)`
-  - 外周 -> 出口 -> スポーン・アイテム候補（P/C/f/l/s、必要数はステージ設定から指定）予約 -> 落とし穴 -> 壁 -> 鉄筋候補 の順に生成。
+  - 外周 -> 出口 -> スポーン・アイテム候補（P/C/e/f/l/s、必要数はステージ設定から指定）予約 -> 落とし穴 -> 壁 -> 鉄筋候補 の順に生成。
   - 予約地点（`reserved_cells`）には壁や落とし穴が生成されないよう保護される。
   - `wall_algo` により壁配置戦略を切り替え可能。
     - `"default"`: ランダムな長さの直線をランダム配置。
@@ -514,7 +527,10 @@
     - `"sparse_moore.<int>%"`: 点在壁の密度を 0〜100 の整数％で指定。
     - `"sparse_ortho"`: 低密度の点在壁を配置（上下左右のみ隣接禁止）。
     - `"sparse_ortho.<int>%"`: 点在壁の密度を 0〜100 の整数％で指定。
-  - 燃料/懐中電灯/靴の候補セル数は、レイアウト生成時にステージ設定の必要数に合わせて確保される。
+  - 燃料系候補セル数はモードごとに確保される。
+    - `FuelMode.FUEL_CAN`: `f` 候補を確保。
+    - `FuelMode.REFUEL_CHAIN`: `e`（空缶）と `f`（給油所）をそれぞれ確保し、最低1つずつ保証する。
+  - 懐中電灯/靴の候補セル数も、レイアウト生成時にステージ設定の必要数に合わせて確保される。
 
 - 落下ゾンビ用タイル
   - `fall_spawn_zones`（ステージ定義の矩形群）をセル集合に展開し、`fall_spawn_cells` として保持。
@@ -537,8 +553,11 @@
 2. **人間の目的到達チェック (`validate_humanoid_objective_connectivity`)**:
    - 人間移動は**8方向移動**（斜め含む）で評価。
    - 動く床セル（`^`/`v`/`<`/`>`）上では、床の逆向き方向とその左右45度（計3方向）への遷移を禁止。
-   - 燃料が必要なステージでは `P -> 到達可能なf -> C` を満たすことを要求。
-   - 燃料が不要なステージでは `P` を燃料開始点として扱い、`P -> C` を要求。
+   - 目的到達条件は `FuelMode` ごとに分岐する:
+     - `FuelMode.FUEL_CAN`: `P -> 到達可能なf -> C` を要求。
+     - `FuelMode.REFUEL_CHAIN`: **`P -> 到達可能なe -> 到達可能なf -> C`** を要求（順序は固定で交換不可）。
+       - `e` または `f` の候補が欠ける場合は不合格として扱い、リトライ対象とする。
+     - `FuelMode.START_FULL`: `P` を燃料開始点として扱い、`P -> C` を要求。
 
 **統合検証 (`validate_connectivity`)**:
 - 上記2検証をまとめて実施し、どちらかが不成立なら失敗。

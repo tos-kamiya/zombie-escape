@@ -259,7 +259,8 @@ class Stage:
 
     # Items
     fuel_spawn_count: int = 1
-    fuel_station_spawn_count: int = 1
+    empty_fuel_can_spawn_count: int = 1
+    filling_station_spawn_count: int = 1
     initial_flashlight_count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT
     initial_shoes_count: int = DEFAULT_SHOES_SPAWN_COUNT
     waiting_car_target_count: int = 1
@@ -291,13 +292,16 @@ class Stage:
         mode_raw = self.fuel_mode
         mode = mode_raw if isinstance(mode_raw, FuelMode) else FuelMode(int(mode_raw))
         object.__setattr__(self, "fuel_mode", mode)
-        if mode != FuelMode.START_FULL:
+        if mode == FuelMode.FUEL_CAN:
             assert self.fuel_spawn_count >= 1, (
-                "fuel_mode 0/1 stages must set fuel_spawn_count >= 1"
+                "fuel_can stages must set fuel_spawn_count >= 1"
             )
         if mode == FuelMode.REFUEL_CHAIN:
-            assert self.fuel_station_spawn_count >= 1, (
-                "refuel_chain stages must set fuel_station_spawn_count >= 1"
+            assert self.empty_fuel_can_spawn_count >= 1, (
+                "refuel_chain stages must set empty_fuel_can_spawn_count >= 1"
+            )
+            assert self.filling_station_spawn_count >= 1, (
+                "refuel_chain stages must set filling_station_spawn_count >= 1"
             )
 
     @property

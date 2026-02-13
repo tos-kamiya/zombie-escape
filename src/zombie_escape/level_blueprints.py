@@ -156,7 +156,7 @@ def validate_humanoid_objective_connectivity(
     """Check objective pathing for humans with moving-floor constraints.
 
     - fuel_mode=1 (FUEL_CAN): P -> any reachable f -> any C
-    - fuel_mode=0 (REFUEL_CHAIN): P -> reachable f1 -> reachable f2 -> any C
+    - fuel_mode=0 (REFUEL_CHAIN): P -> reachable e -> reachable f -> any C
     - fuel_mode=2 (START_FULL): treat P as the fuel start, then P -> any C
     """
     rows = len(grid)
@@ -171,6 +171,9 @@ def validate_humanoid_objective_connectivity(
         (x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "P"
     ]
     car_cells = {(x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "C"}
+    empty_can_cells = {
+        (x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "e"
+    }
     fuel_cells = {(x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "f"}
 
     if len(player_cells) != 1 or not car_cells:
@@ -183,9 +186,9 @@ def validate_humanoid_objective_connectivity(
         passable_cells=passable_cells,
     )
     if fuel_mode == FuelMode.REFUEL_CHAIN:
-        if len(fuel_cells) < 2:
+        if not empty_can_cells or not fuel_cells:
             return False
-        empty_candidates = [cell for cell in fuel_cells if cell in from_player]
+        empty_candidates = [cell for cell in empty_can_cells if cell in from_player]
         if not empty_candidates:
             return False
         for empty_cell in empty_candidates:
@@ -194,9 +197,7 @@ def validate_humanoid_objective_connectivity(
                 empty_cell,
                 passable_cells=passable_cells,
             )
-            station_candidates = [
-                cell for cell in fuel_cells if cell != empty_cell and cell in from_empty
-            ]
+            station_candidates = [cell for cell in fuel_cells if cell in from_empty]
             if not station_candidates:
                 continue
             for station_cell in station_candidates:
@@ -771,6 +772,8 @@ def generate_random_blueprint(
     reserved_cells: set[tuple[int, int]] | None = None,
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] | None = None,
     fuel_count: int = 1,
+    empty_fuel_can_count: int = 0,
+    filling_station_count: int = 0,
     flashlight_count: int = 2,
     shoes_count: int = 2,
 ) -> Blueprint:
@@ -823,10 +826,22 @@ def generate_random_blueprint(
 
     # Items
     fuel_count = max(0, int(fuel_count))
+    empty_fuel_can_count = max(0, int(empty_fuel_can_count))
+    filling_station_count = max(0, int(filling_station_count))
     flashlight_count = max(0, int(flashlight_count))
     shoes_count = max(0, int(shoes_count))
 
+    for _ in range(empty_fuel_can_count):
+        ex, ey = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
+        grid[ey][ex] = "e"
+        reserved_cells.add((ex, ey))
+
     for _ in range(fuel_count):
+        fx, fy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
+        grid[fy][fx] = "f"
+        reserved_cells.add((fx, fy))
+
+    for _ in range(filling_station_count):
         fx, fy = _pick_empty_cell(grid, SPAWN_MARGIN, forbidden_cells=reserved_cells)
         grid[fy][fx] = "f"
         reserved_cells.add((fx, fy))
