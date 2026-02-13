@@ -197,9 +197,9 @@ FLASHLIGHT_SPEC = PolygonSpec(
 FUEL_STATION_SPEC = PolygonSpec(
     size=(14, 18),
     polygons=[
-        [(1, 1), (10, 1), (10, 17), (1, 17)],
-        [(10, 4), (13, 4), (13, 8), (10, 8)],
-        [(10, 10), (13, 10), (13, 12), (10, 12)],
+        [(1, 1), (8, 1), (8, 17), (1, 17)],
+        [(8, 4), (13, 4), (13, 8), (8, 8)],
+        [(8, 10), (12, 10), (12, 12), (8, 12)],
     ],
 )
 
@@ -1032,13 +1032,64 @@ def build_empty_fuel_can_surface(width: int, height: int) -> pygame.Surface:
 
 
 def build_fuel_station_surface(width: int, height: int) -> pygame.Surface:
-    return _draw_polygon_surface(
-        width,
-        height,
-        FUEL_STATION_SPEC,
-        fill_color=(255, 215, 80),
-        outline_color=BLACK,
+    surface = pygame.Surface((width, height), pygame.SRCALPHA)
+
+    def sx(px: int) -> int:
+        return int(round(px * width / 14))
+
+    def sy(py: int) -> int:
+        return int(round(py * height / 18))
+
+    # Base pedestal
+    base = pygame.Rect(sx(0), sy(15), max(1, sx(9) - sx(0)), max(1, sy(18) - sy(15)))
+    pygame.draw.rect(surface, YELLOW, base)
+    pygame.draw.rect(surface, BLACK, base, width=1)
+
+    # Main body
+    body = pygame.Rect(sx(1), sy(1), max(1, sx(8) - sx(1)), max(1, sy(16) - sy(1)))
+    pygame.draw.rect(surface, YELLOW, body)
+    pygame.draw.rect(surface, BLACK, body, width=1)
+
+    # Display panel
+    panel = pygame.Rect(sx(2), sy(3), max(1, sx(7) - sx(2)), max(1, sy(7) - sy(3)))
+    pygame.draw.rect(surface, BLACK, panel)
+
+    # Hose support arm (leave a small gap from body to nozzle side)
+    arm = pygame.Rect(sx(9), sy(4), max(1, sx(10) - sx(9)), max(1, sy(5) - sy(4)))
+    pygame.draw.rect(surface, BLACK, arm)
+
+    # Nozzle block
+    nozzle = pygame.Rect(sx(10), sy(4), max(1, sx(13) - sx(10)), max(1, sy(7) - sy(4)))
+    pygame.draw.rect(surface, YELLOW, nozzle)
+    pygame.draw.rect(surface, BLACK, nozzle, width=1)
+
+    # Hose loop
+    hose_w = max(1, sx(11) - sx(10))
+    hose_h = max(2, sy(14) - sy(7))
+    hose = pygame.Rect(sx(10), sy(7), hose_w, hose_h)
+    pygame.draw.rect(surface, BLACK, hose, width=1)
+
+    # Short hose tip back toward the pump
+    tip = pygame.Rect(sx(9), sy(13), max(1, sx(10) - sx(9)), max(1, sy(14) - sy(13)))
+    pygame.draw.rect(surface, BLACK, tip)
+
+    # Extend lower hose so it visibly connects back into the pump body.
+    lower_hose = pygame.Rect(
+        sx(9),
+        sy(14),
+        max(1, sx(10) - sx(9)),
+        max(1, sy(16) - sy(14)),
     )
+    pygame.draw.rect(surface, BLACK, lower_hose)
+    body_connector = pygame.Rect(
+        sx(8),
+        sy(15),
+        max(1, sx(9) - sx(8)),
+        max(1, sy(16) - sy(15)),
+    )
+    pygame.draw.rect(surface, BLACK, body_connector)
+
+    return surface
 
 
 def build_flashlight_surface(width: int, height: int) -> pygame.Surface:
