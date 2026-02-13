@@ -95,7 +95,7 @@
 - ゲームオーバー画面用: `scaled_overview`, `overview_created`
 - 進行演出: `footprints`, `last_footprint_pos`, `footprint_visible_toggle`, `elapsed_play_ms`
 - 近接探索: `spatial_index`（移動体用の空間インデックス）
-- アイテム状態: `fuel_progress`（`none`/`empty_can`/`full_can`）, `flashlight_count`, `shoes_count`
+- アイテム状態: `fuel_progress`（`0: none` / `1: empty_can` / `2: full_can`）, `flashlight_count`, `shoes_count`
 - ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`,
   `timed_message`（`TimedMessage` の内容を保持）
 - ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
@@ -125,7 +125,7 @@
 
 `Stage` はステージ属性を保持する `dataclass`。
 
-- プレイ特性: `fuel_objective`（`none`/`fuel_can`/`refuel_chain`）, `buddy_required_count`, `survivor_rescue_stage`, `endurance_stage`, `intro_key`
+- プレイ特性: `fuel_mode`（`0: refuel_chain` / `1: fuel_can` / `2: start_full`）, `buddy_required_count`, `survivor_rescue_stage`, `endurance_stage`, `intro_key`
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`, `survivor_spawn_rate`
 - スポーン数: `zombie_spawn_count_per_interval`（スポーンタイミングごとの湧き数、デフォルト1）
 - 内外/落下スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`, `interior_fall_spawn_weight`（重みを分け合う）

@@ -7,6 +7,7 @@ import pytest
 from zombie_escape.entities_constants import MovingFloorDirection
 from zombie_escape.level_blueprints import generate_random_blueprint, validate_car_connectivity
 from zombie_escape.level_constants import DEFAULT_STEEL_BEAM_CHANCE
+from zombie_escape.models import FuelMode
 from zombie_escape.rng import seed_rng
 from zombie_escape.stage_constants import STAGES
 
@@ -130,8 +131,8 @@ def _humanoid_reachable_cells(
 
 def _build_valid_blueprint_grid(stage: object, *, base_seed: int) -> list[str]:
     moving_floor_cells = _moving_floor_cells_for_stage(stage)
-    fuel_count = int(stage.fuel_spawn_count) if stage.requires_fuel else 0
-    if getattr(stage, "requires_refuel", False):
+    fuel_count = int(stage.fuel_spawn_count) if stage.fuel_mode < FuelMode.START_FULL else 0
+    if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
         fuel_count = max(2, fuel_count + int(stage.fuel_station_spawn_count))
 
     for attempt in range(20):
@@ -172,7 +173,7 @@ def test_stage_blueprint_reachability(stage: object) -> None:
     player_start = player_cells[0]
     humanoid_from_player = _humanoid_reachable_cells(grid, player_start)
 
-    if getattr(stage, "requires_refuel", False):
+    if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
         assert len(fuel_cells) >= 2, f"{stage.id}: requires refuel but fuel cells < 2"
         empty_candidates = [cell for cell in fuel_cells if cell in humanoid_from_player]
         assert empty_candidates, f"{stage.id}: player cannot reach any empty-can candidate"
@@ -192,7 +193,7 @@ def test_stage_blueprint_reachability(stage: object) -> None:
         assert can_reach_car_after_refuel, (
             f"{stage.id}: no valid chain P->f1->f2->C found for refuel objective"
         )
-    elif stage.requires_fuel:
+    elif stage.fuel_mode == FuelMode.FUEL_CAN:
         assert fuel_cells, f"{stage.id}: requires fuel but no fuel cell exists"
         reachable_fuels = [cell for cell in fuel_cells if cell in humanoid_from_player]
         assert reachable_fuels, f"{stage.id}: player cannot reach any fuel cell"

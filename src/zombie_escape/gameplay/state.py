@@ -12,6 +12,7 @@ from ..colors import (
 from ..entities_constants import SURVIVOR_MAX_SAFE_PASSENGERS
 from ..localization import translate as tr
 from ..models import (
+    FuelMode,
     FuelProgress,
     GameClock,
     GameData,
@@ -66,10 +67,13 @@ def schedule_timed_message(
 
 def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     """Initialize and return the base game state objects."""
-    starts_with_fuel = not stage.requires_fuel
+    fuel_progress = (
+        FuelProgress.FULL_CAN
+        if stage.fuel_mode == FuelMode.START_FULL
+        else FuelProgress.NONE
+    )
     if stage.endurance_stage:
-        starts_with_fuel = False
-    fuel_progress = FuelProgress.FULL_CAN if starts_with_fuel else FuelProgress.NONE
+        fuel_progress = FuelProgress.NONE
     starts_with_flashlight = False
     initial_flashlights = 1 if starts_with_flashlight else 0
     initial_palette_key = ambient_palette_key_for_flashlights(initial_flashlights)

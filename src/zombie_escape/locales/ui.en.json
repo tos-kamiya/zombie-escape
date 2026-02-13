@@ -204,6 +204,7 @@
     "hud": {
       "need_fuel": "Need fuel to drive!",
       "need_empty_fuel_can": "Need an empty fuel can first!",
+      "internal_error": "Internal error",
       "paused": "PAUSED",
       "pause_hint": "P/Start: Resume · ESC/Select: Return to Title",
       "endurance_timer_label": "Until dawn %{time}",

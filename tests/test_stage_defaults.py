@@ -1,6 +1,6 @@
 import pytest
 
-from zombie_escape.models import FuelObjective, Stage
+from zombie_escape.models import FuelMode, Stage
 
 
 def test_stage_default_zombie_spawn_count_per_interval_is_one() -> None:
@@ -18,6 +18,6 @@ def test_stage_refuel_chain_requires_fuel_station_count() -> None:
             id="stage_test_refuel_invalid",
             name_key="stages.stage1.name",
             description_key="stages.stage1.description",
-            fuel_objective=FuelObjective.REFUEL_CHAIN,
+            fuel_mode=FuelMode.REFUEL_CHAIN,
             fuel_station_spawn_count=0,
         )

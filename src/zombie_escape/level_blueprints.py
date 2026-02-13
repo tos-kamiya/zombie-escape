@@ -10,7 +10,7 @@ from .level_constants import (
     DEFAULT_STEEL_BEAM_CHANCE,
     DEFAULT_WALL_LINES,
 )
-from .models import FuelObjective
+from .models import FuelMode
 from .rng import get_rng
 from .entities_constants import MovingFloorDirection
 
@@ -151,13 +151,13 @@ def _humanoid_reachable_cells(
 def validate_humanoid_objective_connectivity(
     grid: list[str],
     *,
-    fuel_objective: FuelObjective = FuelObjective.NONE,
+    fuel_mode: FuelMode = FuelMode.START_FULL,
 ) -> bool:
     """Check objective pathing for humans with moving-floor constraints.
 
-    - fuel_objective=FUEL_CAN: P -> any reachable f -> any C
-    - fuel_objective=REFUEL_CHAIN: P -> reachable f1 -> reachable f2 -> any C
-    - fuel_objective=NONE: treat P as the fuel start, then P -> any C
+    - fuel_mode=1 (FUEL_CAN): P -> any reachable f -> any C
+    - fuel_mode=0 (REFUEL_CHAIN): P -> reachable f1 -> reachable f2 -> any C
+    - fuel_mode=2 (START_FULL): treat P as the fuel start, then P -> any C
     """
     rows = len(grid)
     cols = len(grid[0])
@@ -182,7 +182,7 @@ def validate_humanoid_objective_connectivity(
         player_start,
         passable_cells=passable_cells,
     )
-    if fuel_objective == FuelObjective.REFUEL_CHAIN:
+    if fuel_mode == FuelMode.REFUEL_CHAIN:
         if len(fuel_cells) < 2:
             return False
         empty_candidates = [cell for cell in fuel_cells if cell in from_player]
@@ -208,7 +208,7 @@ def validate_humanoid_objective_connectivity(
                 if any(car_cell in from_station for car_cell in car_cells):
                     return True
         return False
-    if fuel_objective == FuelObjective.FUEL_CAN:
+    if fuel_mode == FuelMode.FUEL_CAN:
         if not fuel_cells:
             return False
         fuel_starts = [cell for cell in fuel_cells if cell in from_player]
@@ -231,7 +231,7 @@ def validate_humanoid_objective_connectivity(
 def validate_connectivity(
     grid: list[str],
     *,
-    fuel_objective: FuelObjective = FuelObjective.NONE,
+    fuel_mode: FuelMode = FuelMode.START_FULL,
 ) -> set[tuple[int, int]] | None:
     """Validate both car and humanoid movement conditions.
     Returns car reachable cells if both pass, otherwise None.
@@ -241,7 +241,7 @@ def validate_connectivity(
         return None
     if not validate_humanoid_objective_connectivity(
         grid,
-        fuel_objective=fuel_objective,
+        fuel_mode=fuel_mode,
     ):
         return None
     return car_reachable

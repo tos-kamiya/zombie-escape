@@ -59,8 +59,7 @@ from ..gameplay.spawn import _alive_waiting_cars
 from ..world_grid import build_wall_index
 from ..entities.walls import consume_wall_index_dirty
 from ..localization import get_font_settings, translate as tr
-from ..models import Stage
-from ..models import FuelProgress
+from ..models import FuelMode, FuelProgress, Stage
 from ..render import (
     draw,
     draw_debug_overview,
@@ -83,6 +82,338 @@ if TYPE_CHECKING:
 
 
 _SHARED_FOG_CACHE: dict[str, Any] | None = None
+
+
+def _resolve_hint_target_type(
+    *,
+    stage: Stage,
+    fuel_progress: FuelProgress,
+    game_data: Any,
+    player_in_car: bool,
+    active_car: Any,
+    report_internal_error_once: callable,
+) -> str | None:
+    if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
+        if fuel_progress < FuelProgress.EMPTY_CAN:
+            if game_data.empty_fuel_can and game_data.empty_fuel_can.alive():
+                return "empty_fuel_can"
+            report_internal_error_once("missing_empty_fuel_can_for_refuel")
+            return None
+        if fuel_progress == FuelProgress.EMPTY_CAN:
+            if game_data.fuel_station and game_data.fuel_station.alive():
+                return "fuel_station"
+            report_internal_error_once("missing_fuel_station_for_refuel")
+            return None
+        if not player_in_car and (active_car or _alive_waiting_cars(game_data)):
+            return "car"
+        return None
+
+    if stage.fuel_mode == FuelMode.FUEL_CAN and fuel_progress < FuelProgress.FULL_CAN:
+        if game_data.fuel and game_data.fuel.alive():
+            return "fuel"
+        report_internal_error_once("missing_fuel_can_for_fuel_mode")
+        return None
+
+    if not player_in_car and (active_car or _alive_waiting_cars(game_data)):
+        return "car"
+    return None
+
+
+def _resolve_hint_target_position(
+    *,
+    target_type: str | None,
+    game_data: Any,
+    active_car: Any,
+    player_pos: tuple[float, float],
+) -> tuple[float, float] | None:
+    if not target_type:
+        return None
+    if target_type == "fuel" and game_data.fuel and game_data.fuel.alive():
+        return game_data.fuel.rect.center
+    if (
+        target_type == "empty_fuel_can"
+        and game_data.empty_fuel_can
+        and game_data.empty_fuel_can.alive()
+    ):
+        return game_data.empty_fuel_can.rect.center
+    if (
+        target_type == "fuel_station"
+        and game_data.fuel_station
+        and game_data.fuel_station.alive()
+    ):
+        return game_data.fuel_station.rect.center
+    if target_type == "car":
+        if active_car:
+            return active_car.rect.center
+        waiting_target = nearest_waiting_car(game_data, player_pos)
+        if waiting_target:
+            return waiting_target.rect.center
+    return None
+
+
+def _spawn_stage_items(
+    *,
+    game_data: Any,
+    layout_data: dict[str, Any],
+    player: Any,
+) -> None:
+    stage = game_data.stage
+    occupied_centers: set[tuple[int, int]] = set()
+    cell_size = game_data.cell_size
+
+    if stage.fuel_mode < FuelMode.START_FULL:
+        fuel_spawn_count = stage.fuel_spawn_count
+        fuel_station_spawn_count = stage.fuel_station_spawn_count
+        if stage.endurance_stage:
+            fuel_spawn_count = 0
+            fuel_station_spawn_count = 0
+        if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
+            empty_fuel_can = place_empty_fuel_can(
+                layout_data["fuel_cells"],
+                cell_size,
+                player,
+                cars=game_data.waiting_cars,
+                reserved_centers=occupied_centers,
+                count=fuel_spawn_count,
+            )
+            if empty_fuel_can:
+                game_data.empty_fuel_can = empty_fuel_can
+                game_data.groups.all_sprites.add(empty_fuel_can, layer=LAYER_ITEMS)
+                occupied_centers.add(empty_fuel_can.rect.center)
+            fuel_station = place_fuel_station(
+                layout_data["fuel_cells"],
+                cell_size,
+                player,
+                cars=game_data.waiting_cars,
+                reserved_centers=occupied_centers,
+                count=fuel_station_spawn_count,
+            )
+            if fuel_station:
+                game_data.fuel_station = fuel_station
+                game_data.groups.all_sprites.add(fuel_station, layer=LAYER_ITEMS)
+                occupied_centers.add(fuel_station.rect.center)
+        else:
+            fuel_can = place_fuel_can(
+                layout_data["fuel_cells"],
+                cell_size,
+                player,
+                cars=game_data.waiting_cars,
+                reserved_centers=occupied_centers,
+                count=fuel_spawn_count,
+            )
+            if fuel_can:
+                game_data.fuel = fuel_can
+                game_data.groups.all_sprites.add(fuel_can, layer=LAYER_ITEMS)
+                occupied_centers.add(fuel_can.rect.center)
+
+    flashlight_count = stage.initial_flashlight_count
+    flashlights = place_flashlights(
+        layout_data["flashlight_cells"],
+        cell_size,
+        player,
+        cars=game_data.waiting_cars,
+        reserved_centers=occupied_centers,
+        count=max(0, flashlight_count),
+    )
+    game_data.flashlights = flashlights
+    game_data.groups.all_sprites.add(flashlights, layer=LAYER_ITEMS)
+    for flashlight in flashlights:
+        occupied_centers.add(flashlight.rect.center)
+
+    shoes_count = stage.initial_shoes_count
+    shoes_list = place_shoes(
+        layout_data["shoes_cells"],
+        cell_size,
+        player,
+        cars=game_data.waiting_cars,
+        reserved_centers=occupied_centers,
+        count=max(0, shoes_count),
+    )
+    game_data.shoes = shoes_list
+    game_data.groups.all_sprites.add(shoes_list, layer=LAYER_ITEMS)
+
+
+def _handle_runtime_events(
+    *,
+    game_data: Any,
+    debug_mode: bool,
+    paused_manual: bool,
+    paused_focus: bool,
+    debug_overview: bool,
+    controller: Any,
+    joystick: Any,
+    profiler: object | None,
+    profiling_active: bool,
+    dump_profile: callable,
+    finalize: callable,
+) -> tuple[ScreenTransition | None, bool, bool, bool, Any, Any, bool]:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            return (
+                finalize(ScreenTransition(ScreenID.EXIT)),
+                paused_manual,
+                paused_focus,
+                debug_overview,
+                controller,
+                joystick,
+                profiling_active,
+            )
+        if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
+            sync_window_size(event, game_data=game_data)
+            continue
+        if event.type == pygame.WINDOWFOCUSLOST:
+            paused_focus = True
+        if event.type == pygame.WINDOWFOCUSGAINED:
+            paused_focus = False
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            paused_focus = False
+        if event.type == pygame.JOYDEVICEADDED or (
+            CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
+        ):
+            if controller is None:
+                controller = init_first_controller()
+            if controller is None:
+                joystick = init_first_joystick()
+        if event.type == pygame.JOYDEVICEREMOVED or (
+            CONTROLLER_DEVICE_REMOVED is not None
+            and event.type == CONTROLLER_DEVICE_REMOVED
+        ):
+            if controller and not controller.get_init():
+                controller = None
+            if joystick and not joystick.get_init():
+                joystick = None
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_F10:
+                if profiler is not None:
+                    if profiling_active:
+                        dump_profile()
+                        profiling_active = False
+                    else:
+                        profiler.enable()
+                        profiling_active = True
+                        print("Profile started (F10 to stop and save).")
+                continue
+            if event.key == pygame.K_LEFTBRACKET:
+                nudge_window_scale(0.5, game_data=game_data)
+                continue
+            if event.key == pygame.K_RIGHTBRACKET:
+                nudge_window_scale(2.0, game_data=game_data)
+                continue
+            if event.key == pygame.K_f:
+                toggle_fullscreen(game_data=game_data)
+                continue
+            if debug_mode:
+                if event.key == pygame.K_ESCAPE:
+                    return (
+                        ScreenTransition(ScreenID.TITLE),
+                        paused_manual,
+                        paused_focus,
+                        debug_overview,
+                        controller,
+                        joystick,
+                        profiling_active,
+                    )
+                if event.key == pygame.K_p:
+                    paused_manual = not paused_manual
+                if event.key == pygame.K_o:
+                    debug_overview = not debug_overview
+                continue
+            if paused_manual:
+                if event.key == pygame.K_ESCAPE:
+                    return (
+                        finalize(ScreenTransition(ScreenID.TITLE)),
+                        paused_manual,
+                        paused_focus,
+                        debug_overview,
+                        controller,
+                        joystick,
+                        profiling_active,
+                    )
+                if event.key == pygame.K_p:
+                    paused_manual = False
+                continue
+            if event.key in (pygame.K_ESCAPE, pygame.K_p):
+                paused_manual = True
+                continue
+        if event.type == pygame.JOYBUTTONDOWN or (
+            CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN
+        ):
+            if debug_mode:
+                if is_select_event(event):
+                    return (
+                        finalize(ScreenTransition(ScreenID.TITLE)),
+                        paused_manual,
+                        paused_focus,
+                        debug_overview,
+                        controller,
+                        joystick,
+                        profiling_active,
+                    )
+                if is_start_event(event):
+                    paused_manual = not paused_manual
+                continue
+            if paused_manual:
+                if is_select_event(event):
+                    return (
+                        finalize(ScreenTransition(ScreenID.TITLE)),
+                        paused_manual,
+                        paused_focus,
+                        debug_overview,
+                        controller,
+                        joystick,
+                        profiling_active,
+                    )
+                if is_start_event(event):
+                    paused_manual = False
+                continue
+            if is_select_event(event) or is_start_event(event):
+                paused_manual = True
+                continue
+    return (
+        None,
+        paused_manual,
+        paused_focus,
+        debug_overview,
+        controller,
+        joystick,
+        profiling_active,
+    )
+
+
+def _render_paused_state(
+    *,
+    render_assets: "RenderAssets",
+    screen: surface.Surface,
+    overview_surface: surface.Surface,
+    game_data: Any,
+    config: dict[str, Any],
+    screen_width: int,
+    screen_height: int,
+    show_pause_overlay: bool,
+    debug_overview: bool,
+    fps: float | None,
+) -> None:
+    if debug_overview:
+        draw_debug_overview(
+            render_assets,
+            screen,
+            overview_surface,
+            game_data,
+            config,
+            screen_width=screen_width,
+            screen_height=screen_height,
+        )
+    else:
+        draw(
+            render_assets,
+            screen,
+            game_data,
+            config=config,
+            fps=fps,
+        )
+    if show_pause_overlay:
+        draw_pause_overlay(screen)
+    present(screen)
 
 
 def gameplay_screen(
@@ -172,14 +503,6 @@ def gameplay_screen(
     game_data.state.seed = applied_seed
     game_data.state.debug_mode = debug_mode
     game_data.state.show_fps = show_fps
-    # if debug_mode and stage.endurance_stage:
-    #     goal_ms = max(0, stage.endurance_goal_ms)
-    #     if goal_ms > 0:
-    #         remaining = 3 * 60 * 1000  # 3 minutes in ms
-    #         game_data.state.endurance_elapsed_ms = max(0, goal_ms - remaining)
-    #         game_data.state.dawn_ready = False
-    #         game_data.state.dawn_prompt_at = None
-    #         game_data.state.dawn_carbonized = False
     global _SHARED_FOG_CACHE
     if _SHARED_FOG_CACHE is None:
         prewarm_fog_overlays(
@@ -206,11 +529,25 @@ def gameplay_screen(
         )
     paused_manual = False
     paused_focus = False
-    ignore_focus_loss_until = 0
     debug_overview = False
+    reported_internal_errors: set[str] = set()
     controller = init_first_controller()
     joystick = init_first_joystick() if controller is None else None
     _set_mouse_hidden(pygame.mouse.get_focused())
+
+    def _report_internal_error_once(code: str) -> None:
+        if code in reported_internal_errors:
+            return
+        reported_internal_errors.add(code)
+        print(f"INTERNAL ERROR: {code}")
+        schedule_timed_message(
+            game_data.state,
+            tr("hud.internal_error"),
+            duration_frames=ms_to_frames(3000),
+            clear_on_input=False,
+            color=RED,
+            now_ms=game_data.state.clock.elapsed_ms,
+        )
 
     try:
         layout, layout_data, wall_group, all_sprites, blueprint = (
@@ -255,77 +592,11 @@ def gameplay_screen(
 
     spawn_survivors(game_data, layout_data)
 
-    occupied_centers: set[tuple[int, int]] = set()
-    cell_size = game_data.cell_size
-    if stage.requires_fuel:
-        fuel_spawn_count = stage.fuel_spawn_count
-        fuel_station_spawn_count = stage.fuel_station_spawn_count
-        if stage.endurance_stage:
-            fuel_spawn_count = 0
-            fuel_station_spawn_count = 0
-        if stage.requires_refuel:
-            empty_fuel_can = place_empty_fuel_can(
-                layout_data["fuel_cells"],
-                cell_size,
-                player,
-                cars=game_data.waiting_cars,
-                reserved_centers=occupied_centers,
-                count=fuel_spawn_count,
-            )
-            if empty_fuel_can:
-                game_data.empty_fuel_can = empty_fuel_can
-                game_data.groups.all_sprites.add(empty_fuel_can, layer=LAYER_ITEMS)
-                occupied_centers.add(empty_fuel_can.rect.center)
-            fuel_station = place_fuel_station(
-                layout_data["fuel_cells"],
-                cell_size,
-                player,
-                cars=game_data.waiting_cars,
-                reserved_centers=occupied_centers,
-                count=fuel_station_spawn_count,
-            )
-            if fuel_station:
-                game_data.fuel_station = fuel_station
-                game_data.groups.all_sprites.add(fuel_station, layer=LAYER_ITEMS)
-                occupied_centers.add(fuel_station.rect.center)
-        else:
-            fuel_can = place_fuel_can(
-                layout_data["fuel_cells"],
-                cell_size,
-                player,
-                cars=game_data.waiting_cars,
-                reserved_centers=occupied_centers,
-                count=fuel_spawn_count,
-            )
-            if fuel_can:
-                game_data.fuel = fuel_can
-                game_data.groups.all_sprites.add(fuel_can, layer=LAYER_ITEMS)
-                occupied_centers.add(fuel_can.rect.center)
-    flashlight_count = stage.initial_flashlight_count
-    flashlights = place_flashlights(
-        layout_data["flashlight_cells"],
-        cell_size,
-        player,
-        cars=game_data.waiting_cars,
-        reserved_centers=occupied_centers,
-        count=max(0, flashlight_count),
+    _spawn_stage_items(
+        game_data=game_data,
+        layout_data=layout_data,
+        player=player,
     )
-    game_data.flashlights = flashlights
-    game_data.groups.all_sprites.add(flashlights, layer=LAYER_ITEMS)
-    for flashlight in flashlights:
-        occupied_centers.add(flashlight.rect.center)
-
-    shoes_count = stage.initial_shoes_count
-    shoes_list = place_shoes(
-        layout_data["shoes_cells"],
-        cell_size,
-        player,
-        cars=game_data.waiting_cars,
-        reserved_centers=occupied_centers,
-        count=max(0, shoes_count),
-    )
-    game_data.shoes = shoes_list
-    game_data.groups.all_sprites.add(shoes_list, layer=LAYER_ITEMS)
 
     spawn_initial_zombies(game_data, player, layout_data, config)
     spawn_initial_patrol_bots(game_data, player, layout_data)
@@ -364,127 +635,46 @@ def gameplay_screen(
                 )
             )
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return _finalize(ScreenTransition(ScreenID.EXIT))
-            if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
-                sync_window_size(event, game_data=game_data)
-                continue
-            if event.type == pygame.WINDOWFOCUSLOST:
-                now = game_data.state.clock.elapsed_ms
-                if now >= ignore_focus_loss_until:
-                    paused_focus = True
-            if event.type == pygame.WINDOWFOCUSGAINED:
-                paused_focus = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                paused_focus = False
-            if event.type == pygame.JOYDEVICEADDED or (
-                CONTROLLER_DEVICE_ADDED is not None
-                and event.type == CONTROLLER_DEVICE_ADDED
-            ):
-                if controller is None:
-                    controller = init_first_controller()
-                if controller is None:
-                    joystick = init_first_joystick()
-            if event.type == pygame.JOYDEVICEREMOVED or (
-                CONTROLLER_DEVICE_REMOVED is not None
-                and event.type == CONTROLLER_DEVICE_REMOVED
-            ):
-                if controller and not controller.get_init():
-                    controller = None
-                if joystick and not joystick.get_init():
-                    joystick = None
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_F10:
-                    if profiler is not None:
-                        if profiling_active:
-                            _dump_profile()
-                        else:
-                            profiler.enable()
-                            profiling_active = True
-                            print("Profile started (F10 to stop and save).")
-                    continue
-                if event.key == pygame.K_LEFTBRACKET:
-                    nudge_window_scale(0.5, game_data=game_data)
-                    continue
-                if event.key == pygame.K_RIGHTBRACKET:
-                    nudge_window_scale(2.0, game_data=game_data)
-                    continue
-                if event.key == pygame.K_f:
-                    toggle_fullscreen(game_data=game_data)
-                    continue
-                if event.key == pygame.K_s and (
-                    pygame.key.get_mods() & pygame.KMOD_CTRL
-                ):
-                    state_snapshot = {
-                        k: v
-                        for k, v in vars(game_data.state).items()
-                        if k != "footprints"
-                    }
-                    print("STATE DEBUG:", state_snapshot)
-                    continue
-                if debug_mode:
-                    if event.key == pygame.K_ESCAPE:
-                        return ScreenTransition(ScreenID.TITLE)
-                    if event.key == pygame.K_p:
-                        paused_manual = not paused_manual
-                    if event.key == pygame.K_o:
-                        debug_overview = not debug_overview
-                    continue
-                if paused_manual:
-                    if event.key == pygame.K_ESCAPE:
-                        return _finalize(ScreenTransition(ScreenID.TITLE))
-                    if event.key == pygame.K_p:
-                        paused_manual = False
-                    continue
-                if event.key in (pygame.K_ESCAPE, pygame.K_p):
-                    paused_manual = True
-                    continue
-            if event.type == pygame.JOYBUTTONDOWN or (
-                CONTROLLER_BUTTON_DOWN is not None
-                and event.type == CONTROLLER_BUTTON_DOWN
-            ):
-                if debug_mode:
-                    if is_select_event(event):
-                        return _finalize(ScreenTransition(ScreenID.TITLE))
-                    if is_start_event(event):
-                        paused_manual = not paused_manual
-                    continue
-                if paused_manual:
-                    if is_select_event(event):
-                        return _finalize(ScreenTransition(ScreenID.TITLE))
-                    if is_start_event(event):
-                        paused_manual = False
-                    continue
-                if is_select_event(event) or is_start_event(event):
-                    paused_manual = True
-                    continue
+        (
+            transition,
+            paused_manual,
+            paused_focus,
+            debug_overview,
+            controller,
+            joystick,
+            profiling_active,
+        ) = _handle_runtime_events(
+            game_data=game_data,
+            debug_mode=debug_mode,
+            paused_manual=paused_manual,
+            paused_focus=paused_focus,
+            debug_overview=debug_overview,
+            controller=controller,
+            joystick=joystick,
+            profiler=profiler,
+            profiling_active=profiling_active,
+            dump_profile=_dump_profile,
+            finalize=_finalize,
+        )
+        if transition is not None:
+            return transition
 
         _set_mouse_hidden(pygame.mouse.get_focused())
 
         paused = paused_manual or paused_focus
         if paused:
-            if debug_overview:
-                draw_debug_overview(
-                    render_assets,
-                    screen,
-                    overview_surface,
-                    game_data,
-                    config,
-                    screen_width=screen_width,
-                    screen_height=screen_height,
-                )
-            else:
-                draw(
-                    render_assets,
-                    screen,
-                    game_data,
-                    config=config,
-                    fps=current_fps,
-                )
-            if show_pause_overlay:
-                draw_pause_overlay(screen)
-            present(screen)
+            _render_paused_state(
+                render_assets=render_assets,
+                screen=screen,
+                overview_surface=overview_surface,
+                game_data=game_data,
+                config=config,
+                screen_width=screen_width,
+                screen_height=screen_height,
+                show_pause_overlay=show_pause_overlay,
+                debug_overview=debug_overview,
+                fps=current_fps,
+            )
             continue
 
         keys = pygame.key.get_pressed()
@@ -589,8 +779,7 @@ def gameplay_screen(
         car_hint_conf = config.get("car_hint", {})
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
         elapsed_ms = game_data.state.clock.elapsed_ms
-        has_fuel = game_data.state.fuel_progress == FuelProgress.FULL_CAN
-        has_empty_fuel_can = game_data.state.fuel_progress == FuelProgress.EMPTY_CAN
+        fuel_progress = game_data.state.fuel_progress
         hint_enabled = car_hint_conf.get("enabled", True) and not stage.endurance_stage
         hint_target = None
         hint_color = YELLOW
@@ -599,30 +788,14 @@ def gameplay_screen(
 
         active_car = game_data.car if game_data.car and game_data.car.alive() else None
         if hint_enabled:
-            if stage.requires_refuel:
-                if (
-                    not has_empty_fuel_can
-                    and game_data.empty_fuel_can
-                    and game_data.empty_fuel_can.alive()
-                ):
-                    target_type = "empty_fuel_can"
-                elif (
-                    has_empty_fuel_can
-                    and not has_fuel
-                    and game_data.fuel_station
-                    and game_data.fuel_station.alive()
-                ):
-                    target_type = "fuel_station"
-                elif not player.in_car and (active_car or _alive_waiting_cars(game_data)):
-                    target_type = "car"
-                else:
-                    target_type = None
-            elif not has_fuel and game_data.fuel and game_data.fuel.alive():
-                target_type = "fuel"
-            elif not player.in_car and (active_car or _alive_waiting_cars(game_data)):
-                target_type = "car"
-            else:
-                target_type = None
+            target_type = _resolve_hint_target_type(
+                stage=stage,
+                fuel_progress=fuel_progress,
+                game_data=game_data,
+                player_in_car=player.in_car,
+                active_car=active_car,
+                report_internal_error_once=_report_internal_error_once,
+            )
 
             if target_type != hint_target_type:
                 game_data.state.hint_target_type = target_type
@@ -638,29 +811,17 @@ def gameplay_screen(
                 and elapsed_ms >= hint_expires_at
                 and not player.in_car
             ):
-                if target_type == "fuel" and game_data.fuel and game_data.fuel.alive():
-                    hint_target = game_data.fuel.rect.center
-                elif (
-                    target_type == "empty_fuel_can"
-                    and game_data.empty_fuel_can
-                    and game_data.empty_fuel_can.alive()
-                ):
-                    hint_target = game_data.empty_fuel_can.rect.center
-                elif (
-                    target_type == "fuel_station"
-                    and game_data.fuel_station
-                    and game_data.fuel_station.alive()
-                ):
-                    hint_target = game_data.fuel_station.rect.center
-                elif target_type == "car":
-                    if active_car:
-                        hint_target = active_car.rect.center
-                    else:
-                        waiting_target = nearest_waiting_car(
-                            game_data, (player.x, player.y)
-                        )
-                        if waiting_target:
-                            hint_target = waiting_target.rect.center
+                hint_target_raw = _resolve_hint_target_position(
+                    target_type=target_type,
+                    game_data=game_data,
+                    active_car=active_car,
+                    player_pos=(player.x, player.y),
+                )
+                hint_target = (
+                    (int(hint_target_raw[0]), int(hint_target_raw[1]))
+                    if hint_target_raw
+                    else None
+                )
 
         draw(
             render_assets,

@@ -23,7 +23,7 @@ from ..level_blueprints import (
     validate_connectivity,
 )
 from ..models import LevelLayout, Stage
-from ..models import FuelObjective
+from ..models import FuelMode
 from ..rng import get_rng, seed_rng
 
 __all__ = ["generate_level_from_blueprint", "MapGenerationError"]
@@ -123,9 +123,9 @@ def generate_level_from_blueprint(
 
     base_moving_floor_cells = _expand_moving_floor_cells(stage)
     fuel_count = 0
-    if stage.requires_fuel and not stage.endurance_stage:
+    if stage.fuel_mode < FuelMode.START_FULL and not stage.endurance_stage:
         fuel_count = max(0, int(stage.fuel_spawn_count))
-        if stage.requires_refuel:
+        if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
             fuel_count = max(
                 2, fuel_count + max(0, int(stage.fuel_station_spawn_count))
             )
@@ -158,9 +158,7 @@ def generate_level_from_blueprint(
         )
         car_reachable = validate_connectivity(
             blueprint.grid,
-            fuel_objective=(
-                stage.fuel_objective if not stage.endurance_stage else FuelObjective.NONE
-            ),
+            fuel_mode=(stage.fuel_mode if not stage.endurance_stage else FuelMode.START_FULL),
         )
         if car_reachable is not None:
             blueprint.car_reachable_cells = car_reachable

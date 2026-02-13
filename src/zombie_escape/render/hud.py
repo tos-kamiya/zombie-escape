@@ -23,7 +23,7 @@ from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 from ..localization import get_font_settings
 from ..localization import translate as tr
 from ..entities_constants import ZombieKind
-from ..models import Stage, TimedMessage
+from ..models import FuelMode, FuelProgress, Stage, TimedMessage
 from ..render_assets import (
     RenderAssets,
     build_car_surface,
@@ -540,8 +540,7 @@ def _build_objective_lines(
     state: Any,
     player: Player,
     active_car: Car | None,
-    has_fuel: bool,
-    has_empty_fuel_can: bool,
+    fuel_progress: FuelProgress,
     buddy_merged_count: int,
     buddy_required: int,
 ) -> list[str]:
@@ -581,31 +580,51 @@ def _build_objective_lines(
                 )
         if not stage.endurance_stage:
             if not active_car:
-                if stage.requires_refuel and not has_fuel:
-                    if not has_empty_fuel_can:
+                if (
+                    stage.fuel_mode == FuelMode.REFUEL_CHAIN
+                    and fuel_progress < FuelProgress.FULL_CAN
+                ):
+                    if fuel_progress < FuelProgress.EMPTY_CAN:
                         objective_lines.append(tr("objectives.find_empty_fuel_can"))
                     else:
                         objective_lines.append(tr("objectives.refuel_at_station"))
-                elif stage.requires_fuel and not has_fuel:
+                elif (
+                    stage.fuel_mode == FuelMode.FUEL_CAN
+                    and fuel_progress < FuelProgress.FULL_CAN
+                ):
                     objective_lines.append(tr("objectives.find_fuel"))
                 else:
                     objective_lines.append(tr("objectives.find_car"))
             else:
-                if stage.requires_refuel and not has_fuel:
-                    if not has_empty_fuel_can:
+                if (
+                    stage.fuel_mode == FuelMode.REFUEL_CHAIN
+                    and fuel_progress < FuelProgress.FULL_CAN
+                ):
+                    if fuel_progress < FuelProgress.EMPTY_CAN:
                         objective_lines.append(tr("objectives.find_empty_fuel_can"))
                     else:
                         objective_lines.append(tr("objectives.refuel_at_station"))
-                elif stage.requires_fuel and not has_fuel:
+                elif (
+                    stage.fuel_mode == FuelMode.FUEL_CAN
+                    and fuel_progress < FuelProgress.FULL_CAN
+                ):
                     objective_lines.append(tr("objectives.find_fuel"))
                 else:
                     objective_lines.append(tr("objectives.escape"))
-    elif stage and stage.requires_refuel and not has_fuel:
-        if not has_empty_fuel_can:
+    elif (
+        stage
+        and stage.fuel_mode == FuelMode.REFUEL_CHAIN
+        and fuel_progress < FuelProgress.FULL_CAN
+    ):
+        if fuel_progress < FuelProgress.EMPTY_CAN:
             objective_lines.append(tr("objectives.find_empty_fuel_can"))
         else:
             objective_lines.append(tr("objectives.refuel_at_station"))
-    elif stage and stage.requires_fuel and not has_fuel:
+    elif (
+        stage
+        and stage.fuel_mode == FuelMode.FUEL_CAN
+        and fuel_progress < FuelProgress.FULL_CAN
+    ):
         objective_lines.append(tr("objectives.find_fuel"))
     elif stage and stage.survivor_rescue_stage:
         if not player.in_car:

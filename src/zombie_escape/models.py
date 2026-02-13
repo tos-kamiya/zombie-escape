@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import IntEnum
 from typing import TYPE_CHECKING
 
 import pygame
@@ -46,16 +46,16 @@ def _make_lineformer_manager():
     return LineformerTrainManager()
 
 
-class FuelObjective(str, Enum):
-    NONE = "none"
-    FUEL_CAN = "fuel_can"
-    REFUEL_CHAIN = "refuel_chain"
+class FuelMode(IntEnum):
+    REFUEL_CHAIN = 0
+    FUEL_CAN = 1
+    START_FULL = 2
 
 
-class FuelProgress(str, Enum):
-    NONE = "none"
-    EMPTY_CAN = "empty_can"
-    FULL_CAN = "full_can"
+class FuelProgress(IntEnum):
+    NONE = 0
+    EMPTY_CAN = 1
+    FULL_CAN = 2
 
 
 @dataclass
@@ -251,7 +251,7 @@ class Stage:
     )
 
     # Stage objective
-    fuel_objective: FuelObjective = FuelObjective.NONE
+    fuel_mode: FuelMode = FuelMode.START_FULL
     buddy_required_count: int = 0
     survivor_rescue_stage: bool = False
     endurance_stage: bool = False
@@ -288,26 +288,25 @@ class Stage:
     survivor_spawn_rate: float = 0.0
 
     def __post_init__(self) -> None:
-        objective = self.fuel_objective
-        if isinstance(objective, str):
-            objective = FuelObjective(objective)
-            object.__setattr__(self, "fuel_objective", objective)
-        if objective != FuelObjective.NONE:
+        mode_raw = self.fuel_mode
+        mode = mode_raw if isinstance(mode_raw, FuelMode) else FuelMode(int(mode_raw))
+        object.__setattr__(self, "fuel_mode", mode)
+        if mode != FuelMode.START_FULL:
             assert self.fuel_spawn_count >= 1, (
-                "fuel_objective stages must set fuel_spawn_count >= 1"
+                "fuel_mode 0/1 stages must set fuel_spawn_count >= 1"
             )
-        if objective == FuelObjective.REFUEL_CHAIN:
+        if mode == FuelMode.REFUEL_CHAIN:
             assert self.fuel_station_spawn_count >= 1, (
                 "refuel_chain stages must set fuel_station_spawn_count >= 1"
             )
 
     @property
     def requires_fuel(self) -> bool:
-        return self.fuel_objective != FuelObjective.NONE
+        return self.fuel_mode != FuelMode.START_FULL
 
     @property
     def requires_refuel(self) -> bool:
-        return self.fuel_objective == FuelObjective.REFUEL_CHAIN
+        return self.fuel_mode == FuelMode.REFUEL_CHAIN
 
     @property
     def name(self) -> str:
@@ -326,6 +325,6 @@ __all__ = [
     "Groups",
     "GameData",
     "Stage",
-    "FuelObjective",
+    "FuelMode",
     "FuelProgress",
 ]
