@@ -1319,6 +1319,7 @@ def draw(
         screen,
         assets,
         has_fuel=has_fuel,
+        has_empty_fuel_can=state.has_empty_fuel_can,
         flashlight_count=flashlight_count,
         shoes_count=state.shoes_count,
         player_in_car=player.in_car,

@@ -27,6 +27,7 @@ from ..models import Stage, TimedMessage
 from ..render_assets import (
     RenderAssets,
     build_car_surface,
+    build_empty_fuel_can_surface,
     build_flashlight_surface,
     build_fuel_can_surface,
     build_shoes_surface,
@@ -71,6 +72,8 @@ def _get_hud_icon(kind: str) -> surface.Surface:
         return cached
     if kind == "fuel":
         icon = build_fuel_can_surface(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
+    elif kind == "empty_fuel":
+        icon = build_empty_fuel_can_surface(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
     elif kind == "car":
         icon = build_car_surface(CAR_WIDTH, CAR_HEIGHT)
         paint_car_surface(
@@ -248,6 +251,7 @@ def _draw_inventory_icons(
     assets: RenderAssets,
     *,
     has_fuel: bool,
+    has_empty_fuel_can: bool,
     flashlight_count: int,
     shoes_count: int,
     player_in_car: bool = False,
@@ -301,6 +305,8 @@ def _draw_inventory_icons(
     icons: list[surface.Surface] = []
     if has_fuel:
         icons.append(_get_hud_icon("fuel"))
+    elif has_empty_fuel_can:
+        icons.append(_get_hud_icon("empty_fuel"))
     for _ in range(max(0, int(flashlight_count))):
         icons.append(_get_hud_icon("flashlight"))
     for _ in range(max(0, int(shoes_count))):
