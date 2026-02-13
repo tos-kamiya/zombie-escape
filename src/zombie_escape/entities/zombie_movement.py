@@ -18,7 +18,6 @@ from ..entities_constants import (
     ZOMBIE_TRACKER_SIGHT_RANGE,
     ZOMBIE_WALL_HUG_LOST_WALL_MS,
     ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG,
-    ZOMBIE_WALL_HUG_PROBE_STEP,
     ZOMBIE_WALL_HUG_SENSOR_DISTANCE,
     ZOMBIE_WALL_HUG_SENSOR_DIST_RATIO,
     ZOMBIE_WALL_HUG_TARGET_GAP,
@@ -140,41 +139,27 @@ def _zombie_wall_hug_wall_distance(
     walls: list["Wall"],
     angle: float,
     max_distance: float,
-    *,
-    step: float = ZOMBIE_WALL_HUG_PROBE_STEP,
 ) -> float:
-    # 1. Early Exit using spatial set (layout.wall_cells)
-    # If there are no walls in any cell along the ray, we can return max_distance immediately.
-    # This is a very fast O(Cells) check compared to pixel-perfect collision.
-    
-    # 2. Optimized Raycast using clipline
-    # Instead of step-by-step loop, we test all walls once using C-implemented clipline.
+    """Calculate the distance to the nearest wall in the given direction using fast raycasting."""
     direction_x = math.cos(angle)
     direction_y = math.sin(angle)
-    
+
     start_x, start_y = zombie.x, zombie.y
-    end_x = start_x + direction_x * max_distance
-    end_y = start_y + direction_y * max_distance
-    
-    line_start = (int(start_x), int(start_y))
-    line_end = (int(end_x), int(end_y))
-    
+    line_start = (start_x, start_y)
+    line_end = (
+        start_x + direction_x * max_distance,
+        start_y + direction_y * max_distance,
+    )
+
     min_dist_sq = max_distance * max_distance
     hit = False
-    
-    # We use the walls list passed from the spatial index query.
-    # We inflate the test rect by collision_radius to simulate circle collision.
+
+    # We use pre-filtered walls (spatial index) and inflate them by radius to simulate circle check.
     r = zombie.collision_radius
     for wall in walls:
-        # Fast AABB check first
-        # We inflate the wall rect by zombie radius to check for circle-rect intersection
-        # approximation via line-rect intersection.
         rect = wall.rect
-        # Simple proximity check to avoid clipline on far walls (redundant but safe)
-        if abs(rect.centerx - start_x) > max_distance + 50 or \
-           abs(rect.centery - start_y) > max_distance + 50:
-            continue
-            
+        # Inflating the rect by zombie radius allows us to approximate circle-rect intersection
+        # using a simple line-rect clipping test.
         inflated = rect.inflate(r * 2, r * 2)
         points = inflated.clipline(line_start, line_end)
         if points:
@@ -185,7 +170,7 @@ def _zombie_wall_hug_wall_distance(
             if dist_sq < min_dist_sq:
                 min_dist_sq = dist_sq
                 hit = True
-                
+
     if hit:
         return math.sqrt(min_dist_sq)
     return max_distance
@@ -206,14 +191,14 @@ def _zombie_wall_hug_movement(
     if zombie.wall_hug_angle is None:
         zombie.wall_hug_angle = zombie.wander_angle
 
-    # Scale sensor distance with cell size to handle larger grids (e.g. 60px)
-    dynamic_sensor_dist = max(ZOMBIE_WALL_HUG_SENSOR_DISTANCE, cell_size * ZOMBIE_WALL_HUG_SENSOR_DIST_RATIO)
+    # Shared parameters for wall probing
+    dynamic_sensor_dist = max(
+        ZOMBIE_WALL_HUG_SENSOR_DISTANCE, cell_size * ZOMBIE_WALL_HUG_SENSOR_DIST_RATIO
+    )
     sensor_distance = dynamic_sensor_dist + zombie.collision_radius
     probe_offset = math.radians(ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG)
 
     # Adjust target gap for the diagonal probe angle (45 deg)
-    # Perpendicular gap = diagonal_dist * cos(45).
-    # To get a 4px perpendicular gap, we need 4.0 / cos(45) ~= 5.66px diagonal gap.
     target_gap_diagonal = ZOMBIE_WALL_HUG_TARGET_GAP / math.cos(probe_offset)
 
     if zombie.wall_hug_side == 0:
