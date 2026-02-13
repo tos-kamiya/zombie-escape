@@ -141,7 +141,7 @@ def test_marker_position_interpolates_along_discrete_history() -> None:
     manager.post_update(zombie_group)
 
     marker_x, marker_y = train.marker_positions[0]
-    assert marker_x == 90.0
+    assert marker_x == 86.0
     assert marker_y == 100.0
 
 

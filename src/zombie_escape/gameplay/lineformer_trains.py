@@ -24,10 +24,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from ..models import GameData
 
 RNG = get_rng()
-_MARKER_HISTORY_RECORD_DISTANCE = FOOTPRINT_STEP_DISTANCE * 0.5
-_MARKER_TRAIL_SPACING = FOOTPRINT_STEP_DISTANCE * 0.5
-_MARKER_DRAW_SHIFT_ALPHA = 0.45
-_MARKER_DRAW_SHIFT_MAX = ZOMBIE_LINEFORMER_JOIN_RADIUS
+_MARKER_HISTORY_RECORD_DISTANCE = FOOTPRINT_STEP_DISTANCE * 0.6
+_MARKER_TRAIL_SPACING = FOOTPRINT_STEP_DISTANCE * 0.6
 _MERGE_APPROACH_DISTANCE = ZOMBIE_LINEFORMER_JOIN_RADIUS
 _MERGE_TRAIL_SNAP_DISTANCE = ZOMBIE_LINEFORMER_JOIN_RADIUS * 0.75
 
@@ -489,31 +487,11 @@ class LineformerTrainManager:
 
     def iter_marker_draw_data(self, zombie_group) -> list[tuple[float, float, float]]:
         draw_data: list[tuple[float, float, float]] = []
-        heads = {
-            z.lineformer_id: z
-            for z in zombie_group
-            if isinstance(z, Zombie)
-            and z.alive()
-            and z.kind == ZombieKind.LINEFORMER
-            and getattr(z, "lineformer_train_id", None) is not None
-        }
+        _ = zombie_group
         for train in self.trains.values():
-            shift_x = 0.0
-            shift_y = 0.0
-            if train.marker_positions:
-                head = heads.get(train.head_id)
-                if head is not None:
-                    base_x, base_y = train.marker_positions[0]
-                    shift_x = (head.x - base_x) * _MARKER_DRAW_SHIFT_ALPHA
-                    shift_y = (head.y - base_y) * _MARKER_DRAW_SHIFT_ALPHA
-                    shift_dist = math.hypot(shift_x, shift_y)
-                    if shift_dist > _MARKER_DRAW_SHIFT_MAX and shift_dist > 0:
-                        scale = _MARKER_DRAW_SHIFT_MAX / shift_dist
-                        shift_x *= scale
-                        shift_y *= scale
             for idx, marker_pos in enumerate(train.marker_positions):
                 angle = train.marker_angles[idx] if idx < len(train.marker_angles) else 0.0
-                draw_data.append((marker_pos[0] + shift_x, marker_pos[1] + shift_y, angle))
+                draw_data.append((marker_pos[0], marker_pos[1], angle))
         return draw_data
 
     def total_marker_count(self) -> int:
