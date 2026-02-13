@@ -226,138 +226,524 @@ def _spawn_stage_items(
     game_data.groups.all_sprites.add(shoes_list, layer=LAYER_ITEMS)
 
 
-def _handle_runtime_events(
-    *,
-    game_data: Any,
-    debug_mode: bool,
-    paused_manual: bool,
-    paused_focus: bool,
-    debug_overview: bool,
-    input_helper: InputHelper,
-    profiler: object | None,
-    profiling_active: bool,
-    dump_profile: callable,
-    finalize: callable,
-) -> tuple[ScreenTransition | None, bool, bool, bool, bool, Any]:
-    events = pygame.event.get()
-    for event in events:
-        if event.type == pygame.QUIT:
-            return (
-                finalize(ScreenTransition(ScreenID.EXIT)),
-                paused_manual,
-                paused_focus,
-                debug_overview,
-                profiling_active,
-                input_helper.snapshot(events, pygame.key.get_pressed()),
+class GameplayScreenRunner:
+    def __init__(
+        self,
+        *,
+        screen: surface.Surface,
+        clock: time.Clock,
+        config: dict[str, Any],
+        fps: int,
+        stage: Stage,
+        show_pause_overlay: bool,
+        seed: int | None,
+        render_assets: "RenderAssets",
+        debug_mode: bool = False,
+        show_fps: bool = False,
+        profiler: object | None = None,
+        profiler_output: Path | None = None,
+    ) -> None:
+        self.screen = screen
+        self.clock = clock
+        self.config = config
+        self.fps = fps
+        self.stage = stage
+        self.show_pause_overlay = show_pause_overlay
+        self.seed = seed
+        self.render_assets = render_assets
+        self.debug_mode = debug_mode
+        self.show_fps = show_fps
+        self.profiler = profiler
+        self.profiler_output = profiler_output
+
+        self.screen_width = screen.get_width()
+        self.screen_height = screen.get_height()
+        self.use_busy_loop = os.environ.get("ZOMBIE_ESCAPE_BUSY_LOOP") == "1"
+        self.mouse_hidden = False
+        self.profiling_active = False
+        self.paused_manual = False
+        self.paused_focus = False
+        self.debug_overview = False
+        self.reported_internal_errors: set[str] = set()
+        self.input_helper = InputHelper()
+
+        self.game_data: Any = None
+        self.overview_surface: surface.Surface | None = None
+
+    def run(self) -> ScreenTransition:
+        transition = self._setup_game()
+        if transition is not None:
+            return transition
+        assert self.game_data is not None
+        assert self.overview_surface is not None
+
+        self._set_mouse_hidden(pygame.mouse.get_focused())
+        while True:
+            frame_ms = (
+                self.clock.tick_busy_loop(self.fps)
+                if self.use_busy_loop
+                else self.clock.tick(self.fps)
             )
-        if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
-            sync_window_size(event, game_data=game_data)
-            continue
-        input_helper.handle_device_event(event)
-        if event.type == pygame.WINDOWFOCUSLOST:
-            paused_focus = True
-        if event.type == pygame.WINDOWFOCUSGAINED:
-            paused_focus = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            paused_focus = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_F10:
-                if profiler is not None:
-                    if profiling_active:
-                        dump_profile()
-                        profiling_active = False
-                    else:
-                        profiler.enable()
-                        profiling_active = True
-                        print("Profile started (F10 to stop and save).")
-                continue
-            if event.key == pygame.K_LEFTBRACKET:
-                nudge_window_scale(0.5, game_data=game_data)
-                continue
-            if event.key == pygame.K_RIGHTBRACKET:
-                nudge_window_scale(2.0, game_data=game_data)
-                continue
-            if event.key == pygame.K_f:
-                toggle_fullscreen(game_data=game_data)
-                continue
-            if debug_mode:
-                if event.key == pygame.K_o:
-                    debug_overview = not debug_overview
-                continue
-    snapshot = input_helper.snapshot(events, pygame.key.get_pressed())
-    if debug_mode:
-        if snapshot.pressed(CommonAction.BACK):
-            return (
-                finalize(ScreenTransition(ScreenID.TITLE)),
-                paused_manual,
-                paused_focus,
-                debug_overview,
-                profiling_active,
-                snapshot,
-            )
-        if snapshot.pressed(CommonAction.START):
-            paused_manual = not paused_manual
-    else:
-        if paused_manual:
-            if snapshot.pressed(CommonAction.BACK):
-                return (
-                    finalize(ScreenTransition(ScreenID.TITLE)),
-                    paused_manual,
-                    paused_focus,
-                    debug_overview,
-                    profiling_active,
-                    snapshot,
+            dt = frame_ms / 1000.0
+            current_fps = self.clock.get_fps()
+
+            if self._is_game_finished(frame_ms, current_fps):
+                return self._finalize(
+                    ScreenTransition(
+                        ScreenID.GAME_OVER,
+                        stage=self.stage,
+                        game_data=self.game_data,
+                        config=self.config,
+                    )
                 )
+
+            transition, input_snapshot = self._handle_runtime_events()
+            if transition is not None:
+                return transition
+
+            self._set_mouse_hidden(pygame.mouse.get_focused())
+
+            if self.paused_manual or self.paused_focus:
+                self._render_paused_state(current_fps)
+                continue
+
+            self._update_world(dt, input_snapshot)
+            if self.debug_overview:
+                draw_debug_overview(
+                    self.render_assets,
+                    self.screen,
+                    self.overview_surface,
+                    self.game_data,
+                    self.config,
+                    screen_width=self.screen_width,
+                    screen_height=self.screen_height,
+                )
+                present(self.screen)
+                continue
+
+            self._draw_game_frame(current_fps)
+
+    def _setup_game(self) -> ScreenTransition | None:
+        seed_value = self.seed if self.seed is not None else generate_seed()
+        applied_seed = seed_rng(seed_value)
+        loading_started_ms = pygame.time.get_ticks()
+        self._show_loading_still()
+
+        self.game_data = initialize_game_state(self.config, self.stage)
+        self.game_data.state.seed = applied_seed
+        self.game_data.state.debug_mode = self.debug_mode
+        self.game_data.state.show_fps = self.show_fps
+
+        global _SHARED_FOG_CACHE
+        if _SHARED_FOG_CACHE is None:
+            prewarm_fog_overlays(
+                self.game_data.fog,
+                self.render_assets,
+                stage=self.stage,
+            )
+            _SHARED_FOG_CACHE = self.game_data.fog
+        else:
+            self.game_data.fog = _SHARED_FOG_CACHE
+
+        if self.stage.intro_key and self.game_data.state.timed_message:
+            loading_elapsed_ms = max(0, pygame.time.get_ticks() - loading_started_ms)
+            remaining_ms = max(
+                0, frames_to_ms(INTRO_MESSAGE_DISPLAY_FRAMES) - loading_elapsed_ms
+            )
+            schedule_timed_message(
+                self.game_data.state,
+                tr(self.stage.intro_key),
+                duration_frames=max(0, ms_to_frames(remaining_ms)),
+                clear_on_input=True,
+                color=LIGHT_GRAY,
+                align="left",
+                now_ms=self.game_data.state.clock.elapsed_ms,
+            )
+
+        try:
+            layout, layout_data, wall_group, all_sprites, blueprint = (
+                generate_level_from_blueprint(
+                    self.stage,
+                    self.config,
+                    seed=self.game_data.state.seed,
+                    ambient_palette_key=self.game_data.state.ambient_palette_key,
+                )
+            )
+            self.game_data.layout = layout
+            self.game_data.blueprint = blueprint
+            self.game_data.groups.wall_group = wall_group
+            self.game_data.groups.all_sprites = all_sprites
+            self.game_data.wall_index_dirty = True
+        except MapGenerationError:
+            self.screen.fill((0, 0, 0))
+            blit_message_wrapped(
+                self.screen,
+                tr("errors.map_generation_failed"),
+                16,
+                RED,
+                (self.screen_width // 2, self.screen_height // 2),
+                max_width=self.screen_width - 40,
+            )
+            present(self.screen)
+            pygame.time.delay(3000)
+            return self._finalize(ScreenTransition(ScreenID.TITLE))
+
+        sync_ambient_palette_with_flashlights(self.game_data, force=True)
+        initial_waiting = max(0, self.stage.waiting_car_target_count)
+        player, waiting_cars = setup_player_and_cars(
+            self.game_data, layout_data, car_count=initial_waiting
+        )
+        self.game_data.player = player
+        self.game_data.waiting_cars = waiting_cars
+        self.game_data.car = None
+        maintain_waiting_car_supply(
+            self.game_data, minimum=self.stage.waiting_car_target_count
+        )
+        apply_passenger_speed_penalty(self.game_data)
+        spawn_survivors(self.game_data, layout_data)
+        _spawn_stage_items(
+            game_data=self.game_data,
+            layout_data=layout_data,
+            player=player,
+        )
+        spawn_initial_zombies(self.game_data, player, layout_data, self.config)
+        spawn_initial_patrol_bots(self.game_data, player, layout_data)
+        update_footprints(self.game_data, self.config)
+        level_rect = self.game_data.layout.field_rect
+        self.overview_surface = pygame.Surface((level_rect.width, level_rect.height))
+        return None
+
+    def _handle_runtime_events(self) -> tuple[ScreenTransition | None, Any]:
+        assert self.game_data is not None
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.QUIT:
+                return (
+                    self._finalize(ScreenTransition(ScreenID.EXIT)),
+                    self.input_helper.snapshot(events, pygame.key.get_pressed()),
+                )
+            if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
+                sync_window_size(event, game_data=self.game_data)
+                continue
+            self.input_helper.handle_device_event(event)
+            if event.type == pygame.WINDOWFOCUSLOST:
+                self.paused_focus = True
+            if event.type == pygame.WINDOWFOCUSGAINED:
+                self.paused_focus = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.paused_focus = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_F10:
+                    if self.profiler is not None:
+                        if self.profiling_active:
+                            self._dump_profile()
+                            self.profiling_active = False
+                        else:
+                            self.profiler.enable()
+                            self.profiling_active = True
+                            print("Profile started (F10 to stop and save).")
+                    continue
+                if event.key == pygame.K_LEFTBRACKET:
+                    nudge_window_scale(0.5, game_data=self.game_data)
+                    continue
+                if event.key == pygame.K_RIGHTBRACKET:
+                    nudge_window_scale(2.0, game_data=self.game_data)
+                    continue
+                if event.key == pygame.K_f:
+                    toggle_fullscreen(game_data=self.game_data)
+                    continue
+                if self.debug_mode and event.key == pygame.K_o:
+                    self.debug_overview = not self.debug_overview
+
+        snapshot = self.input_helper.snapshot(events, pygame.key.get_pressed())
+        if self.debug_mode:
+            if snapshot.pressed(CommonAction.BACK):
+                return self._finalize(ScreenTransition(ScreenID.TITLE)), snapshot
             if snapshot.pressed(CommonAction.START):
-                paused_manual = False
-        elif snapshot.pressed(CommonAction.BACK) or snapshot.pressed(
-            CommonAction.START
-        ):
-            paused_manual = True
-    return (
-        None,
-        paused_manual,
-        paused_focus,
-        debug_overview,
-        profiling_active,
-        snapshot,
-    )
+                self.paused_manual = not self.paused_manual
+        else:
+            if self.paused_manual:
+                if snapshot.pressed(CommonAction.BACK):
+                    return self._finalize(ScreenTransition(ScreenID.TITLE)), snapshot
+                if snapshot.pressed(CommonAction.START):
+                    self.paused_manual = False
+            elif snapshot.pressed(CommonAction.BACK) or snapshot.pressed(
+                CommonAction.START
+            ):
+                self.paused_manual = True
+        return None, snapshot
 
+    def _update_world(self, dt: float, input_snapshot: Any) -> None:
+        assert self.game_data is not None
+        game_data = self.game_data
+        state = game_data.state
+        groups = game_data.groups
+        keys = pygame.key.get_pressed()
+        accel_allowed = not (state.game_over or state.game_won)
+        accel_active = accel_allowed and input_snapshot.held(CommonAction.ACCEL)
+        state.time_accel_active = accel_active
+        substeps = SURVIVAL_TIME_ACCEL_SUBSTEPS if accel_active else 1
+        sub_dt = min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
+        if consume_wall_index_dirty():
+            game_data.wall_index_dirty = True
+        if game_data.wall_index is None or game_data.wall_index_dirty:
+            game_data.wall_index = build_wall_index(
+                groups.wall_group, cell_size=game_data.cell_size
+            )
+            game_data.wall_index_dirty = False
+        wall_index = game_data.wall_index
 
-def _render_paused_state(
-    *,
-    render_assets: "RenderAssets",
-    screen: surface.Surface,
-    overview_surface: surface.Surface,
-    game_data: Any,
-    config: dict[str, Any],
-    screen_width: int,
-    screen_height: int,
-    show_pause_overlay: bool,
-    debug_overview: bool,
-    fps: float | None,
-) -> None:
-    if debug_overview:
-        draw_debug_overview(
-            render_assets,
-            screen,
-            overview_surface,
-            game_data,
-            config,
-            screen_width=screen_width,
-            screen_height=screen_height,
+        for _ in range(substeps):
+            player_ref = game_data.player
+            if player_ref is None:
+                break
+            car_ref = game_data.car
+            pad_vector = input_snapshot.move_vector
+            player_dx, player_dy, car_dx, car_dy = process_player_input(
+                keys,
+                player_ref,
+                car_ref,
+                shoes_count=state.shoes_count,
+                pad_input=pad_vector,
+            )
+            if (
+                state.timed_message
+                and state.timed_message.clear_on_input
+                and (player_dx or player_dy or car_dx or car_dy)
+            ):
+                state.timed_message = None
+            update_entities(
+                game_data,
+                player_dx,
+                player_dy,
+                car_dx,
+                car_dy,
+                self.config,
+                wall_index=wall_index,
+            )
+            update_footprints(game_data, self.config)
+            step_ms = int(sub_dt * 1000)
+            if accel_active:
+                step_ms = max(1, step_ms)
+            time_scale = 4.0 / max(1, substeps) if accel_active else 1.0
+            state.clock.time_scale = time_scale
+            step_ms = state.clock.tick(step_ms)
+            update_endurance_timer(game_data, step_ms)
+            cleanup_survivor_messages(state)
+            check_interactions(game_data, self.config)
+            if state.game_over or state.game_won:
+                break
+
+        player_ref = game_data.player
+        if player_ref is None:
+            return
+        mobile_entities: list[pygame.sprite.Sprite] = []
+        if player_ref.alive():
+            mobile_entities.append(player_ref)
+        car_ref = game_data.car
+        if car_ref and car_ref.alive():
+            mobile_entities.append(car_ref)
+        mobile_entities.extend(
+            [zombie for zombie in groups.zombie_group if zombie.alive()]
         )
-    else:
+        mobile_entities.extend(
+            [
+                survivor
+                for survivor in groups.survivor_group
+                if survivor.alive()
+            ]
+        )
+        mobile_entities.extend(
+            [bot for bot in groups.patrol_bot_group if bot.alive()]
+        )
+        state.spatial_index.rebuild(mobile_entities)
+
+    def _draw_game_frame(self, current_fps: float) -> None:
+        assert self.game_data is not None
+        game_data = self.game_data
+        state = game_data.state
+        player = game_data.player
+        if player is None:
+            raise ValueError("Player missing from game data")
+
+        car_hint_conf = self.config.get("car_hint", {})
+        hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
+        elapsed_ms = state.clock.elapsed_ms
+        fuel_progress = state.fuel_progress
+        hint_enabled = car_hint_conf.get("enabled", True) and not self.stage.endurance_stage
+        hint_target = None
+        hint_color = YELLOW
+        hint_expires_at = state.hint_expires_at
+        hint_target_type = state.hint_target_type
+        active_car = game_data.car if game_data.car and game_data.car.alive() else None
+
+        if hint_enabled:
+            target_type = _resolve_hint_target_type(
+                stage=self.stage,
+                fuel_progress=fuel_progress,
+                game_data=game_data,
+                player_in_car=player.in_car,
+                active_car=active_car,
+                report_internal_error_once=self._report_internal_error_once,
+            )
+            if target_type != hint_target_type:
+                state.hint_target_type = target_type
+                state.hint_expires_at = (
+                    elapsed_ms + hint_delay if target_type else 0
+                )
+                hint_expires_at = state.hint_expires_at
+
+            if target_type and hint_expires_at and elapsed_ms >= hint_expires_at and not player.in_car:
+                hint_target_raw = _resolve_hint_target_position(
+                    target_type=target_type,
+                    game_data=game_data,
+                    active_car=active_car,
+                    player_pos=(player.x, player.y),
+                )
+                hint_target = (
+                    (int(hint_target_raw[0]), int(hint_target_raw[1]))
+                    if hint_target_raw
+                    else None
+                )
+
         draw(
-            render_assets,
-            screen,
+            self.render_assets,
+            self.screen,
             game_data,
-            config=config,
-            fps=fps,
+            config=self.config,
+            hint_target=hint_target,
+            hint_color=hint_color,
+            fps=current_fps,
         )
-    if show_pause_overlay:
-        draw_pause_overlay(screen)
-    present(screen)
+        if self.profiling_active:
+            font_settings = get_font_settings()
+            font = load_font(font_settings.resource, font_settings.scaled_size(11))
+            label = render_text_surface(
+                font,
+                "PROFILE ON",
+                RED,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            self.screen.blit(label, (6, 6))
+        present(self.screen)
+
+    def _render_paused_state(self, current_fps: float) -> None:
+        assert self.overview_surface is not None
+        assert self.game_data is not None
+        if self.debug_overview:
+            draw_debug_overview(
+                self.render_assets,
+                self.screen,
+                self.overview_surface,
+                self.game_data,
+                self.config,
+                screen_width=self.screen_width,
+                screen_height=self.screen_height,
+            )
+        else:
+            draw(
+                self.render_assets,
+                self.screen,
+                self.game_data,
+                config=self.config,
+                fps=current_fps,
+            )
+        if self.show_pause_overlay:
+            draw_pause_overlay(self.screen)
+        present(self.screen)
+
+    def _is_game_finished(self, frame_ms: int, current_fps: float) -> bool:
+        assert self.game_data is not None
+        game_data = self.game_data
+        state = game_data.state
+        if not (state.game_over or state.game_won):
+            return False
+        state.clock.time_scale = 1.0
+        state.clock.tick(frame_ms)
+        if state.game_won:
+            record_stage_clear(self.stage.id)
+        if state.game_over and not state.game_won:
+            if state.game_over_at is None:
+                state.game_over_at = state.clock.elapsed_ms
+            if (
+                state.clock.elapsed_ms - state.game_over_at
+                < 1000
+            ):
+                draw(
+                    self.render_assets,
+                    self.screen,
+                    game_data,
+                    config=self.config,
+                    hint_color=None,
+                    fps=current_fps,
+                )
+                present(self.screen)
+                return False
+        return True
+
+    def _report_internal_error_once(self, code: str) -> None:
+        if code in self.reported_internal_errors:
+            return
+        self.reported_internal_errors.add(code)
+        print(f"INTERNAL ERROR: {code}")
+        schedule_timed_message(
+            self.game_data.state,
+            tr("hud.internal_error"),
+            duration_frames=ms_to_frames(3000),
+            clear_on_input=False,
+            color=RED,
+            now_ms=self.game_data.state.clock.elapsed_ms,
+        )
+
+    def _show_loading_still(self) -> None:
+        self.screen.fill((0, 0, 0))
+        if self.stage.intro_key:
+            intro_text = tr(self.stage.intro_key)
+            font_settings = get_font_settings()
+            font_size = font_settings.scaled_size(GAMEPLAY_FONT_SIZE * 2)
+            font = load_font(font_settings.resource, font_size)
+            line_height = int(round(font.get_linesize() * font_settings.line_height_scale))
+            x = TIMED_MESSAGE_LEFT_X
+            y = TIMED_MESSAGE_TOP_Y
+            for line in intro_text.splitlines():
+                if not line:
+                    y += line_height
+                    continue
+                rendered = font.render(line, False, WHITE)
+                self.screen.blit(rendered, (x, y))
+                y += line_height
+        present(self.screen)
+        pygame.event.pump()
+
+    def _dump_profile(self) -> None:
+        if self.profiler is None or self.profiler_output is None:
+            return
+        try:
+            import pstats
+        except Exception:
+            return
+        if self.profiling_active:
+            self.profiler.disable()
+            self.profiling_active = False
+        output_path = self.profiler_output
+        self.profiler.dump_stats(output_path)
+        summary_path = output_path.with_suffix(".txt")
+        with summary_path.open("w", encoding="utf-8") as handle:
+            stats = pstats.Stats(self.profiler, stream=handle).sort_stats("tottime")
+            stats.print_stats(50)
+        print(f"Profile saved to {output_path} and {summary_path}")
+
+    def _set_mouse_hidden(self, hidden: bool) -> None:
+        if self.mouse_hidden == hidden:
+            return
+        pygame.mouse.set_visible(not hidden)
+        self.mouse_hidden = hidden
+
+    def _finalize(self, transition: ScreenTransition) -> ScreenTransition:
+        self._set_mouse_hidden(False)
+        if self.profiling_active:
+            self._dump_profile()
+        return transition
 
 
 def gameplay_screen(
@@ -375,415 +761,18 @@ def gameplay_screen(
     profiler: "object | None" = None,
     profiler_output: Path | None = None,
 ) -> ScreenTransition:
-    """Main gameplay loop that returns the next screen transition."""
-
-    screen_width = screen.get_width()
-    screen_height = screen.get_height()
-    mouse_hidden = False
-    use_busy_loop = os.environ.get("ZOMBIE_ESCAPE_BUSY_LOOP") == "1"
-    profiling_active = False
-
-    def _dump_profile() -> None:
-        nonlocal profiling_active
-        if profiler is None or profiler_output is None:
-            return
-        try:
-            import pstats
-        except Exception:
-            return
-        if profiling_active:
-            profiler.disable()
-            profiling_active = False
-        output_path = profiler_output
-        profiler.dump_stats(output_path)
-        summary_path = output_path.with_suffix(".txt")
-        with summary_path.open("w", encoding="utf-8") as handle:
-            stats = pstats.Stats(profiler, stream=handle).sort_stats("tottime")
-            stats.print_stats(50)
-        print(f"Profile saved to {output_path} and {summary_path}")
-
-    def _set_mouse_hidden(hidden: bool) -> None:
-        nonlocal mouse_hidden
-        if mouse_hidden == hidden:
-            return
-        pygame.mouse.set_visible(not hidden)
-        mouse_hidden = hidden
-
-    def _finalize(transition: ScreenTransition) -> ScreenTransition:
-        _set_mouse_hidden(False)
-        if profiling_active:
-            _dump_profile()
-        return transition
-
-    def _show_loading_still() -> None:
-        screen.fill((0, 0, 0))
-        if stage.intro_key:
-            intro_text = tr(stage.intro_key)
-            font_settings = get_font_settings()
-            font_size = font_settings.scaled_size(GAMEPLAY_FONT_SIZE * 2)
-            font = load_font(font_settings.resource, font_size)
-            line_height = int(
-                round(font.get_linesize() * font_settings.line_height_scale)
-            )
-            x = TIMED_MESSAGE_LEFT_X
-            y = TIMED_MESSAGE_TOP_Y
-            for line in intro_text.splitlines():
-                if not line:
-                    y += line_height
-                    continue
-                surface = font.render(line, False, WHITE)
-                screen.blit(surface, (x, y))
-                y += line_height
-        present(screen)
-        pygame.event.pump()
-
-    seed_value = seed if seed is not None else generate_seed()
-    applied_seed = seed_rng(seed_value)
-
-    loading_started_ms = pygame.time.get_ticks()
-    _show_loading_still()
-
-    game_data = initialize_game_state(config, stage)
-    game_data.state.seed = applied_seed
-    game_data.state.debug_mode = debug_mode
-    game_data.state.show_fps = show_fps
-    global _SHARED_FOG_CACHE
-    if _SHARED_FOG_CACHE is None:
-        prewarm_fog_overlays(
-            game_data.fog,
-            render_assets,
-            stage=stage,
-        )
-        _SHARED_FOG_CACHE = game_data.fog
-    else:
-        game_data.fog = _SHARED_FOG_CACHE
-    if stage.intro_key and game_data.state.timed_message:
-        loading_elapsed_ms = max(0, pygame.time.get_ticks() - loading_started_ms)
-        remaining_ms = max(
-            0, frames_to_ms(INTRO_MESSAGE_DISPLAY_FRAMES) - loading_elapsed_ms
-        )
-        schedule_timed_message(
-            game_data.state,
-            tr(stage.intro_key),
-            duration_frames=max(0, ms_to_frames(remaining_ms)),
-            clear_on_input=True,
-            color=LIGHT_GRAY,
-            align="left",
-            now_ms=game_data.state.clock.elapsed_ms,
-        )
-    paused_manual = False
-    paused_focus = False
-    debug_overview = False
-    reported_internal_errors: set[str] = set()
-    input_helper = InputHelper()
-    _set_mouse_hidden(pygame.mouse.get_focused())
-
-    def _report_internal_error_once(code: str) -> None:
-        if code in reported_internal_errors:
-            return
-        reported_internal_errors.add(code)
-        print(f"INTERNAL ERROR: {code}")
-        schedule_timed_message(
-            game_data.state,
-            tr("hud.internal_error"),
-            duration_frames=ms_to_frames(3000),
-            clear_on_input=False,
-            color=RED,
-            now_ms=game_data.state.clock.elapsed_ms,
-        )
-
-    try:
-        layout, layout_data, wall_group, all_sprites, blueprint = (
-            generate_level_from_blueprint(
-                stage,
-                config,
-                seed=game_data.state.seed,
-                ambient_palette_key=game_data.state.ambient_palette_key,
-            )
-        )
-        game_data.layout = layout
-        game_data.blueprint = blueprint
-        game_data.groups.wall_group = wall_group
-        game_data.groups.all_sprites = all_sprites
-        game_data.wall_index_dirty = True
-    except MapGenerationError:
-        # If generation fails after retries, show error and back to title
-        screen.fill((0, 0, 0))
-        blit_message_wrapped(
-            screen,
-            tr("errors.map_generation_failed"),
-            16,
-            RED,
-            (screen_width // 2, screen_height // 2),
-            max_width=screen_width - 40,
-        )
-        present(screen)
-        pygame.time.delay(3000)
-        return _finalize(ScreenTransition(ScreenID.TITLE))
-
-    sync_ambient_palette_with_flashlights(game_data, force=True)
-    initial_waiting = max(0, stage.waiting_car_target_count)
-    player, waiting_cars = setup_player_and_cars(
-        game_data, layout_data, car_count=initial_waiting
+    runner = GameplayScreenRunner(
+        screen=screen,
+        clock=clock,
+        config=config,
+        fps=fps,
+        stage=stage,
+        show_pause_overlay=show_pause_overlay,
+        seed=seed,
+        render_assets=render_assets,
+        debug_mode=debug_mode,
+        show_fps=show_fps,
+        profiler=profiler,
+        profiler_output=profiler_output,
     )
-    game_data.player = player
-    game_data.waiting_cars = waiting_cars
-    game_data.car = None
-    # Only top up if initial placement spawned fewer than the intended baseline (shouldn't happen)
-    maintain_waiting_car_supply(game_data, minimum=stage.waiting_car_target_count)
-    apply_passenger_speed_penalty(game_data)
-
-    spawn_survivors(game_data, layout_data)
-
-    _spawn_stage_items(
-        game_data=game_data,
-        layout_data=layout_data,
-        player=player,
-    )
-
-    spawn_initial_zombies(game_data, player, layout_data, config)
-    spawn_initial_patrol_bots(game_data, player, layout_data)
-    update_footprints(game_data, config)
-    level_rect = game_data.layout.field_rect
-    overview_surface = pygame.Surface((level_rect.width, level_rect.height))
-    while True:
-        frame_ms = clock.tick_busy_loop(fps) if use_busy_loop else clock.tick(fps)
-        dt = frame_ms / 1000.0
-        current_fps = clock.get_fps()
-        if game_data.state.game_over or game_data.state.game_won:
-            game_data.state.clock.time_scale = 1.0
-            game_data.state.clock.tick(frame_ms)
-            if game_data.state.game_won:
-                record_stage_clear(stage.id)
-            if game_data.state.game_over and not game_data.state.game_won:
-                if game_data.state.game_over_at is None:
-                    game_data.state.game_over_at = game_data.state.clock.elapsed_ms
-                if game_data.state.clock.elapsed_ms - game_data.state.game_over_at < 1000:
-                    draw(
-                        render_assets,
-                        screen,
-                        game_data,
-                        config=config,
-                        hint_color=None,
-                        fps=current_fps,
-                    )
-                    present(screen)
-                    continue
-            return _finalize(
-                ScreenTransition(
-                    ScreenID.GAME_OVER,
-                    stage=stage,
-                    game_data=game_data,
-                    config=config,
-                )
-            )
-
-        (
-            transition,
-            paused_manual,
-            paused_focus,
-            debug_overview,
-            profiling_active,
-            input_snapshot,
-        ) = _handle_runtime_events(
-            game_data=game_data,
-            debug_mode=debug_mode,
-            paused_manual=paused_manual,
-            paused_focus=paused_focus,
-            debug_overview=debug_overview,
-            input_helper=input_helper,
-            profiler=profiler,
-            profiling_active=profiling_active,
-            dump_profile=_dump_profile,
-            finalize=_finalize,
-        )
-        if transition is not None:
-            return transition
-
-        _set_mouse_hidden(pygame.mouse.get_focused())
-
-        paused = paused_manual or paused_focus
-        if paused:
-            _render_paused_state(
-                render_assets=render_assets,
-                screen=screen,
-                overview_surface=overview_surface,
-                game_data=game_data,
-                config=config,
-                screen_width=screen_width,
-                screen_height=screen_height,
-                show_pause_overlay=show_pause_overlay,
-                debug_overview=debug_overview,
-                fps=current_fps,
-            )
-            continue
-
-        keys = pygame.key.get_pressed()
-        accel_allowed = not (game_data.state.game_over or game_data.state.game_won)
-        accel_active = accel_allowed and input_snapshot.held(CommonAction.ACCEL)
-        game_data.state.time_accel_active = accel_active
-        substeps = SURVIVAL_TIME_ACCEL_SUBSTEPS if accel_active else 1
-        sub_dt = min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
-        if consume_wall_index_dirty():
-            game_data.wall_index_dirty = True
-        if game_data.wall_index is None or game_data.wall_index_dirty:
-            game_data.wall_index = build_wall_index(
-                game_data.groups.wall_group, cell_size=game_data.cell_size
-            )
-            game_data.wall_index_dirty = False
-        wall_index = game_data.wall_index
-        for _ in range(substeps):
-            player_ref = game_data.player
-            if player_ref is None:
-                break
-            car_ref = game_data.car
-            pad_vector = input_snapshot.move_vector
-            player_dx, player_dy, car_dx, car_dy = process_player_input(
-                keys,
-                player_ref,
-                car_ref,
-                shoes_count=game_data.state.shoes_count,
-                pad_input=pad_vector,
-            )
-            if (
-                game_data.state.timed_message
-                and game_data.state.timed_message.clear_on_input
-                and (player_dx or player_dy or car_dx or car_dy)
-            ):
-                game_data.state.timed_message = None
-            update_entities(
-                game_data,
-                player_dx,
-                player_dy,
-                car_dx,
-                car_dy,
-                config,
-                wall_index=wall_index,
-            )
-            update_footprints(game_data, config)
-            step_ms = int(sub_dt * 1000)
-            if accel_active:
-                step_ms = max(1, step_ms)
-            time_scale = 4.0 / max(1, substeps) if accel_active else 1.0
-            game_data.state.clock.time_scale = time_scale
-            step_ms = game_data.state.clock.tick(step_ms)
-            update_endurance_timer(game_data, step_ms)
-            cleanup_survivor_messages(game_data.state)
-            check_interactions(game_data, config)
-            if game_data.state.game_over or game_data.state.game_won:
-                break
-
-        player_ref = game_data.player
-        if player_ref is not None:
-            mobile_entities: list[pygame.sprite.Sprite] = []
-            if player_ref.alive():
-                mobile_entities.append(player_ref)
-            car_ref = game_data.car
-            if car_ref and car_ref.alive():
-                mobile_entities.append(car_ref)
-            mobile_entities.extend(
-                [zombie for zombie in game_data.groups.zombie_group if zombie.alive()]
-            )
-            mobile_entities.extend(
-                [
-                    survivor
-                    for survivor in game_data.groups.survivor_group
-                    if survivor.alive()
-                ]
-            )
-            mobile_entities.extend(
-                [
-                    bot
-                    for bot in game_data.groups.patrol_bot_group
-                    if bot.alive()
-                ]
-            )
-            game_data.state.spatial_index.rebuild(mobile_entities)
-
-        player = game_data.player
-        if player is None:
-            raise ValueError("Player missing from game data")
-
-        if debug_overview:
-            draw_debug_overview(
-                render_assets,
-                screen,
-                overview_surface,
-                game_data,
-                config,
-                screen_width=screen_width,
-                screen_height=screen_height,
-            )
-            present(screen)
-            continue
-
-        car_hint_conf = config.get("car_hint", {})
-        hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
-        elapsed_ms = game_data.state.clock.elapsed_ms
-        fuel_progress = game_data.state.fuel_progress
-        hint_enabled = car_hint_conf.get("enabled", True) and not stage.endurance_stage
-        hint_target = None
-        hint_color = YELLOW
-        hint_expires_at = game_data.state.hint_expires_at
-        hint_target_type = game_data.state.hint_target_type
-
-        active_car = game_data.car if game_data.car and game_data.car.alive() else None
-        if hint_enabled:
-            target_type = _resolve_hint_target_type(
-                stage=stage,
-                fuel_progress=fuel_progress,
-                game_data=game_data,
-                player_in_car=player.in_car,
-                active_car=active_car,
-                report_internal_error_once=_report_internal_error_once,
-            )
-
-            if target_type != hint_target_type:
-                game_data.state.hint_target_type = target_type
-                game_data.state.hint_expires_at = (
-                    elapsed_ms + hint_delay if target_type else 0
-                )
-                hint_expires_at = game_data.state.hint_expires_at
-                hint_target_type = target_type
-
-            if (
-                target_type
-                and hint_expires_at
-                and elapsed_ms >= hint_expires_at
-                and not player.in_car
-            ):
-                hint_target_raw = _resolve_hint_target_position(
-                    target_type=target_type,
-                    game_data=game_data,
-                    active_car=active_car,
-                    player_pos=(player.x, player.y),
-                )
-                hint_target = (
-                    (int(hint_target_raw[0]), int(hint_target_raw[1]))
-                    if hint_target_raw
-                    else None
-                )
-
-        draw(
-            render_assets,
-            screen,
-            game_data,
-            config=config,
-            hint_target=hint_target,
-            hint_color=hint_color,
-            fps=current_fps,
-        )
-        if profiling_active:
-            font_settings = get_font_settings()
-            font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            label = render_text_surface(
-                font,
-                "PROFILE ON",
-                RED,
-                line_height_scale=font_settings.line_height_scale,
-            )
-            screen.blit(label, (6, 6))
-        present(screen)
-
-    # Should not reach here, but return to title if it happens
-    return _finalize(ScreenTransition(ScreenID.TITLE))
+    return runner.run()
