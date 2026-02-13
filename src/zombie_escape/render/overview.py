@@ -9,6 +9,7 @@ from ..colors import (
     BLACK,
     BLUE,
     FOOTPRINT_COLOR,
+    LIGHT_GRAY,
     YELLOW,
     WHITE,
     get_environment_palette,
@@ -426,3 +427,12 @@ def draw_debug_overview(
                     _scaled_rect(item.rect),
                     line_height_scale=font_settings.line_height_scale,
                 )
+    zombie_count = sum(1 for z in game_data.groups.zombie_group if z.alive())
+    count_surface = render_text_surface(
+        label_font,
+        f"Zombies: {zombie_count}",
+        LIGHT_GRAY,
+        line_height_scale=font_settings.line_height_scale,
+    )
+    count_rect = count_surface.get_rect(midbottom=(screen_width // 2, screen_height - 6))
+    screen.blit(count_surface, count_rect)
