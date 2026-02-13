@@ -370,6 +370,10 @@
     `_handle_car_destruction` / `_handle_escape_conditions` が呼ばれる。
   - 生存者の車乗車は `survivor_rescue_stage` に加えて `survivor_spawn_rate > 0` のステージでも有効。
   - 車とゾンビの衝突は車の `collision_radius` ベースで判定し、移動中接触でゾンビにヒットダメージを与える。
+  - 車の耐久値は `entities_constants.py` の `CAR_HEALTH` で定義される。
+  - 車が受ける接触ダメージ（ゾンビ/ゾンビ犬接触・壁接触）は
+    `gameplay/entity_interactions.py` の `CAR_ZOMBIE_RAM_DAMAGE` /
+    `CAR_ZOMBIE_CONTACT_DAMAGE` と `entities_constants.py` の `CAR_WALL_DAMAGE` で調整する。
 - `update_survivors(game_data, config)` (`gameplay/survivors.py`)
   - サバイバー/相棒の移動と追従。
   - 落とし穴を壁と同様の障害物として避ける。
