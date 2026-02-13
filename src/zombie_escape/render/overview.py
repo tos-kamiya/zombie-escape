@@ -33,7 +33,7 @@ from ..models import Footprint, GameData
 from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
 from ..render_constants import MOVING_FLOOR_OVERVIEW_COLOR
 from ..entities_constants import PATROL_BOT_COLLISION_RADIUS
-from .hud import _get_fog_scale
+from .hud import _get_fog_scale, build_zombie_debug_counts_text
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from ..gameplay.lineformer_trains import LineformerTrainManager
@@ -427,12 +427,19 @@ def draw_debug_overview(
                     _scaled_rect(item.rect),
                     line_height_scale=font_settings.line_height_scale,
                 )
-    zombie_count = sum(1 for z in game_data.groups.zombie_group if z.alive())
-    count_surface = render_text_surface(
-        label_font,
-        f"Zombies: {zombie_count}",
-        LIGHT_GRAY,
-        line_height_scale=font_settings.line_height_scale,
+    debug_counts = build_zombie_debug_counts_text(
+        zombie_group=game_data.groups.zombie_group,
+        lineformer_marker_count=game_data.lineformer_trains.total_marker_count(),
+        falling_spawn_carry=game_data.state.falling_spawn_carry,
     )
-    count_rect = count_surface.get_rect(midbottom=(screen_width // 2, screen_height - 6))
-    screen.blit(count_surface, count_rect)
+    if debug_counts:
+        count_surface = render_text_surface(
+            label_font,
+            debug_counts,
+            LIGHT_GRAY,
+            line_height_scale=font_settings.line_height_scale,
+        )
+        count_rect = count_surface.get_rect(
+            midbottom=(screen_width // 2, screen_height - 6)
+        )
+        screen.blit(count_surface, count_rect)

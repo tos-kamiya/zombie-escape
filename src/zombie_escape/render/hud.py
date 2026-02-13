@@ -90,6 +90,34 @@ def _get_hud_icon(kind: str) -> surface.Surface:
     return icon
 
 
+def build_zombie_debug_counts_text(
+    *,
+    zombie_group: sprite.Group | None,
+    lineformer_marker_count: int | None = None,
+    falling_spawn_carry: int | None = None,
+) -> str | None:
+    """Build the shared zombie debug summary text used in HUD/overview."""
+    if zombie_group is None:
+        return None
+    zombies = [z for z in zombie_group if z.alive()]
+    total = len(zombies)
+    kinds = [getattr(z, "kind", None) for z in zombies]
+    tracker = sum(1 for kind in kinds if kind == ZombieKind.TRACKER)
+    wall = sum(1 for kind in kinds if kind == ZombieKind.WALL_HUGGER)
+    lineformer = sum(1 for kind in kinds if kind == ZombieKind.LINEFORMER)
+    marker_count = max(0, int(lineformer_marker_count or 0))
+    lineformer_total = lineformer + marker_count
+    dog_count = sum(1 for kind in kinds if kind == ZombieKind.DOG)
+    normal = max(0, total - tracker - wall - lineformer - dog_count)
+    debug_counts = (
+        f"Z:{total} N:{normal} T:{tracker} W:{wall} "
+        f"L:{lineformer}({lineformer_total}) D:{dog_count}"
+    )
+    if falling_spawn_carry is not None:
+        debug_counts = f"{debug_counts} C:{max(0, falling_spawn_carry)}"
+    return debug_counts
+
+
 def _draw_status_bar(
     screen: surface.Surface,
     assets: RenderAssets,
@@ -139,23 +167,12 @@ def _draw_status_bar(
     if steel_on:
         parts.append(tr("status.steel"))
     debug_counts: str | None = None
-    if debug_mode and zombie_group is not None:
-        zombies = [z for z in zombie_group if z.alive()]
-        total = len(zombies)
-        kinds = [getattr(z, "kind", None) for z in zombies]
-        tracker = sum(1 for kind in kinds if kind == ZombieKind.TRACKER)
-        wall = sum(1 for kind in kinds if kind == ZombieKind.WALL_HUGGER)
-        lineformer = sum(1 for kind in kinds if kind == ZombieKind.LINEFORMER)
-        marker_count = max(0, int(lineformer_marker_count or 0))
-        lineformer_total = lineformer + marker_count
-        dog_count = sum(1 for kind in kinds if kind == ZombieKind.DOG)
-        normal = max(0, total - tracker - wall - lineformer - dog_count)
-        debug_counts = (
-            f"Z:{total} N:{normal} T:{tracker} W:{wall} "
-            f"L:{lineformer}({lineformer_total}) D:{dog_count}"
+    if debug_mode:
+        debug_counts = build_zombie_debug_counts_text(
+            zombie_group=zombie_group,
+            lineformer_marker_count=lineformer_marker_count,
+            falling_spawn_carry=falling_spawn_carry,
         )
-        if falling_spawn_carry is not None:
-            debug_counts = f"{debug_counts} C:{max(0, falling_spawn_carry)}"
     status_text = " | ".join(parts)
     color = LIGHT_GRAY
 
