@@ -63,3 +63,4 @@ PY_VERSIONS="3.10 3.12" ./scripts/check-multi-py.sh
 ## Related docs
 
 - `docs/design.md`: gameplay/data flow overview.
+- `docs/user-input-spec.md`: user input normalization spec (keyboard/gamepad).

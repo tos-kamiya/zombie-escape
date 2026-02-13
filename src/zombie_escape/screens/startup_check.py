@@ -10,11 +10,7 @@ from ..font_utils import load_font
 from ..localization import get_font_settings
 from ..localization import translate as tr
 from ..input_utils import (
-    CONTROLLER_DEVICE_ADDED,
-    CONTROLLER_DEVICE_REMOVED,
-    init_first_controller,
-    init_first_joystick,
-    is_confirm_held,
+    InputHelper,
 )
 from ..render import blit_text_wrapped, wrap_text
 from ..windowing import adjust_menu_logical_size, present, sync_window_size
@@ -34,11 +30,10 @@ def startup_check_screen(
     if width <= 0 or height <= 0:
         width, height = screen_size
 
-    controller = init_first_controller()
-    joystick = init_first_joystick() if controller is None else None
+    input_helper = InputHelper()
     pygame.event.pump()
 
-    if not is_confirm_held(controller, joystick):
+    if not input_helper.is_confirm_held():
         return ScreenTransition(ScreenID.TITLE)
 
     release_at: int | None = None
@@ -54,25 +49,10 @@ def startup_check_screen(
                 adjust_menu_logical_size()
                 width, height = screen.get_size()
                 continue
-            if event.type == pygame.JOYDEVICEADDED or (
-                CONTROLLER_DEVICE_ADDED is not None
-                and event.type == CONTROLLER_DEVICE_ADDED
-            ):
-                if controller is None:
-                    controller = init_first_controller()
-                if controller is None:
-                    joystick = init_first_joystick()
-            if event.type == pygame.JOYDEVICEREMOVED or (
-                CONTROLLER_DEVICE_REMOVED is not None
-                and event.type == CONTROLLER_DEVICE_REMOVED
-            ):
-                if controller and not controller.get_init():
-                    controller = None
-                if joystick and not joystick.get_init():
-                    joystick = None
+            input_helper.handle_device_event(event)
 
         pygame.event.pump()
-        if not is_confirm_held(controller, joystick):
+        if not input_helper.is_confirm_held():
             if release_at is None:
                 release_at = now
             elif now - release_at >= release_delay_ms:

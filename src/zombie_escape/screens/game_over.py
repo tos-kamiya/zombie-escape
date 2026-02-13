@@ -8,14 +8,8 @@ from pygame import surface, time
 from ..colors import BLACK, GREEN, LIGHT_GRAY, RED, WHITE
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 from ..input_utils import (
-    CONTROLLER_BUTTON_DOWN,
-    CONTROLLER_DEVICE_ADDED,
-    CONTROLLER_DEVICE_REMOVED,
-    init_first_controller,
-    init_first_joystick,
-    is_confirm_event,
-    is_start_event,
-    is_select_event,
+    CommonAction,
+    InputHelper,
 )
 from ..localization import translate as tr
 from ..models import GameData, Stage
@@ -50,8 +44,7 @@ def game_over_screen(
     state = game_data.state
     wall_group = game_data.groups.wall_group
     footprints_enabled = config.get("footprints", {}).get("enabled", True)
-    controller = init_first_controller()
-    joystick = init_first_joystick() if controller is None else None
+    input_helper = InputHelper()
 
     while True:
         if not state.overview_created:
@@ -190,12 +183,14 @@ def game_over_screen(
         present(screen)
         clock.tick(fps)
 
-        for event in pygame.event.get():
+        events = pygame.event.get()
+        for event in events:
             if event.type == pygame.QUIT:
                 return ScreenTransition(ScreenID.EXIT)
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event, game_data=game_data)
                 continue
+            input_helper.handle_device_event(event)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
                     nudge_window_scale(0.5, game_data=game_data)
@@ -214,31 +209,13 @@ def game_over_screen(
                         stage=stage,
                         seed=state.seed,
                     )
-            if event.type == pygame.JOYDEVICEADDED or (
-                CONTROLLER_DEVICE_ADDED is not None
-                and event.type == CONTROLLER_DEVICE_ADDED
-            ):
-                if controller is None:
-                    controller = init_first_controller()
-                if controller is None:
-                    joystick = init_first_joystick()
-            if event.type == pygame.JOYDEVICEREMOVED or (
-                CONTROLLER_DEVICE_REMOVED is not None
-                and event.type == CONTROLLER_DEVICE_REMOVED
-            ):
-                if controller and not controller.get_init():
-                    controller = None
-                if joystick and not joystick.get_init():
-                    joystick = None
-            if event.type == pygame.JOYBUTTONDOWN or (
-                CONTROLLER_BUTTON_DOWN is not None
-                and event.type == CONTROLLER_BUTTON_DOWN
-            ):
-                if is_start_event(event) and stage is not None:
-                    return ScreenTransition(
-                        ScreenID.GAMEPLAY,
-                        stage=stage,
-                        seed=state.seed,
-                    )
-                if is_select_event(event) or is_confirm_event(event):
-                    return ScreenTransition(ScreenID.TITLE)
+
+        snapshot = input_helper.snapshot(events, pygame.key.get_pressed())
+        if snapshot.pressed(CommonAction.START) and stage is not None:
+            return ScreenTransition(
+                ScreenID.GAMEPLAY,
+                stage=stage,
+                seed=state.seed,
+            )
+        if snapshot.pressed(CommonAction.BACK) or snapshot.pressed(CommonAction.CONFIRM):
+            return ScreenTransition(ScreenID.TITLE)

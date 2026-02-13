@@ -45,15 +45,8 @@ from ..gameplay.constants import (
     LAYER_ITEMS,
 )
 from ..input_utils import (
-    CONTROLLER_BUTTON_DOWN,
-    CONTROLLER_DEVICE_ADDED,
-    CONTROLLER_DEVICE_REMOVED,
-    init_first_controller,
-    init_first_joystick,
-    is_accel_active,
-    is_select_event,
-    is_start_event,
-    read_gamepad_move,
+    CommonAction,
+    InputHelper,
 )
 from ..gameplay.spawn import _alive_waiting_cars
 from ..world_grid import build_wall_index
@@ -240,48 +233,33 @@ def _handle_runtime_events(
     paused_manual: bool,
     paused_focus: bool,
     debug_overview: bool,
-    controller: Any,
-    joystick: Any,
+    input_helper: InputHelper,
     profiler: object | None,
     profiling_active: bool,
     dump_profile: callable,
     finalize: callable,
-) -> tuple[ScreenTransition | None, bool, bool, bool, Any, Any, bool]:
-    for event in pygame.event.get():
+) -> tuple[ScreenTransition | None, bool, bool, bool, bool, Any]:
+    events = pygame.event.get()
+    for event in events:
         if event.type == pygame.QUIT:
             return (
                 finalize(ScreenTransition(ScreenID.EXIT)),
                 paused_manual,
                 paused_focus,
                 debug_overview,
-                controller,
-                joystick,
                 profiling_active,
+                input_helper.snapshot(events, pygame.key.get_pressed()),
             )
         if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
             sync_window_size(event, game_data=game_data)
             continue
+        input_helper.handle_device_event(event)
         if event.type == pygame.WINDOWFOCUSLOST:
             paused_focus = True
         if event.type == pygame.WINDOWFOCUSGAINED:
             paused_focus = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             paused_focus = False
-        if event.type == pygame.JOYDEVICEADDED or (
-            CONTROLLER_DEVICE_ADDED is not None and event.type == CONTROLLER_DEVICE_ADDED
-        ):
-            if controller is None:
-                controller = init_first_controller()
-            if controller is None:
-                joystick = init_first_joystick()
-        if event.type == pygame.JOYDEVICEREMOVED or (
-            CONTROLLER_DEVICE_REMOVED is not None
-            and event.type == CONTROLLER_DEVICE_REMOVED
-        ):
-            if controller and not controller.get_init():
-                controller = None
-            if joystick and not joystick.get_init():
-                joystick = None
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_F10:
                 if profiler is not None:
@@ -303,80 +281,46 @@ def _handle_runtime_events(
                 toggle_fullscreen(game_data=game_data)
                 continue
             if debug_mode:
-                if event.key == pygame.K_ESCAPE:
-                    return (
-                        ScreenTransition(ScreenID.TITLE),
-                        paused_manual,
-                        paused_focus,
-                        debug_overview,
-                        controller,
-                        joystick,
-                        profiling_active,
-                    )
-                if event.key == pygame.K_p:
-                    paused_manual = not paused_manual
                 if event.key == pygame.K_o:
                     debug_overview = not debug_overview
                 continue
-            if paused_manual:
-                if event.key == pygame.K_ESCAPE:
-                    return (
-                        finalize(ScreenTransition(ScreenID.TITLE)),
-                        paused_manual,
-                        paused_focus,
-                        debug_overview,
-                        controller,
-                        joystick,
-                        profiling_active,
-                    )
-                if event.key == pygame.K_p:
-                    paused_manual = False
-                continue
-            if event.key in (pygame.K_ESCAPE, pygame.K_p):
-                paused_manual = True
-                continue
-        if event.type == pygame.JOYBUTTONDOWN or (
-            CONTROLLER_BUTTON_DOWN is not None and event.type == CONTROLLER_BUTTON_DOWN
+    snapshot = input_helper.snapshot(events, pygame.key.get_pressed())
+    if debug_mode:
+        if snapshot.pressed(CommonAction.BACK):
+            return (
+                finalize(ScreenTransition(ScreenID.TITLE)),
+                paused_manual,
+                paused_focus,
+                debug_overview,
+                profiling_active,
+                snapshot,
+            )
+        if snapshot.pressed(CommonAction.START):
+            paused_manual = not paused_manual
+    else:
+        if paused_manual:
+            if snapshot.pressed(CommonAction.BACK):
+                return (
+                    finalize(ScreenTransition(ScreenID.TITLE)),
+                    paused_manual,
+                    paused_focus,
+                    debug_overview,
+                    profiling_active,
+                    snapshot,
+                )
+            if snapshot.pressed(CommonAction.START):
+                paused_manual = False
+        elif snapshot.pressed(CommonAction.BACK) or snapshot.pressed(
+            CommonAction.START
         ):
-            if debug_mode:
-                if is_select_event(event):
-                    return (
-                        finalize(ScreenTransition(ScreenID.TITLE)),
-                        paused_manual,
-                        paused_focus,
-                        debug_overview,
-                        controller,
-                        joystick,
-                        profiling_active,
-                    )
-                if is_start_event(event):
-                    paused_manual = not paused_manual
-                continue
-            if paused_manual:
-                if is_select_event(event):
-                    return (
-                        finalize(ScreenTransition(ScreenID.TITLE)),
-                        paused_manual,
-                        paused_focus,
-                        debug_overview,
-                        controller,
-                        joystick,
-                        profiling_active,
-                    )
-                if is_start_event(event):
-                    paused_manual = False
-                continue
-            if is_select_event(event) or is_start_event(event):
-                paused_manual = True
-                continue
+            paused_manual = True
     return (
         None,
         paused_manual,
         paused_focus,
         debug_overview,
-        controller,
-        joystick,
         profiling_active,
+        snapshot,
     )
 
 
@@ -531,8 +475,7 @@ def gameplay_screen(
     paused_focus = False
     debug_overview = False
     reported_internal_errors: set[str] = set()
-    controller = init_first_controller()
-    joystick = init_first_joystick() if controller is None else None
+    input_helper = InputHelper()
     _set_mouse_hidden(pygame.mouse.get_focused())
 
     def _report_internal_error_once(code: str) -> None:
@@ -640,17 +583,15 @@ def gameplay_screen(
             paused_manual,
             paused_focus,
             debug_overview,
-            controller,
-            joystick,
             profiling_active,
+            input_snapshot,
         ) = _handle_runtime_events(
             game_data=game_data,
             debug_mode=debug_mode,
             paused_manual=paused_manual,
             paused_focus=paused_focus,
             debug_overview=debug_overview,
-            controller=controller,
-            joystick=joystick,
+            input_helper=input_helper,
             profiler=profiler,
             profiling_active=profiling_active,
             dump_profile=_dump_profile,
@@ -679,7 +620,7 @@ def gameplay_screen(
 
         keys = pygame.key.get_pressed()
         accel_allowed = not (game_data.state.game_over or game_data.state.game_won)
-        accel_active = accel_allowed and is_accel_active(keys, controller, joystick)
+        accel_active = accel_allowed and input_snapshot.held(CommonAction.ACCEL)
         game_data.state.time_accel_active = accel_active
         substeps = SURVIVAL_TIME_ACCEL_SUBSTEPS if accel_active else 1
         sub_dt = min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
@@ -696,7 +637,7 @@ def gameplay_screen(
             if player_ref is None:
                 break
             car_ref = game_data.car
-            pad_vector = read_gamepad_move(controller, joystick)
+            pad_vector = input_snapshot.move_vector
             player_dx, player_dy, car_dx, car_dy = process_player_input(
                 keys,
                 player_ref,

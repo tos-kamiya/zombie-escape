@@ -15,16 +15,8 @@ from ..progress import load_progress
 from ..render import blit_text_wrapped, wrap_text
 from ..rng import generate_seed
 from ..input_utils import (
-    CONTROLLER_BUTTON_DOWN,
-    CONTROLLER_BUTTON_DPAD_DOWN,
-    CONTROLLER_BUTTON_DPAD_LEFT,
-    CONTROLLER_BUTTON_DPAD_RIGHT,
-    CONTROLLER_BUTTON_DPAD_UP,
-    CONTROLLER_DEVICE_ADDED,
-    CONTROLLER_DEVICE_REMOVED,
-    init_first_controller,
-    init_first_joystick,
-    is_confirm_event,
+    CommonAction,
+    InputHelper,
 )
 from ..screens import (
     ScreenID,
@@ -154,16 +146,44 @@ def title_screen(
         0,
     )
     selected = min(selected_stage_index, len(options) - 1)
-    controller = init_first_controller()
-    joystick = init_first_joystick() if controller is None else None
+    input_helper = InputHelper()
     pygame.event.pump()
     # Drop any queued confirm events from startup/controller init glitches.
     confirm_event_types = [pygame.JOYBUTTONDOWN]
-    if CONTROLLER_BUTTON_DOWN is not None:
-        confirm_event_types.append(CONTROLLER_BUTTON_DOWN)
+    controller_button_down = getattr(pygame, "CONTROLLERBUTTONDOWN", None)
+    if controller_button_down is not None:
+        confirm_event_types.append(controller_button_down)
     pygame.event.clear(confirm_event_types)
     pygame.event.clear([pygame.KEYDOWN])
     confirm_armed_at = pygame.time.get_ticks() + 300
+
+    def _activate_current_selection() -> ScreenTransition | None:
+        current = options[selected]
+        if current["type"] == "stage" and current.get("available"):
+            seed_value = int(current_seed_text) if current_seed_text else None
+            return ScreenTransition(
+                ScreenID.GAMEPLAY,
+                stage=current["stage"],
+                seed=seed_value,
+                seed_text=current_seed_text,
+                seed_is_auto=current_seed_auto,
+            )
+        if current["type"] == "settings":
+            return ScreenTransition(
+                ScreenID.SETTINGS,
+                seed_text=current_seed_text,
+                seed_is_auto=current_seed_auto,
+            )
+        if current["type"] == "readme":
+            _open_readme_link(use_stage6=current_page > 0)
+            return None
+        if current["type"] == "quit":
+            return ScreenTransition(
+                ScreenID.EXIT,
+                seed_text=current_seed_text,
+                seed_is_auto=current_seed_auto,
+            )
+        return None
 
     def _render_frame() -> None:
         screen.fill(BLACK)
@@ -519,7 +539,8 @@ def title_screen(
             print(f"Error rendering title screen: {e}")
 
     while True:
-        for event in pygame.event.get():
+        events = pygame.event.get()
+        for event in events:
             if event.type == pygame.QUIT:
                 return ScreenTransition(
                     ScreenID.EXIT,
@@ -530,22 +551,7 @@ def title_screen(
                 sync_window_size(event)
                 adjust_menu_logical_size()
                 continue
-            if event.type == pygame.JOYDEVICEADDED or (
-                CONTROLLER_DEVICE_ADDED is not None
-                and event.type == CONTROLLER_DEVICE_ADDED
-            ):
-                if controller is None:
-                    controller = init_first_controller()
-                if controller is None:
-                    joystick = init_first_joystick()
-            if event.type == pygame.JOYDEVICEREMOVED or (
-                CONTROLLER_DEVICE_REMOVED is not None
-                and event.type == CONTROLLER_DEVICE_REMOVED
-            ):
-                if controller and not controller.get_init():
-                    controller = None
-                if joystick and not joystick.get_init():
-                    joystick = None
+            input_helper.handle_device_event(event)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_BACKSPACE:
                     current_seed_text = _generate_auto_seed_text()
@@ -568,138 +574,28 @@ def title_screen(
                     toggle_fullscreen()
                     adjust_menu_logical_size()
                     continue
-                if event.key in (pygame.K_LEFT, pygame.K_a):
-                    if current_page > 0:
-                        current_page -= 1
-                        options, stage_options = _build_options(current_page)
-                        selected = 0
-                    continue
-                if event.key in (pygame.K_RIGHT, pygame.K_d):
-                    if current_page < len(stage_pages) - 1 and _page_available(
-                        current_page + 1
-                    ):
-                        current_page += 1
-                        options, stage_options = _build_options(current_page)
-                        selected = 0
-                    continue
-                if event.key in (pygame.K_UP, pygame.K_w):
-                    selected = (selected - 1) % len(options)
-                elif event.key in (pygame.K_DOWN, pygame.K_s):
-                    selected = (selected + 1) % len(options)
-                elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                    if pygame.time.get_ticks() < confirm_armed_at:
-                        continue
-                    current = options[selected]
-                    if current["type"] == "stage" and current.get("available"):
-                        seed_value = (
-                            int(current_seed_text) if current_seed_text else None
-                        )
-                        return ScreenTransition(
-                            ScreenID.GAMEPLAY,
-                            stage=current["stage"],
-                            seed=seed_value,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-                    if current["type"] == "settings":
-                        return ScreenTransition(
-                            ScreenID.SETTINGS,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-                    if current["type"] == "readme":
-                        _open_readme_link(use_stage6=current_page > 0)
-                        continue
-                    if current["type"] == "quit":
-                        return ScreenTransition(
-                            ScreenID.EXIT,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-            if event.type == pygame.JOYBUTTONDOWN or (
-                CONTROLLER_BUTTON_DOWN is not None
-                and event.type == CONTROLLER_BUTTON_DOWN
-            ):
-                if is_confirm_event(event):
-                    if pygame.time.get_ticks() < confirm_armed_at:
-                        continue
-                    current = options[selected]
-                    if current["type"] == "stage" and current.get("available"):
-                        seed_value = (
-                            int(current_seed_text) if current_seed_text else None
-                        )
-                        return ScreenTransition(
-                            ScreenID.GAMEPLAY,
-                            stage=current["stage"],
-                            seed=seed_value,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-                    if current["type"] == "settings":
-                        return ScreenTransition(
-                            ScreenID.SETTINGS,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-                    if current["type"] == "readme":
-                        _open_readme_link(use_stage6=current_page > 0)
-                        continue
-                    if current["type"] == "quit":
-                        return ScreenTransition(
-                            ScreenID.EXIT,
-                            seed_text=current_seed_text,
-                            seed_is_auto=current_seed_auto,
-                        )
-                if (
-                    CONTROLLER_BUTTON_DOWN is not None
-                    and event.type == CONTROLLER_BUTTON_DOWN
-                ):
-                    if (
-                        CONTROLLER_BUTTON_DPAD_UP is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_UP
-                    ):
-                        selected = (selected - 1) % len(options)
-                    if (
-                        CONTROLLER_BUTTON_DPAD_DOWN is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_DOWN
-                    ):
-                        selected = (selected + 1) % len(options)
-                    if (
-                        CONTROLLER_BUTTON_DPAD_LEFT is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_LEFT
-                    ):
-                        if current_page > 0:
-                            current_page -= 1
-                            options, stage_options = _build_options(current_page)
-                            selected = 0
-                    if (
-                        CONTROLLER_BUTTON_DPAD_RIGHT is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_RIGHT
-                    ):
-                        if current_page < len(stage_pages) - 1 and _page_available(
-                            current_page + 1
-                        ):
-                            current_page += 1
-                            options, stage_options = _build_options(current_page)
-                            selected = 0
-            if event.type == pygame.JOYHATMOTION:
-                hat_x, hat_y = event.value
-                if hat_y == 1:
-                    selected = (selected - 1) % len(options)
-                elif hat_y == -1:
-                    selected = (selected + 1) % len(options)
-                if hat_x == -1:
-                    if current_page > 0:
-                        current_page -= 1
-                        options, stage_options = _build_options(current_page)
-                        selected = 0
-                elif hat_x == 1:
-                    if current_page < len(stage_pages) - 1 and _page_available(
-                        current_page + 1
-                    ):
-                        current_page += 1
-                        options, stage_options = _build_options(current_page)
-                        selected = 0
+
+        snapshot = input_helper.snapshot(events, pygame.key.get_pressed())
+
+        if snapshot.pressed(CommonAction.LEFT):
+            if current_page > 0:
+                current_page -= 1
+                options, stage_options = _build_options(current_page)
+                selected = 0
+        if snapshot.pressed(CommonAction.RIGHT):
+            if current_page < len(stage_pages) - 1 and _page_available(current_page + 1):
+                current_page += 1
+                options, stage_options = _build_options(current_page)
+                selected = 0
+        if snapshot.pressed(CommonAction.UP):
+            selected = (selected - 1) % len(options)
+        if snapshot.pressed(CommonAction.DOWN):
+            selected = (selected + 1) % len(options)
+        if snapshot.pressed(CommonAction.CONFIRM):
+            if pygame.time.get_ticks() >= confirm_armed_at:
+                transition = _activate_current_selection()
+                if transition is not None:
+                    return transition
 
         _render_frame()
         present(screen)

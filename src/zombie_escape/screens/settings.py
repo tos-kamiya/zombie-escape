@@ -11,17 +11,8 @@ from ..colors import BLACK, GREEN, LIGHT_GRAY, WHITE
 from ..config import DEFAULT_CONFIG, save_config
 from ..font_utils import load_font
 from ..input_utils import (
-    CONTROLLER_BUTTON_DOWN,
-    CONTROLLER_BUTTON_DPAD_DOWN,
-    CONTROLLER_BUTTON_DPAD_LEFT,
-    CONTROLLER_BUTTON_DPAD_RIGHT,
-    CONTROLLER_BUTTON_DPAD_UP,
-    CONTROLLER_DEVICE_ADDED,
-    CONTROLLER_DEVICE_REMOVED,
-    init_first_controller,
-    init_first_joystick,
-    is_confirm_event,
-    is_select_event,
+    CommonAction,
+    InputHelper,
 )
 from ..localization import (
     get_font_settings,
@@ -64,8 +55,7 @@ def settings_screen(
     selected = 0
     languages = language_options()
     language_codes = [lang.code for lang in languages]
-    controller = init_first_controller()
-    joystick = init_first_joystick() if controller is None else None
+    input_helper = InputHelper()
 
     def _ensure_parent(path: tuple[str, ...]) -> tuple[dict, str]:
         node = working
@@ -487,31 +477,15 @@ def settings_screen(
         clock.tick(fps)
 
     while True:
-        for event in pygame.event.get():
+        events = pygame.event.get()
+        for event in events:
             if event.type == pygame.QUIT:
                 return config
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event)
                 adjust_menu_logical_size()
                 continue
-            if event.type == pygame.JOYDEVICEADDED or (
-                CONTROLLER_DEVICE_ADDED is not None
-                and event.type == CONTROLLER_DEVICE_ADDED
-            ):
-                if controller is None:
-                    controller = init_first_controller()
-                if controller is None:
-                    joystick = init_first_joystick()
-            if event.type == pygame.JOYDEVICEREMOVED or (
-                CONTROLLER_DEVICE_REMOVED is not None
-                and event.type == CONTROLLER_DEVICE_REMOVED
-            ):
-                if controller and not controller.get_init():
-                    controller = None
-                if joystick and not joystick.get_init():
-                    joystick = None
-            if is_select_event(event):
-                return _exit_settings()
+            input_helper.handle_device_event(event)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
                     nudge_menu_window_scale(0.5)
@@ -525,95 +499,36 @@ def settings_screen(
                     continue
                 if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
                     return _exit_settings()
-                if event.key in (pygame.K_UP, pygame.K_w):
-                    selected = (selected - 1) % row_count
-                if event.key in (pygame.K_DOWN, pygame.K_s):
-                    selected = (selected + 1) % row_count
-                current_row = rows[selected]
-                row_type = current_row.get("type", "toggle")
-                if event.key in (pygame.K_SPACE, pygame.K_RETURN):
-                    if row_type == "action":
-                        return _exit_settings()
-                    if row_type == "toggle":
-                        toggle_row(current_row)
-                    elif row_type == "choice":
-                        cycle_choice(current_row, 1)
-                if event.key == pygame.K_LEFT and row_type != "action":
-                    if row_type == "toggle":
-                        set_easy_value(current_row, True)
-                    elif row_type == "choice":
-                        cycle_choice(current_row, -1)
-                if event.key == pygame.K_RIGHT and row_type != "action":
-                    if row_type == "toggle":
-                        set_easy_value(current_row, False)
-                    elif row_type == "choice":
-                        cycle_choice(current_row, 1)
                 if event.key == pygame.K_r:
                     working = copy.deepcopy(DEFAULT_CONFIG)
                     set_language(working.get("language"))
-            if event.type == pygame.JOYBUTTONDOWN or (
-                CONTROLLER_BUTTON_DOWN is not None
-                and event.type == CONTROLLER_BUTTON_DOWN
-            ):
-                current_row = rows[selected]
-                row_type = current_row.get("type", "toggle")
-                if is_confirm_event(event):
-                    if row_type == "action":
-                        return _exit_settings()
-                    if row_type == "toggle":
-                        toggle_row(current_row)
-                    elif row_type == "choice":
-                        cycle_choice(current_row, 1)
-                if (
-                    CONTROLLER_BUTTON_DOWN is not None
-                    and event.type == CONTROLLER_BUTTON_DOWN
-                ):
-                    if (
-                        CONTROLLER_BUTTON_DPAD_UP is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_UP
-                    ):
-                        selected = (selected - 1) % row_count
-                    if (
-                        CONTROLLER_BUTTON_DPAD_DOWN is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_DOWN
-                    ):
-                        selected = (selected + 1) % row_count
-                    if (
-                        CONTROLLER_BUTTON_DPAD_LEFT is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_LEFT
-                        and row_type != "action"
-                    ):
-                        if row_type == "toggle":
-                            set_easy_value(current_row, True)
-                        elif row_type == "choice":
-                            cycle_choice(current_row, -1)
-                    if (
-                        CONTROLLER_BUTTON_DPAD_RIGHT is not None
-                        and event.button == CONTROLLER_BUTTON_DPAD_RIGHT
-                        and row_type != "action"
-                    ):
-                        if row_type == "toggle":
-                            set_easy_value(current_row, False)
-                        elif row_type == "choice":
-                            cycle_choice(current_row, 1)
-            if event.type == pygame.JOYHATMOTION:
-                current_row = rows[selected]
-                row_type = current_row.get("type", "toggle")
-                hat_x, hat_y = event.value
-                if hat_y == 1:
-                    selected = (selected - 1) % row_count
-                elif hat_y == -1:
-                    selected = (selected + 1) % row_count
-                if hat_x == -1 and row_type != "action":
-                    if row_type == "toggle":
-                        set_easy_value(current_row, True)
-                    elif row_type == "choice":
-                        cycle_choice(current_row, -1)
-                elif hat_x == 1 and row_type != "action":
-                    if row_type == "toggle":
-                        set_easy_value(current_row, False)
-                    elif row_type == "choice":
-                        cycle_choice(current_row, 1)
+
+        snapshot = input_helper.snapshot(events, pygame.key.get_pressed())
+        if snapshot.pressed(CommonAction.BACK):
+            return _exit_settings()
+        if snapshot.pressed(CommonAction.UP):
+            selected = (selected - 1) % row_count
+        if snapshot.pressed(CommonAction.DOWN):
+            selected = (selected + 1) % row_count
+        current_row = rows[selected]
+        row_type = current_row.get("type", "toggle")
+        if snapshot.pressed(CommonAction.CONFIRM):
+            if row_type == "action":
+                return _exit_settings()
+            if row_type == "toggle":
+                toggle_row(current_row)
+            elif row_type == "choice":
+                cycle_choice(current_row, 1)
+        if snapshot.pressed(CommonAction.LEFT) and row_type != "action":
+            if row_type == "toggle":
+                set_easy_value(current_row, True)
+            elif row_type == "choice":
+                cycle_choice(current_row, -1)
+        if snapshot.pressed(CommonAction.RIGHT) and row_type != "action":
+            if row_type == "toggle":
+                set_easy_value(current_row, False)
+            elif row_type == "choice":
+                cycle_choice(current_row, 1)
 
         _render_frame()
         present(screen)
