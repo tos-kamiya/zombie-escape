@@ -24,7 +24,11 @@ from ..entities_constants import (
     PLAYER_SPEED,
     PLAYER_WALL_DAMAGE,
 )
-from ..render_assets import angle_bin_from_vector, build_player_directional_surfaces
+from ..render_assets import (
+    angle_bin_from_vector,
+    build_player_directional_surfaces,
+    build_zombie_directional_surfaces,
+)
 from ..render_constants import ANGLE_BINS
 from ..world_grid import WallIndex
 from .collisions import collide_circle_custom, spritecollideany_walls
@@ -63,6 +67,7 @@ class Player(pygame.sprite.Sprite):
         self.jump_duration = JUMP_DURATION_MS
         self.is_jumping = False
         self.collision_radius = float(self.radius)
+        self.is_zombified_visual = False
 
     def move(
         self: Self,
@@ -220,3 +225,18 @@ class Player(pygame.sprite.Sprite):
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
         set_facing_bin(self, new_bin)
+
+    def set_zombified_visual(self: Self) -> None:
+        """Swap visuals to a simple zombie-style body (no hands)."""
+        if self.is_zombified_visual:
+            return
+        center = self.rect.center
+        self.directional_images = build_zombie_directional_surfaces(
+            self.radius,
+            draw_hands=False,
+        )
+        self.image = self.directional_images[self.facing_bin]
+        self.rect = self.image.get_rect(center=center)
+        self.x = float(self.rect.centerx)
+        self.y = float(self.rect.centery)
+        self.is_zombified_visual = True

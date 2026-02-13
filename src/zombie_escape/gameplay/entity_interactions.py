@@ -806,6 +806,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             is_active_zombie_threat(zombie, now_ms=now) for zombie in collisions
         ) or marker_hit:
             if not state.game_over:
+                player.set_zombified_visual()
                 state.game_over = True
                 state.game_over_at = state.clock.elapsed_ms
                 schedule_timed_message(
