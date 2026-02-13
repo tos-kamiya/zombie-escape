@@ -64,8 +64,8 @@ def _ms_to_frames(ms: int) -> int:
 RNG = get_rng()
 
 # --- Car vs zombie damage (interaction rules) ---
-CAR_ZOMBIE_RAM_DAMAGE = 5
-CAR_ZOMBIE_CONTACT_DAMAGE = 1
+CAR_ZOMBIE_RAM_DAMAGE = 6
+CAR_ZOMBIE_CONTACT_DAMAGE = 2
 CAR_ZOMBIE_HIT_DAMAGE = 20
 
 
