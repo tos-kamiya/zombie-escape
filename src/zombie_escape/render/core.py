@@ -726,7 +726,7 @@ def _draw_lineformer_merge_fx(
         y = fx.start_pos[1] + (fx.target_pos[1] - fx.start_pos[1]) * t
         alpha = int(200 * (1.0 - t))
         radius = max(2, int(ZOMBIE_RADIUS * (0.9 - 0.3 * t)))
-        color = (75, 75, 75, max(0, min(255, alpha)))
+        color = (98, 75, 75, max(0, min(255, alpha)))
         world_rect = pygame.Rect(0, 0, 1, 1)
         world_rect.center = (int(x), int(y))
         screen_center = camera.apply_rect(world_rect).center
@@ -1064,7 +1064,7 @@ def _draw_lineformer_train_markers(
             width=1,
         )
         offset = int(round(marker_radius * 0.3))
-        side_offset = int(round(marker_radius * 0.7))
+        side_offset = int(round(marker_radius * 0.5))
         arm_len = int(round(marker_radius * 0.9))
         arm2_len = int(round(marker_radius * 0.6))
         forward_x = math.cos(angle_rad)
@@ -1075,8 +1075,8 @@ def _draw_lineformer_train_markers(
         elbow_y = center_y + forward_y * offset + right_y * side_offset
         hand_x = elbow_x + right_x * arm_len
         hand_y = elbow_y + right_y * arm_len
-        tip_x = hand_x - right_x * (arm2_len * 0.59) + forward_x * (arm2_len * 0.81)
-        tip_y = hand_y - right_y * (arm2_len * 0.59) + forward_y * (arm2_len * 0.81)
+        tip_x = hand_x - right_x * (arm2_len * 0.61) + forward_x * (arm2_len * 0.95)
+        tip_y = hand_y - right_y * (arm2_len * 0.61) + forward_y * (arm2_len * 0.95)
         pygame.draw.lines(
             screen,
             ZOMBIE_OUTLINE_COLOR,
