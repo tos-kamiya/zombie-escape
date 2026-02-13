@@ -8,8 +8,10 @@ import pygame
 from .colors import STUDIO_AMBIENT_PALETTE_KEY, get_environment_palette
 from .entities import (
     Car,
+    EmptyFuelCan,
     Flashlight,
     FuelCan,
+    FuelStation,
     PatrolBot,
     Player,
     RubbleWall,
@@ -357,6 +359,26 @@ def export_images(
     fuel_path = out / "fuel.png"
     _save_surface(fuel_surface, fuel_path, scale=output_scale)
     saved.append(fuel_path)
+
+    empty_fuel_can = EmptyFuelCan(center_x, center_y)
+    empty_fuel_can_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=empty_fuel_can.rect,
+        sprites=[empty_fuel_can],
+    )
+    empty_fuel_can_path = out / "empty-fuel-can.png"
+    _save_surface(empty_fuel_can_surface, empty_fuel_can_path, scale=output_scale)
+    saved.append(empty_fuel_can_path)
+
+    fuel_station = FuelStation(center_x, center_y)
+    fuel_station_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=fuel_station.rect,
+        sprites=[fuel_station],
+    )
+    fuel_station_path = out / "fuel-station.png"
+    _save_surface(fuel_station_surface, fuel_station_path, scale=output_scale)
+    saved.append(fuel_station_path)
 
     flashlight = Flashlight(center_x, center_y)
     flashlight_surface = _render_studio_snapshot(
