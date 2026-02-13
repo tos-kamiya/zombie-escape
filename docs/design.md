@@ -95,7 +95,7 @@
 - ゲームオーバー画面用: `scaled_overview`, `overview_created`
 - 進行演出: `footprints`, `last_footprint_pos`, `footprint_visible_toggle`, `elapsed_play_ms`
 - 近接探索: `spatial_index`（移動体用の空間インデックス）
-- アイテム状態: `has_fuel`, `flashlight_count`, `shoes_count`
+- アイテム状態: `has_fuel`, `has_empty_fuel_can`, `flashlight_count`, `shoes_count`
 - ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`,
   `timed_message`（`TimedMessage` の内容を保持）
 - ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`
@@ -117,7 +117,7 @@
 - `fog`: 霧描画用のキャッシュ辞書
 - `stage`: `Stage`（ステージ定義）
 - `cell_size`, `level_width`, `level_height`: ステージ別のタイルサイズに応じたワールド寸法
-- `fuel`, `flashlights`, `shoes`, `player`, `car`, `waiting_cars` など
+- `fuel`, `empty_fuel_can`, `fuel_station`, `flashlights`, `shoes`, `player`, `car`, `waiting_cars` など
 - ログ補助: `last_logged_waiting_cars`
 - lineformer 列管理: `lineformer_trains`（先頭実体＋後続マーカー列の管理）
 
@@ -125,7 +125,7 @@
 
 `Stage` はステージ属性を保持する `dataclass`。
 
-- プレイ特性: `requires_fuel`, `buddy_required_count`, `survivor_rescue_stage`, `endurance_stage`, `intro_key`
+- プレイ特性: `requires_fuel`, `requires_refuel`, `buddy_required_count`, `survivor_rescue_stage`, `endurance_stage`, `intro_key`
 - スポーン/難易度: `spawn_interval_ms`, `initial_interior_spawn_rate`, `survivor_spawn_rate`
 - スポーン数: `zombie_spawn_count_per_interval`（スポーンタイミングごとの湧き数、デフォルト1）
 - 内外/落下スポーン比率: `exterior_spawn_weight`, `interior_spawn_weight`, `interior_fall_spawn_weight`（重みを分け合う）
@@ -346,7 +346,7 @@
   - `mode="spawn"`: 上空から拡大しながら登場。着地時にゾンビを生成しホコリリングを発生。
   - `mode="pitfall"`: 穴の中心へ吸い込まれながら縮小・消滅。
   - 位置が見つからない場合は落下スポーンを行わず、`falling_spawn_carry` を加算して次回へ繰り越す。
-- `spawn_survivors` / `place_buddies` / `place_fuel_can` / `place_flashlights` / `place_shoes` (`gameplay/spawn.py`)
+- `spawn_survivors` / `place_buddies` / `place_fuel_can` / `place_empty_fuel_can` / `place_fuel_station` / `place_flashlights` / `place_shoes` (`gameplay/spawn.py`)
   - ステージ別のアイテムやNPCを配置。ブループリントの予約地点を優先使用する。
 - `spawn_waiting_car` / `place_new_car` / `maintain_waiting_car_supply` (`gameplay/spawn.py`)
   - 待機車両の補充と再配置。**車で到達可能なタイル（`car_walkable_cells`）からのみ選択**され、孤立を防止する。
@@ -365,7 +365,7 @@
   **壁が破壊されたときにのみ**再構築される（`wall_index_dirty` フラグ）。
 - `check_interactions(game_data, config)` (`gameplay/entity_interactions.py`)
   - アイテム収集、車両/救助/敗北判定などの相互作用。
-  - 主な処理は責務ごとに分割され、`_handle_fuel_pickup` / `_handle_player_item_pickups` /
+  - 主な処理は責務ごとに分割され、`_handle_fuel_pickup` / `_handle_empty_fuel_can_pickup` / `_handle_fuel_station_refuel` / `_handle_player_item_pickups` /
     `_handle_buddy_interactions` / `_board_survivors_if_colliding` /
     `_handle_car_destruction` / `_handle_escape_conditions` が呼ばれる。
   - 生存者の車乗車は `survivor_rescue_stage` に加えて `survivor_spawn_rate > 0` のステージでも有効。

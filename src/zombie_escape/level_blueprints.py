@@ -151,10 +151,12 @@ def validate_humanoid_objective_connectivity(
     grid: list[str],
     *,
     requires_fuel: bool,
+    requires_refuel: bool = False,
 ) -> bool:
     """Check objective pathing for humans with moving-floor constraints.
 
     - requires_fuel=True: P -> any reachable f -> any C
+    - requires_refuel=True: P -> reachable f1 -> reachable f2 -> any C
     - requires_fuel=False: treat P as the fuel start, then P -> any C
     """
     rows = len(grid)
@@ -180,6 +182,32 @@ def validate_humanoid_objective_connectivity(
         player_start,
         passable_cells=passable_cells,
     )
+    if requires_refuel:
+        if len(fuel_cells) < 2:
+            return False
+        empty_candidates = [cell for cell in fuel_cells if cell in from_player]
+        if not empty_candidates:
+            return False
+        for empty_cell in empty_candidates:
+            from_empty = _humanoid_reachable_cells(
+                grid,
+                empty_cell,
+                passable_cells=passable_cells,
+            )
+            station_candidates = [
+                cell for cell in fuel_cells if cell != empty_cell and cell in from_empty
+            ]
+            if not station_candidates:
+                continue
+            for station_cell in station_candidates:
+                from_station = _humanoid_reachable_cells(
+                    grid,
+                    station_cell,
+                    passable_cells=passable_cells,
+                )
+                if any(car_cell in from_station for car_cell in car_cells):
+                    return True
+        return False
     if requires_fuel:
         if not fuel_cells:
             return False
@@ -204,6 +232,7 @@ def validate_connectivity(
     grid: list[str],
     *,
     requires_fuel: bool = False,
+    requires_refuel: bool = False,
 ) -> set[tuple[int, int]] | None:
     """Validate both car and humanoid movement conditions.
     Returns car reachable cells if both pass, otherwise None.
@@ -214,6 +243,7 @@ def validate_connectivity(
     if not validate_humanoid_objective_connectivity(
         grid,
         requires_fuel=requires_fuel,
+        requires_refuel=requires_refuel,
     ):
         return None
     return car_reachable

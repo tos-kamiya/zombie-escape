@@ -16,8 +16,10 @@ from ..colors import (
 )
 from ..entities import (
     Car,
+    EmptyFuelCan,
     Flashlight,
     FuelCan,
+    FuelStation,
     Player,
     PatrolBot,
     Shoes,
@@ -94,6 +96,8 @@ def draw_level_overview(
     *,
     now_ms: int,
     fuel: FuelCan | None = None,
+    empty_fuel_can: EmptyFuelCan | None = None,
+    fuel_station: FuelStation | None = None,
     flashlights: list[Flashlight] | None = None,
     shoes: list[Shoes] | None = None,
     buddies: list[Survivor] | None = None,
@@ -300,6 +304,8 @@ def draw_debug_overview(
         footprints_to_draw,
         now_ms=game_data.state.clock.elapsed_ms,
         fuel=game_data.fuel,
+        empty_fuel_can=game_data.empty_fuel_can,
+        fuel_station=game_data.fuel_station,
         flashlights=game_data.flashlights or [],
         shoes=game_data.shoes or [],
         buddies=[
@@ -405,6 +411,22 @@ def draw_debug_overview(
             label_font,
             "F",
             _scaled_rect(game_data.fuel.rect),
+            line_height_scale=font_settings.line_height_scale,
+        )
+    if game_data.empty_fuel_can and game_data.empty_fuel_can.alive():
+        _draw_overview_tag(
+            screen,
+            label_font,
+            "E",
+            _scaled_rect(game_data.empty_fuel_can.rect),
+            line_height_scale=font_settings.line_height_scale,
+        )
+    if game_data.fuel_station and game_data.fuel_station.alive():
+        _draw_overview_tag(
+            screen,
+            label_font,
+            "G",
+            _scaled_rect(game_data.fuel_station.rect),
             line_height_scale=font_settings.line_height_scale,
         )
     if game_data.flashlights:

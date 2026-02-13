@@ -535,6 +535,7 @@ def _build_objective_lines(
     player: Player,
     active_car: Car | None,
     has_fuel: bool,
+    has_empty_fuel_can: bool,
     buddy_merged_count: int,
     buddy_required: int,
 ) -> list[str]:
@@ -574,15 +575,30 @@ def _build_objective_lines(
                 )
         if not stage.endurance_stage:
             if not active_car:
-                if stage.requires_fuel and not has_fuel:
+                if stage.requires_refuel and not has_fuel:
+                    if not has_empty_fuel_can:
+                        objective_lines.append(tr("objectives.find_empty_fuel_can"))
+                    else:
+                        objective_lines.append(tr("objectives.refuel_at_station"))
+                elif stage.requires_fuel and not has_fuel:
                     objective_lines.append(tr("objectives.find_fuel"))
                 else:
                     objective_lines.append(tr("objectives.find_car"))
             else:
-                if stage.requires_fuel and not has_fuel:
+                if stage.requires_refuel and not has_fuel:
+                    if not has_empty_fuel_can:
+                        objective_lines.append(tr("objectives.find_empty_fuel_can"))
+                    else:
+                        objective_lines.append(tr("objectives.refuel_at_station"))
+                elif stage.requires_fuel and not has_fuel:
                     objective_lines.append(tr("objectives.find_fuel"))
                 else:
                     objective_lines.append(tr("objectives.escape"))
+    elif stage and stage.requires_refuel and not has_fuel:
+        if not has_empty_fuel_can:
+            objective_lines.append(tr("objectives.find_empty_fuel_can"))
+        else:
+            objective_lines.append(tr("objectives.refuel_at_station"))
     elif stage and stage.requires_fuel and not has_fuel:
         objective_lines.append(tr("objectives.find_fuel"))
     elif stage and stage.survivor_rescue_stage:

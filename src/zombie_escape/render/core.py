@@ -1309,6 +1309,7 @@ def draw(
         player=player,
         active_car=active_car,
         has_fuel=has_fuel,
+        has_empty_fuel_can=state.has_empty_fuel_can,
         buddy_merged_count=state.buddy_merged_count,
         buddy_required=stage.buddy_required_count if stage else 0,
     )

@@ -81,6 +81,8 @@ def game_over_screen(
                 footprints_to_draw,
                 now_ms=state.clock.elapsed_ms,
                 fuel=game_data.fuel,
+                empty_fuel_can=game_data.empty_fuel_can,
+                fuel_station=game_data.fuel_station,
                 flashlights=game_data.flashlights or [],
                 shoes=game_data.shoes or [],
                 buddies=[

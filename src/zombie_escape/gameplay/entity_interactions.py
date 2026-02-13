@@ -12,10 +12,14 @@ from ..entities_constants import (
     CAR_HEIGHT,
     CAR_WALL_DAMAGE,
     CAR_WIDTH,
+    EMPTY_FUEL_CAN_HEIGHT,
+    EMPTY_FUEL_CAN_WIDTH,
     FLASHLIGHT_HEIGHT,
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
+    FUEL_STATION_HEIGHT,
+    FUEL_STATION_WIDTH,
     HUMANOID_RADIUS,
     SHOES_HEIGHT,
     SHOES_WIDTH,
@@ -91,6 +95,64 @@ def _handle_fuel_pickup(
     fuel.kill()
     game_data.fuel = None
     print("Fuel acquired!")
+
+
+def _handle_empty_fuel_can_pickup(
+    *,
+    game_data: GameData,
+    player: pygame.sprite.Sprite,
+    empty_fuel_can: pygame.sprite.Sprite | None,
+    interaction_radius: float,
+    player_near_point: callable,
+) -> None:
+    state = game_data.state
+    if not (
+        empty_fuel_can
+        and empty_fuel_can.alive()
+        and not state.has_empty_fuel_can
+        and not state.has_fuel
+        and not player.in_car
+    ):
+        return
+    if not player_near_point(empty_fuel_can.rect.center, interaction_radius):
+        return
+    state.has_empty_fuel_can = True
+    state.hint_expires_at = 0
+    state.hint_target_type = None
+    empty_fuel_can.kill()
+    game_data.empty_fuel_can = None
+    print("Empty fuel can acquired!")
+
+
+def _handle_fuel_station_refuel(
+    *,
+    game_data: GameData,
+    player: pygame.sprite.Sprite,
+    fuel_station: pygame.sprite.Sprite | None,
+    interaction_radius: float,
+    need_fuel_text: str,
+    player_near_point: callable,
+) -> None:
+    state = game_data.state
+    if not (
+        fuel_station
+        and fuel_station.alive()
+        and state.has_empty_fuel_can
+        and not state.has_fuel
+        and not player.in_car
+    ):
+        return
+    if not player_near_point(fuel_station.rect.center, interaction_radius):
+        return
+    state.has_empty_fuel_can = False
+    state.has_fuel = True
+    if state.timed_message == need_fuel_text:
+        schedule_timed_message(
+            state, None, duration_frames=0, now_ms=state.clock.elapsed_ms
+        )
+    state.hint_expires_at = 0
+    state.hint_target_type = None
+    print("Fuel can filled at station!")
 
 
 def _handle_player_item_pickups(
@@ -378,6 +440,8 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     walkable_cells = game_data.layout.walkable_cells
     outside_cells = game_data.layout.outside_cells
     fuel = game_data.fuel
+    empty_fuel_can = game_data.empty_fuel_can
+    fuel_station = game_data.fuel_station
     flashlights = game_data.flashlights or []
     shoes_list = game_data.shoes or []
     camera = game_data.camera
@@ -394,6 +458,12 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
 
     car_interaction_radius = _interaction_radius(CAR_WIDTH, CAR_HEIGHT)
     fuel_interaction_radius = _interaction_radius(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
+    empty_fuel_can_interaction_radius = _interaction_radius(
+        EMPTY_FUEL_CAN_WIDTH, EMPTY_FUEL_CAN_HEIGHT
+    )
+    fuel_station_interaction_radius = _interaction_radius(
+        FUEL_STATION_WIDTH, FUEL_STATION_HEIGHT
+    )
     flashlight_interaction_radius = _interaction_radius(
         FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT
     )
@@ -427,14 +497,31 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     def _player_near_car(car_obj: Car | None) -> bool:
         return _player_near_sprite(car_obj, car_interaction_radius)
 
-    _handle_fuel_pickup(
-        game_data=game_data,
-        player=player,
-        fuel=fuel,
-        fuel_interaction_radius=fuel_interaction_radius,
-        need_fuel_text=need_fuel_text,
-        player_near_point=_player_near_point,
-    )
+    if stage.requires_refuel:
+        _handle_empty_fuel_can_pickup(
+            game_data=game_data,
+            player=player,
+            empty_fuel_can=empty_fuel_can,
+            interaction_radius=empty_fuel_can_interaction_radius,
+            player_near_point=_player_near_point,
+        )
+        _handle_fuel_station_refuel(
+            game_data=game_data,
+            player=player,
+            fuel_station=fuel_station,
+            interaction_radius=fuel_station_interaction_radius,
+            need_fuel_text=need_fuel_text,
+            player_near_point=_player_near_point,
+        )
+    else:
+        _handle_fuel_pickup(
+            game_data=game_data,
+            player=player,
+            fuel=fuel,
+            fuel_interaction_radius=fuel_interaction_radius,
+            need_fuel_text=need_fuel_text,
+            player_near_point=_player_near_point,
+        )
     _handle_player_item_pickups(
         game_data=game_data,
         player=player,
@@ -483,7 +570,12 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     color=YELLOW,
                     now_ms=state.clock.elapsed_ms,
                 )
-                state.hint_target_type = "fuel"
+                if stage.requires_refuel:
+                    state.hint_target_type = (
+                        "fuel_station" if state.has_empty_fuel_can else "empty_fuel_can"
+                    )
+                else:
+                    state.hint_target_type = "fuel"
 
     # Claim a waiting/parked car when the player finally reaches it
     if not player.in_car and not active_car and waiting_cars:
@@ -517,7 +609,14 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                         color=YELLOW,
                         now_ms=state.clock.elapsed_ms,
                     )
-                    state.hint_target_type = "fuel"
+                    if stage.requires_refuel:
+                        state.hint_target_type = (
+                            "fuel_station"
+                            if state.has_empty_fuel_can
+                            else "empty_fuel_can"
+                        )
+                    else:
+                        state.hint_target_type = "fuel"
 
     # Bonus: collide a parked car while driving to repair/extend capabilities
     if player.in_car and active_car and shrunk_car and waiting_cars:

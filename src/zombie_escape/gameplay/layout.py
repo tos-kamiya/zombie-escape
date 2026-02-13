@@ -124,6 +124,8 @@ def generate_level_from_blueprint(
     fuel_count = 0
     if stage.requires_fuel and not stage.endurance_stage:
         fuel_count = max(0, int(stage.fuel_spawn_count))
+        if stage.requires_refuel:
+            fuel_count = max(2, fuel_count)
     flashlight_count = max(0, int(stage.initial_flashlight_count))
     shoes_count = max(0, int(stage.initial_shoes_count))
 
@@ -154,6 +156,7 @@ def generate_level_from_blueprint(
         car_reachable = validate_connectivity(
             blueprint.grid,
             requires_fuel=stage.requires_fuel and not stage.endurance_stage,
+            requires_refuel=stage.requires_refuel and not stage.endurance_stage,
         )
         if car_reachable is not None:
             blueprint.car_reachable_cells = car_reachable

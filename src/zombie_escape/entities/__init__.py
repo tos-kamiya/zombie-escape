@@ -13,16 +13,22 @@ import pygame
 from pygame import rect
 
 from ..entities_constants import (
+    EMPTY_FUEL_CAN_HEIGHT,
+    EMPTY_FUEL_CAN_WIDTH,
     FLASHLIGHT_HEIGHT,
     FLASHLIGHT_WIDTH,
     FUEL_CAN_HEIGHT,
     FUEL_CAN_WIDTH,
+    FUEL_STATION_HEIGHT,
+    FUEL_STATION_WIDTH,
     SHOES_HEIGHT,
     SHOES_WIDTH,
 )
 from ..render_assets import (
+    build_empty_fuel_can_surface,
     build_flashlight_surface,
     build_fuel_can_surface,
+    build_fuel_station_surface,
     build_shoes_surface,
 )
 from ..rng import get_rng
@@ -99,6 +105,26 @@ class FuelCan(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x, y))
 
 
+class EmptyFuelCan(pygame.sprite.Sprite):
+    """Empty fuel can collectible that must be filled at a station."""
+
+    def __init__(self: Self, x: int, y: int) -> None:
+        super().__init__()
+        self.image = build_empty_fuel_can_surface(
+            EMPTY_FUEL_CAN_WIDTH, EMPTY_FUEL_CAN_HEIGHT
+        )
+        self.rect = self.image.get_rect(center=(x, y))
+
+
+class FuelStation(pygame.sprite.Sprite):
+    """Fuel station interaction point used to fill empty fuel cans."""
+
+    def __init__(self: Self, x: int, y: int) -> None:
+        super().__init__()
+        self.image = build_fuel_station_surface(FUEL_STATION_WIDTH, FUEL_STATION_HEIGHT)
+        self.rect = self.image.get_rect(center=(x, y))
+
+
 class Flashlight(pygame.sprite.Sprite):
     """Flashlight pickup that expands the player's visible radius when collected."""
 
@@ -130,6 +156,8 @@ __all__ = [
     "PatrolBot",
     "Car",
     "FuelCan",
+    "EmptyFuelCan",
+    "FuelStation",
     "Flashlight",
     "Shoes",
     "random_position_outside_building",

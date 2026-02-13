@@ -6,8 +6,10 @@ import pygame
 
 from ..entities import (
     Car,
+    EmptyFuelCan,
     Flashlight,
     FuelCan,
+    FuelStation,
     PatrolBot,
     Player,
     Shoes,
@@ -58,6 +60,8 @@ FallScheduleResult = Literal["scheduled", "no_position", "blocked", "no_player"]
 __all__ = [
     "place_new_car",
     "place_fuel_can",
+    "place_empty_fuel_can",
+    "place_fuel_station",
     "place_flashlights",
     "place_shoes",
     "place_buddies",
@@ -426,11 +430,82 @@ def place_fuel_can(
     count: int = 1,
 ) -> FuelCan | None:
     """Pick a spawn spot for the fuel can away from the player (and car if given)."""
+    return _place_collectible(
+        walkable_cells,
+        cell_size,
+        player,
+        cars=cars,
+        reserved_centers=reserved_centers,
+        count=count,
+        min_player_dist=250,
+        min_car_dist=200,
+        factory=FuelCan,
+    )
+
+
+def place_empty_fuel_can(
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
+    player: Player,
+    *,
+    cars: Sequence[Car] | None = None,
+    reserved_centers: set[tuple[int, int]] | None = None,
+    count: int = 1,
+) -> EmptyFuelCan | None:
+    """Pick a spawn spot for the empty fuel can away from the player/car."""
+    placed = _place_collectible(
+        walkable_cells,
+        cell_size,
+        player,
+        cars=cars,
+        reserved_centers=reserved_centers,
+        count=count,
+        min_player_dist=250,
+        min_car_dist=200,
+        factory=EmptyFuelCan,
+    )
+    return placed if isinstance(placed, EmptyFuelCan) else None
+
+
+def place_fuel_station(
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
+    player: Player,
+    *,
+    cars: Sequence[Car] | None = None,
+    reserved_centers: set[tuple[int, int]] | None = None,
+    count: int = 1,
+) -> FuelStation | None:
+    """Pick a spawn spot for the fuel station away from the player/car."""
+    placed = _place_collectible(
+        walkable_cells,
+        cell_size,
+        player,
+        cars=cars,
+        reserved_centers=reserved_centers,
+        count=count,
+        min_player_dist=260,
+        min_car_dist=200,
+        factory=FuelStation,
+    )
+    return placed if isinstance(placed, FuelStation) else None
+
+
+def _place_collectible(
+    walkable_cells: list[tuple[int, int]],
+    cell_size: int,
+    player: Player,
+    *,
+    cars: Sequence[Car] | None,
+    reserved_centers: set[tuple[int, int]] | None,
+    count: int,
+    min_player_dist: int,
+    min_car_dist: int,
+    factory: Callable[[int, int], pygame.sprite.Sprite],
+) -> pygame.sprite.Sprite | None:
     if count <= 0 or not walkable_cells:
         return None
 
-    min_player_dist = 250
-    min_car_dist = 200
     min_player_dist_sq = min_player_dist * min_player_dist
     min_car_dist_sq = min_car_dist * min_car_dist
 
@@ -453,11 +528,11 @@ def place_fuel_can(
                     break
             if too_close:
                 continue
-        return FuelCan(center[0], center[1])
+        return factory(center[0], center[1])
 
     cell = RNG.choice(walkable_cells)
     center = _cell_center(cell, cell_size)
-    return FuelCan(center[0], center[1])
+    return factory(center[0], center[1])
 
 
 def _place_flashlight(

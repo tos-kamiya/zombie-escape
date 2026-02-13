@@ -22,7 +22,16 @@ from .level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
-    from .entities import Camera, Car, Flashlight, FuelCan, Player, Shoes
+    from .entities import (
+        Camera,
+        Car,
+        EmptyFuelCan,
+        Flashlight,
+        FuelCan,
+        FuelStation,
+        Player,
+        Shoes,
+    )
     from .gameplay.decay_effects import DecayingEntityEffect
     from .gameplay.lineformer_trains import LineformerTrainManager
     from .gameplay.spatial_index import SpatialIndex
@@ -119,6 +128,7 @@ class ProgressState:
     footprint_visible_toggle: bool
     clock: GameClock
     has_fuel: bool
+    has_empty_fuel_can: bool
     flashlight_count: int
     shoes_count: int
     ambient_palette_key: str
@@ -186,6 +196,8 @@ class GameData:
     wall_index_dirty: bool = True
     blueprint: Blueprint | None = None
     fuel: FuelCan | None = None
+    empty_fuel_can: EmptyFuelCan | None = None
+    fuel_station: FuelStation | None = None
     flashlights: list[Flashlight] | None = None
     shoes: list[Shoes] | None = None
     player: Player | None = None
@@ -228,6 +240,7 @@ class Stage:
 
     # Stage objective
     requires_fuel: bool = False
+    requires_refuel: bool = False
     buddy_required_count: int = 0
     survivor_rescue_stage: bool = False
     endurance_stage: bool = False
@@ -266,6 +279,10 @@ class Stage:
         if self.requires_fuel:
             assert self.fuel_spawn_count >= 1, (
                 "requires_fuel stages must set fuel_spawn_count >= 1"
+            )
+        if self.requires_refuel:
+            assert self.requires_fuel, (
+                "requires_refuel stages must also set requires_fuel=True"
             )
 
     @property

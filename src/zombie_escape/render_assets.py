@@ -11,6 +11,7 @@ from .colors import (
     BLACK,
     BLUE,
     DARK_RED,
+    LIGHT_GRAY,
     ORANGE,
     STEEL_BEAM_COLOR,
     STEEL_BEAM_LINE_COLOR,
@@ -193,6 +194,15 @@ FLASHLIGHT_SPEC = PolygonSpec(
     ],
 )
 
+FUEL_STATION_SPEC = PolygonSpec(
+    size=(14, 18),
+    polygons=[
+        [(1, 1), (10, 1), (10, 17), (1, 17)],
+        [(10, 4), (13, 4), (13, 8), (10, 8)],
+        [(10, 10), (13, 10), (13, 12), (10, 12)],
+    ],
+)
+
 SHOES_SPEC = PolygonSpec(
     size=(14, 10),
     polygons=[
@@ -234,14 +244,17 @@ def _draw_polygon_surface(
     width: int,
     height: int,
     spec: PolygonSpec,
+    *,
+    fill_color: tuple[int, int, int] = YELLOW,
+    outline_color: tuple[int, int, int] = BLACK,
 ) -> pygame.Surface:
     surface = pygame.Surface((width, height), pygame.SRCALPHA)
     draw_polygons = spec.polygons
     if (width, height) != spec.size:
         draw_polygons = _scale_polygons(spec, (width, height))
     for poly in draw_polygons:
-        pygame.draw.polygon(surface, YELLOW, poly)
-        pygame.draw.polygon(surface, BLACK, poly, width=1)
+        pygame.draw.polygon(surface, fill_color, poly)
+        pygame.draw.polygon(surface, outline_color, poly, width=1)
     return surface
 
 
@@ -1014,6 +1027,20 @@ def build_fuel_can_surface(width: int, height: int) -> pygame.Surface:
     return _draw_polygon_surface(width, height, FUEL_CAN_SPEC)
 
 
+def build_empty_fuel_can_surface(width: int, height: int) -> pygame.Surface:
+    return _draw_polygon_surface(width, height, FUEL_CAN_SPEC, fill_color=LIGHT_GRAY)
+
+
+def build_fuel_station_surface(width: int, height: int) -> pygame.Surface:
+    return _draw_polygon_surface(
+        width,
+        height,
+        FUEL_STATION_SPEC,
+        fill_color=(255, 215, 80),
+        outline_color=BLACK,
+    )
+
+
 def build_flashlight_surface(width: int, height: int) -> pygame.Surface:
     return _draw_polygon_surface(width, height, FLASHLIGHT_SPEC)
 
@@ -1048,6 +1075,8 @@ __all__ = [
     "RUBBLE_ROTATION_DEG",
     "paint_steel_beam_surface",
     "build_fuel_can_surface",
+    "build_empty_fuel_can_surface",
+    "build_fuel_station_surface",
     "build_flashlight_surface",
     "build_shoes_surface",
 ]

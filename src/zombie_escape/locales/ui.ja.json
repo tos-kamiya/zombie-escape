@@ -187,6 +187,10 @@
       "stage27": {
         "name": "#27 行列ゾンビ",
         "description": "並びたいらしい。"
+      },
+      "stage28": {
+        "name": "#28 空缶ラン",
+        "description": "空の燃料缶を拾い、給油所で満タンにしてから車で脱出せよ。"
       }
     },
     "status": {
@@ -213,6 +217,8 @@
       "survive_until_dawn": "生き延びる",
       "get_outside": "建物の外へ",
       "find_fuel": "燃料を探す",
+      "find_empty_fuel_can": "空の燃料缶を探す",
+      "refuel_at_station": "給油所で給油する",
       "find_car": "車を探す",
       "escape": "建物から脱出する",
       "merge_buddy_single": "相棒と合流する",

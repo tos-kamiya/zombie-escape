@@ -187,6 +187,10 @@
       "stage27": {
         "name": "#27 Lineformer",
         "description": "They like to line up."
+      },
+      "stage28": {
+        "name": "#28 Empty Can Run",
+        "description": "Grab an empty can, refill it at a station, then escape by car."
       }
     },
     "status": {
@@ -213,6 +217,8 @@
       "survive_until_dawn": "Survive",
       "get_outside": "Get outside",
       "find_fuel": "Find the fuel can",
+      "find_empty_fuel_can": "Find an empty fuel can",
+      "refuel_at_station": "Refill at the fuel station",
       "find_car": "Find the car",
       "escape": "Escape the building",
       "merge_buddy_single": "Meet up with your buddy",

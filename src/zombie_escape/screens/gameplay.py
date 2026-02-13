@@ -23,9 +23,11 @@ from ..gameplay import (
     initialize_game_state,
     maintain_waiting_car_supply,
     nearest_waiting_car,
+    place_empty_fuel_can,
     schedule_timed_message,
     place_flashlights,
     place_fuel_can,
+    place_fuel_station,
     place_shoes,
     process_player_input,
     setup_player_and_cars,
@@ -258,18 +260,44 @@ def gameplay_screen(
         fuel_spawn_count = stage.fuel_spawn_count
         if stage.endurance_stage:
             fuel_spawn_count = 0
-        fuel_can = place_fuel_can(
-            layout_data["fuel_cells"],
-            cell_size,
-            player,
-            cars=game_data.waiting_cars,
-            reserved_centers=occupied_centers,
-            count=fuel_spawn_count,
-        )
-        if fuel_can:
-            game_data.fuel = fuel_can
-            game_data.groups.all_sprites.add(fuel_can, layer=LAYER_ITEMS)
-            occupied_centers.add(fuel_can.rect.center)
+        if stage.requires_refuel:
+            empty_fuel_can = place_empty_fuel_can(
+                layout_data["fuel_cells"],
+                cell_size,
+                player,
+                cars=game_data.waiting_cars,
+                reserved_centers=occupied_centers,
+                count=fuel_spawn_count,
+            )
+            if empty_fuel_can:
+                game_data.empty_fuel_can = empty_fuel_can
+                game_data.groups.all_sprites.add(empty_fuel_can, layer=LAYER_ITEMS)
+                occupied_centers.add(empty_fuel_can.rect.center)
+            fuel_station = place_fuel_station(
+                layout_data["fuel_cells"],
+                cell_size,
+                player,
+                cars=game_data.waiting_cars,
+                reserved_centers=occupied_centers,
+                count=fuel_spawn_count,
+            )
+            if fuel_station:
+                game_data.fuel_station = fuel_station
+                game_data.groups.all_sprites.add(fuel_station, layer=LAYER_ITEMS)
+                occupied_centers.add(fuel_station.rect.center)
+        else:
+            fuel_can = place_fuel_can(
+                layout_data["fuel_cells"],
+                cell_size,
+                player,
+                cars=game_data.waiting_cars,
+                reserved_centers=occupied_centers,
+                count=fuel_spawn_count,
+            )
+            if fuel_can:
+                game_data.fuel = fuel_can
+                game_data.groups.all_sprites.add(fuel_can, layer=LAYER_ITEMS)
+                occupied_centers.add(fuel_can.rect.center)
     flashlight_count = stage.initial_flashlight_count
     flashlights = place_flashlights(
         layout_data["flashlight_cells"],
@@ -567,7 +595,25 @@ def gameplay_screen(
 
         active_car = game_data.car if game_data.car and game_data.car.alive() else None
         if hint_enabled:
-            if not has_fuel and game_data.fuel and game_data.fuel.alive():
+            if stage.requires_refuel:
+                if (
+                    not game_data.state.has_empty_fuel_can
+                    and game_data.empty_fuel_can
+                    and game_data.empty_fuel_can.alive()
+                ):
+                    target_type = "empty_fuel_can"
+                elif (
+                    game_data.state.has_empty_fuel_can
+                    and not has_fuel
+                    and game_data.fuel_station
+                    and game_data.fuel_station.alive()
+                ):
+                    target_type = "fuel_station"
+                elif not player.in_car and (active_car or _alive_waiting_cars(game_data)):
+                    target_type = "car"
+                else:
+                    target_type = None
+            elif not has_fuel and game_data.fuel and game_data.fuel.alive():
                 target_type = "fuel"
             elif not player.in_car and (active_car or _alive_waiting_cars(game_data)):
                 target_type = "car"
@@ -590,6 +636,18 @@ def gameplay_screen(
             ):
                 if target_type == "fuel" and game_data.fuel and game_data.fuel.alive():
                     hint_target = game_data.fuel.rect.center
+                elif (
+                    target_type == "empty_fuel_can"
+                    and game_data.empty_fuel_can
+                    and game_data.empty_fuel_can.alive()
+                ):
+                    hint_target = game_data.empty_fuel_can.rect.center
+                elif (
+                    target_type == "fuel_station"
+                    and game_data.fuel_station
+                    and game_data.fuel_station.alive()
+                ):
+                    hint_target = game_data.fuel_station.rect.center
                 elif target_type == "car":
                     if active_car:
                         hint_target = active_car.rect.center

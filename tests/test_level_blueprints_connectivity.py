@@ -91,3 +91,26 @@ def test_validate_connectivity_non_fuel_treats_player_as_fuel_start() -> None:
 
     reachable = validate_connectivity(grid, requires_fuel=False)
     assert reachable is not None
+
+
+def test_validate_connectivity_refuel_requires_two_reachable_fuel_points() -> None:
+    grid = [
+        "BBBBBBBBB",
+        "BP.C...EB",
+        "B...f...B",
+        "BBBBBBBBB",
+    ]
+
+    assert validate_connectivity(grid, requires_fuel=True, requires_refuel=True) is None
+
+
+def test_validate_connectivity_refuel_respects_one_way_flow() -> None:
+    # Player can reach both fuel cells, but cannot return from the right side to car
+    # because the one-way floor cell '>' blocks leftward movement across the chokepoint.
+    grid = [
+        "BBBBBBBBBBB",
+        "B.PfC>..fEB",
+        "BBBBBBBBBBB",
+    ]
+
+    assert validate_connectivity(grid, requires_fuel=True, requires_refuel=True) is None
