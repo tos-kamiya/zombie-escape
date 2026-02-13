@@ -23,7 +23,6 @@ from ..entities_constants import (
     PLAYER_SPEED,
     ZombieKind,
     ZOMBIE_DECAY_DURATION_FRAMES,
-    ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
     ZOMBIE_SPEED,
 )
 from ..gameplay_constants import (
@@ -327,8 +326,6 @@ def _create_zombie(
         decay_duration_frames = ZOMBIE_DECAY_DURATION_FRAMES
     if kind is None:
         kind = _pick_zombie_variant(stage)
-    if kind == ZombieKind.LINEFORMER:
-        base_speed *= ZOMBIE_LINEFORMER_SPEED_MULTIPLIER
     base_speed = min(base_speed, PLAYER_SPEED - 0.05)
     if kind == ZombieKind.TRACKER:
         ratio = (

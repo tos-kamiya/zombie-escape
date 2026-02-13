@@ -202,3 +202,26 @@ def test_train_avoids_target_already_reserved_by_other_train() -> None:
     assert train_b in manager.trains
     assert head_b.lineformer_follow_target_id != claimed_target.lineformer_id
     assert head_b.lineformer_follow_target_id == free_target.lineformer_id
+
+
+def test_lineformer_head_base_speed_stays_constant_in_pre_update() -> None:
+    game_data = _make_game_data()
+    manager = game_data.lineformer_trains
+    zombie_group = game_data.groups.zombie_group
+
+    target = Zombie(100, 100, kind=ZombieKind.NORMAL)
+    head = Zombie(95, 100, kind=ZombieKind.LINEFORMER)
+    zombie_group.add(target, head)
+    manager.create_train_for_head(
+        head,
+        target_id=target.lineformer_id,
+        now_ms=0,
+    )
+
+    idle_speed = head.initial_speed
+    manager.pre_update(game_data, config={}, now_ms=100)
+    assert head.initial_speed == idle_speed
+
+    target.kill()
+    manager.pre_update(game_data, config={}, now_ms=200)
+    assert head.initial_speed == idle_speed

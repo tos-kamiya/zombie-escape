@@ -13,7 +13,6 @@ from ..entities_constants import (
     ZOMBIE_DECAY_DURATION_FRAMES,
     ZOMBIE_LINEFORMER_DISSOLVE_SPAWN_MS,
     ZOMBIE_LINEFORMER_JOIN_RADIUS,
-    ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
     ZOMBIE_SPEED,
     ZombieKind,
 )
@@ -207,7 +206,6 @@ class LineformerTrainManager:
             base_speed = RNG.uniform(ZOMBIE_SPEED, FAST_ZOMBIE_BASE_SPEED)
         else:
             base_speed = ZOMBIE_SPEED
-        base_speed *= ZOMBIE_LINEFORMER_SPEED_MULTIPLIER
         base_speed = min(base_speed, PLAYER_SPEED - 0.05)
         decay_duration_frames = max(
             1.0,

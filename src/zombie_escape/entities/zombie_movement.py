@@ -12,6 +12,7 @@ from ..entities_constants import (
     ZOMBIE_LINEFORMER_JOIN_COOLDOWN_MS,
     ZOMBIE_LINEFORMER_JOIN_RADIUS,
     ZOMBIE_LINEFORMER_MAX_CHAIN_DEPTH,
+    ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
     ZOMBIE_LINEFORMER_TARGET_LOST_MS,
     ZOMBIE_SIGHT_RANGE,
     ZOMBIE_TRACKER_FAR_SCENT_RADIUS,
@@ -334,7 +335,11 @@ def _zombie_lineformer_train_head_movement(
     follow_max = ZOMBIE_LINEFORMER_FOLLOW_DISTANCE + ZOMBIE_LINEFORMER_FOLLOW_TOLERANCE
     if distance_sq <= follow_max * follow_max:
         return 0.0, 0.0
-    return _zombie_move_toward(zombie, target_pos)
+    move_x, move_y = _zombie_move_toward(zombie, target_pos)
+    return (
+        move_x * ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
+        move_y * ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
+    )
 
 
 def _line_of_sight_clear(

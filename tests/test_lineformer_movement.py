@@ -3,9 +3,13 @@ import pygame
 from zombie_escape.entities import Zombie
 from zombie_escape.entities_constants import (
     ZombieKind,
+    ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
     ZOMBIE_LINEFORMER_TARGET_LOST_MS,
 )
-from zombie_escape.entities.zombie_movement import _zombie_lineformer_movement
+from zombie_escape.entities.zombie_movement import (
+    _zombie_lineformer_movement,
+    _zombie_lineformer_train_head_movement,
+)
 from zombie_escape.level_constants import DEFAULT_CELL_SIZE, DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from zombie_escape.models import LevelLayout
 
@@ -171,3 +175,38 @@ def test_non_lineformer_ignores_lineformer_for_repulsion() -> None:
 
     assert move_x == 1.0
     assert move_y == 0.0
+
+
+def test_lineformer_train_head_boosts_movement_only_while_tracking() -> None:
+    head = Zombie(100, 100, kind=ZombieKind.LINEFORMER)
+    layout = _make_layout()
+
+    head.lineformer_target_pos = None
+    wander_x, wander_y = _zombie_lineformer_train_head_movement(
+        head,
+        [],
+        DEFAULT_CELL_SIZE,
+        layout,
+        (0, 0),
+        [],
+        [],
+        now_ms=1,
+    )
+
+    head.lineformer_target_pos = (200, 100)
+    chase_x, chase_y = _zombie_lineformer_train_head_movement(
+        head,
+        [],
+        DEFAULT_CELL_SIZE,
+        layout,
+        (0, 0),
+        [],
+        [],
+        now_ms=2,
+    )
+
+    assert chase_x > 0
+    assert chase_y == 0
+    assert abs(chase_x) == head.speed * ZOMBIE_LINEFORMER_SPEED_MULTIPLIER
+    assert abs(wander_x) <= head.speed
+    assert abs(wander_y) <= head.speed
