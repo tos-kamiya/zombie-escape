@@ -315,8 +315,7 @@ class LineformerTrainManager:
                 return True
         return False
 
-    def pre_update(self, game_data: "GameData", *, config: dict, now_ms: int) -> None:
-        zombie_group = game_data.groups.zombie_group
+    def _build_pre_update_context(self, zombie_group) -> tuple[list[Zombie], dict[int, Zombie], dict[int, Zombie]]:
         targets = self._iter_non_lineformer_targets(zombie_group)
         target_by_id = {z.lineformer_id: z for z in targets}
         heads = {
@@ -327,79 +326,111 @@ class LineformerTrainManager:
             and z.kind == ZombieKind.LINEFORMER
             and getattr(z, "lineformer_train_id", None) is not None
         }
+        return targets, target_by_id, heads
+
+    def _process_train_pre_update(
+        self,
+        train: LineformerTrain,
+        *,
+        heads: dict[int, Zombie],
+        targets: list[Zombie],
+        target_by_id: dict[int, Zombie],
+        now_ms: int,
+    ) -> bool:
+        if train.train_id not in self.trains:
+            return True
+
+        head = heads.get(train.head_id)
+        if head is None:
+            self._start_dissolving(train, now_ms=now_ms)
+            return False
+        if train.state != "active":
+            return False
+
+        is_sole_train = self._train_length(train) == 1
+        target = target_by_id.get(train.target_id) if train.target_id is not None else None
+        if target is None:
+            reserved_targets = {
+                target_id
+                for target_id, owner_train_id in self.target_to_train.items()
+                if owner_train_id != train.train_id
+            }
+            if is_sole_train:
+                target = self._find_nearest_target(
+                    (head.x, head.y),
+                    targets,
+                    excluded_target_ids=reserved_targets,
+                )
+                # Fallback for merge behavior:
+                # a lone train may temporarily lock onto a reserved target so it
+                # can merge when it reaches the other train's tail.
+                if target is None:
+                    target = self._find_nearest_target((head.x, head.y), targets)
+            else:
+                target = self._find_nearest_target((head.x, head.y), targets)
+            train.target_id = target.lineformer_id if target is not None else None
+        head.lineformer_follow_target_id = train.target_id
+
+        if target is None:
+            head.lineformer_target_pos = None
+            head.lineformer_last_target_seen_ms = None
+            if train.marker_positions:
+                self._start_dissolving(train, now_ms=now_ms)
+            return False
+
+        owner_train_id = self.target_to_train.get(target.lineformer_id)
+        if owner_train_id is None or owner_train_id == train.train_id:
+            head.lineformer_target_pos = (target.x, target.y)
+            head.lineformer_last_target_seen_ms = now_ms
+            return False
+
+        dst_train = self.trains.get(owner_train_id)
+        if (
+            dst_train is not None
+            and dst_train.state == "active"
+            and is_sole_train
+        ):
+            tail_pos = self._train_tail_position(dst_train, heads=heads)
+            if (
+                tail_pos is not None
+                and self._within_distance_sq(
+                    (head.x, head.y),
+                    tail_pos,
+                    distance=_MERGE_APPROACH_DISTANCE,
+                )
+            ):
+                if not self._is_close_to_any_trail_point((head.x, head.y), dst_train):
+                    return True
+                head.x, head.y = tail_pos
+                self._merge_train_into(
+                    train,
+                    dst_train,
+                    heads=heads,
+                )
+                return True
+
+        train.target_id = None
+        head.lineformer_follow_target_id = None
+        head.lineformer_target_pos = None
+        head.lineformer_last_target_seen_ms = None
+        if train.marker_positions:
+            self._start_dissolving(train, now_ms=now_ms)
+        return True
+
+    def pre_update(self, game_data: "GameData", *, config: dict, now_ms: int) -> None:
+        zombie_group = game_data.groups.zombie_group
+        targets, target_by_id, heads = self._build_pre_update_context(zombie_group)
         self._rebuild_target_index()
 
         for train in list(self.trains.values()):
-            if train.train_id not in self.trains:
+            if self._process_train_pre_update(
+                train,
+                heads=heads,
+                targets=targets,
+                target_by_id=target_by_id,
+                now_ms=now_ms,
+            ):
                 continue
-            head = heads.get(train.head_id)
-            if head is None:
-                self._start_dissolving(train, now_ms=now_ms)
-            elif train.state == "active":
-                is_sole_train = self._train_length(train) == 1
-                target = target_by_id.get(train.target_id) if train.target_id is not None else None
-                if target is None:
-                    reserved_targets = {
-                        target_id
-                        for target_id, owner_train_id in self.target_to_train.items()
-                        if owner_train_id != train.train_id
-                    }
-                    if is_sole_train:
-                        target = self._find_nearest_target(
-                            (head.x, head.y),
-                            targets,
-                            excluded_target_ids=reserved_targets,
-                        )
-                        # Fallback for merge behavior:
-                        # a lone train may temporarily lock onto a reserved target so it
-                        # can merge when it reaches the other train's tail.
-                        if target is None:
-                            target = self._find_nearest_target((head.x, head.y), targets)
-                    else:
-                        target = self._find_nearest_target((head.x, head.y), targets)
-                    train.target_id = target.lineformer_id if target is not None else None
-                head.lineformer_follow_target_id = train.target_id
-                if target is not None:
-                    owner_train_id = self.target_to_train.get(target.lineformer_id)
-                    if owner_train_id is not None and owner_train_id != train.train_id:
-                        dst_train = self.trains.get(owner_train_id)
-                        if dst_train is not None and dst_train.state == "active":
-                            # Merge only when this train is a lone head and close to the
-                            # destination train's tail to avoid visible teleport jumps.
-                            if self._train_length(train) == 1:
-                                tail_pos = self._train_tail_position(dst_train, heads=heads)
-                                if tail_pos is not None:
-                                    if self._within_distance_sq(
-                                        (head.x, head.y),
-                                        tail_pos,
-                                        distance=_MERGE_APPROACH_DISTANCE,
-                                    ):
-                                        if not self._is_close_to_any_trail_point(
-                                            (head.x, head.y),
-                                            dst_train,
-                                        ):
-                                            continue
-                                        head.x, head.y = tail_pos
-                                        self._merge_train_into(
-                                            train,
-                                            dst_train,
-                                            heads=heads,
-                                        )
-                                        continue
-                        train.target_id = None
-                        head.lineformer_follow_target_id = None
-                        head.lineformer_target_pos = None
-                        head.lineformer_last_target_seen_ms = None
-                        if train.marker_positions:
-                            self._start_dissolving(train, now_ms=now_ms)
-                        continue
-                    head.lineformer_target_pos = (target.x, target.y)
-                    head.lineformer_last_target_seen_ms = now_ms
-                else:
-                    head.lineformer_target_pos = None
-                    head.lineformer_last_target_seen_ms = None
-                    if train.marker_positions:
-                        self._start_dissolving(train, now_ms=now_ms)
             if train.state == "dissolving" and now_ms >= train.next_dissolve_ms:
                 self._promote_one_marker(train, game_data=game_data, config=config, now_ms=now_ms)
         self._rebuild_target_index()
