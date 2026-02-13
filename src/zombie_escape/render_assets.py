@@ -496,10 +496,10 @@ def draw_lineformer_direction_arm(
     right_y = forward_x
     elbow_x = center_x + forward_x * offset + right_x * side_offset
     elbow_y = center_y + forward_y * offset + right_y * side_offset
-    hand_x = elbow_x + right_x * (arm_len * 1.0) + forward_x * (arm_len * 0)
-    hand_y = elbow_y + right_y * (arm_len * 1.0) + forward_y * (arm_len * 0)
-    tip_x = hand_x - right_x * (arm2_len * 0.59) + forward_x * (arm2_len * 0.81)
-    tip_y = hand_y - right_y * (arm2_len * 0.59) + forward_y * (arm2_len * 0.81)
+    hand_x = elbow_x + right_x * (arm_len * 0.7) + forward_x * (arm_len * 0.7)
+    hand_y = elbow_y + right_y * (arm_len * 0.7) + forward_y * (arm_len * 0.7)
+    tip_x = hand_x - right_x * (arm2_len * 0.7) + forward_x * (arm2_len * 0.7)
+    tip_y = hand_y - right_y * (arm2_len * 0.7) + forward_y * (arm2_len * 0.7)
     pygame.draw.lines(
         surface,
         color,
