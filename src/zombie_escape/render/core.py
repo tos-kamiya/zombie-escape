@@ -35,6 +35,7 @@ from ..localization import translate as tr
 from ..models import (
     DustRing,
     FallingEntity,
+    FuelProgress,
     Footprint,
     GameData,
     Stage,
@@ -1135,7 +1136,8 @@ def draw(
     stage = game_data.stage
     outside_cells = game_data.layout.outside_cells
     all_sprites = game_data.groups.all_sprites
-    has_fuel = state.has_fuel
+    has_fuel = state.fuel_progress == FuelProgress.FULL_CAN
+    has_empty_fuel_can = state.fuel_progress == FuelProgress.EMPTY_CAN
     flashlight_count = state.flashlight_count
     active_car = game_data.car if game_data.car and game_data.car.alive() else None
     if player.in_car and game_data.car and game_data.car.alive():
@@ -1309,7 +1311,7 @@ def draw(
         player=player,
         active_car=active_car,
         has_fuel=has_fuel,
-        has_empty_fuel_can=state.has_empty_fuel_can,
+        has_empty_fuel_can=has_empty_fuel_can,
         buddy_merged_count=state.buddy_merged_count,
         buddy_required=stage.buddy_required_count if stage else 0,
     )
@@ -1319,7 +1321,7 @@ def draw(
         screen,
         assets,
         has_fuel=has_fuel,
-        has_empty_fuel_can=state.has_empty_fuel_can,
+        has_empty_fuel_can=has_empty_fuel_can,
         flashlight_count=flashlight_count,
         shoes_count=state.shoes_count,
         player_in_car=player.in_car,

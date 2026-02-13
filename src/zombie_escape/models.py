@@ -52,6 +52,12 @@ class FuelObjective(str, Enum):
     REFUEL_CHAIN = "refuel_chain"
 
 
+class FuelProgress(str, Enum):
+    NONE = "none"
+    EMPTY_CAN = "empty_can"
+    FULL_CAN = "full_can"
+
+
 @dataclass
 class LevelLayout:
     """Container for level layout rectangles and cell sets."""
@@ -134,8 +140,7 @@ class ProgressState:
     last_footprint_pos: tuple[int, int] | None
     footprint_visible_toggle: bool
     clock: GameClock
-    has_fuel: bool
-    has_empty_fuel_can: bool
+    fuel_progress: FuelProgress
     flashlight_count: int
     shoes_count: int
     ambient_palette_key: str
@@ -322,4 +327,5 @@ __all__ = [
     "GameData",
     "Stage",
     "FuelObjective",
+    "FuelProgress",
 ]

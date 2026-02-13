@@ -12,6 +12,7 @@ from ..colors import (
 from ..entities_constants import SURVIVOR_MAX_SAFE_PASSENGERS
 from ..localization import translate as tr
 from ..models import (
+    FuelProgress,
     GameClock,
     GameData,
     Groups,
@@ -68,6 +69,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
     starts_with_fuel = not stage.requires_fuel
     if stage.endurance_stage:
         starts_with_fuel = False
+    fuel_progress = FuelProgress.FULL_CAN if starts_with_fuel else FuelProgress.NONE
     starts_with_flashlight = False
     initial_flashlights = 1 if starts_with_flashlight else 0
     initial_palette_key = ambient_palette_key_for_flashlights(initial_flashlights)
@@ -86,8 +88,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         last_footprint_pos=None,
         footprint_visible_toggle=True,
         clock=GameClock(),
-        has_fuel=starts_with_fuel,
-        has_empty_fuel_can=False,
+        fuel_progress=fuel_progress,
         flashlight_count=initial_flashlights,
         shoes_count=0,
         ambient_palette_key=initial_palette_key,

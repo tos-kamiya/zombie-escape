@@ -95,7 +95,7 @@
 - ゲームオーバー画面用: `scaled_overview`, `overview_created`
 - 進行演出: `footprints`, `last_footprint_pos`, `footprint_visible_toggle`, `elapsed_play_ms`
 - 近接探索: `spatial_index`（移動体用の空間インデックス）
-- アイテム状態: `has_fuel`, `has_empty_fuel_can`, `flashlight_count`, `shoes_count`
+- アイテム状態: `fuel_progress`（`none`/`empty_can`/`full_can`）, `flashlight_count`, `shoes_count`
 - ヒント/メッセージ: `hint_expires_at`, `hint_target_type`, `fuel_message_until`, `survivor_messages`,
   `timed_message`（`TimedMessage` の内容を保持）
 - ステージ特殊処理: `buddy_rescued`, `buddy_onboard`, `survivors_onboard`, `survivors_rescued`, `survivor_capacity`

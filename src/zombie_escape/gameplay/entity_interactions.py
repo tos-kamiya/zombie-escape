@@ -33,6 +33,7 @@ from .constants import (
 from ..colors import BLUE, YELLOW
 from ..localization import translate as tr
 from ..models import GameData
+from ..models import FuelProgress
 from ..rng import get_rng
 from ..render_constants import BUDDY_COLOR
 from ..screen_constants import FPS
@@ -83,11 +84,16 @@ def _handle_fuel_pickup(
     player_near_point: callable,
 ) -> None:
     state = game_data.state
-    if not (fuel and fuel.alive() and not state.has_fuel and not player.in_car):
+    if not (
+        fuel
+        and fuel.alive()
+        and state.fuel_progress != FuelProgress.FULL_CAN
+        and not player.in_car
+    ):
         return
     if not player_near_point(fuel.rect.center, fuel_interaction_radius):
         return
-    state.has_fuel = True
+    state.fuel_progress = FuelProgress.FULL_CAN
     if state.timed_message == need_fuel_text:
         schedule_timed_message(state, None, duration_frames=0, now_ms=state.clock.elapsed_ms)
     state.hint_expires_at = 0
@@ -109,14 +115,13 @@ def _handle_empty_fuel_can_pickup(
     if not (
         empty_fuel_can
         and empty_fuel_can.alive()
-        and not state.has_empty_fuel_can
-        and not state.has_fuel
+        and state.fuel_progress == FuelProgress.NONE
         and not player.in_car
     ):
         return False
     if not player_near_point(empty_fuel_can.rect.center, interaction_radius):
         return False
-    state.has_empty_fuel_can = True
+    state.fuel_progress = FuelProgress.EMPTY_CAN
     state.hint_expires_at = 0
     state.hint_target_type = None
     empty_fuel_can.kill()
@@ -138,15 +143,13 @@ def _handle_fuel_station_refuel(
     if not (
         fuel_station
         and fuel_station.alive()
-        and state.has_empty_fuel_can
-        and not state.has_fuel
+        and state.fuel_progress == FuelProgress.EMPTY_CAN
         and not player.in_car
     ):
         return False
     if not player_near_point(fuel_station.rect.center, interaction_radius):
         return False
-    state.has_empty_fuel_can = False
-    state.has_fuel = True
+    state.fuel_progress = FuelProgress.FULL_CAN
     if state.timed_message == need_fuel_text:
         schedule_timed_message(
             state, None, duration_frames=0, now_ms=state.clock.elapsed_ms
@@ -306,7 +309,12 @@ def _handle_escape_conditions(
             state.game_won = True
 
     # Player escaping the level
-    if player.in_car and car and car.alive() and state.has_fuel:
+    if (
+        player.in_car
+        and car
+        and car.alive()
+        and state.fuel_progress == FuelProgress.FULL_CAN
+    ):
         buddy_ready = True
         if stage.buddy_required_count > 0:
             buddy_ready = state.buddy_merged_count >= stage.buddy_required_count
@@ -557,7 +565,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         and active_car
         and active_car.health > 0
     ):
-        if state.has_fuel:
+        if state.fuel_progress == FuelProgress.FULL_CAN:
             player.in_car = True
             all_sprites.remove(player)
             state.hint_expires_at = 0
@@ -575,7 +583,9 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 )
                 if stage.requires_refuel:
                     state.hint_target_type = (
-                        "fuel_station" if state.has_empty_fuel_can else "empty_fuel_can"
+                        "fuel_station"
+                        if state.fuel_progress == FuelProgress.EMPTY_CAN
+                        else "empty_fuel_can"
                     )
                 else:
                     state.hint_target_type = "fuel"
@@ -588,7 +598,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 claimed_car = parked_car
                 break
         if claimed_car:
-            if state.has_fuel:
+            if state.fuel_progress == FuelProgress.FULL_CAN:
                 try:
                     game_data.waiting_cars.remove(claimed_car)
                 except ValueError:
@@ -615,7 +625,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                     if stage.requires_refuel:
                         state.hint_target_type = (
                             "fuel_station"
-                            if state.has_empty_fuel_can
+                            if state.fuel_progress == FuelProgress.EMPTY_CAN
                             else "empty_fuel_can"
                         )
                     else:

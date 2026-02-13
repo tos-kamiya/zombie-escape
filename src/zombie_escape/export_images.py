@@ -30,7 +30,7 @@ from .entities_constants import (
 )
 from .gameplay.state import initialize_game_state
 from .level_constants import DEFAULT_CELL_SIZE
-from .models import FallingEntity, Stage
+from .models import FallingEntity, FuelProgress, Stage
 from .render.core import _draw_entities, _draw_falling_fx, _draw_play_area
 from .render_constants import build_render_assets
 from .render.shadows import _get_shadow_layer, draw_single_entity_shadow_by_mode
@@ -82,7 +82,7 @@ def _build_studio_game_data(cell_size: int):
     game_data = initialize_game_state({}, stage)
     state = game_data.state
     state.ambient_palette_key = STUDIO_AMBIENT_PALETTE_KEY
-    state.has_fuel = False
+    state.fuel_progress = FuelProgress.NONE
     state.flashlight_count = 0
     state.shoes_count = 0
     state.timed_message = None
@@ -208,7 +208,7 @@ def _render_studio_snapshot(
         game_data.camera,
         game_data.groups.all_sprites,
         player,
-        has_fuel=game_data.state.has_fuel,
+        has_fuel=(game_data.state.fuel_progress == FuelProgress.FULL_CAN),
         show_fuel_indicator=False,
     )
 

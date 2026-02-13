@@ -60,6 +60,7 @@ from ..world_grid import build_wall_index
 from ..entities.walls import consume_wall_index_dirty
 from ..localization import get_font_settings, translate as tr
 from ..models import Stage
+from ..models import FuelProgress
 from ..render import (
     draw,
     draw_debug_overview,
@@ -588,7 +589,8 @@ def gameplay_screen(
         car_hint_conf = config.get("car_hint", {})
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
         elapsed_ms = game_data.state.clock.elapsed_ms
-        has_fuel = game_data.state.has_fuel
+        has_fuel = game_data.state.fuel_progress == FuelProgress.FULL_CAN
+        has_empty_fuel_can = game_data.state.fuel_progress == FuelProgress.EMPTY_CAN
         hint_enabled = car_hint_conf.get("enabled", True) and not stage.endurance_stage
         hint_target = None
         hint_color = YELLOW
@@ -599,13 +601,13 @@ def gameplay_screen(
         if hint_enabled:
             if stage.requires_refuel:
                 if (
-                    not game_data.state.has_empty_fuel_can
+                    not has_empty_fuel_can
                     and game_data.empty_fuel_can
                     and game_data.empty_fuel_can.alive()
                 ):
                     target_type = "empty_fuel_can"
                 elif (
-                    game_data.state.has_empty_fuel_can
+                    has_empty_fuel_can
                     and not has_fuel
                     and game_data.fuel_station
                     and game_data.fuel_station.alive()
