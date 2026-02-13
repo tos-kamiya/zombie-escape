@@ -1024,11 +1024,65 @@ def paint_steel_beam_surface(
 
 
 def build_fuel_can_surface(width: int, height: int) -> pygame.Surface:
-    return _draw_polygon_surface(width, height, FUEL_CAN_SPEC)
+    surface = pygame.Surface((width, height), pygame.SRCALPHA)
+    _draw_fuel_can_body(surface, width, height, fill_color=YELLOW)
+    _draw_fuel_can_cap(surface, width, height, fill_color=BLACK)
+    return surface
 
 
 def build_empty_fuel_can_surface(width: int, height: int) -> pygame.Surface:
-    return _draw_polygon_surface(width, height, FUEL_CAN_SPEC, fill_color=LIGHT_GRAY)
+    surface = pygame.Surface((width, height), pygame.SRCALPHA)
+    _draw_fuel_can_body(surface, width, height, fill_color=LIGHT_GRAY)
+    # Keep empty-can look but add a yellow cap accent to match item color language.
+    _draw_fuel_can_cap(surface, width, height, fill_color=YELLOW)
+    return surface
+
+
+def _draw_fuel_can_body(
+    surface: pygame.Surface,
+    width: int,
+    height: int,
+    *,
+    fill_color: tuple[int, int, int],
+) -> None:
+    x1 = max(1, int(round(width * 0.10)))
+    y1 = max(1, int(round(height * 0.10)))
+    # Keep a small top-right cut so the can still reads as a mostly-rect body.
+    x2 = min(width - 2, int(round(width * 0.78)))
+    y2 = max(y1 + 1, int(round(height * 0.14)))
+    x3 = min(width - 2, int(round(width * 0.86)))
+    y3 = min(height - 2, int(round(height * 0.23)))
+    x4 = x3
+    y4 = min(height - 2, int(round(height * 0.92)))
+    x5 = x1
+    y5 = y4
+    body_points = [
+        (x1, y1),
+        (x2, y2),
+        (x3, y3),
+        (x4, y4),
+        (x5, y5),
+    ]
+    pygame.draw.polygon(surface, fill_color, body_points)
+    pygame.draw.polygon(surface, BLACK, body_points, width=1)
+
+
+def _draw_fuel_can_cap(
+    surface: pygame.Surface,
+    width: int,
+    height: int,
+    *,
+    fill_color: tuple[int, int, int],
+) -> None:
+    cap = pygame.Rect(
+        max(0, int(round(width * 0.66))),
+        max(0, int(round(height * 0.06))),
+        max(3, int(round(width * 0.30))),
+        max(2, int(round(height * 0.22))),
+    )
+    cap.clamp_ip(surface.get_rect())
+    pygame.draw.rect(surface, fill_color, cap, border_radius=1)
+    pygame.draw.rect(surface, BLACK, cap, width=1, border_radius=1)
 
 
 def build_fuel_station_surface(width: int, height: int) -> pygame.Surface:
