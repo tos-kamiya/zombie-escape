@@ -44,7 +44,7 @@ from ..world_grid import apply_cell_edge_nudge
 from .patrol_paralyze import draw_paralyze_marker
 from .movement import _circle_wall_collision
 from .zombie_movement import (
-    _zombie_lineformer_movement,
+    _zombie_lineformer_train_head_movement,
     _zombie_normal_movement,
     _zombie_tracker_movement,
     _zombie_wall_hug_movement,
@@ -119,18 +119,15 @@ class Zombie(pygame.sprite.Sprite):
             elif self.kind == ZombieKind.WALL_HUGGER:
                 movement_strategy = _zombie_wall_hug_movement
             elif self.kind == ZombieKind.LINEFORMER:
-                movement_strategy = _zombie_lineformer_movement
+                movement_strategy = _zombie_lineformer_train_head_movement
             else:
                 movement_strategy = _zombie_normal_movement
         self.movement_strategy = movement_strategy
         self.lineformer_id = Zombie._next_lineformer_id
         Zombie._next_lineformer_id += 1
         self.lineformer_follow_target_id: int | None = None
-        self.lineformer_head_id: int | None = None
-        self.lineformer_rank = 0
         self.lineformer_target_pos: tuple[float, float] | None = None
         self.lineformer_last_target_seen_ms: int | None = None
-        self.lineformer_join_cooldown_until_ms = 0
         self.tracker_target_pos: tuple[float, float] | None = None
         self.tracker_target_time: int | None = None
         self.tracker_last_scan_time = 0
