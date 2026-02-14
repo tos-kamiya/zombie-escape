@@ -90,6 +90,7 @@ def game_over_screen(
                 lineformer_trains=game_data.lineformer_trains,
                 fall_spawn_cells=game_data.layout.fall_spawn_cells,
                 moving_floor_cells=game_data.layout.moving_floor_cells,
+                puddle_cells=game_data.layout.puddle_cells,
                 palette_key=state.ambient_palette_key,
             )
 

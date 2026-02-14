@@ -34,7 +34,7 @@ from ..font_utils import load_font, render_text_surface
 from ..localization import get_font_settings
 from ..models import Footprint, GameData
 from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
-from ..render_constants import MOVING_FLOOR_OVERVIEW_COLOR
+from ..render_constants import MOVING_FLOOR_OVERVIEW_COLOR, PUDDLE_OVERVIEW_COLOR
 from ..entities_constants import PATROL_BOT_COLLISION_RADIUS
 from .hud import _get_fog_scale, build_zombie_debug_counts_text
 
@@ -109,6 +109,7 @@ def draw_level_overview(
     lineformer_trains: "LineformerTrainManager | None" = None,
     fall_spawn_cells: set[tuple[int, int]] | None = None,
     moving_floor_cells: dict[tuple[int, int], object] | None = None,
+    puddle_cells: set[tuple[int, int]] | None = None,
     palette_key: str | None = None,
 ) -> None:
     palette = get_environment_palette(palette_key)
@@ -149,6 +150,18 @@ def draw_level_overview(
                 pygame.draw.rect(
                     surface,
                     MOVING_FLOOR_OVERVIEW_COLOR,
+                    pygame.Rect(
+                        x * cell_size,
+                        y * cell_size,
+                        cell_size,
+                        cell_size,
+                    ),
+                )
+        if puddle_cells:
+            for x, y in puddle_cells:
+                pygame.draw.rect(
+                    surface,
+                    PUDDLE_OVERVIEW_COLOR,
                     pygame.Rect(
                         x * cell_size,
                         y * cell_size,
@@ -332,6 +345,7 @@ def draw_debug_overview(
         lineformer_trains=game_data.lineformer_trains,
         fall_spawn_cells=game_data.layout.fall_spawn_cells,
         moving_floor_cells=game_data.layout.moving_floor_cells,
+        puddle_cells=game_data.layout.puddle_cells,
         palette_key=game_data.state.ambient_palette_key,
     )
     fov_target = None
@@ -473,6 +487,13 @@ def draw_debug_overview(
                     fg=(100, 255, 100),
                     line_height_scale=font_settings.line_height_scale,
                 )
+    if game_data.layout.puddle_cells:
+        for x, y in game_data.layout.puddle_cells:
+            # Only draw tags for some or centered in zones? 
+            # For simplicity, just draw tags if they are within the view and spread out a bit
+            pass # Puddles are floor tiles, 'W' tags on every cell would be too noisy.
+            # Minimap color is already updated.
+
     debug_counts = build_zombie_debug_counts_text(
         zombie_group=game_data.groups.zombie_group,
         lineformer_marker_count=game_data.lineformer_trains.total_marker_count(),
