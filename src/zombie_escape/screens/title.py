@@ -487,15 +487,7 @@ def title_screen(
                 )
 
             current = options[selected]
-            # Adjust description vertical position to avoid overlap with selected stage name/icons.
-            # If in the first half of the current stage list, align to bottom of the stage block.
-            # Otherwise, align to top.
-            if current["type"] == "stage" and selected < stage_count // 2:
-                # Move down if selecting top items
-                desc_area_top = stage_rows_start + stage_count * base_row_height
-            else:
-                # Move up if selecting bottom items or non-stage options
-                desc_area_top = section_top
+            desc_area_top = section_top
 
             if current["type"] == "stage":
                 desc_size = font_settings.scaled_size(11)
@@ -508,6 +500,16 @@ def title_screen(
                     current["stage"].description, desc_font, info_column_width
                 )
                 desc_height = max(1, len(desc_lines)) * desc_line_height
+
+                # Adjust description vertical position to avoid overlap with selected stage name/icons.
+                # If in the first half of the current stage list, align bottom to the bottom of the stage block.
+                # Otherwise, align top to the section top.
+                if selected < stage_count // 2:
+                    # Align bottom edge of description to bottom edge of the last stage title
+                    desc_area_top = (stage_rows_start + fixed_stage_block_height) - desc_height
+                else:
+                    desc_area_top = section_top
+
                 desc_panel_padding = 6
                 desc_panel_rect = pygame.Rect(
                     info_column_x - desc_panel_padding,
