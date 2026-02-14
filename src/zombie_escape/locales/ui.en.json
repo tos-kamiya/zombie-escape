@@ -192,6 +192,10 @@
         "name": "#28 Flooded Sector",
         "description": "Don't let the puddles slow you down."
       },
+      "stage29": {
+        "name": "#29 Cultivation Facility",
+        "description": "Get out before the zombies pile up."
+      },
       "stage30": {
         "name": "#30 Maze Attraction",
         "description": "A maze meant to be fun. It seems some people were left behind.",
