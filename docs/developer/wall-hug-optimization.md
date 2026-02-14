@@ -109,3 +109,21 @@ Zombies naturally slow down over time due to decay or floor effects. To increase
 
 ### Impact on Stability
 In low-speed simulations (40% speed), dynamic scaling reduced direction-change jitter by approximately 40%, leading to much smoother movement along walls as zombies age.
+
+## Small Cell Size Optimization (35px-45px)
+
+Feedback indicates that while the AI is stable on larger grids, it struggles on smaller cell sizes (35px, 40px, 45px). On these grids, the relative proportions of the zombie radius, target gap, and sensor distance change significantly.
+
+### Challenges on Small Grids
+- **Relatively Large Sensors**: A 30px sensor on a 35px grid covers almost the entire next cell, potentially picking up walls too early.
+- **Narrow Corridors**: The physical space between walls is tighter, making steering jitter more problematic.
+- **Corner Overshoot**: On small grids, a single frame's movement is a larger percentage of the cell width, making precise cornering harder.
+
+### New Experiment Plan
+We will perform a targeted parameter sweep for cell sizes 35, 40, and 45 to find a "Small Grid Profile" or a unified scaling law that handles these cases.
+
+#### Parameters to Re-evaluate
+- **Min Sensor Distance**: Should `ZOMBIE_WALL_HUG_SENSOR_DISTANCE` be lower for small cells?
+- **Target Gap**: Is 4.2px too much?
+- **Base Turn Step**: Is 8.0° too aggressive when the corridor is tight?
+- **Sensor Ratio**: Refining the 0.6 ratio for small scales.

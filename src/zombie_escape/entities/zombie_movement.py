@@ -19,7 +19,6 @@ from ..entities_constants import (
     ZOMBIE_TRACKER_SIGHT_RANGE,
     ZOMBIE_WALL_HUG_LOST_WALL_MS,
     ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG,
-    ZOMBIE_WALL_HUG_SENSOR_DISTANCE,
     ZOMBIE_WALL_HUG_SENSOR_DIST_RATIO,
     ZOMBIE_WALL_HUG_TARGET_GAP,
     ZOMBIE_WALL_HUG_TURN_STEP_DEG,
@@ -195,15 +194,16 @@ def _zombie_wall_hug_movement(
     # Speed-based scaling factors
     speed_ratio = zombie.speed / ZOMBIE_SPEED if ZOMBIE_SPEED > 0 else 1.0
 
-    # Shared parameters for wall probing
-    dynamic_sensor_dist = max(
-        ZOMBIE_WALL_HUG_SENSOR_DISTANCE, cell_size * ZOMBIE_WALL_HUG_SENSOR_DIST_RATIO
-    )
-    # Scale sensor distance slightly with speed (0.8x to 1.0x range)
+    # Non-linear scaling for sensor distance based on cell size.
+    # On small cells (35px), we need shorter sensors (~20px) to avoid jitter.
+    # On large cells (60px), we need longer sensors (~40px) to catch corners.
+    # Formula: cell_size * (0.4 + 0.005 * cell_size)
+    dynamic_sensor_dist = cell_size * (0.4 + 0.005 * cell_size)
+    # Apply speed scaling (0.8x to 1.0x range)
     dynamic_sensor_dist *= (0.8 + 0.2 * speed_ratio)
 
     # Scale probe angle with speed: widen at low speeds to catch gaps better
-    # Reference: 55 degrees at 100% speed, increases slightly as speed drops
+    # Reference: 55 degrees at 100% speed
     dynamic_probe_angle_deg = ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG * (speed_ratio ** -0.2)
     probe_offset = math.radians(min(75.0, dynamic_probe_angle_deg))
 
