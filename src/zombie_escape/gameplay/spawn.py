@@ -817,6 +817,9 @@ def setup_player_and_cars(
     car_count: int = 1,
 ) -> tuple[Player, list[Car]]:
     """Create the player plus one or more parked cars using blueprint candidates."""
+    if not game_data.stage.endurance_stage:
+        assert car_count > 0, "Non-endurance stages must have at least one car"
+
     all_sprites = game_data.groups.all_sprites
     walkable_cells: list[tuple[int, int]] = layout_data["walkable_cells"]
     cell_size = game_data.cell_size
@@ -854,7 +857,7 @@ def setup_player_and_cars(
         choice = car_candidates.pop()
         return _cell_center(choice, cell_size)
 
-    for _ in range(max(1, car_count)):
+    for _ in range(max(0, car_count)):
         car_pos = _pick_car_position()
         car = Car(*car_pos, appearance=car_appearance)
         waiting_cars.append(car)
@@ -1034,7 +1037,9 @@ def maintain_waiting_car_supply(
     game_data: GameData, *, minimum: int | None = None
 ) -> None:
     """Ensure a baseline count of parked cars exists."""
-    target = 1 if minimum is None else max(0, minimum)
+    if minimum is None:
+        minimum = game_data.stage.waiting_car_target_count
+    target = max(0, minimum)
     current = len(_alive_waiting_cars(game_data))
     while current < target:
         new_car = spawn_waiting_car(game_data)

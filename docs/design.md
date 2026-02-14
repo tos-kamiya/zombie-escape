@@ -348,6 +348,8 @@
   - 内部壁の一部は `wall_rubble_ratio` に応じて `RubbleWall` に差し替える（見た目のみ、シード再現性には依存しない）。
 - `setup_player_and_cars(game_data, layout_data, car_count)` (`gameplay/spawn.py`)
   - プレイヤーと待機車両を配置。車は必ず「車で到達可能なエリア」に配置される。
+  - 耐久ステージ（`endurance_stage=True`）では `car_count=0`（車なし）を指定可能。
+  - 非耐久ステージでは最低1台の配置が要求される（アサーションで保護）。
 - `spawn_initial_zombies(game_data, player, layout_data, config)` (`gameplay/spawn.py`)
   - 初期ゾンビを内側エリア中心に配置。
 
@@ -366,6 +368,7 @@
   - ステージ別のアイテムやNPCを配置。ブループリントの予約地点を優先使用する。
 - `spawn_waiting_car` / `place_new_car` / `maintain_waiting_car_supply` (`gameplay/spawn.py`)
   - 待機車両の補充と再配置。**車で到達可能なタイル（`car_walkable_cells`）からのみ選択**され、孤立を防止する。
+  - `maintain_waiting_car_supply` は引数が省略された場合、`Stage` 定義の `waiting_car_target_count` を維持目標とする。
 - `respawn_buddies_near_player` / `nearest_waiting_car` (`gameplay/spawn.py`)
   - 相棒の再配置や最寄り車両の検索。
 
