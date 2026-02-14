@@ -710,7 +710,7 @@ STAGES: list[Stage] = [
         description_key="stages.stage28.description",
         fuel_mode=FuelMode.REFUEL_CHAIN,
         available=True,
-        cell_size=50,
+        cell_size=60,
         grid_cols=39,
         grid_rows=14,
         wall_algorithm="empty",
@@ -758,6 +758,7 @@ STAGES: list[Stage] = [
         ],
         puddle_density=0.05,
         exit_sides=["top", "bottom"],
+        houseplant_density=0.04,
     ),
     Stage(
         id="stage30",
