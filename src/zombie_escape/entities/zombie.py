@@ -16,6 +16,8 @@ from ..entities_constants import (
     ZOMBIE_CARBONIZE_DECAY_FRAMES,
     ZOMBIE_DECAY_DURATION_FRAMES,
     ZOMBIE_DECAY_MIN_SPEED_RATIO,
+    ZOMBIE_DOG_LONG_AXIS_RATIO,
+    ZOMBIE_DOG_SHORT_AXIS_RATIO,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SPEED,
@@ -33,6 +35,7 @@ from ..models import Footprint, LevelLayout
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_directional_surfaces,
+    build_zombie_dog_directional_surfaces,
     draw_lineformer_direction_arm,
     draw_humanoid_hand,
     draw_humanoid_nose,
@@ -90,12 +93,9 @@ class Zombie(pygame.sprite.Sprite):
         self.radius = ZOMBIE_RADIUS
         self.facing_bin = 0
         self.kind = kind
-        self.is_trapped = False
-        self._visual_is_trapped = self.is_trapped
         self.directional_images = build_zombie_directional_surfaces(
             self.radius,
             draw_hands=False,
-            is_trapped=self.is_trapped,
         )
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(x, y))
@@ -341,17 +341,6 @@ class Zombie(pygame.sprite.Sprite):
         self._set_facing_bin(new_bin)
 
     def _apply_render_overlays(self: Self) -> None:
-        if self.is_trapped != self._visual_is_trapped:
-            self.directional_images = build_zombie_directional_surfaces(
-                self.radius,
-                draw_hands=False,
-                is_trapped=self.is_trapped,
-            )
-            self._visual_is_trapped = self.is_trapped
-            center = self.rect.center
-            self.image = self.directional_images[self.facing_bin]
-            self.rect = self.image.get_rect(center=center)
-
         base_surface = self.directional_images[self.facing_bin]
         needs_overlay = self.kind == ZombieKind.TRACKER or (
             self.kind == ZombieKind.WALL_HUGGER
@@ -470,12 +459,6 @@ class Zombie(pygame.sprite.Sprite):
         if not self.alive():
             return
 
-        if self.is_trapped:
-            self.last_move_dx = 0.0
-            self.last_move_dy = 0.0
-            self._apply_render_overlays()
-            return
-
         _ = nearby_patrol_bots
         on_electrified_floor = False
         if cell_size > 0 and electrified_cells:
@@ -566,6 +549,97 @@ class Zombie(pygame.sprite.Sprite):
         self.x = final_x
         self.y = final_y
         self.rect.center = (int(self.x), int(self.y))
+
+    def carbonize(self: Self) -> None:
+        self.vitals.carbonize()
+
+
+class TrappedZombie(pygame.sprite.Sprite):
+    """A zombie or dog that has been trapped by a houseplant."""
+
+    def __init__(
+        self: Self,
+        x: float,
+        y: float,
+        kind: ZombieKind,
+        health: int,
+        max_health: int,
+        facing_bin: int,
+        radius: float,
+        collision_radius: float,
+        decay_duration_frames: float,
+    ) -> None:
+        super().__init__()
+        self.x = x
+        self.y = y
+        self.kind = kind
+        self.facing_bin = facing_bin
+        self.radius = radius
+        self.collision_radius = collision_radius
+        self.is_trapped = True
+
+        if self.kind == ZombieKind.DOG:
+            base_size = ZOMBIE_RADIUS * 2.0
+            long_axis = base_size * ZOMBIE_DOG_LONG_AXIS_RATIO
+            short_axis = base_size * ZOMBIE_DOG_SHORT_AXIS_RATIO
+            self.directional_images = build_zombie_dog_directional_surfaces(
+                long_axis, short_axis, is_trapped=True
+            )
+        else:
+            self.directional_images = build_zombie_directional_surfaces(
+                int(self.radius), draw_hands=False, is_trapped=True
+            )
+
+        self.image = self.directional_images[self.facing_bin]
+        self.rect = self.image.get_rect(center=(int(x), int(y)))
+
+        self.vitals = ZombieVitals(
+            max_health=max_health,
+            decay_duration_frames=decay_duration_frames,
+            decay_min_speed_ratio=ZOMBIE_DECAY_MIN_SPEED_RATIO,
+            carbonize_decay_frames=ZOMBIE_CARBONIZE_DECAY_FRAMES,
+            on_health_ratio=lambda r: None,  # No speed change needed
+            on_kill=self.kill,
+            on_carbonize=self._apply_carbonize_visuals,
+        )
+        self.vitals.health = health
+
+    @property
+    def health(self: Self) -> int:
+        return self.vitals.health
+
+    @property
+    def max_health(self: Self) -> int:
+        return self.vitals.max_health
+
+    @property
+    def carbonized(self: Self) -> bool:
+        return self.vitals.carbonized
+
+    def _apply_carbonize_visuals(self: Self) -> None:
+        self.image = build_grayscale_image(self.image)
+
+    def take_damage(
+        self: Self,
+        amount: int,
+        *,
+        source: str | None = None,
+        now_ms: int = 0,
+    ) -> None:
+        if amount <= 0 or not self.alive():
+            return
+        self.vitals.take_damage(amount, source=source, now_ms=now_ms)
+
+    def update(self: Self, *args: Any, **kwargs: Any) -> None:
+        """Handle decay and jittering visuals."""
+        self.vitals.apply_decay()
+        if not self.alive():
+            return
+
+        # Jitter visuals
+        ox = RNG.uniform(-1.0, 1.0)
+        oy = RNG.uniform(-1.0, 1.0)
+        self.rect.center = (int(self.x + ox), int(self.y + oy))
 
     def carbonize(self: Self) -> None:
         self.vitals.carbonize()

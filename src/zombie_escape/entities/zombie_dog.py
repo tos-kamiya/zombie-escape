@@ -72,14 +72,11 @@ class ZombieDog(pygame.sprite.Sprite):
         self.charge_direction = (0.0, 0.0)
         self.wander_angle = RNG.uniform(0.0, math.tau)
         self.wander_change_time = 0
-        self.is_trapped = False
-        self._visual_is_trapped = self.is_trapped
         self.kind = ZombieKind.DOG
         self.facing_bin = 0
         self.directional_images = build_zombie_dog_directional_surfaces(
             self.long_axis,
             self.short_axis,
-            is_trapped=self.is_trapped,
         )
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(x, y))
@@ -325,23 +322,6 @@ class ZombieDog(pygame.sprite.Sprite):
         )
         self.image = image
 
-    def _apply_visual_updates(self: Self, now_ms: int) -> None:
-        if self.is_trapped != self._visual_is_trapped:
-            self.directional_images = build_zombie_dog_directional_surfaces(
-                self.long_axis,
-                self.short_axis,
-                is_trapped=self.is_trapped,
-            )
-            self._visual_is_trapped = self.is_trapped
-            center = self.rect.center
-            self.image = self.directional_images[self.facing_bin]
-            self.rect = self.image.get_rect(center=center)
-
-        if self.patrol_paralyze_until_ms > now_ms:
-            self._apply_paralyze_overlay(now_ms)
-        else:
-            self.image = self.directional_images[self.facing_bin]
-
     def update(
         self: Self,
         player_center: tuple[float, float],
@@ -361,12 +341,6 @@ class ZombieDog(pygame.sprite.Sprite):
             return
         self._apply_decay()
         if not self.alive():
-            return
-
-        if self.is_trapped:
-            self.last_move_dx = 0.0
-            self.last_move_dy = 0.0
-            self._apply_visual_updates(now_ms)
             return
 
         _ = nearby_zombies, footprints
@@ -456,7 +430,10 @@ class ZombieDog(pygame.sprite.Sprite):
             cell_size=cell_size,
         )
         self._update_facing_from_movement(move_x, move_y)
-        self._apply_visual_updates(now)
+        if self.patrol_paralyze_until_ms > now:
+            self._apply_paralyze_overlay(now)
+        else:
+            self.image = self.directional_images[self.facing_bin]
         self.last_move_dx = move_x
         self.last_move_dy = move_y
 

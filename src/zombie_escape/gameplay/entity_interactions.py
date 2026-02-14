@@ -36,7 +36,7 @@ from ..models import FuelMode, FuelProgress, GameData
 from ..rng import get_rng
 from ..render_constants import BUDDY_COLOR
 from ..screen_constants import FPS
-from ..entities import Car
+from ..entities import Car, TrappedZombie
 from ..entities.collisions import collide_circle_custom
 from .footprints import get_shrunk_sprite
 from .spawn import maintain_waiting_car_supply
@@ -50,7 +50,7 @@ from .survivors import (
 )
 from .utils import is_active_zombie_threat, is_entity_in_fov, rect_visible_on_screen
 from .ambient import sync_ambient_palette_with_flashlights
-from .constants import SCREAM_MESSAGE_DISPLAY_FRAMES
+from .constants import SCREAM_MESSAGE_DISPLAY_FRAMES, LAYER_ZOMBIES
 from .state import schedule_timed_message
 
 
@@ -79,11 +79,12 @@ def _handle_houseplant_trapping(game_data: GameData) -> None:
     if not houseplants:
         return
     zombie_group = game_data.groups.zombie_group
+    all_sprites = game_data.groups.all_sprites
     cell_size = game_data.cell_size
     if cell_size <= 0:
         return
 
-    for zombie in zombie_group:
+    for zombie in list(zombie_group):
         if not zombie.alive() or getattr(zombie, "is_trapped", False):
             continue
         
@@ -95,7 +96,21 @@ def _handle_houseplant_trapping(game_data: GameData) -> None:
             dist_sq = dx * dx + dy * dy
             trap_range = zombie.collision_radius + hp.collision_radius
             if dist_sq <= trap_range * trap_range:
-                zombie.is_trapped = True
+                # Replace with TrappedZombie
+                trapped = TrappedZombie(
+                    x=zombie.x,
+                    y=zombie.y,
+                    kind=getattr(zombie, "kind", ZombieKind.NORMAL),
+                    health=zombie.health,
+                    max_health=zombie.max_health,
+                    facing_bin=getattr(zombie, "facing_bin", 0),
+                    radius=zombie.radius,
+                    collision_radius=zombie.collision_radius,
+                    decay_duration_frames=zombie.decay_duration_frames,
+                )
+                zombie.kill()
+                zombie_group.add(trapped)
+                all_sprites.add(trapped, layer=LAYER_ZOMBIES)
 
 
 def _handle_fuel_pickup(

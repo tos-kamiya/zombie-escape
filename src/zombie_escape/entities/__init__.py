@@ -38,7 +38,7 @@ from .walls import SteelBeam, Wall, RubbleWall
 from .car import Car
 from .player import Player
 from .survivor import Survivor
-from .zombie import Zombie
+from .zombie import Zombie, TrappedZombie
 from .zombie_dog import ZombieDog
 from .patrol_bot import PatrolBot
 from .houseplant import SpikyHouseplant
@@ -153,6 +153,7 @@ __all__ = [
     "Player",
     "Survivor",
     "Zombie",
+    "TrappedZombie",
     "ZombieDog",
     "PatrolBot",
     "SpikyHouseplant",
