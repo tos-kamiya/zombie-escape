@@ -13,6 +13,7 @@ from ..entities import (
     PatrolBot,
     Player,
     Shoes,
+    SpikyHouseplant,
     Survivor,
     Zombie,
     ZombieDog,
@@ -38,6 +39,7 @@ from .constants import (
     FALLING_ZOMBIE_DUST_DURATION_MS,
     FALLING_ZOMBIE_DURATION_MS,
     FALLING_ZOMBIE_PRE_FX_MS,
+    LAYER_HOUSEPLANTS,
     LAYER_PLAYERS,
     LAYER_VEHICLES,
     LAYER_ZOMBIES,
@@ -69,6 +71,7 @@ __all__ = [
     "setup_player_and_cars",
     "spawn_initial_zombies",
     "spawn_initial_patrol_bots",
+    "spawn_houseplants",
     "spawn_waiting_car",
     "maintain_waiting_car_supply",
     "nearest_waiting_car",
@@ -838,7 +841,8 @@ def setup_player_and_cars(
         or layout_data.get("car_walkable_cells")
         or walkable_cells
     )
-    car_candidates = list(layout_data["car_cells"] or car_spawn_cells)
+    houseplant_set = set(layout_data.get("houseplant_cells", []))
+    car_candidates = [c for c in (layout_data["car_cells"] or car_spawn_cells) if c not in houseplant_set]
     waiting_cars: list[Car] = []
     car_appearance = _car_appearance_for_stage(game_data.stage)
 
@@ -1257,3 +1261,25 @@ def spawn_weighted_zombie(
     if fall_result == "scheduled":
         return True
     return False
+
+
+def spawn_houseplants(
+    game_data: GameData,
+    layout_data: Mapping[str, list[tuple[int, int]]],
+) -> list[SpikyHouseplant]:
+    """Spawn houseplants based on blueprint cells."""
+    houseplants: list[SpikyHouseplant] = []
+    houseplant_cells = layout_data.get("houseplant_cells", [])
+    if not houseplant_cells:
+        return houseplants
+
+    all_sprites = game_data.groups.all_sprites
+    cell_size = game_data.cell_size
+
+    for cell in houseplant_cells:
+        pos = _cell_center(cell, cell_size)
+        hp = SpikyHouseplant(pos[0], pos[1])
+        all_sprites.add(hp, layer=LAYER_HOUSEPLANTS)
+        houseplants.append(hp)
+
+    return houseplants

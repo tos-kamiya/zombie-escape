@@ -41,6 +41,7 @@ from .survivor import Survivor
 from .zombie import Zombie
 from .zombie_dog import ZombieDog
 from .patrol_bot import PatrolBot
+from .houseplant import SpikyHouseplant
 
 RNG = get_rng()
 
@@ -154,6 +155,7 @@ __all__ = [
     "Zombie",
     "ZombieDog",
     "PatrolBot",
+    "SpikyHouseplant",
     "Car",
     "FuelCan",
     "EmptyFuelCan",

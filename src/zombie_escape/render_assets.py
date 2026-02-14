@@ -30,6 +30,7 @@ from .render_constants import (
     PATROL_BOT_BODY_COLOR,
     PATROL_BOT_OUTLINE_COLOR,
     SURVIVOR_COLOR,
+    TRAPPED_OUTLINE_COLOR,
     ZOMBIE_BODY_COLOR,
     ZOMBIE_OUTLINE_COLOR,
     RenderAssets,
@@ -575,88 +576,234 @@ def build_zombie_directional_surfaces(
     *,
     bins: int = ANGLE_BINS,
     draw_hands: bool = True,
+    is_trapped: bool = False,
 ) -> list[pygame.Surface]:
-    cache_key = (radius, draw_hands, bins)
+    cache_key = (radius, draw_hands, bins, is_trapped)
     if cache_key in _ZOMBIE_DIRECTIONAL_CACHE:
         return _ZOMBIE_DIRECTIONAL_CACHE[cache_key]
+    
+    outline_color = TRAPPED_OUTLINE_COLOR if is_trapped else ZOMBIE_OUTLINE_COLOR
+    
     surfaces = _build_humanoid_directional_surfaces(
         radius,
         base_color=ZOMBIE_BODY_COLOR,
         cap_color=_brighten_color(ZOMBIE_BODY_COLOR),
         bins=bins,
         draw_hands=draw_hands,
-        outline_color=ZOMBIE_OUTLINE_COLOR,
+        outline_color=outline_color,
     )
     _ZOMBIE_DIRECTIONAL_CACHE[cache_key] = surfaces
     return surfaces
 
 
 def build_zombie_dog_directional_surfaces(
+
+
     long_axis: float,
+
+
     short_axis: float,
+
+
     *,
+
+
     bins: int = ANGLE_BINS,
+
+
+    is_trapped: bool = False,
+
+
 ) -> list[pygame.Surface]:
-    cache_key = (float(long_axis), float(short_axis), bins)
+
+
+    cache_key = (float(long_axis), float(short_axis), bins, is_trapped)
+
+
     if cache_key in _ZOMBIE_DOG_DIRECTIONAL_CACHE:
+
+
         return _ZOMBIE_DOG_DIRECTIONAL_CACHE[cache_key]
+
+
+    
+
+
+    outline_color = TRAPPED_OUTLINE_COLOR if is_trapped else ZOMBIE_OUTLINE_COLOR
+
+
+    
+
+
     half_long = long_axis * 0.5
+
+
     half_short = short_axis * 0.5
+
+
     width = int(math.ceil(long_axis + HUMANOID_OUTLINE_WIDTH * 2))
+
+
     height = int(math.ceil(long_axis + HUMANOID_OUTLINE_WIDTH * 2))
+
+
     center = (width / 2.0, height / 2.0)
 
+
+
+
+
     def _lemon_points(angle_rad: float) -> list[tuple[int, int]]:
+
+
         taper = 0.4
+
+
         waist = 0.9
+
+
         local_points = [
+
+
             (half_long, 0.0),
+
+
             (half_long * taper, half_short),
+
+
             (-half_long * taper, half_short * waist),
+
+
             (-half_long, 0.0),
+
+
             (-half_long * taper, -half_short * waist),
+
+
             (half_long * taper, -half_short),
+
+
         ]
+
+
         cos_a = math.cos(angle_rad)
+
+
         sin_a = math.sin(angle_rad)
+
+
         points = []
+
+
         for px, py in local_points:
+
+
             rx = px * cos_a - py * sin_a + center[0]
+
+
             ry = px * sin_a + py * cos_a + center[1]
+
+
             points.append((int(round(rx)), int(round(ry))))
+
+
         return points
 
+
+
+
+
     surfaces: list[pygame.Surface] = []
+
+
     for bin_idx in range(bins):
+
+
         angle_rad = bin_idx * ANGLE_STEP
+
+
         surface = pygame.Surface((width, height), pygame.SRCALPHA)
+
+
         points = _lemon_points(angle_rad)
+
+
         pygame.draw.polygon(surface, ZOMBIE_BODY_COLOR, points)
+
+
         center_x, center_y = center
+
+
         highlight_dir = (math.cos(angle_rad) * 0.25, math.sin(angle_rad) * 0.25)
+
+
         highlight_points = [
+
+
             (
+
+
                 int(round((px - center_x) * 0.82 + center_x + highlight_dir[0])),
+
+
                 int(round((py - center_y) * 0.82 + center_y + highlight_dir[1])),
+
+
             )
+
+
             for px, py in points
+
+
         ]
+
+
         pygame.draw.polygon(
+
+
             surface,
+
+
             _brighten_color(ZOMBIE_BODY_COLOR),
+
+
             highlight_points,
+
+
         )
+
+
         if HUMANOID_OUTLINE_WIDTH > 0:
+
+
             pygame.draw.polygon(
+
+
                 surface,
-                ZOMBIE_OUTLINE_COLOR,
+
+
+                outline_color,
+
+
                 points,
+
+
                 width=HUMANOID_OUTLINE_WIDTH,
+
+
             )
+
+
         surfaces.append(surface)
 
+
     _ZOMBIE_DOG_DIRECTIONAL_CACHE[cache_key] = surfaces
+
+
     return surfaces
+
+
+
 
 
 def build_patrol_bot_directional_surfaces(

@@ -85,6 +85,7 @@ def game_over_screen(
                 ],
                 survivors=list(game_data.groups.survivor_group),
                 patrol_bots=list(game_data.groups.patrol_bot_group),
+                houseplants=list(game_data.houseplants.values()),
                 zombies=list(game_data.groups.zombie_group),
                 lineformer_trains=game_data.lineformer_trains,
                 fall_spawn_cells=game_data.layout.fall_spawn_cells,

@@ -90,9 +90,12 @@ class Zombie(pygame.sprite.Sprite):
         self.radius = ZOMBIE_RADIUS
         self.facing_bin = 0
         self.kind = kind
+        self.is_trapped = False
+        self._visual_is_trapped = self.is_trapped
         self.directional_images = build_zombie_directional_surfaces(
             self.radius,
             draw_hands=False,
+            is_trapped=self.is_trapped,
         )
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(x, y))
@@ -338,6 +341,17 @@ class Zombie(pygame.sprite.Sprite):
         self._set_facing_bin(new_bin)
 
     def _apply_render_overlays(self: Self) -> None:
+        if self.is_trapped != self._visual_is_trapped:
+            self.directional_images = build_zombie_directional_surfaces(
+                self.radius,
+                draw_hands=False,
+                is_trapped=self.is_trapped,
+            )
+            self._visual_is_trapped = self.is_trapped
+            center = self.rect.center
+            self.image = self.directional_images[self.facing_bin]
+            self.rect = self.image.get_rect(center=center)
+
         base_surface = self.directional_images[self.facing_bin]
         needs_overlay = self.kind == ZombieKind.TRACKER or (
             self.kind == ZombieKind.WALL_HUGGER
@@ -455,6 +469,13 @@ class Zombie(pygame.sprite.Sprite):
         self._apply_decay()
         if not self.alive():
             return
+
+        if self.is_trapped:
+            self.last_move_dx = 0.0
+            self.last_move_dy = 0.0
+            self._apply_render_overlays()
+            return
+
         _ = nearby_patrol_bots
         on_electrified_floor = False
         if cell_size > 0 and electrified_cells:

@@ -207,6 +207,7 @@ class PatrolBot(pygame.sprite.Sprite):
         layout,
         drift: tuple[float, float] = (0.0, 0.0),
         now_ms: int,
+        houseplants: dict[tuple[int, int], "SpikyHouseplant"] | None = None,
     ) -> None:
         now = now_ms
         drift_x, drift_y = drift
@@ -325,6 +326,25 @@ class PatrolBot(pygame.sprite.Sprite):
                 final_y = self.y
                 break
 
+        hit_houseplant = False
+        if houseplants and cell_size > 0:
+            cx_idx = int(final_x // cell_size)
+            cy_idx = int(final_y // cell_size)
+            for dy in range(-1, 2):
+                for dx in range(-1, 2):
+                    hp = houseplants.get((cx_idx + dx, cy_idx + dy))
+                    if hp and hp.alive():
+                        h_dx = final_x - hp.x
+                        h_dy = final_y - hp.y
+                        h_hit_range = collision_radius + hp.collision_radius
+                        if h_dx * h_dx + h_dy * h_dy <= h_hit_range * h_hit_range:
+                            hit_houseplant = True
+                            final_x = self.x
+                            final_y = self.y
+                            break
+                if hit_houseplant:
+                    break
+
         possible_humans = []
         if human_group:
             possible_humans.extend(
@@ -384,7 +404,7 @@ class PatrolBot(pygame.sprite.Sprite):
 
         if _humanoid_collision(final_x, final_y):
             self.pause_until_ms = now + PATROL_BOT_HUMANOID_PAUSE_MS
-        elif hit_wall or hit_pitfall or hit_bot or hit_car or hit_outer:
+        elif hit_wall or hit_pitfall or hit_bot or hit_car or hit_outer or hit_houseplant:
             # Step back slightly to avoid corner lock, then rotate.
             backoff = max(0.5, self.speed * 0.5)
             final_x = self.x - float(self.direction[0]) * backoff

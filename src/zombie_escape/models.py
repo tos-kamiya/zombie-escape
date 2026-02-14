@@ -10,6 +10,7 @@ import pygame
 from pygame import sprite, surface
 
 from .entities_constants import (
+    HOUSEPLANT_RADIUS,
     MovingFloorDirection,
     ZOMBIE_DECAY_DURATION_FRAMES,
     ZombieKind,
@@ -73,6 +74,7 @@ class LevelLayout:
     car_walkable_cells: set[tuple[int, int]]
     car_spawn_cells: list[tuple[int, int]]
     fall_spawn_cells: set[tuple[int, int]]
+    houseplant_cells: set[tuple[int, int]]
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection]
 
@@ -215,6 +217,9 @@ class GameData:
     player: Player | None = None
     car: Car | None = None
     waiting_cars: list[Car] = field(default_factory=list)
+    houseplants: dict[tuple[int, int], "SpikyHouseplant"] = field(
+        default_factory=dict
+    )
     last_logged_waiting_cars: int | None = None
     lineformer_trains: "LineformerTrainManager" = field(
         default_factory=_make_lineformer_manager
@@ -249,6 +254,8 @@ class Stage:
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = field(
         default_factory=dict
     )
+    houseplant_density: float = 0.0
+    houseplant_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
 
     # Stage objective
     fuel_mode: FuelMode = FuelMode.START_FULL
@@ -302,6 +309,11 @@ class Stage:
             )
             assert self.fuel_station_spawn_count >= 1, (
                 "refuel_chain stages must set fuel_station_spawn_count >= 1"
+            )
+        if self.houseplant_density > 0 or self.houseplant_zones:
+            assert self.cell_size * 0.5 > HOUSEPLANT_RADIUS + 2, (
+                f"cell_size ({self.cell_size}) is too small for houseplant optimization "
+                f"(requires half-cell > {HOUSEPLANT_RADIUS + 2})"
             )
 
     @property

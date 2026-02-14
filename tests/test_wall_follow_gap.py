@@ -38,6 +38,7 @@ def test_wall_hug_turns_away_when_too_close() -> None:
         car_walkable_cells=set(),
         car_spawn_cells=[],
         fall_spawn_cells=set(),
+        houseplant_cells=set(),
         bevel_corners={},
         moving_floor_cells={},
     )

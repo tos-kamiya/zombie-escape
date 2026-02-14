@@ -33,6 +33,7 @@ from ..gameplay import (
     setup_player_and_cars,
     spawn_initial_patrol_bots,
     spawn_initial_zombies,
+    spawn_houseplants,
     spawn_survivors,
     sync_ambient_palette_with_flashlights,
     update_entities,
@@ -410,6 +411,12 @@ class GameplayScreenRunner:
         )
         spawn_initial_zombies(self.game_data, player, layout_data, self.config)
         spawn_initial_patrol_bots(self.game_data, player, layout_data)
+        
+        hp_list = spawn_houseplants(self.game_data, layout_data)
+        hp_cells = layout_data.get("houseplant_cells", [])
+        for cell, hp in zip(hp_cells, hp_list):
+            self.game_data.houseplants[cell] = hp
+
         update_footprints(self.game_data, self.config)
         level_rect = self.game_data.layout.field_rect
         self.overview_surface = pygame.Surface((level_rect.width, level_rect.height))

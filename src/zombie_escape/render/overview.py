@@ -23,6 +23,7 @@ from ..entities import (
     Player,
     PatrolBot,
     Shoes,
+    SpikyHouseplant,
     SteelBeam,
     Survivor,
     Wall,
@@ -103,6 +104,7 @@ def draw_level_overview(
     buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
     patrol_bots: list[PatrolBot] | None = None,
+    houseplants: list[SpikyHouseplant] | None = None,
     zombies: list[pygame.sprite.Sprite] | None = None,
     lineformer_trains: "LineformerTrainManager | None" = None,
     fall_spawn_cells: set[tuple[int, int]] | None = None,
@@ -245,6 +247,16 @@ def draw_level_overview(
                     bot.rect.center,
                     int(PATROL_BOT_COLLISION_RADIUS),
                 )
+    if houseplants:
+        plant_color = (60, 200, 60)
+        for hp in houseplants:
+            if hp.alive():
+                pygame.draw.circle(
+                    surface,
+                    plant_color,
+                    hp.rect.center,
+                    max(2, int(hp.radius)),
+                )
     if zombies:
         zombie_color = (200, 80, 80)
         lineformer_marker_color = (150, 50, 50)
@@ -315,6 +327,7 @@ def draw_debug_overview(
         ],
         survivors=list(game_data.groups.survivor_group),
         patrol_bots=list(game_data.groups.patrol_bot_group),
+        houseplants=list(game_data.houseplants.values()),
         zombies=list(game_data.groups.zombie_group),
         lineformer_trains=game_data.lineformer_trains,
         fall_spawn_cells=game_data.layout.fall_spawn_cells,
@@ -447,6 +460,17 @@ def draw_debug_overview(
                     label_font,
                     "S",
                     _scaled_rect(item.rect),
+                    line_height_scale=font_settings.line_height_scale,
+                )
+    if game_data.houseplants:
+        for hp in game_data.houseplants.values():
+            if hp.alive():
+                _draw_overview_tag(
+                    screen,
+                    label_font,
+                    "H",
+                    _scaled_rect(hp.rect),
+                    fg=(100, 255, 100),
                     line_height_scale=font_settings.line_height_scale,
                 )
     debug_counts = build_zombie_debug_counts_text(

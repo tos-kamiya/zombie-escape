@@ -159,6 +159,8 @@ def generate_level_from_blueprint(
             fuel_station_count=fuel_station_count,
             flashlight_count=flashlight_count,
             shoes_count=shoes_count,
+            houseplant_density=stage.houseplant_density,
+            houseplant_zones=stage.houseplant_zones,
         )
         car_reachable = validate_connectivity(
             blueprint.grid,
@@ -200,6 +202,7 @@ def generate_level_from_blueprint(
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = {}
     walkable_cells: list[tuple[int, int]] = []
     pitfall_cells: set[tuple[int, int]] = set()
+    houseplant_cells: set[tuple[int, int]] = set()
     player_cells: list[tuple[int, int]] = []
     car_cells: list[tuple[int, int]] = []
     fuel_cells: list[tuple[int, int]] = []
@@ -259,6 +262,11 @@ def generate_level_from_blueprint(
                 continue
             if ch == "x":
                 pitfall_cells.add((x, y))
+                continue
+            if ch == "h":
+                houseplant_cells.add((x, y))
+                if not cell_has_beam:
+                    walkable_cells.append((x, y))
                 continue
             if ch == "E":
                 if not cell_has_beam:
@@ -398,6 +406,7 @@ def generate_level_from_blueprint(
         car_walkable_cells=car_reachable_cells,
         car_spawn_cells=[],
         fall_spawn_cells=set(),
+        houseplant_cells=houseplant_cells,
         bevel_corners=bevel_corners,
         moving_floor_cells={},
     )
@@ -458,6 +467,7 @@ def generate_level_from_blueprint(
         "fuel_station_cells": list(fuel_cells),
         "flashlight_cells": list(flashlight_cells),
         "shoes_cells": list(shoes_cells),
+        "houseplant_cells": list(houseplant_cells),
         "walkable_cells": walkable_cells,
         "car_walkable_cells": list(car_reachable_cells),
         "item_spawn_cells": item_spawn_cells,

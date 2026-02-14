@@ -717,6 +717,59 @@ def _place_pitfall_density(
                 grid[y][x] = "x"
 
 
+def _place_houseplant_zones(
+    grid: list[list[str]],
+    *,
+    houseplant_zones: list[tuple[int, int, int, int]] | None = None,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Place zone-defined houseplants on empty floor cells."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+
+    if not houseplant_zones:
+        return
+    for col, row, width, height in houseplant_zones:
+        if width <= 0 or height <= 0:
+            continue
+        start_x = max(0, col)
+        start_y = max(0, row)
+        end_x = min(cols, col + width)
+        end_y = min(rows, row + height)
+        for y in range(start_y, end_y):
+            for x in range(start_x, end_x):
+                if (x, y) in forbidden:
+                    continue
+                if grid[y][x] == ".":
+                    grid[y][x] = "h"
+
+
+def _place_houseplant_density(
+    grid: list[list[str]],
+    *,
+    density: float,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Replace empty floor cells with houseplants based on density."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+
+    if density <= 0.0:
+        return
+    for y in range(1, rows - 1):
+        for x in range(1, cols - 1):
+            if (x, y) in forbidden:
+                continue
+            if grid[y][x] != ".":
+                continue
+            if RNG.random() < density:
+                grid[y][x] = "h"
+
+
 def _pick_empty_cell(
     grid: list[list[str]],
     margin: int,
@@ -776,6 +829,8 @@ def generate_random_blueprint(
     fuel_station_count: int = 0,
     flashlight_count: int = 2,
     shoes_count: int = 2,
+    houseplant_density: float = 0.0,
+    houseplant_zones: list[tuple[int, int, int, int]] | None = None,
 ) -> Blueprint:
     """Generate a single randomized blueprint grid without connectivity validation."""
     grid = _init_grid(cols, rows)
@@ -810,6 +865,21 @@ def generate_random_blueprint(
         reserved_cells.update(
             _expand_zone_cells(
                 pitfall_zones,
+                grid_cols=cols,
+                grid_rows=rows,
+            )
+        )
+
+    # Place zone-defined houseplants
+    if houseplant_zones:
+        _place_houseplant_zones(
+            grid,
+            houseplant_zones=houseplant_zones,
+            forbidden_cells=reserved_cells,
+        )
+        reserved_cells.update(
+            _expand_zone_cells(
+                houseplant_zones,
                 grid_cols=cols,
                 grid_rows=rows,
             )
@@ -968,6 +1038,13 @@ def generate_random_blueprint(
     _place_pitfall_density(
         grid,
         density=pitfall_density,
+        forbidden_cells=reserved_cells,
+    )
+
+    # Place density-based houseplants.
+    _place_houseplant_density(
+        grid,
+        density=houseplant_density,
         forbidden_cells=reserved_cells,
     )
 

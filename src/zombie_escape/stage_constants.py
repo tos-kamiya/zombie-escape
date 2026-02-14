@@ -731,6 +731,22 @@ STAGES: list[Stage] = [
         fuel_spawn_count=0,
         survivor_spawn_rate=0.05,
     ),
+    Stage(
+        id="stage_hp_test",
+        name_key="stages.stage_hp_test.name",
+        description_key="stages.stage_hp_test.description",
+        available=True,
+        cell_size=50,
+        grid_cols=20,
+        grid_rows=20,
+        wall_algorithm="empty",
+        initial_interior_spawn_rate=0.05,
+        houseplant_density=0.03,
+        houseplant_zones=[(15, 10, 10, 5)],
+        zombie_normal_ratio=0.5,
+        zombie_dog_ratio=0.5,
+        waiting_car_target_count=1,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 

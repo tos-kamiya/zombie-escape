@@ -15,6 +15,7 @@ from ..entities import (
     ZombieDog,
 )
 from ..entities_constants import (
+    HOUSEPLANT_COLLISION_RADIUS,
     HUMANOID_WALL_BUMP_FRAMES,
     MOVING_FLOOR_SPEED,
     PLAYER_SPEED,
@@ -425,6 +426,7 @@ def update_entities(
         target = target_center
         if getattr(zombie, "carbonized", False):
             zombie.on_moving_floor = False
+        
         floor_dx, floor_dy = get_moving_floor_drift(
             zombie.rect,
             game_data.layout,
@@ -432,6 +434,19 @@ def update_entities(
             speed=MOVING_FLOOR_SPEED,
         )
         zombie.on_moving_floor = abs(floor_dx) > 0.0 or abs(floor_dy) > 0.0
+
+        # Trapping logic
+        if not getattr(zombie, "is_trapped", False):
+            cell = (int(zombie.x // game_data.cell_size), int(zombie.y // game_data.cell_size))
+            hp = game_data.houseplants.get(cell)
+            if hp and hp.alive():
+                dx = hp.x - zombie.x
+                dy = hp.y - zombie.y
+                dist_sq = dx * dx + dy * dy
+                trap_range = zombie.collision_radius + hp.collision_radius
+                if dist_sq <= trap_range * trap_range:
+                    zombie.is_trapped = True
+
         if zombie.on_moving_floor and hasattr(zombie, "_apply_decay"):
             zombie._apply_decay()
             if not zombie.alive():
@@ -587,6 +602,7 @@ def update_entities(
             layout=game_data.layout,
             drift=(floor_dx, floor_dy),
             now_ms=game_data.state.clock.elapsed_ms,
+            houseplants=game_data.houseplants,
         )
 
     update_decay_effects(game_data.state.decay_effects, frames=1)
