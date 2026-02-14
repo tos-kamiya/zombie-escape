@@ -17,6 +17,7 @@ from ..entities import (
 from ..entities_constants import (
     HOUSEPLANT_COLLISION_RADIUS,
     HOUSEPLANT_HUMANOID_SPEED_FACTOR,
+    HOUSEPLANT_CAR_SPEED_FACTOR,
     HUMANOID_WALL_BUMP_FRAMES,
     MOVING_FLOOR_SPEED,
     PLAYER_SPEED,
@@ -157,6 +158,28 @@ def update_entities(
         )
         car_dx += floor_dx
         car_dy += floor_dy
+
+        # Houseplant slow-down
+        if game_data.houseplants and game_data.cell_size > 0:
+            cx_idx = int(active_car.x // game_data.cell_size)
+            cy_idx = int(active_car.y // game_data.cell_size)
+            on_hp = False
+            for dy_idx in range(-1, 2):
+                for dx_idx in range(-1, 2):
+                    hp = game_data.houseplants.get((cx_idx + dx_idx, cy_idx + dy_idx))
+                    if hp and hp.alive():
+                        h_dx = active_car.x - hp.x
+                        h_dy = active_car.y - hp.y
+                        # For car, use a slightly larger area or its actual rect for better feel
+                        if h_dx * h_dx + h_dy * h_dy <= (active_car.collision_radius + hp.collision_radius) ** 2:
+                            on_hp = True
+                            break
+                if on_hp:
+                    break
+            if on_hp:
+                car_dx *= HOUSEPLANT_CAR_SPEED_FACTOR
+                car_dy *= HOUSEPLANT_CAR_SPEED_FACTOR
+
         car_dx, car_dy = apply_cell_edge_nudge(
             active_car.x,
             active_car.y,

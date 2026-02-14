@@ -780,6 +780,20 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             elif marker_hits > 0:
                 active_car._take_damage(CAR_ZOMBIE_CONTACT_DAMAGE * marker_hits)
 
+    # Car hitting houseplants
+    if player.in_car and active_car and active_car.health > 0 and shrunk_car:
+        car_cell_x = int(active_car.x // cell_size)
+        car_cell_y = int(active_car.y // cell_size)
+        for dy in range(-1, 2):
+            for dx in range(-1, 2):
+                hp = game_data.houseplants.get((car_cell_x + dx, car_cell_y + dy))
+                if hp and hp.alive():
+                    if shrunk_car.rect.colliderect(hp.rect):
+                        # Car destroys the plant instantly (or applies high damage)
+                        # and takes minimal damage (or wall damage)
+                        hp._take_damage(hp.max_health)
+                        active_car._take_damage(CAR_WALL_DAMAGE // 4)
+
     # Car hitting patrol bots
     if player.in_car and active_car and active_car.health > 0 and patrol_bot_group:
         if hasattr(active_car, "get_collision_circle"):
