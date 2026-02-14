@@ -1183,11 +1183,11 @@ def get_character_icon(kind: str, size: int) -> pygame.Surface:
     if kind == "player":
         return build_player_directional_surfaces(size)[0]
     elif kind == "buddy":
-        return build_survivor_directional_surfaces(size, is_buddy=True)[0]
+        return build_survivor_directional_surfaces(size, is_buddy=True, draw_hands=True)[0]
     elif kind == "survivor":
-        return build_survivor_directional_surfaces(size, is_buddy=False)[0]
+        return build_survivor_directional_surfaces(size, is_buddy=False, draw_hands=False)[0]
     elif kind == "zombie":
-        return build_zombie_directional_surfaces(size)[0]
+        return build_zombie_directional_surfaces(size, draw_hands=False)[0]
     elif kind == "zombie_dog":
         # Dog uses size*2 as long axis, and a slightly thinner short axis.
         return build_zombie_dog_directional_surfaces(float(size * 2.4), float(size * 1.6))[0]
