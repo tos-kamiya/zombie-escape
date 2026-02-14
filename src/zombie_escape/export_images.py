@@ -21,6 +21,7 @@ from .entities import (
     Wall,
     Zombie,
     ZombieDog,
+    SpikyHouseplant,
 )
 from .entities_constants import (
     INTERNAL_WALL_BEVEL_DEPTH,
@@ -113,10 +114,13 @@ def _render_studio_snapshot(
     pitfall_cells: set[tuple[int, int]] | None = None,
     fall_spawn_cells: set[tuple[int, int]] | None = None,
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] | None = None,
+    puddle_cells: set[tuple[int, int]] | None = None,
     falling_zombies: list[FallingEntity] | None = None,
     enable_shadows: bool = False,
+    ambient_palette_key: str | None = STUDIO_AMBIENT_PALETTE_KEY,
 ) -> pygame.Surface:
     game_data = _build_studio_game_data(cell_size)
+    game_data.state.ambient_palette_key = ambient_palette_key
     assets = build_render_assets(cell_size)
     screen = pygame.Surface((assets.screen_width, assets.screen_height), pygame.SRCALPHA)
 
@@ -124,6 +128,7 @@ def _render_studio_snapshot(
     layout.pitfall_cells = pitfall_cells or set()
     layout.fall_spawn_cells = fall_spawn_cells or set()
     layout.moving_floor_cells = moving_floor_cells or {}
+    layout.puddle_cells = puddle_cells or set()
 
     sprites = sprites or []
     player = None
@@ -152,6 +157,7 @@ def _render_studio_snapshot(
         layout.outside_cells,
         layout.fall_spawn_cells,
         layout.pitfall_cells,
+        layout.puddle_cells,
         layout.moving_floor_cells,
         set(),
         game_data.cell_size,
@@ -547,5 +553,36 @@ def export_images(
     moving_floor_path = out / "moving-floor.png"
     _save_surface(moving_floor_surface, moving_floor_path, scale=output_scale)
     saved.append(moving_floor_path)
+
+    puddle_cell_x = cell_x
+    puddle_cell_y = cell_y
+    puddle_rect = pygame.Rect(
+        puddle_cell_x * cell_size,
+        puddle_cell_y * cell_size,
+        cell_size,
+        cell_size,
+    )
+    puddle_padding = max(2, int(round(cell_size * 0.12)))
+    puddle_rect = puddle_rect.inflate(puddle_padding * 2, puddle_padding * 2)
+    puddle_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=puddle_rect,
+        puddle_cells={(puddle_cell_x, puddle_cell_y)},
+        ambient_palette_key=None,
+    )
+    puddle_path = out / "puddle.png"
+    _save_surface(puddle_surface, puddle_path, scale=output_scale)
+    saved.append(puddle_path)
+
+    houseplant = SpikyHouseplant(center_x, center_y)
+    houseplant_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=houseplant.rect,
+        sprites=[houseplant],
+        enable_shadows=True,
+    )
+    houseplant_path = out / "houseplant.png"
+    _save_surface(houseplant_surface, houseplant_path, scale=output_scale)
+    saved.append(houseplant_path)
 
     return saved

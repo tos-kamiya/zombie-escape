@@ -1393,6 +1393,35 @@ def get_tile_icon(kind: str, size: int) -> pygame.Surface:
         line_color = (130, 130, 130)
         for i in range(-rect.width, rect.width, 4):
             pygame.draw.line(surf, line_color, (i, 0), (i + rect.width, rect.height), width=1)
+    elif kind == "puddle":
+        # Transparent water effect: single ring only, slightly larger for visibility.
+        ring_color = (95, 135, 185)
+        ring_rect = rect.inflate(-1, -1)
+        # Enlarge by 10% while keeping center.
+        inflate_w = max(1, int(round(ring_rect.width * 0.1)))
+        inflate_h = max(1, int(round(ring_rect.height * 0.1)))
+        ring_rect = ring_rect.inflate(inflate_w, inflate_h)
+        if ring_rect.width > 0 and ring_rect.height > 0:
+            pygame.draw.ellipse(surf, ring_color, ring_rect, width=1)
+    elif kind == "houseplant":
+        # Simple marker: body + four spikes.
+        center = rect.center
+        body_radius = max(2, scaled_size // 4)
+        pygame.draw.circle(surf, (30, 120, 30), center, max(1, body_radius - 1))
+        spike_inner = max(1, body_radius)
+        spike_outer = max(spike_inner + 1, body_radius + 1)
+        for i in range(4):
+            angle = i * 90
+            direction = pygame.Vector2(1, 0).rotate(angle)
+            start = (
+                int(center[0] + direction.x * spike_inner),
+                int(center[1] + direction.y * spike_inner),
+            )
+            end = (
+                int(center[0] + direction.x * spike_outer),
+                int(center[1] + direction.y * spike_outer),
+            )
+            pygame.draw.line(surf, (150, 255, 150), start, end, width=1)
     else:
         pygame.draw.rect(surf, (128, 128, 128), rect, width=1)
 

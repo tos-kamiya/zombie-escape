@@ -157,6 +157,8 @@ def title_screen(
         "pitfall": get_tile_icon("pitfall", icon_radius),
         "fall_spawn": get_tile_icon("fall_spawn", icon_radius),
         "moving_floor": get_tile_icon("moving_floor", icon_radius),
+        "puddle": get_tile_icon("puddle", icon_radius),
+        "houseplant": get_tile_icon("houseplant", icon_radius),
     }
 
     # Create car_forbidden icon for endurance stages
@@ -215,6 +217,10 @@ def title_screen(
             icons.append(icon_surfaces["fall_spawn"])
         if stage.moving_floor_zones or stage.moving_floor_cells:
             icons.append(icon_surfaces["moving_floor"])
+        if stage.puddle_density > 0 or stage.puddle_zones:
+            icons.append(icon_surfaces["puddle"])
+        if stage.houseplant_density > 0 or stage.houseplant_zones:
+            icons.append(icon_surfaces["houseplant"])
 
         return icons
 
