@@ -617,6 +617,7 @@
 - `localization.py` が `python-i18n` をラップ。
 - `locales/ui.*.json` を読み込み、`translate()` で文字列取得。
 - フォント指定やスケールもロケール別に制御。
+- **スキーマ整合性**: 全ての言語ファイルでキー構造が完全に同期されている必要がある。これは `tests/test_localization_schema.py` によって自動検査される。
 
 ## 13. 重要な定数
 
