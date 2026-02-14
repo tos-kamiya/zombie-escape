@@ -603,6 +603,7 @@ class TrappedZombie(pygame.sprite.Sprite):
             on_carbonize=self._apply_carbonize_visuals,
         )
         self.vitals.health = health
+        self.frame_counter = 0
 
     @property
     def health(self: Self) -> int:
@@ -636,10 +637,12 @@ class TrappedZombie(pygame.sprite.Sprite):
         if not self.alive():
             return
 
-        # Jitter visuals
-        ox = RNG.uniform(-1.0, 1.0)
-        oy = RNG.uniform(-1.0, 1.0)
-        self.rect.center = (int(self.x + ox), int(self.y + oy))
+        # Jitter visuals at 1/4 speed
+        if self.frame_counter % 4 == 0:
+            ox = RNG.uniform(-1.0, 1.0)
+            oy = RNG.uniform(-1.0, 1.0)
+            self.rect.center = (int(self.x + ox), int(self.y + oy))
+        self.frame_counter += 1
 
     def carbonize(self: Self) -> None:
         self.vitals.carbonize()
