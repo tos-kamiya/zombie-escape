@@ -10,6 +10,7 @@ from ..entities_constants import (
     ZOMBIE_LINEFORMER_FOLLOW_TOLERANCE,
     ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
     ZOMBIE_SIGHT_RANGE,
+    ZOMBIE_SPEED,
     ZOMBIE_TRACKER_FAR_SCENT_RADIUS,
     ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS,
     ZOMBIE_TRACKER_RELOCK_DELAY_MS,
@@ -191,10 +192,16 @@ def _zombie_wall_hug_movement(
     if zombie.wall_hug_angle is None:
         zombie.wall_hug_angle = zombie.wander_angle
 
+    # Speed-based scaling factors
+    speed_ratio = zombie.speed / ZOMBIE_SPEED if ZOMBIE_SPEED > 0 else 1.0
+
     # Shared parameters for wall probing
     dynamic_sensor_dist = max(
         ZOMBIE_WALL_HUG_SENSOR_DISTANCE, cell_size * ZOMBIE_WALL_HUG_SENSOR_DIST_RATIO
     )
+    # Scale sensor distance slightly with speed (0.8x to 1.0x range)
+    dynamic_sensor_dist *= (0.8 + 0.2 * speed_ratio)
+
     sensor_distance = dynamic_sensor_dist + zombie.collision_radius
     probe_offset = math.radians(ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG)
 
@@ -255,7 +262,10 @@ def _zombie_wall_hug_movement(
     if is_in_sight:
         return _zombie_move_toward(zombie, player_center)
 
-    turn_step = math.radians(ZOMBIE_WALL_HUG_TURN_STEP_DEG)
+    # Scale turn step by current speed ratio to maintain consistent turning radius
+    # and avoid "ping-ponging" (jitter) at low speeds.
+    turn_step = math.radians(ZOMBIE_WALL_HUG_TURN_STEP_DEG * speed_ratio)
+
     if side_has_wall or forward_has_wall:
         zombie.wall_hug_last_wall_time = now
     if side_has_wall:
