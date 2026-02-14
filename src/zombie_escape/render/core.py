@@ -56,7 +56,6 @@ from ..render_constants import (
     PITFALL_EDGE_METAL_COLOR,
     PITFALL_EDGE_STRIPE_COLOR,
     PITFALL_EDGE_STRIPE_SPACING,
-    PUDDLE_TILE_COLOR,
     PLAYER_SHADOW_ALPHA_MULT,
     PLAYER_SHADOW_RADIUS_MULT,
     FADE_IN_DURATION_MS,
@@ -84,6 +83,7 @@ from .shadows import (
     _draw_wall_shadows,
     _get_shadow_layer,
 )
+from .puddle import draw_puddle_rings, get_puddle_phase, get_puddle_wave_color
 
 ELECTRIFIED_FLOOR_ACCENT_COLOR = (216, 200, 90)
 ELECTRIFIED_FLOOR_OVERLAY_ALPHA = 26
@@ -216,43 +216,16 @@ def _get_puddle_tile_surface(
         return cached
 
     size = key[0]
-    is_fall_spawn = key[3]
     puddle_tile = pygame.Surface((size, size), pygame.SRCALPHA)
     tile_rect = puddle_tile.get_rect()
 
     pygame.draw.rect(puddle_tile, key[1], tile_rect)
 
-    wave_color = (
-        min(255, PUDDLE_TILE_COLOR[0] + 40),
-        min(255, PUDDLE_TILE_COLOR[1] + 40),
-        min(255, PUDDLE_TILE_COLOR[2] + 40),
-        140,
-    )
-    base_wave_offset = key[2]
-    base_wave_rect = tile_rect.inflate(
-        -int(size * 0.3) - base_wave_offset,
-        -int(size * 0.4) - base_wave_offset,
-    )
-    for i in range(2):
-        wave_offset = base_wave_offset + i * 2
-        wave_rect = tile_rect.inflate(
-            -int(size * 0.3) - wave_offset,
-            -int(size * 0.5) - wave_offset,
-        )
-        if wave_rect.width <= 0 or wave_rect.height <= 0:
-            continue
-        pygame.draw.ellipse(
-            puddle_tile,
-            wave_color,
-            wave_rect,
-            width=1,
-        )
-
-    border_rect = base_wave_rect.inflate(int(size * 0.68), int(size * 0.68))
-    pygame.draw.ellipse(
+    draw_puddle_rings(
         puddle_tile,
-        wave_color,
-        border_rect,
+        rect=tile_rect,
+        phase=key[2],
+        color=get_puddle_wave_color(alpha=140),
         width=1,
     )
 
@@ -978,11 +951,10 @@ def _draw_play_area(
                 )
                 sr = camera.apply_rect(r)
                 if sr.colliderect(screen_rect):
-                    parity_phase_offset = (x + y) % 4
                     puddle_tile = _get_puddle_tile_surface(
                         cell_size=grid_snap,
                         base_color=base_color,
-                        phase=((elapsed_ms // 400) + parity_phase_offset),
+                        phase=get_puddle_phase(elapsed_ms, x, y, cycle_ms=400),
                         fall_spawn=((x, y) in fall_spawn_cells),
                     )
                     screen.blit(puddle_tile, sr.topleft)

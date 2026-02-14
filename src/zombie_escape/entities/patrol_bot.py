@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
 
 import pygame
 
@@ -22,9 +23,13 @@ from ..entities_constants import (
 from ..render_assets import angle_bin_from_vector, build_patrol_bot_directional_surfaces
 from ..render_constants import ANGLE_BINS
 from ..rng import get_rng
+from ..surface_effects import is_in_puddle_cell
 from ..world_grid import apply_cell_edge_nudge
 from .movement import _circle_wall_collision
 from .walls import Wall
+
+if TYPE_CHECKING:  # pragma: no cover - typing-only imports
+    from .houseplant import SpikyHouseplant
 
 RNG = get_rng()
 
@@ -251,11 +256,14 @@ class PatrolBot(pygame.sprite.Sprite):
         move_y = float(self.direction[1]) * self.speed + drift_y
 
         # Puddle slow-down
-        if cell_size > 0 and layout.puddle_cells:
-            cell = (int(self.x // cell_size), int(self.y // cell_size))
-            if cell in layout.puddle_cells:
-                move_x *= PUDDLE_SPEED_FACTOR
-                move_y *= PUDDLE_SPEED_FACTOR
+        if is_in_puddle_cell(
+            self.x,
+            self.y,
+            cell_size=cell_size,
+            puddle_cells=layout.puddle_cells,
+        ):
+            move_x *= PUDDLE_SPEED_FACTOR
+            move_y *= PUDDLE_SPEED_FACTOR
 
         move_x, move_y = apply_cell_edge_nudge(
             self.x,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Iterable, Protocol, TYPE_CHECKING
+from typing import Any, Iterable, Protocol, TYPE_CHECKING
 
 import pygame
 
@@ -44,6 +44,7 @@ from ..render_assets import (
 )
 from ..render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR, ZOMBIE_OUTLINE_COLOR
 from ..rng import get_rng
+from ..surface_effects import is_in_puddle_cell
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from ..world_grid import apply_cell_edge_nudge
 from .patrol_paralyze import draw_paralyze_marker
@@ -508,11 +509,14 @@ class Zombie(pygame.sprite.Sprite):
         move_y += drift_y
         
         # Puddle slow-down
-        if cell_size > 0 and layout.puddle_cells:
-            cell = (int(self.x // cell_size), int(self.y // cell_size))
-            if cell in layout.puddle_cells:
-                move_x *= PUDDLE_SPEED_FACTOR
-                move_y *= PUDDLE_SPEED_FACTOR
+        if is_in_puddle_cell(
+            self.x,
+            self.y,
+            cell_size=cell_size,
+            puddle_cells=layout.puddle_cells,
+        ):
+            move_x *= PUDDLE_SPEED_FACTOR
+            move_y *= PUDDLE_SPEED_FACTOR
 
         if dist_to_player_sq <= avoid_radius_sq or self.kind == ZombieKind.WALL_HUGGER:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)

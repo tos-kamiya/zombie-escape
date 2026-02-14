@@ -34,6 +34,7 @@ from ..entities_constants import (
     ZOMBIE_SEPARATION_DISTANCE,
 )
 from ..rng import get_rng
+from ..surface_effects import is_in_puddle_cell
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_dog_directional_surfaces,
@@ -422,11 +423,14 @@ class ZombieDog(pygame.sprite.Sprite):
         move_y += drift_y
 
         # Puddle slow-down
-        if cell_size > 0 and layout.puddle_cells:
-            cell = (int(self.x // cell_size), int(self.y // cell_size))
-            if cell in layout.puddle_cells:
-                move_x *= PUDDLE_SPEED_FACTOR
-                move_y *= PUDDLE_SPEED_FACTOR
+        if is_in_puddle_cell(
+            self.x,
+            self.y,
+            cell_size=cell_size,
+            puddle_cells=layout.puddle_cells,
+        ):
+            move_x *= PUDDLE_SPEED_FACTOR
+            move_y *= PUDDLE_SPEED_FACTOR
 
         if nearby_zombies:
             move_x, move_y = self._avoid_other_zombies(

@@ -34,6 +34,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
         Player,
         Shoes,
     )
+    from .entities.houseplant import SpikyHouseplant
     from .gameplay.decay_effects import DecayingEntityEffect
     from .gameplay.lineformer_trains import LineformerTrainManager
     from .gameplay.spatial_index import SpatialIndex

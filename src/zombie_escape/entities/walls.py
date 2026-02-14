@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
 
 import pygame
 from pygame import rect
@@ -31,9 +31,6 @@ from .movement import (
     _circle_rect_collision,
     _rect_polygon_collision,
 )
-
-if TYPE_CHECKING:
-    from .houseplant import SpikyHouseplant
 
 _WALL_INDEX_DIRTY = False
 

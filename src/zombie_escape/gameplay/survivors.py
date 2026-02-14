@@ -27,6 +27,7 @@ from .constants import (
 from ..localization import translate_dict, translate_list
 from ..models import GameData, ProgressState
 from ..rng import get_rng
+from ..surface_effects import resolve_surface_speed_factor
 from ..entities import Survivor, Zombie, ZombieDog, spritecollideany_walls
 from ..world_grid import WallIndex
 from .spawn import _create_zombie
@@ -79,32 +80,16 @@ def update_survivors(
         if on_moving_floor:
             moving_floor_survivors.append(survivor)
 
-        # Houseplant / Puddle slow-down
-        speed_factor = 1.0
-        if game_data.houseplants and game_data.cell_size > 0:
-            sx_idx = int(survivor.x // game_data.cell_size)
-            sy_idx = int(survivor.y // game_data.cell_size)
-            on_hp = False
-            for dy_idx in range(-1, 2):
-                for dx_idx in range(-1, 2):
-                    hp = game_data.houseplants.get((sx_idx + dx_idx, sy_idx + dy_idx))
-                    if hp and hp.alive():
-                        h_dx = survivor.x - hp.x
-                        h_dy = survivor.y - hp.y
-                        if h_dx * h_dx + h_dy * h_dy <= (survivor.collision_radius + hp.collision_radius) ** 2:
-                            on_hp = True
-                            break
-                if on_hp:
-                    break
-            if on_hp:
-                speed_factor = HOUSEPLANT_HUMANOID_SPEED_FACTOR
-        
-        # If not touching a houseplant, check for a puddle
-        if speed_factor == 1.0 and game_data.layout.puddle_cells and game_data.cell_size > 0:
-            sx_idx = int(survivor.x // game_data.cell_size)
-            sy_idx = int(survivor.y // game_data.cell_size)
-            if (sx_idx, sy_idx) in game_data.layout.puddle_cells:
-                speed_factor = PUDDLE_SPEED_FACTOR
+        speed_factor = resolve_surface_speed_factor(
+            survivor.x,
+            survivor.y,
+            survivor.collision_radius,
+            cell_size=game_data.cell_size,
+            puddle_cells=game_data.layout.puddle_cells,
+            houseplants=game_data.houseplants,
+            houseplant_speed_factor=HOUSEPLANT_HUMANOID_SPEED_FACTOR,
+            puddle_speed_factor=PUDDLE_SPEED_FACTOR,
+        )
 
         survivor.update_behavior(
             target_pos,

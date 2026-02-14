@@ -20,8 +20,6 @@ from ..entities_constants import (
     ZOMBIE_WALL_HUG_LOST_WALL_MS,
     ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG,
     ZOMBIE_WALL_HUG_PROBE_ANGLE_PERP_DEG,
-    ZOMBIE_WALL_HUG_SENSOR_DISTANCE,
-    ZOMBIE_WALL_HUG_SENSOR_DIST_RATIO,
     ZOMBIE_WALL_HUG_TARGET_GAP,
     ZOMBIE_WALL_HUG_TURN_STEP_DEG,
 )
@@ -206,7 +204,7 @@ def _zombie_wall_hug_movement(
     # 3. Side Perpendicular (90)
     angle_side_deg = ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG * (speed_ratio ** -0.2)
     angle_perp_deg = ZOMBIE_WALL_HUG_PROBE_ANGLE_PERP_DEG
-    
+
     probe_offset_side = math.radians(min(75.0, angle_side_deg))
     probe_offset_perp = math.radians(angle_perp_deg)
 
@@ -217,26 +215,43 @@ def _zombie_wall_hug_movement(
         # Initial side discovery (still symmetrical for the very first frame)
         left_angle = zombie.wall_hug_angle + probe_offset_side
         right_angle = zombie.wall_hug_angle - probe_offset_side
-        left_dist = _zombie_wall_hug_wall_distance(zombie, walls, left_angle, sensor_distance)
-        right_dist = _zombie_wall_hug_wall_distance(zombie, walls, right_angle, sensor_distance)
-        forward_dist = _zombie_wall_hug_wall_distance(zombie, walls, zombie.wall_hug_angle, sensor_distance)
-        
-        if left_dist < sensor_distance or right_dist < sensor_distance or forward_dist < sensor_distance:
-            if left_dist <= right_dist: zombie.wall_hug_side = 1.0
-            else: zombie.wall_hug_side = -1.0
+        left_dist = _zombie_wall_hug_wall_distance(
+            zombie, walls, left_angle, sensor_distance
+        )
+        right_dist = _zombie_wall_hug_wall_distance(
+            zombie, walls, right_angle, sensor_distance
+        )
+        forward_dist = _zombie_wall_hug_wall_distance(
+            zombie, walls, zombie.wall_hug_angle, sensor_distance
+        )
+
+        if (
+            left_dist < sensor_distance
+            or right_dist < sensor_distance
+            or forward_dist < sensor_distance
+        ):
+            if left_dist <= right_dist:
+                zombie.wall_hug_side = 1.0
+            else:
+                zombie.wall_hug_side = -1.0
             zombie.wall_hug_last_wall_time = now
         else:
-            if is_in_sight: return _zombie_move_toward(zombie, player_center)
-            return _zombie_wander_movement(zombie, walls, cell_size, layout, now_ms=now_ms)
+            if is_in_sight:
+                return _zombie_move_toward(zombie, player_center)
+            return _zombie_wander_movement(
+                zombie, walls, cell_size, layout, now_ms=now_ms
+            )
 
     # Asymmetrical Probing while following
     side_angle = zombie.wall_hug_angle + zombie.wall_hug_side * probe_offset_side
     perp_angle = zombie.wall_hug_angle + zombie.wall_hug_side * probe_offset_perp
-    
+
     side_dist = _zombie_wall_hug_wall_distance(zombie, walls, side_angle, sensor_distance)
     perp_dist = _zombie_wall_hug_wall_distance(zombie, walls, perp_angle, sensor_distance)
-    forward_dist = _zombie_wall_hug_wall_distance(zombie, walls, zombie.wall_hug_angle, sensor_distance)
-    
+    forward_dist = _zombie_wall_hug_wall_distance(
+        zombie, walls, zombie.wall_hug_angle, sensor_distance
+    )
+
     side_has_wall = side_dist < sensor_distance
     perp_has_wall = perp_dist < sensor_distance
     forward_has_wall = forward_dist < sensor_distance
@@ -261,14 +276,16 @@ def _zombie_wall_hug_movement(
         if abs(gap_error) > 0.1:
             ratio = min(1.0, abs(gap_error) / target_gap_diagonal)
             turn = turn_step * ratio
-            if gap_error > 0: zombie.wall_hug_angle -= zombie.wall_hug_side * turn
-            else: zombie.wall_hug_angle += zombie.wall_hug_side * turn
-        
+            if gap_error > 0:
+                zombie.wall_hug_angle -= zombie.wall_hug_side * turn
+            else:
+                zombie.wall_hug_angle += zombie.wall_hug_side * turn
+
         if forward_dist < ZOMBIE_WALL_HUG_TARGET_GAP:
             # Wall ahead! Turn sharply.
             zombie.wall_hug_angle -= zombie.wall_hug_side * (turn_step * 2.0)
     else:
-        # PERPENDICULAR PROBE LOST WALL! 
+        # PERPENDICULAR PROBE LOST WALL!
         # This means we either hit an outer corner or a GAP.
         zombie.wall_hug_last_side_has_wall = False
         if forward_has_wall:

@@ -34,9 +34,10 @@ from ..font_utils import load_font, render_text_surface
 from ..localization import get_font_settings
 from ..models import Footprint, GameData
 from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
-from ..render_constants import MOVING_FLOOR_OVERVIEW_COLOR, PUDDLE_TILE_COLOR
+from ..render_constants import MOVING_FLOOR_OVERVIEW_COLOR
 from ..entities_constants import PATROL_BOT_COLLISION_RADIUS
 from .hud import _get_fog_scale, build_zombie_debug_counts_text
+from .puddle import draw_puddle_rings, get_puddle_wave_color
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from ..gameplay.lineformer_trains import LineformerTrainManager
@@ -180,11 +181,7 @@ def draw_level_overview(
                     ),
                 )
         if puddle_cells:
-            puddle_wave_color = (
-                min(255, PUDDLE_TILE_COLOR[0] + 40),
-                min(255, PUDDLE_TILE_COLOR[1] + 40),
-                min(255, PUDDLE_TILE_COLOR[2] + 40),
-            )
+            puddle_wave_color = get_puddle_wave_color(alpha=None)
             for x, y in puddle_cells:
                 cell_rect = pygame.Rect(
                     x * cell_size,
@@ -192,12 +189,11 @@ def draw_level_overview(
                     cell_size,
                     cell_size,
                 )
-                radius = max(1, int(cell_size * 0.3))
-                pygame.draw.circle(
+                draw_puddle_rings(
                     surface,
-                    puddle_wave_color,
-                    cell_rect.center,
-                    radius,
+                    rect=cell_rect,
+                    phase=0,
+                    color=puddle_wave_color,
                     width=1,
                 )
 

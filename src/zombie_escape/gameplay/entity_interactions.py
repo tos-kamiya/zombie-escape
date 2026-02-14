@@ -20,9 +20,7 @@ from ..entities_constants import (
     FUEL_CAN_WIDTH,
     FUEL_STATION_HEIGHT,
     FUEL_STATION_WIDTH,
-    HOUSEPLANT_CAR_SPEED_FACTOR,
     HUMANOID_RADIUS,
-    PUDDLE_SPEED_FACTOR,
     SHOES_HEIGHT,
     SHOES_WIDTH,
     SURVIVOR_MAX_SAFE_PASSENGERS,
@@ -90,7 +88,7 @@ def _handle_houseplant_trapping(game_data: GameData) -> None:
     for zombie in list(zombie_group):
         if not zombie.alive() or getattr(zombie, "is_trapped", False):
             continue
-        
+
         cell = (int(zombie.x // cell_size), int(zombie.y // cell_size))
         hp = houseplants.get(cell)
         if hp and hp.alive():
