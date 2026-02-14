@@ -13,6 +13,10 @@ from ..localization import translate as tr
 from ..models import Stage
 from ..progress import load_progress
 from ..render import blit_text_wrapped, wrap_text
+from ..render_assets import (
+    get_character_icon,
+    get_tile_icon,
+)
 from ..rng import generate_seed
 from ..input_utils import (
     CommonAction,
@@ -109,6 +113,98 @@ def title_screen(
     )
     current_seed_auto = seed_is_auto or generated
     stage_progress, _ = load_progress()
+
+    # Icon setup for cleared stages
+    icon_radius = 3
+
+    def _create_lettered_zombie(letter: str) -> pygame.Surface:
+        surf = get_character_icon("zombie", icon_radius).copy()
+        if not letter:
+            return surf
+        w, h = surf.get_size()
+        # Draw tiny letter at bottom-right
+        color = WHITE
+        # 14x14 surface, center 7,7. Body is radius 3.
+        # Bottom-right area 9,9 to 13,13.
+        ox, oy = w - 5, h - 6
+        if letter == "T":
+            pygame.draw.line(surf, color, (ox, oy), (ox + 2, oy))
+            pygame.draw.line(surf, color, (ox + 1, oy), (ox + 1, oy + 4))
+        elif letter == "W":
+            # W (compact 5-pixel wide)
+            pygame.draw.line(surf, color, (ox, oy), (ox, oy + 4))
+            pygame.draw.line(surf, color, (ox + 2, oy + 1), (ox + 2, oy + 4))
+            pygame.draw.line(surf, color, (ox + 4, oy), (ox + 4, oy + 4))
+            pygame.draw.line(surf, color, (ox, oy + 4), (ox + 4, oy + 4))
+        elif letter == "L":
+            pygame.draw.line(surf, color, (ox, oy), (ox, oy + 4))
+            pygame.draw.line(surf, color, (ox, oy + 4), (ox + 2, oy + 4))
+        return surf
+
+    icon_surfaces = {
+        "buddy": get_character_icon("buddy", icon_radius),
+        "survivor": get_character_icon("survivor", icon_radius),
+        "zombie": _create_lettered_zombie(""),
+        "zombie_tracker": _create_lettered_zombie("T"),
+        "zombie_wall": _create_lettered_zombie("W"),
+        "zombie_line": _create_lettered_zombie("L"),
+        "zombie_dog": get_character_icon("zombie_dog", icon_radius),
+        "patrol_bot": get_character_icon("patrol_bot", icon_radius),
+        "car": get_character_icon("car", icon_radius),
+        "pitfall": get_tile_icon("pitfall", icon_radius),
+        "fall_spawn": get_tile_icon("fall_spawn", icon_radius),
+        "moving_floor": get_tile_icon("moving_floor", icon_radius),
+    }
+
+    # Create car_forbidden icon for endurance stages
+    car_forbidden = icon_surfaces["car"].copy()
+    cw, ch = car_forbidden.get_size()
+    # Draw a red X over the car
+    pygame.draw.line(car_forbidden, (255, 50, 50), (1, 1), (cw - 2, ch - 2), width=2)
+    pygame.draw.line(car_forbidden, (255, 50, 50), (cw - 2, 1), (1, ch - 2), width=2)
+    icon_surfaces["car_forbidden"] = car_forbidden
+
+    def _get_stage_icons(stage: Stage) -> list[pygame.Surface]:
+        icons = []
+        if stage.buddy_required_count > 0:
+            icons.append(icon_surfaces["buddy"])
+        if stage.survivor_rescue_stage or stage.survivor_spawn_rate > 0:
+            icons.append(icon_surfaces["survivor"])
+
+        has_zombie = (
+            stage.exterior_spawn_weight > 0
+            or stage.interior_spawn_weight > 0
+            or stage.interior_fall_spawn_weight > 0
+        )
+        if has_zombie:
+            # Show icons for each present zombie type
+            if stage.zombie_normal_ratio > 0:
+                icons.append(icon_surfaces["zombie"])
+            if stage.zombie_tracker_ratio > 0:
+                icons.append(icon_surfaces["zombie_tracker"])
+            if stage.zombie_wall_hugging_ratio > 0:
+                icons.append(icon_surfaces["zombie_wall"])
+            if stage.zombie_lineformer_ratio > 0:
+                icons.append(icon_surfaces["zombie_line"])
+
+        if stage.zombie_dog_ratio > 0:
+            icons.append(icon_surfaces["zombie_dog"])
+
+        if stage.patrol_bot_spawn_rate > 0:
+            icons.append(icon_surfaces["patrol_bot"])
+
+        if stage.endurance_stage:
+            icons.append(icon_surfaces["car_forbidden"])
+
+        # Floor features
+        if stage.pitfall_density > 0 or stage.pitfall_zones:
+            icons.append(icon_surfaces["pitfall"])
+        if stage.interior_fall_spawn_weight > 0 or stage.fall_spawn_zones or stage.fall_spawn_floor_ratio > 0:
+            icons.append(icon_surfaces["fall_spawn"])
+        if stage.moving_floor_zones or stage.moving_floor_cells:
+            icons.append(icon_surfaces["moving_floor"])
+
+        return icons
 
     def _page_available(page_index: int) -> bool:
         if page_index <= 0:
@@ -331,6 +427,20 @@ def title_screen(
                     10_000,
                     line_height_scale=font_settings.line_height_scale,
                 )
+
+                # Draw icons if cleared
+                if cleared and option.get("available"):
+                    label_width, _, _ = _measure_text(label, stage_option_font, 10_000)
+                    icons = _get_stage_icons(option["stage"])
+                    icon_x = list_column_x + 8 + label_width + 6
+                    icon_y_center = row_top + row_height // 2
+                    for icon_surf in icons:
+                        icon_rect = icon_surf.get_rect(
+                            center=(icon_x + icon_surf.get_width() // 2, icon_y_center)
+                        )
+                        screen.blit(icon_surf, icon_rect)
+                        icon_x += icon_surf.get_width() + 2
+
                 row_top += row_height
 
             resource_option_size = font_settings.scaled_size(11)

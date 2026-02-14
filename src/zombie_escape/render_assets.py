@@ -1174,6 +1174,73 @@ def build_shoes_surface(width: int, height: int) -> pygame.Surface:
     return _draw_polygon_surface(width, height, SHOES_SPEC)
 
 
+def get_character_icon(kind: str, size: int) -> pygame.Surface:
+    """Return a single icon Surface for the given character kind and base size.
+
+    'size' is generally treated as the radius for humanoids/bots,
+    or a base scale for others.
+    """
+    if kind == "player":
+        return build_player_directional_surfaces(size)[0]
+    elif kind == "buddy":
+        return build_survivor_directional_surfaces(size, is_buddy=True)[0]
+    elif kind == "survivor":
+        return build_survivor_directional_surfaces(size, is_buddy=False)[0]
+    elif kind == "zombie":
+        return build_zombie_directional_surfaces(size)[0]
+    elif kind == "zombie_dog":
+        # Dog uses size*2 as long axis, and a slightly thinner short axis.
+        return build_zombie_dog_directional_surfaces(float(size * 2.4), float(size * 1.6))[0]
+    elif kind == "patrol_bot":
+        # Patrol bot size in build_patrol_bot_directional_surfaces is total diameter.
+        # Humanoids use 'size' as radius, so their diameter is ~2*size.
+        # Robot is significantly larger than humanoids in-game, so we use 4*size.
+        return build_patrol_bot_directional_surfaces(size * 4)[0]
+    elif kind == "car":
+        # Create a small car icon.
+        width = size * 2
+        height = int(width * 1.4)
+        surf = pygame.Surface((width, height), pygame.SRCALPHA)
+        paint_car_surface(
+            surf,
+            width=width,
+            height=height,
+            color=resolve_car_color(health_ratio=1.0, appearance="default"),
+        )
+        return surf
+
+    # Fallback
+    fallback = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
+    pygame.draw.circle(fallback, (128, 128, 128), (size, size), size)
+    return fallback
+
+
+def get_tile_icon(kind: str, size: int) -> pygame.Surface:
+    """Return a single icon Surface for special tile types."""
+    surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
+    rect = surf.get_rect()
+
+    if kind == "pitfall":
+        # Dark abyss with a slight metallic top edge
+        pygame.draw.rect(surf, (21, 20, 20), rect)
+        pygame.draw.rect(surf, (110, 110, 115), (0, 0, rect.width, 2))
+    elif kind == "fall_spawn":
+        # Orange-brown floor color
+        pygame.draw.rect(surf, (84, 48, 29), rect)
+        # Add a small dot to indicate it's a spawn point?
+        pygame.draw.circle(surf, (180, 0, 0), rect.center, size // 2)
+    elif kind == "moving_floor":
+        # Gray with diagonal stripes
+        pygame.draw.rect(surf, (90, 90, 90), rect)
+        line_color = (130, 130, 130)
+        for i in range(-rect.width, rect.width, 4):
+            pygame.draw.line(surf, line_color, (i, 0), (i + rect.width, rect.height), width=1)
+    else:
+        pygame.draw.rect(surf, (128, 128, 128), rect, width=1)
+
+    return surf
+
+
 __all__ = [
     "angle_bin_from_vector",
     "EnvironmentPalette",
@@ -1204,4 +1271,6 @@ __all__ = [
     "build_fuel_station_surface",
     "build_flashlight_surface",
     "build_shoes_surface",
+    "get_character_icon",
+    "get_tile_icon",
 ]
