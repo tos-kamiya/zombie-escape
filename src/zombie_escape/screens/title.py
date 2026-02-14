@@ -171,7 +171,7 @@ def title_screen(
         icons = []
         if stage.buddy_required_count > 0:
             icons.append(icon_surfaces["buddy"])
-        if stage.survivor_rescue_stage or stage.survivor_spawn_rate > 0:
+        if stage.survivor_rescue_stage:
             icons.append(icon_surfaces["survivor"])
 
         has_zombie = (

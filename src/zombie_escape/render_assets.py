@@ -1209,11 +1209,14 @@ def get_character_icon(kind: str, size: int) -> pygame.Surface:
         )
         return surf
     elif kind == "fuel_can":
-        return build_fuel_can_surface(size * 4, size * 4)
+        scaled_size = int(size * 3.2)
+        return build_fuel_can_surface(scaled_size, scaled_size)
     elif kind == "empty_fuel_can":
-        return build_empty_fuel_can_surface(size * 4, size * 4)
+        scaled_size = int(size * 3.2)
+        return build_empty_fuel_can_surface(scaled_size, scaled_size)
     elif kind == "shoes":
-        return build_shoes_surface(size * 4, size * 4)
+        scaled_size = int(size * 3.2)
+        return build_shoes_surface(scaled_size, scaled_size)
 
     # Fallback
     fallback = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
@@ -1223,8 +1226,9 @@ def get_character_icon(kind: str, size: int) -> pygame.Surface:
 
 def get_tile_icon(kind: str, size: int) -> pygame.Surface:
     """Return a single icon Surface for special tile types."""
-    # Use size*4 to match the approximately 12-14px scale of other icons
-    surf = pygame.Surface((size * 4, size * 4), pygame.SRCALPHA)
+    # Use size*3.2 (approx 10px) to balance with humanoid icons
+    scaled_size = int(size * 3.2)
+    surf = pygame.Surface((scaled_size, scaled_size), pygame.SRCALPHA)
     rect = surf.get_rect()
 
     if kind == "pitfall":
