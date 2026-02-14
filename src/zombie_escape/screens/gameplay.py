@@ -678,14 +678,26 @@ class GameplayScreenRunner:
                 state.clock.elapsed_ms - state.game_over_at
                 < 1000
             ):
-                draw(
-                    self.render_assets,
-                    self.screen,
-                    game_data,
-                    config=self.config,
-                    hint_color=None,
-                    fps=current_fps,
-                )
+                if self.debug_overview:
+                    assert self.overview_surface is not None
+                    draw_debug_overview(
+                        self.render_assets,
+                        self.screen,
+                        self.overview_surface,
+                        self.game_data,
+                        self.config,
+                        screen_width=self.screen_width,
+                        screen_height=self.screen_height,
+                    )
+                else:
+                    draw(
+                        self.render_assets,
+                        self.screen,
+                        game_data,
+                        config=self.config,
+                        hint_color=None,
+                        fps=current_fps,
+                    )
                 present(self.screen)
                 return False
         return True

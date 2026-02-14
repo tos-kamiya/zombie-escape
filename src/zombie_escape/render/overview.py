@@ -34,7 +34,7 @@ from ..font_utils import load_font, render_text_surface
 from ..localization import get_font_settings
 from ..models import Footprint, GameData
 from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
-from ..render_constants import MOVING_FLOOR_OVERVIEW_COLOR, PUDDLE_OVERVIEW_COLOR
+from ..render_constants import MOVING_FLOOR_OVERVIEW_COLOR, PUDDLE_TILE_COLOR
 from ..entities_constants import PATROL_BOT_COLLISION_RADIUS
 from .hud import _get_fog_scale, build_zombie_debug_counts_text
 
@@ -83,6 +83,28 @@ def _draw_overview_tag(
     padded.topleft = (x, y)
     label_rect.center = padded.center
     surface.blit(label, label_rect)
+
+
+def _draw_houseplant_spike_mark(
+    surface: surface.Surface,
+    center: tuple[int, int],
+    radius: int,
+) -> None:
+    spike_color = (90, 180, 90)
+    inner = max(1, radius - 2)
+    outer = max(inner + 1, radius + 1)
+    for i in range(8):
+        angle = i * (360 / 8)
+        direction = pygame.Vector2(1, 0).rotate(angle)
+        start = (
+            int(center[0] + direction.x * inner),
+            int(center[1] + direction.y * inner),
+        )
+        end = (
+            int(center[0] + direction.x * outer),
+            int(center[1] + direction.y * outer),
+        )
+        pygame.draw.line(surface, spike_color, start, end, width=2)
 
 
 def draw_level_overview(
@@ -158,16 +180,25 @@ def draw_level_overview(
                     ),
                 )
         if puddle_cells:
+            puddle_wave_color = (
+                min(255, PUDDLE_TILE_COLOR[0] + 40),
+                min(255, PUDDLE_TILE_COLOR[1] + 40),
+                min(255, PUDDLE_TILE_COLOR[2] + 40),
+            )
             for x, y in puddle_cells:
-                pygame.draw.rect(
+                cell_rect = pygame.Rect(
+                    x * cell_size,
+                    y * cell_size,
+                    cell_size,
+                    cell_size,
+                )
+                radius = max(1, int(cell_size * 0.3))
+                pygame.draw.circle(
                     surface,
-                    PUDDLE_OVERVIEW_COLOR,
-                    pygame.Rect(
-                        x * cell_size,
-                        y * cell_size,
-                        cell_size,
-                        cell_size,
-                    ),
+                    puddle_wave_color,
+                    cell_rect.center,
+                    radius,
+                    width=1,
                 )
 
     for wall in wall_group:
@@ -261,12 +292,10 @@ def draw_level_overview(
                     int(PATROL_BOT_COLLISION_RADIUS),
                 )
     if houseplants:
-        plant_color = (60, 200, 60)
         for hp in houseplants:
             if hp.alive():
-                pygame.draw.circle(
+                _draw_houseplant_spike_mark(
                     surface,
-                    plant_color,
                     hp.rect.center,
                     max(2, int(hp.radius)),
                 )
@@ -474,17 +503,6 @@ def draw_debug_overview(
                     label_font,
                     "S",
                     _scaled_rect(item.rect),
-                    line_height_scale=font_settings.line_height_scale,
-                )
-    if game_data.houseplants:
-        for hp in game_data.houseplants.values():
-            if hp.alive():
-                _draw_overview_tag(
-                    screen,
-                    label_font,
-                    "H",
-                    _scaled_rect(hp.rect),
-                    fg=(100, 255, 100),
                     line_height_scale=font_settings.line_height_scale,
                 )
     if game_data.layout.puddle_cells:

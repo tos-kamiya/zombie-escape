@@ -15,7 +15,6 @@ from ..entities import (
     ZombieDog,
 )
 from ..entities_constants import (
-    HOUSEPLANT_COLLISION_RADIUS,
     HOUSEPLANT_HUMANOID_SPEED_FACTOR,
     HOUSEPLANT_CAR_SPEED_FACTOR,
     PUDDLE_SPEED_FACTOR,
@@ -226,47 +225,55 @@ def update_entities(
         if player not in all_sprites:
             all_sprites.add(player, layer=LAYER_PLAYERS)
         player.pending_pitfall_fall = False
-        floor_dx, floor_dy = get_moving_floor_drift(
-            get_floor_overlap_rect(player),
-            game_data.layout,
-            cell_size=game_data.cell_size,
-            speed=MOVING_FLOOR_SPEED,
-        )
-        player_dx += floor_dx
-        player_dy += floor_dy
+        movement_locked = game_data.state.game_over
+        floor_dx = 0.0
+        floor_dy = 0.0
+        if not movement_locked:
+            floor_dx, floor_dy = get_moving_floor_drift(
+                get_floor_overlap_rect(player),
+                game_data.layout,
+                cell_size=game_data.cell_size,
+                speed=MOVING_FLOOR_SPEED,
+            )
+            player_dx += floor_dx
+            player_dy += floor_dy
 
-        # Houseplant / Puddle slow-down
-        speed_factor = 1.0
-        if game_data.houseplants and game_data.cell_size > 0:
-            px_idx = int(player.x // game_data.cell_size)
-            py_idx = int(player.y // game_data.cell_size)
-            on_hp = False
-            for dy_idx in range(-1, 2):
-                for dx_idx in range(-1, 2):
-                    hp = game_data.houseplants.get((px_idx + dx_idx, py_idx + dy_idx))
-                    if hp and hp.alive():
-                        h_dx = player.x - hp.x
-                        h_dy = player.y - hp.y
-                        if h_dx * h_dx + h_dy * h_dy <= (player.collision_radius + hp.collision_radius) ** 2:
-                            on_hp = True
-                            break
+            # Houseplant / Puddle slow-down
+            speed_factor = 1.0
+            if game_data.houseplants and game_data.cell_size > 0:
+                px_idx = int(player.x // game_data.cell_size)
+                py_idx = int(player.y // game_data.cell_size)
+                on_hp = False
+                for dy_idx in range(-1, 2):
+                    for dx_idx in range(-1, 2):
+                        hp = game_data.houseplants.get((px_idx + dx_idx, py_idx + dy_idx))
+                        if hp and hp.alive():
+                            h_dx = player.x - hp.x
+                            h_dy = player.y - hp.y
+                            if h_dx * h_dx + h_dy * h_dy <= (player.collision_radius + hp.collision_radius) ** 2:
+                                on_hp = True
+                                break
+                    if on_hp:
+                        break
                 if on_hp:
-                    break
-            if on_hp:
-                speed_factor = HOUSEPLANT_HUMANOID_SPEED_FACTOR
-        
-        # If not touching a houseplant, check for a puddle
-        if speed_factor == 1.0 and game_data.layout.puddle_cells and game_data.cell_size > 0:
-            px_idx = int(player.x // game_data.cell_size)
-            py_idx = int(player.y // game_data.cell_size)
-            if (px_idx, py_idx) in game_data.layout.puddle_cells:
-                speed_factor = PUDDLE_SPEED_FACTOR
-        
-        if speed_factor != 1.0:
-            player_dx *= speed_factor
-            player_dy *= speed_factor
+                    speed_factor = HOUSEPLANT_HUMANOID_SPEED_FACTOR
 
-        player.on_moving_floor = abs(floor_dx) > 0.0 or abs(floor_dy) > 0.0
+            # If not touching a houseplant, check for a puddle
+            if speed_factor == 1.0 and game_data.layout.puddle_cells and game_data.cell_size > 0:
+                px_idx = int(player.x // game_data.cell_size)
+                py_idx = int(player.y // game_data.cell_size)
+                if (px_idx, py_idx) in game_data.layout.puddle_cells:
+                    speed_factor = PUDDLE_SPEED_FACTOR
+
+            if speed_factor != 1.0:
+                player_dx *= speed_factor
+                player_dy *= speed_factor
+            player.on_moving_floor = abs(floor_dx) > 0.0 or abs(floor_dy) > 0.0
+        else:
+            player_dx = 0.0
+            player_dy = 0.0
+            player.on_moving_floor = False
+
         player_dx, player_dy = apply_cell_edge_nudge(
             player.x,
             player.y,

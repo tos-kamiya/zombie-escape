@@ -88,6 +88,9 @@ from .shadows import (
 ELECTRIFIED_FLOOR_ACCENT_COLOR = (216, 200, 90)
 ELECTRIFIED_FLOOR_OVERLAY_ALPHA = 26
 ELECTRIFIED_FLOOR_BORDER_ALPHA = 140
+_PUDDLE_TILE_CACHE: dict[
+    tuple[int, tuple[int, int, int], int], surface.Surface
+] = {}
 
 
 def blit_message(
@@ -193,6 +196,76 @@ def _build_moving_floor_pattern(
         for x in range(-spacing, pattern_size + spacing, spacing):
             _draw_chevron(0, 0, x)
     return surface_out
+
+
+def _get_puddle_tile_surface(
+    *,
+    cell_size: int,
+    base_color: tuple[int, int, int],
+    phase: int,
+) -> surface.Surface:
+    key = (
+        max(1, int(cell_size)),
+        (int(base_color[0]), int(base_color[1]), int(base_color[2])),
+        int(phase) % 4,
+    )
+    cached = _PUDDLE_TILE_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    size = key[0]
+    puddle_tile = pygame.Surface((size, size), pygame.SRCALPHA)
+    tile_rect = puddle_tile.get_rect()
+
+    pygame.draw.rect(puddle_tile, key[1], tile_rect)
+    pygame.draw.rect(
+        puddle_tile,
+        (PUDDLE_TILE_COLOR[0], PUDDLE_TILE_COLOR[1], PUDDLE_TILE_COLOR[2], 60),
+        tile_rect,
+    )
+
+    wave_color = (
+        min(255, PUDDLE_TILE_COLOR[0] + 40),
+        min(255, PUDDLE_TILE_COLOR[1] + 40),
+        min(255, PUDDLE_TILE_COLOR[2] + 40),
+        170,
+    )
+    border_color = (
+        wave_color[0],
+        wave_color[1],
+        wave_color[2],
+        140,
+    )
+    base_wave_offset = key[2]
+    base_wave_rect = tile_rect.inflate(
+        -int(size * 0.3) - base_wave_offset,
+        -int(size * 0.4) - base_wave_offset,
+    )
+    border_rect = base_wave_rect.inflate(int(size * 0.68), int(size * 0.68))
+    pygame.draw.ellipse(
+        puddle_tile,
+        border_color,
+        border_rect,
+        width=1,
+    )
+
+    for i in range(2):
+        wave_offset = (base_wave_offset + i * 2) % 4
+        wave_rect = tile_rect.inflate(
+            -int(size * 0.3) - wave_offset,
+            -int(size * 0.5) - wave_offset,
+        )
+        if wave_rect.width <= 0 or wave_rect.height <= 0:
+            continue
+        pygame.draw.ellipse(
+            puddle_tile,
+            wave_color,
+            wave_rect,
+            width=1,
+        )
+
+    _PUDDLE_TILE_CACHE[key] = puddle_tile
+    return puddle_tile
 
 
 def _wrap_long_segment(
@@ -888,6 +961,18 @@ def _draw_play_area(
 
                 continue
 
+            use_secondary = ((x // 2) + (y // 2)) % 2 == 0
+            if (x, y) in fall_spawn_cells:
+                base_color = (
+                    palette.fall_zone_secondary
+                    if use_secondary
+                    else palette.fall_zone_primary
+                )
+            elif use_secondary:
+                base_color = palette.floor_secondary
+            else:
+                base_color = palette.floor_primary
+
             if (x, y) in puddle_cells:
                 lx, ly = (
                     x * grid_snap,
@@ -901,20 +986,15 @@ def _draw_play_area(
                 )
                 sr = camera.apply_rect(r)
                 if sr.colliderect(screen_rect):
-                    pygame.draw.rect(screen, PUDDLE_TILE_COLOR, sr)
-                    # Simple wave/puddle effect
-                    wave_color = tuple(min(255, c + 30) for c in PUDDLE_TILE_COLOR)
-                    for i in range(2):
-                        wave_offset = (elapsed_ms // 200 + i * 2) % 4
-                        pygame.draw.ellipse(
-                            screen,
-                            wave_color,
-                            sr.inflate(-10 - wave_offset, -20 - wave_offset),
-                            width=1
-                        )
+                    parity_phase_offset = (x + y) % 4
+                    puddle_tile = _get_puddle_tile_surface(
+                        cell_size=grid_snap,
+                        base_color=base_color,
+                        phase=((elapsed_ms // 400) + parity_phase_offset),
+                    )
+                    screen.blit(puddle_tile, sr.topleft)
                 continue
 
-            use_secondary = ((x // 2) + (y // 2)) % 2 == 0
             if (x, y) in fall_spawn_cells:
                 color = (
                     palette.fall_zone_secondary

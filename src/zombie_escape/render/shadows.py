@@ -5,7 +5,16 @@ import math
 import pygame
 from pygame import sprite, surface
 
-from ..entities import Camera, Car, Player, SteelBeam, Survivor, Zombie, ZombieDog
+from ..entities import (
+    Camera,
+    Car,
+    Player,
+    SpikyHouseplant,
+    SteelBeam,
+    Survivor,
+    Zombie,
+    ZombieDog,
+)
 from ..entities_constants import JUMP_SHADOW_OFFSET, ZOMBIE_RADIUS
 from ..render_constants import (
     ENTITY_SHADOW_ALPHA,
@@ -255,7 +264,7 @@ def _draw_entity_shadows(
         if isinstance(entity, Car):
             if exclude_car is not None and entity is exclude_car:
                 continue
-        if not isinstance(entity, (Zombie, ZombieDog, Survivor, Car)):
+        if not isinstance(entity, (Zombie, ZombieDog, Survivor, Car, SpikyHouseplant)):
             continue
         if outside_cells:
             cell = (
@@ -342,7 +351,7 @@ def _draw_entity_drop_shadows(
         if isinstance(entity, Car):
             if exclude_car is not None and entity is exclude_car:
                 continue
-        if not isinstance(entity, (Zombie, ZombieDog, Survivor, Car)):
+        if not isinstance(entity, (Zombie, ZombieDog, Survivor, Car, SpikyHouseplant)):
             continue
         if outside_cells:
             cell = (
