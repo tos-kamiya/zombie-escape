@@ -17,6 +17,8 @@ Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/righ
 | Moving Floor | <img src="../imgs/exports/moving-floor.png" width="80"> | Stage 24 | A floor you can ride to move quickly in its direction. |
 | Empty Fuel Can | <img src="../imgs/exports/empty-fuel-can.png" width="80"> | Stage 26 | Pickup item used in stages where the empty fuel can appears. |
 | Fuel Station | <img src="../imgs/exports/fuel-station.png" width="80"> | Stage 26 | Refills the empty fuel can in stages where the empty fuel can appears. |
+| Puddle | <img src="../imgs/exports/puddle.png" width="80"> | Stage 28 | Slows movement while you are on the puddle tile. |
+| Spiky Houseplant | <img src="../imgs/exports/houseplant.png" width="80"> | Stage 28 | Trap-style obstacle. It is hard to pass by without getting caught. Zombies get caught in it. |
 
 ## Fuel Rule Change (Stages with Empty Fuel Can)
 
