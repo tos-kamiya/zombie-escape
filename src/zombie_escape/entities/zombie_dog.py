@@ -167,6 +167,8 @@ class ZombieDog(pygame.sprite.Sprite):
                 continue
             if candidate is self or not candidate.alive():
                 continue
+            if getattr(candidate, "is_trapped", False):
+                continue
             if not hasattr(candidate, "carbonized"):
                 continue
             if getattr(candidate, "carbonized", False):
@@ -393,8 +395,10 @@ class ZombieDog(pygame.sprite.Sprite):
         if chase_target is not None:
             if self.mode != ZombieDogMode.CHASE:
                 self.mode = ZombieDogMode.CHASE
-        elif self.mode == ZombieDogMode.CHASE:
-            self.mode = ZombieDogMode.WANDER
+        else:
+            if self.mode == ZombieDogMode.CHASE:
+                self.mode = ZombieDogMode.WANDER
+            chase_target = None
 
         if self.mode == ZombieDogMode.WANDER and self._in_sight(player_center):
             self.mode = ZombieDogMode.CHARGE
