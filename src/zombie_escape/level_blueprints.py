@@ -49,7 +49,8 @@ def validate_car_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
             ch = grid[y][x]
             if ch == "C":
                 start_pos = (x, y)
-            if ch not in ("x", "B", "O", "^", "v", "<", ">"):
+            # Car can drive through moving-floor cells; only solid blockers are excluded.
+            if ch not in ("x", "B", "O"):
                 passable_cells.add((x, y))
                 if ch == "E":
                     exit_cells.add((x, y))
