@@ -91,7 +91,12 @@ def _draw_houseplant_spike_mark(
     center: tuple[int, int],
     radius: int,
 ) -> None:
+    body_fill_color = (64, 132, 64)
+    body_outline_color = (90, 180, 90)
     spike_color = (90, 180, 90)
+    body_radius = max(2, radius - 2)
+    pygame.draw.circle(surface, body_fill_color, center, body_radius)
+    pygame.draw.circle(surface, body_outline_color, center, body_radius, width=1)
     inner = max(1, radius - 2)
     outer = max(inner + 1, radius + 1)
     for i in range(8):
