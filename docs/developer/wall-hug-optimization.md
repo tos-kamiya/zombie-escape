@@ -74,6 +74,29 @@ To resolve the performance issues, the step-by-step loop was replaced with a fas
 ### Impact
 After implementing this optimization, the CPU usage for wall-hugging AI dropped dramatically, ensuring a smooth 60 FPS even in stages densely populated with wall-hugging zombies.
 
+## Advanced Multi-Scenario Velocity Optimization (New Experiment)
+
+To ensure the AI is robust enough for complex level designs, we are conducting a large-scale parameter sweep across multiple speed-dependent variables and challenging terrain scenarios.
+
+### New Scenarios for Evaluation
+1.  **Straight Stability**: Maintaining a perfect gap on long walls.
+2.  **Dual-Direction Cranks**: Navigating S-turns (left then right) without getting stuck.
+3.  **Full Loop**: Completing a square circuit and returning to the starting point.
+4.  **Gap Detection (The "Missing Tile" Test)**: Ensuring the zombie turns into a 1-cell wide opening in a wall rather than ignoring it and walking past.
+
+### Parameters for Optimization (Speed-Dependent)
+We are testing combinations of:
+- **Dynamic Probe Angle**: Does narrowing/widening the 45° angle at different speeds improve cornering?
+- **Dynamic Sensor Distance**: Refining the scaling power (e.g., linear vs. square root) relative to speed.
+- **Target Gap & Turn Step**: Finding the sweet spot between speed-proportional turning and physical clearance.
+
+### Reward Function Refinements
+The reward function now includes:
+- **Waypoint Bonuses**: Points for reaching key nodes in the maze (cranks, gap entry).
+- **Circuit Completion**: High reward for finishing a loop.
+- **Jitter Penalty**: Heavy deduction for rapid oscillation in angular velocity.
+- **Gap Success**: Specific reward for entering a 1-tile gap.
+
 ## Velocity-Based Dynamic Parameter Scaling
 
 Zombies naturally slow down over time due to decay or floor effects. To increase stability at all speeds, parameters are now dynamically scaled based on the zombie's current velocity relative to the reference `ZOMBIE_SPEED`.

@@ -202,10 +202,14 @@ def _zombie_wall_hug_movement(
     # Scale sensor distance slightly with speed (0.8x to 1.0x range)
     dynamic_sensor_dist *= (0.8 + 0.2 * speed_ratio)
 
-    sensor_distance = dynamic_sensor_dist + zombie.collision_radius
-    probe_offset = math.radians(ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG)
+    # Scale probe angle with speed: widen at low speeds to catch gaps better
+    # Reference: 55 degrees at 100% speed, increases slightly as speed drops
+    dynamic_probe_angle_deg = ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG * (speed_ratio ** -0.2)
+    probe_offset = math.radians(min(75.0, dynamic_probe_angle_deg))
 
-    # Adjust target gap for the diagonal probe angle (45 deg)
+    sensor_distance = dynamic_sensor_dist + zombie.collision_radius
+
+    # Adjust target gap for the diagonal probe angle
     target_gap_diagonal = ZOMBIE_WALL_HUG_TARGET_GAP / math.cos(probe_offset)
 
     if zombie.wall_hug_side == 0:
@@ -279,7 +283,8 @@ def _zombie_wall_hug_movement(
             else:
                 zombie.wall_hug_angle += zombie.wall_hug_side * turn
         if forward_dist < ZOMBIE_WALL_HUG_TARGET_GAP:
-            zombie.wall_hug_angle -= zombie.wall_hug_side * (turn_step * 1.5)
+            # Enhanced forward collision avoidance (2.0x instead of 1.5x)
+            zombie.wall_hug_angle -= zombie.wall_hug_side * (turn_step * 2.0)
     else:
         zombie.wall_hug_last_side_has_wall = False
         if forward_has_wall:
