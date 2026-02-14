@@ -18,6 +18,7 @@ from ..entities_constants import (
     HOUSEPLANT_COLLISION_RADIUS,
     HOUSEPLANT_HUMANOID_SPEED_FACTOR,
     HOUSEPLANT_CAR_SPEED_FACTOR,
+    PUDDLE_SPEED_FACTOR,
     HUMANOID_WALL_BUMP_FRAMES,
     MOVING_FLOOR_SPEED,
     PLAYER_SPEED,
@@ -159,7 +160,8 @@ def update_entities(
         car_dx += floor_dx
         car_dy += floor_dy
 
-        # Houseplant slow-down
+        # Houseplant / Puddle slow-down
+        speed_factor = 1.0
         if game_data.houseplants and game_data.cell_size > 0:
             cx_idx = int(active_car.x // game_data.cell_size)
             cy_idx = int(active_car.y // game_data.cell_size)
@@ -170,15 +172,24 @@ def update_entities(
                     if hp and hp.alive():
                         h_dx = active_car.x - hp.x
                         h_dy = active_car.y - hp.y
-                        # For car, use a slightly larger area or its actual rect for better feel
                         if h_dx * h_dx + h_dy * h_dy <= (active_car.collision_radius + hp.collision_radius) ** 2:
                             on_hp = True
                             break
                 if on_hp:
                     break
             if on_hp:
-                car_dx *= HOUSEPLANT_CAR_SPEED_FACTOR
-                car_dy *= HOUSEPLANT_CAR_SPEED_FACTOR
+                speed_factor = HOUSEPLANT_CAR_SPEED_FACTOR
+        
+        # If not touching a houseplant, check for a puddle
+        if speed_factor == 1.0 and game_data.layout.puddle_cells and game_data.cell_size > 0:
+            cx_idx = int(active_car.x // game_data.cell_size)
+            cy_idx = int(active_car.y // game_data.cell_size)
+            if (cx_idx, cy_idx) in game_data.layout.puddle_cells:
+                speed_factor = PUDDLE_SPEED_FACTOR
+        
+        if speed_factor != 1.0:
+            car_dx *= speed_factor
+            car_dy *= speed_factor
 
         car_dx, car_dy = apply_cell_edge_nudge(
             active_car.x,
@@ -224,7 +235,8 @@ def update_entities(
         player_dx += floor_dx
         player_dy += floor_dy
 
-        # Houseplant slow-down
+        # Houseplant / Puddle slow-down
+        speed_factor = 1.0
         if game_data.houseplants and game_data.cell_size > 0:
             px_idx = int(player.x // game_data.cell_size)
             py_idx = int(player.y // game_data.cell_size)
@@ -241,8 +253,18 @@ def update_entities(
                 if on_hp:
                     break
             if on_hp:
-                player_dx *= HOUSEPLANT_HUMANOID_SPEED_FACTOR
-                player_dy *= HOUSEPLANT_HUMANOID_SPEED_FACTOR
+                speed_factor = HOUSEPLANT_HUMANOID_SPEED_FACTOR
+        
+        # If not touching a houseplant, check for a puddle
+        if speed_factor == 1.0 and game_data.layout.puddle_cells and game_data.cell_size > 0:
+            px_idx = int(player.x // game_data.cell_size)
+            py_idx = int(player.y // game_data.cell_size)
+            if (px_idx, py_idx) in game_data.layout.puddle_cells:
+                speed_factor = PUDDLE_SPEED_FACTOR
+        
+        if speed_factor != 1.0:
+            player_dx *= speed_factor
+            player_dy *= speed_factor
 
         player.on_moving_floor = abs(floor_dx) > 0.0 or abs(floor_dy) > 0.0
         player_dx, player_dy = apply_cell_edge_nudge(

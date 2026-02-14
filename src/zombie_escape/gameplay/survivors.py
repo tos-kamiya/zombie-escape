@@ -11,6 +11,7 @@ from ..entities_constants import (
     BUDDY_RADIUS,
     CAR_SPEED,
     HOUSEPLANT_HUMANOID_SPEED_FACTOR,
+    PUDDLE_SPEED_FACTOR,
     SURVIVOR_MAX_SAFE_PASSENGERS,
     SURVIVOR_MIN_SPEED_FACTOR,
     SURVIVOR_RADIUS,
@@ -78,7 +79,7 @@ def update_survivors(
         if on_moving_floor:
             moving_floor_survivors.append(survivor)
 
-        # Houseplant slow-down
+        # Houseplant / Puddle slow-down
         speed_factor = 1.0
         if game_data.houseplants and game_data.cell_size > 0:
             sx_idx = int(survivor.x // game_data.cell_size)
@@ -97,6 +98,13 @@ def update_survivors(
                     break
             if on_hp:
                 speed_factor = HOUSEPLANT_HUMANOID_SPEED_FACTOR
+        
+        # If not touching a houseplant, check for a puddle
+        if speed_factor == 1.0 and game_data.layout.puddle_cells and game_data.cell_size > 0:
+            sx_idx = int(survivor.x // game_data.cell_size)
+            sy_idx = int(survivor.y // game_data.cell_size)
+            if (sx_idx, sy_idx) in game_data.layout.puddle_cells:
+                speed_factor = PUDDLE_SPEED_FACTOR
 
         survivor.update_behavior(
             target_pos,

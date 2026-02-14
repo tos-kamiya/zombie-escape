@@ -19,6 +19,7 @@ from ..entities_constants import (
     ZOMBIE_DECAY_MIN_SPEED_RATIO,
     ZOMBIE_DOG_LONG_AXIS_RATIO,
     ZOMBIE_DOG_SHORT_AXIS_RATIO,
+    PUDDLE_SPEED_FACTOR,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SPEED,
@@ -505,6 +506,14 @@ class Zombie(pygame.sprite.Sprite):
         )
         move_x += drift_x
         move_y += drift_y
+        
+        # Puddle slow-down
+        if cell_size > 0 and layout.puddle_cells:
+            cell = (int(self.x // cell_size), int(self.y // cell_size))
+            if cell in layout.puddle_cells:
+                move_x *= PUDDLE_SPEED_FACTOR
+                move_y *= PUDDLE_SPEED_FACTOR
+
         if dist_to_player_sq <= avoid_radius_sq or self.kind == ZombieKind.WALL_HUGGER:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)
         move_x, move_y = apply_cell_edge_nudge(

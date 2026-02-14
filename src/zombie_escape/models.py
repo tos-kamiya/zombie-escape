@@ -75,6 +75,7 @@ class LevelLayout:
     car_spawn_cells: list[tuple[int, int]]
     fall_spawn_cells: set[tuple[int, int]]
     houseplant_cells: set[tuple[int, int]]
+    puddle_cells: set[tuple[int, int]]
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection]
 
@@ -256,6 +257,8 @@ class Stage:
     )
     houseplant_density: float = 0.0
     houseplant_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
+    puddle_density: float = 0.0
+    puddle_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
 
     # Stage objective
     fuel_mode: FuelMode = FuelMode.START_FULL
@@ -315,6 +318,43 @@ class Stage:
                 f"cell_size ({self.cell_size}) is too small for houseplant optimization "
                 f"(requires half-cell > {HOUSEPLANT_RADIUS + 2})"
             )
+
+        # Exclusivity validation for zone-based gimmicks
+        self._validate_zone_exclusivity()
+
+    def _validate_zone_exclusivity(self) -> None:
+        """Ensure that exclusive gimmicks (pitfall, floor, houseplant, puddle) do not overlap in zones."""
+        
+        def _get_cells(zones: list[tuple[int, int, int, int]]) -> set[tuple[int, int]]:
+            cells = set()
+            for x, y, w, h in zones:
+                for dy in range(h):
+                    for dx in range(w):
+                        cells.add((x + dx, y + dy))
+            return cells
+
+        # Collect all cells from different gimmicks
+        pitfall_cells = _get_cells(self.pitfall_zones)
+        
+        floor_cells = set()
+        for zones in self.moving_floor_zones.values():
+            floor_cells.update(_get_cells(zones))
+        
+        plant_cells = _get_cells(self.houseplant_zones)
+        water_cells = _get_cells(self.puddle_zones)
+
+        # Check overlaps
+        # 1. Pitfall vs others
+        assert not (pitfall_cells & floor_cells), f"Stage {self.id}: Pitfall and Moving Floor zones overlap"
+        assert not (pitfall_cells & plant_cells), f"Stage {self.id}: Pitfall and Houseplant zones overlap"
+        assert not (pitfall_cells & water_cells), f"Stage {self.id}: Pitfall and Puddle zones overlap"
+        
+        # 2. Moving Floor vs others
+        assert not (floor_cells & plant_cells), f"Stage {self.id}: Moving Floor and Houseplant zones overlap"
+        assert not (floor_cells & water_cells), f"Stage {self.id}: Moving Floor and Puddle zones overlap"
+        
+        # 3. Houseplant vs Puddle
+        assert not (plant_cells & water_cells), f"Stage {self.id}: Houseplant and Puddle zones overlap"
 
     @property
     def requires_fuel(self) -> bool:

@@ -30,3 +30,36 @@ def test_stage_refuel_chain_requires_distinct_item_counts() -> None:
             fuel_mode=FuelMode.REFUEL_CHAIN,
             fuel_station_spawn_count=0,
         )
+
+
+def test_stage_zone_exclusivity_assertion() -> None:
+    """Ensure Stage raises AssertionError when different gimmick zones overlap."""
+    # Pitfall vs Houseplant
+    with pytest.raises(AssertionError, match="Pitfall and Houseplant zones overlap"):
+        Stage(
+            id="overlap_1",
+            name_key="n",
+            description_key="d",
+            pitfall_zones=[(10, 10, 2, 2)],
+            houseplant_zones=[(11, 11, 1, 1)]  # Overlaps at (11, 11)
+        )
+
+    # Houseplant vs Puddle
+    with pytest.raises(AssertionError, match="Houseplant and Puddle zones overlap"):
+        Stage(
+            id="overlap_2",
+            name_key="n",
+            description_key="d",
+            houseplant_zones=[(5, 5, 5, 5)],
+            puddle_zones=[(9, 9, 2, 2)]  # Overlaps at (9, 9)
+        )
+
+    # Moving Floor vs Puddle
+    with pytest.raises(AssertionError, match="Moving Floor and Puddle zones overlap"):
+        Stage(
+            id="overlap_3",
+            name_key="n",
+            description_key="d",
+            moving_floor_zones={"U": [(0, 0, 10, 10)]},
+            puddle_zones=[(5, 5, 1, 1)]
+        )

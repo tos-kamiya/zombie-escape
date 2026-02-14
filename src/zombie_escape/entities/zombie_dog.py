@@ -29,6 +29,7 @@ from ..entities_constants import (
     PATROL_BOT_PARALYZE_MS,
     PATROL_BOT_PARALYZE_BLINK_MS,
     PATROL_BOT_PARALYZE_MARKER_COLOR,
+    PUDDLE_SPEED_FACTOR,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
 )
@@ -419,6 +420,14 @@ class ZombieDog(pygame.sprite.Sprite):
 
         move_x += drift_x
         move_y += drift_y
+
+        # Puddle slow-down
+        if cell_size > 0 and layout.puddle_cells:
+            cell = (int(self.x // cell_size), int(self.y // cell_size))
+            if cell in layout.puddle_cells:
+                move_x *= PUDDLE_SPEED_FACTOR
+                move_y *= PUDDLE_SPEED_FACTOR
+
         if nearby_zombies:
             move_x, move_y = self._avoid_other_zombies(
                 move_x, move_y, list(nearby_zombies)

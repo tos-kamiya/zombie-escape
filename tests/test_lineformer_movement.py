@@ -31,6 +31,7 @@ def _make_layout() -> LevelLayout:
         car_spawn_cells=[],
         fall_spawn_cells=set(),
         houseplant_cells=set(),
+        puddle_cells=set(),
         bevel_corners={},
         moving_floor_cells={},
     )

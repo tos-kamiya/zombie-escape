@@ -17,6 +17,7 @@ from ..entities_constants import (
     PATROL_BOT_SPRITE_SIZE,
     PATROL_BOT_SPEED,
     PATROL_BOT_COLLISION_MARGIN,
+    PUDDLE_SPEED_FACTOR,
 )
 from ..render_assets import angle_bin_from_vector, build_patrol_bot_directional_surfaces
 from ..render_constants import ANGLE_BINS
@@ -248,6 +249,14 @@ class PatrolBot(pygame.sprite.Sprite):
 
         move_x = float(self.direction[0]) * self.speed + drift_x
         move_y = float(self.direction[1]) * self.speed + drift_y
+
+        # Puddle slow-down
+        if cell_size > 0 and layout.puddle_cells:
+            cell = (int(self.x // cell_size), int(self.y // cell_size))
+            if cell in layout.puddle_cells:
+                move_x *= PUDDLE_SPEED_FACTOR
+                move_y *= PUDDLE_SPEED_FACTOR
+
         move_x, move_y = apply_cell_edge_nudge(
             self.x,
             self.y,
