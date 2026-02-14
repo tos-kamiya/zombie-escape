@@ -73,6 +73,31 @@ CAR_ZOMBIE_CONTACT_DAMAGE = 2
 CAR_ZOMBIE_HIT_DAMAGE = 20
 
 
+def _handle_houseplant_trapping(game_data: GameData) -> None:
+    """Check if any zombies should be trapped by houseplants."""
+    houseplants = game_data.houseplants
+    if not houseplants:
+        return
+    zombie_group = game_data.groups.zombie_group
+    cell_size = game_data.cell_size
+    if cell_size <= 0:
+        return
+
+    for zombie in zombie_group:
+        if not zombie.alive() or getattr(zombie, "is_trapped", False):
+            continue
+        
+        cell = (int(zombie.x // cell_size), int(zombie.y // cell_size))
+        hp = houseplants.get(cell)
+        if hp and hp.alive():
+            dx = hp.x - zombie.x
+            dy = hp.y - zombie.y
+            dist_sq = dx * dx + dy * dy
+            trap_range = zombie.collision_radius + hp.collision_radius
+            if dist_sq <= trap_range * trap_range:
+                zombie.is_trapped = True
+
+
 def _handle_fuel_pickup(
     *,
     game_data: GameData,
@@ -492,6 +517,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         stage.survivor_rescue_stage or stage.survivor_spawn_rate > 0.0
     )
     maintain_waiting_car_supply(game_data)
+    _handle_houseplant_trapping(game_data)
     active_car = car if car and car.alive() else None
     waiting_cars = game_data.waiting_cars
     shrunk_car = get_shrunk_sprite(active_car, 0.8) if active_car else None

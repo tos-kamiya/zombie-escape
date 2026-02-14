@@ -435,18 +435,6 @@ def update_entities(
         )
         zombie.on_moving_floor = abs(floor_dx) > 0.0 or abs(floor_dy) > 0.0
 
-        # Trapping logic
-        if not getattr(zombie, "is_trapped", False):
-            cell = (int(zombie.x // game_data.cell_size), int(zombie.y // game_data.cell_size))
-            hp = game_data.houseplants.get(cell)
-            if hp and hp.alive():
-                dx = hp.x - zombie.x
-                dy = hp.y - zombie.y
-                dist_sq = dx * dx + dy * dy
-                trap_range = zombie.collision_radius + hp.collision_radius
-                if dist_sq <= trap_range * trap_range:
-                    zombie.is_trapped = True
-
         if zombie.on_moving_floor and hasattr(zombie, "_apply_decay"):
             zombie._apply_decay()
             if not zombie.alive():
