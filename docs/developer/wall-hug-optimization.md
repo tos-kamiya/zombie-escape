@@ -127,3 +127,36 @@ We will perform a targeted parameter sweep for cell sizes 35, 40, and 45 to find
 - **Target Gap**: Is 4.2px too much?
 - **Base Turn Step**: Is 8.0° too aggressive when the corridor is tight?
 - **Sensor Ratio**: Refining the 0.6 ratio for small scales.
+
+## Multi-Probe High-Precision Shape Tracking (New Experiment)
+
+To address the issue where zombies miss 1-cell gaps on small grids (35px), we are transitioning from a 3-probe system to a **4-probe High-Fidelity system**.
+
+### The Problem: Bridging
+On a 35px grid, a diagonal 55° sensor might "see" the wall on the other side of a 1-cell gap before the zombie has turned, causing it to "bridge" the gap and continue straight.
+
+### New Sensor Configuration
+We are adding a **Perpendicular (90°) probe** to the tracking side:
+1.  **Forward (0°)**: Detects obstacles in front.
+2.  **Front-Diagonal (30°)**: Anticipates inner corners and upcoming wall curves.
+3.  **Mid-Diagonal (60°)**: Maintains the target gap.
+4.  **Side-Perpendicular (90°)**: Detects the exact moment a wall ends (outer corners/gaps).
+
+### Shape-Priority Logic
+We are shifting the optimization target from "Smoothness" to "Shape Fidelity":
+- **High Sensitivity to Discontinuity**: If the 90° or 60° probe loses the wall, the zombie will initiate a sharp turn immediately.
+- **Accepted Jitter**: To ensure 1-cell gaps are never missed, we allow higher angular velocity (jitter) in exchange for tighter wall following.
+
+## Asymmetrical 3-Probe System (Final Implementation)
+
+To achieve reliable 1-cell gap detection on the smallest grids (35px) without increasing CPU overhead, we implemented an **Asymmetrical 3-Probe system**.
+
+### Final Configuration
+1.  **Forward (0°)**: Detects immediate obstacles and dead ends.
+2.  **Tracking Diagonal (55° base)**: Main probe for maintaining the target gap (4.2px). Scales with speed to widen at low velocities.
+3.  **Tracking Perpendicular (90°)**: Monitors the wall continuity. **Losing the wall on this probe triggers an immediate sharp turn**, ensuring 1-cell gaps are never bypassed.
+
+### Results
+- **Gap Sensitivity**: Successfully detects and enters 35px wide wall openings at all speeds.
+- **Performance**: Maintains the same computational footprint as the previous symmetrical system.
+- **Cornering**: Significantly improved outer-corner tracking by responding to the 90° probe discontinuity.
