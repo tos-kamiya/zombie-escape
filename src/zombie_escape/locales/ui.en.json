@@ -187,6 +187,10 @@
       "stage27": {
         "name": "#27 Lineformer",
         "description": "They like to line up."
+      },
+      "stage28": {
+        "name": "#28 Maze Attraction",
+        "description": "A maze meant to be fun. It seems some people were left behind."
       }
     },
     "status": {
