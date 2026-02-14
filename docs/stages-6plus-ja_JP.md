@@ -17,6 +17,7 @@
 | 動く床 | <img src="../imgs/exports/moving-floor.png" width="80"> | ステージ24 | 乗ると高速に移動できる床。 |
 | 空の燃料缶 | <img src="../imgs/exports/empty-fuel-can.png" width="80"> | ステージ26 | 空の燃料缶が出現するステージで使う取得アイテム。 |
 | 給油所 | <img src="../imgs/exports/fuel-station.png" width="80"> | ステージ26 | 空の燃料缶が出現するステージで空缶を満タンにする地点。 |
+| 行列ゾンビ | <img src="../imgs/exports/zombie-lineformer.png" width="80"> | ステージ27 | 列を作りたがるゾンビ。 |
 | 水たまり | <img src="../imgs/exports/puddle.png" width="80"> | ステージ28 | 水たまりセル上にいる間、移動速度が低下する。 |
 | トゲトゲの観葉植物 | <img src="../imgs/exports/houseplant.png" width="80"> | ステージ28 | トラップ系の障害物。引っかからないように通り過ぎるのは大変。ゾンビは引っかかる。 |
 
