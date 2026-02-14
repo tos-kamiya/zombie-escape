@@ -16,6 +16,8 @@ MOVING_FLOOR_MAP = {
 
 PITFALL_CHAR = "x"
 FALL_SPAWN_CHAR = "?"
+HOUSEPLANT_CHAR = "h"
+PUDDLE_CHAR = "w"
 
 
 def _read_ascii(path: str | None) -> list[str]:
@@ -72,7 +74,13 @@ def _collect_zone_letters(grid: list[str]) -> list[str]:
 
 
 def _validate_grid(grid: list[str]) -> None:
-    allowed = set(MOVING_FLOOR_MAP) | {PITFALL_CHAR, FALL_SPAWN_CHAR, "."}
+    allowed = set(MOVING_FLOOR_MAP) | {
+        PITFALL_CHAR,
+        FALL_SPAWN_CHAR,
+        HOUSEPLANT_CHAR,
+        PUDDLE_CHAR,
+        ".",
+    }
     allowed |= {chr(code) for code in range(ord("A"), ord("Z") + 1)}
     for y, row in enumerate(grid):
         for x, ch in enumerate(row):
@@ -95,6 +103,8 @@ def generate_zone_data(lines: list[str]) -> dict[str, object]:
     output["moving_floor_zones"] = moving_floor_zones
     output["pitfall_zones"] = _compress_rectangles(grid, PITFALL_CHAR)
     output["fall_spawn_zones"] = _compress_rectangles(grid, FALL_SPAWN_CHAR)
+    output["houseplant_zones"] = _compress_rectangles(grid, HOUSEPLANT_CHAR)
+    output["puddle_zones"] = _compress_rectangles(grid, PUDDLE_CHAR)
 
     for letter in _collect_zone_letters(grid):
         key = f"zone_{letter.lower()}"
