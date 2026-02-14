@@ -24,6 +24,7 @@ from ..entities_constants import (
     SHOES_HEIGHT,
     SHOES_WIDTH,
     SURVIVOR_MAX_SAFE_PASSENGERS,
+    ZombieKind,
 )
 from .constants import (
     FUEL_HINT_DURATION_MS,
