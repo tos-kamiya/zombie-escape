@@ -887,6 +887,7 @@ def generate_random_blueprint(
     houseplant_zones: list[tuple[int, int, int, int]] | None = None,
     puddle_density: float = 0.0,
     puddle_zones: list[tuple[int, int, int, int]] | None = None,
+    fall_spawn_zones: list[tuple[int, int, int, int]] | None = None,
 ) -> Blueprint:
     """Generate a single randomized blueprint grid without connectivity validation."""
     grid = _init_grid(cols, rows)
@@ -910,7 +911,6 @@ def generate_random_blueprint(
                 grid[my][mx] = "<"
             elif direction == MovingFloorDirection.RIGHT:
                 grid[my][mx] = ">"
-
     # Place zone-defined pitfalls
     if pitfall_zones:
         _place_pitfall_zones(

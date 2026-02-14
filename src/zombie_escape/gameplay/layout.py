@@ -437,19 +437,27 @@ def generate_level_from_blueprint(
         grid_cols=stage.grid_cols,
         grid_rows=stage.grid_rows,
     )
+    walkable_set = set(walkable_cells)
     floor_ratio = max(0.0, min(1.0, stage.fall_spawn_floor_ratio))
     if floor_ratio > 0.0 and interior_min_x <= interior_max_x:
         for y in range(interior_min_y, interior_max_y + 1):
             for x in range(interior_min_x, interior_max_x + 1):
+                cell = (x, y)
+                if cell not in walkable_set:
+                    continue
                 if RNG.random() < floor_ratio:
-                    fall_spawn_cells.add((x, y))
+                    fall_spawn_cells.add(cell)
         if not fall_spawn_cells:
-            fall_spawn_cells.add(
-                (
-                    RNG.randint(interior_min_x, interior_max_x),
-                    RNG.randint(interior_min_y, interior_max_y),
+            candidates = [
+                cell
+                for cell in walkable_set
+                if (
+                    interior_min_x <= cell[0] <= interior_max_x
+                    and interior_min_y <= cell[1] <= interior_max_y
                 )
-            )
+            ]
+            if candidates:
+                fall_spawn_cells.add(RNG.choice(candidates))
     layout.fall_spawn_cells = fall_spawn_cells
     layout.bevel_corners = bevel_corners
 

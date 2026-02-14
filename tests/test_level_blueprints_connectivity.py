@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from zombie_escape.level_blueprints import (
+    generate_random_blueprint,
     validate_car_connectivity,
     validate_connectivity,
     validate_humanoid_connectivity,
 )
 from zombie_escape.models import FuelMode
+from zombie_escape.rng import seed_rng
 
 
 def test_validate_car_connectivity_blocks_pitfalls() -> None:
@@ -46,7 +48,7 @@ def test_validate_connectivity_returns_reachable_cells_when_valid() -> None:
     assert (3, 1) in reachable  # exit cell
 
 
-def test_validate_car_connectivity_treats_moving_floor_as_blocked() -> None:
+def test_validate_car_connectivity_allows_moving_floor_cells() -> None:
     grid = [
         "BBBBBBB",
         "B.C...B",
@@ -55,7 +57,9 @@ def test_validate_car_connectivity_treats_moving_floor_as_blocked() -> None:
         "BBBBBBB",
     ]
 
-    assert validate_car_connectivity(grid) is None
+    reachable = validate_car_connectivity(grid)
+    assert reachable is not None
+    assert (3, 3) in reachable  # exit cell
 
 
 def test_validate_humanoid_connectivity_treats_moving_floor_as_blocked() -> None:
@@ -119,3 +123,46 @@ def test_validate_connectivity_refuel_respects_one_way_flow() -> None:
     assert (
         validate_connectivity(grid, fuel_mode=FuelMode.REFUEL_CHAIN) is None
     )
+
+
+def test_generate_random_blueprint_allows_puddle_density_on_fall_spawn_zone() -> None:
+    seed_rng(12345)
+    baseline = generate_random_blueprint(
+        steel_chance=0.0,
+        cols=10,
+        rows=10,
+        wall_algo="empty",
+        puddle_density=1.0,
+        fuel_count=0,
+        empty_fuel_can_count=0,
+        fuel_station_count=0,
+        flashlight_count=0,
+        shoes_count=0,
+    )
+    target = None
+    for y, row in enumerate(baseline.grid):
+        for x, ch in enumerate(row):
+            if ch == "w":
+                target = (x, y)
+                break
+        if target is not None:
+            break
+    assert target is not None
+
+    seed_rng(12345)
+    with_fall_zone = generate_random_blueprint(
+        steel_chance=0.0,
+        cols=10,
+        rows=10,
+        wall_algo="empty",
+        puddle_density=1.0,
+        fall_spawn_zones=[(target[0], target[1], 1, 1)],
+        fuel_count=0,
+        empty_fuel_can_count=0,
+        fuel_station_count=0,
+        flashlight_count=0,
+        shoes_count=0,
+    )
+
+    # Puddle density is allowed to overlap a configured fall-spawn zone.
+    assert with_fall_zone.grid[target[1]][target[0]] == "w"
