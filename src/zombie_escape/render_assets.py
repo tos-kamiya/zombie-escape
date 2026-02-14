@@ -1208,6 +1208,12 @@ def get_character_icon(kind: str, size: int) -> pygame.Surface:
             color=resolve_car_color(health_ratio=1.0, appearance="default"),
         )
         return surf
+    elif kind == "fuel_can":
+        return build_fuel_can_surface(size * 2, size * 2)
+    elif kind == "empty_fuel_can":
+        return build_empty_fuel_can_surface(size * 2, size * 2)
+    elif kind == "shoes":
+        return build_shoes_surface(size * 2, size * 2)
 
     # Fallback
     fallback = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)

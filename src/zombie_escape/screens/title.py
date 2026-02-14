@@ -151,6 +151,9 @@ def title_screen(
         "zombie_dog": get_character_icon("zombie_dog", icon_radius),
         "patrol_bot": get_character_icon("patrol_bot", icon_radius),
         "car": get_character_icon("car", icon_radius),
+        "fuel_can": get_character_icon("fuel_can", icon_radius),
+        "empty_fuel_can": get_character_icon("empty_fuel_can", icon_radius),
+        "shoes": get_character_icon("shoes", icon_radius),
         "pitfall": get_tile_icon("pitfall", icon_radius),
         "fall_spawn": get_tile_icon("fall_spawn", icon_radius),
         "moving_floor": get_tile_icon("moving_floor", icon_radius),
@@ -192,6 +195,15 @@ def title_screen(
 
         if stage.patrol_bot_spawn_rate > 0:
             icons.append(icon_surfaces["patrol_bot"])
+
+        from ..models import FuelMode
+        if stage.fuel_mode == FuelMode.FUEL_CAN:
+            icons.append(icon_surfaces["fuel_can"])
+        elif stage.fuel_mode == FuelMode.REFUEL_CHAIN:
+            icons.append(icon_surfaces["empty_fuel_can"])
+
+        if stage.initial_shoes_count > 0:
+            icons.append(icon_surfaces["shoes"])
 
         if stage.endurance_stage:
             icons.append(icon_surfaces["car_forbidden"])
