@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import random
 from typing import Iterable, Protocol, TYPE_CHECKING
 
 import pygame
@@ -639,8 +640,8 @@ class TrappedZombie(pygame.sprite.Sprite):
 
         # Jitter visuals at 1/4 speed
         if self.frame_counter % 4 == 0:
-            ox = RNG.uniform(-1.0, 1.0)
-            oy = RNG.uniform(-1.0, 1.0)
+            ox = random.uniform(-1.0, 1.0)
+            oy = random.uniform(-1.0, 1.0)
             self.rect.center = (int(self.x + ox), int(self.y + oy))
         self.frame_counter += 1
 
