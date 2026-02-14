@@ -190,7 +190,8 @@
       },
       "stage28": {
         "name": "#28 Maze Attraction",
-        "description": "A maze meant to be fun. It seems some people were left behind."
+        "description": "A maze meant to be fun. It seems some people were left behind.",
+        "intro": "The place I fled into was a maze attraction.\nIt seems some people are still left behind."
       }
     },
     "status": {
