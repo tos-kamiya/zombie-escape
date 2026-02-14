@@ -391,8 +391,10 @@ def title_screen(
             row_top = stage_rows_start
             for idx, option in enumerate(stage_options):
                 row_height = stage_row_heights[idx]
+                # Span highlight from left column start to right column end
+                full_content_width = (info_column_x + info_column_width) - list_column_x
                 highlight_rect = pygame.Rect(
-                    list_column_x, row_top - 2, list_column_width, row_height
+                    list_column_x, row_top - 2, full_content_width, row_height
                 )
                 cleared = stage_progress.get(option["stage"].id, 0) > 0
                 base_color = WHITE if cleared else _UNCLEARED_STAGE_COLOR
@@ -448,6 +450,7 @@ def title_screen(
             for idx, option in enumerate(resource_options):
                 option_idx = stage_count + idx
                 row_top = action_rows_start + idx * resource_row_height
+                # Highlight only the left column for resources
                 highlight_rect = pygame.Rect(
                     list_column_x, row_top - 2, list_column_width, resource_row_height
                 )
@@ -484,7 +487,16 @@ def title_screen(
                 )
 
             current = options[selected]
-            desc_area_top = section_top
+            # Adjust description vertical position to avoid overlap with selected stage name/icons.
+            # If in the first half of the current stage list, align to bottom of the stage block.
+            # Otherwise, align to top.
+            if current["type"] == "stage" and selected < stage_count // 2:
+                # Move down if selecting top items
+                desc_area_top = stage_rows_start + stage_count * base_row_height
+            else:
+                # Move up if selecting bottom items or non-stage options
+                desc_area_top = section_top
+
             if current["type"] == "stage":
                 desc_size = font_settings.scaled_size(11)
                 desc_font = _get_font(desc_size)
