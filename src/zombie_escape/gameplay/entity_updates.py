@@ -436,7 +436,7 @@ def update_entities(
     tracker_buckets: dict[tuple[int, int, int], list[Zombie]] = {}
     tracker_cell_size = ZOMBIE_TRACKER_CROWD_BAND_WIDTH
     angle_step = math.pi / 4.0
-    zombie_kinds = SpatialKind.ZOMBIE | SpatialKind.ZOMBIE_DOG
+    zombie_kinds = SpatialKind.ZOMBIE | SpatialKind.ZOMBIE_DOG | SpatialKind.TRAPPED_ZOMBIE
     patrol_kinds = SpatialKind.PATROL_BOT
     base_radius = ZOMBIE_SEPARATION_DISTANCE + PLAYER_SPEED
     for zombie in zombies_sorted:

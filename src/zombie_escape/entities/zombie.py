@@ -248,22 +248,32 @@ class Zombie(pygame.sprite.Sprite):
         self: Self,
         move_x: float,
         move_y: float,
-        zombies: Iterable[Zombie],
+        zombies: Iterable[pygame.sprite.Sprite],
     ) -> tuple[float, float]:
         """If another zombie is too close, steer directly away from the closest one."""
         orig_move_x, orig_move_y = move_x, move_y
         next_x = self.x + move_x
         next_y = self.y + move_y
 
-        closest: Zombie | None = None
+        closest: pygame.sprite.Sprite | None = None
         closest_dist_sq = ZOMBIE_SEPARATION_DISTANCE * ZOMBIE_SEPARATION_DISTANCE
         for other in zombies:
             if other is self or not other.alive():
                 continue
-            if self.kind != ZombieKind.LINEFORMER and other.kind == ZombieKind.LINEFORMER:
+            
+            # Lineformer logic: non-lineformers ignore lineformers
+            other_kind = getattr(other, "kind", None)
+            if self.kind != ZombieKind.LINEFORMER and other_kind == ZombieKind.LINEFORMER:
                 continue
-            dx = other.x - next_x
-            dy = other.y - next_y
+            
+            # Attributes check (TrappedZombie has x,y but is a different class)
+            ox = getattr(other, "x", None)
+            oy = getattr(other, "y", None)
+            if ox is None or oy is None:
+                continue
+
+            dx = ox - next_x
+            dy = oy - next_y
             if (
                 abs(dx) > ZOMBIE_SEPARATION_DISTANCE
                 or abs(dy) > ZOMBIE_SEPARATION_DISTANCE
@@ -278,7 +288,7 @@ class Zombie(pygame.sprite.Sprite):
             return move_x, move_y
 
         if self.kind == ZombieKind.WALL_HUGGER:
-            other_radius = float(closest.collision_radius)
+            other_radius = float(getattr(closest, "collision_radius", self.collision_radius))
             bump_dist_sq = (self.collision_radius + other_radius) ** 2
             if closest_dist_sq < bump_dist_sq and RNG.random() < 0.1:
                 if self.wall_hug_angle is None:
@@ -290,8 +300,8 @@ class Zombie(pygame.sprite.Sprite):
                     math.sin(self.wall_hug_angle) * self.speed,
                 )
 
-        away_dx = next_x - closest.x
-        away_dy = next_y - closest.y
+        away_dx = next_x - getattr(closest, "x", next_x)
+        away_dy = next_y - getattr(closest, "y", next_y)
         away_dist = math.hypot(away_dx, away_dy)
         if away_dist == 0:
             angle = RNG.uniform(0, 2 * math.pi)

@@ -743,8 +743,9 @@ STAGES: list[Stage] = [
         initial_interior_spawn_rate=0.05,
         houseplant_density=0.03,
         houseplant_zones=[(15, 10, 1, 3)],
-        zombie_normal_ratio=0.5,
-        zombie_dog_ratio=0.5,
+        zombie_normal_ratio=0.4,
+        zombie_dog_ratio=0.1,
+        zombie_lineformer_ratio=0.4,
         waiting_car_target_count=1,
     ),
 ]
