@@ -56,6 +56,7 @@ from ..render_constants import (
     PITFALL_EDGE_METAL_COLOR,
     PITFALL_EDGE_STRIPE_COLOR,
     PITFALL_EDGE_STRIPE_SPACING,
+    PUDDLE_TILE_COLOR,
     PLAYER_SHADOW_ALPHA_MULT,
     PLAYER_SHADOW_RADIUS_MULT,
     FADE_IN_DURATION_MS,
@@ -728,6 +729,7 @@ def _draw_play_area(
     outside_cells: set[tuple[int, int]],
     fall_spawn_cells: set[tuple[int, int]],
     pitfall_cells: set[tuple[int, int]],
+    puddle_cells: set[tuple[int, int]],
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection],
     electrified_cells: set[tuple[int, int]],
     cell_size: int,
@@ -884,6 +886,32 @@ def _draw_play_area(
                             width=2,
                         )
 
+                continue
+
+            if (x, y) in puddle_cells:
+                lx, ly = (
+                    x * grid_snap,
+                    y * grid_snap,
+                )
+                r = pygame.Rect(
+                    lx,
+                    ly,
+                    grid_snap,
+                    grid_snap,
+                )
+                sr = camera.apply_rect(r)
+                if sr.colliderect(screen_rect):
+                    pygame.draw.rect(screen, PUDDLE_TILE_COLOR, sr)
+                    # Simple wave/puddle effect
+                    wave_color = tuple(min(255, c + 30) for c in PUDDLE_TILE_COLOR)
+                    for i in range(2):
+                        wave_offset = (elapsed_ms // 200 + i * 2) % 4
+                        pygame.draw.ellipse(
+                            screen,
+                            wave_color,
+                            sr.inflate(-10 - wave_offset, -20 - wave_offset),
+                            width=1
+                        )
                 continue
 
             use_secondary = ((x // 2) + (y // 2)) % 2 == 0
@@ -1168,6 +1196,7 @@ def draw(
         outside_cells,
         game_data.layout.fall_spawn_cells,
         game_data.layout.pitfall_cells,
+        game_data.layout.puddle_cells,
         game_data.layout.moving_floor_cells,
         state.electrified_cells,
         game_data.cell_size,
