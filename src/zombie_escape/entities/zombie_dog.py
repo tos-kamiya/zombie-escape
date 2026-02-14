@@ -203,11 +203,8 @@ class ZombieDog(pygame.sprite.Sprite):
             if other is self or not other.alive():
                 continue
             
-            # Attributes check
-            ox = getattr(other, "x", None)
-            oy = getattr(other, "y", None)
-            if ox is None or oy is None:
-                continue
+            ox = other.x  # type: ignore[attr-defined]
+            oy = other.y  # type: ignore[attr-defined]
 
             dx = ox - next_x
             dy = oy - next_y
@@ -224,8 +221,8 @@ class ZombieDog(pygame.sprite.Sprite):
         if closest is None:
             return move_x, move_y
 
-        away_dx = next_x - getattr(closest, "x", next_x)
-        away_dy = next_y - getattr(closest, "y", next_y)
+        away_dx = next_x - closest.x  # type: ignore[attr-defined]
+        away_dy = next_y - closest.y  # type: ignore[attr-defined]
         away_dist = math.hypot(away_dx, away_dy)
         if away_dist == 0:
             angle = RNG.uniform(0, 2 * math.pi)

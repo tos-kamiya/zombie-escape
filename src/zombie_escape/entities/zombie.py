@@ -262,15 +262,14 @@ class Zombie(pygame.sprite.Sprite):
                 continue
             
             # Lineformer logic: non-lineformers ignore lineformers
-            other_kind = getattr(other, "kind", None)
+            other_kind = other.kind  # type: ignore[attr-defined]
             if self.kind != ZombieKind.LINEFORMER and other_kind == ZombieKind.LINEFORMER:
                 continue
             
-            # Attributes check (TrappedZombie has x,y but is a different class)
-            ox = getattr(other, "x", None)
-            oy = getattr(other, "y", None)
-            if ox is None or oy is None:
-                continue
+            # Type ignore because spatial index might contain other sprites, 
+            # but we only query ZOMBIE | ZOMBIE_DOG | TRAPPED_ZOMBIE
+            ox = other.x  # type: ignore[attr-defined]
+            oy = other.y  # type: ignore[attr-defined]
 
             dx = ox - next_x
             dy = oy - next_y
@@ -288,7 +287,7 @@ class Zombie(pygame.sprite.Sprite):
             return move_x, move_y
 
         if self.kind == ZombieKind.WALL_HUGGER:
-            other_radius = float(getattr(closest, "collision_radius", self.collision_radius))
+            other_radius = float(closest.collision_radius)  # type: ignore[attr-defined]
             bump_dist_sq = (self.collision_radius + other_radius) ** 2
             if closest_dist_sq < bump_dist_sq and RNG.random() < 0.1:
                 if self.wall_hug_angle is None:
@@ -300,8 +299,8 @@ class Zombie(pygame.sprite.Sprite):
                     math.sin(self.wall_hug_angle) * self.speed,
                 )
 
-        away_dx = next_x - getattr(closest, "x", next_x)
-        away_dy = next_y - getattr(closest, "y", next_y)
+        away_dx = next_x - closest.x  # type: ignore[attr-defined]
+        away_dy = next_y - closest.y  # type: ignore[attr-defined]
         away_dist = math.hypot(away_dx, away_dy)
         if away_dist == 0:
             angle = RNG.uniform(0, 2 * math.pi)
