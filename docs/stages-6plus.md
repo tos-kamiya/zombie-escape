@@ -19,7 +19,7 @@ Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/righ
 | Fuel Station | <img src="../imgs/exports/fuel-station.png" width="80"> | Stage 26 | Refills the empty fuel can in stages where the empty fuel can appears. |
 | Zombie (Lineformer) | <img src="../imgs/exports/zombie-lineformer.png" width="80"> | Stage 27 | A zombie that likes to form lines. |
 | Puddle | <img src="../imgs/exports/puddle.png" width="80"> | Stage 28 | Slows movement while you are on the puddle tile. |
-| Spiky Houseplant | <img src="../imgs/exports/houseplant.png" width="80"> | Stage 28 | Trap-style obstacle. It is hard to pass by without getting caught. Zombies get caught in it. |
+| Spiky Houseplant | <img src="../imgs/exports/houseplant.png" width="80"> | Stage 28 | It is hard to pass by without getting caught. Zombies get caught in it. |
 
 ## Fuel Rule Change (Stages with Empty Fuel Can)
 
