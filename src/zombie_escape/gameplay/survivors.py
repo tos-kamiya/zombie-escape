@@ -10,6 +10,7 @@ import pygame
 from ..entities_constants import (
     BUDDY_RADIUS,
     CAR_SPEED,
+    HOUSEPLANT_HUMANOID_SPEED_FACTOR,
     SURVIVOR_MAX_SAFE_PASSENGERS,
     SURVIVOR_MIN_SPEED_FACTOR,
     SURVIVOR_RADIUS,
@@ -76,6 +77,27 @@ def update_survivors(
         survivor.on_moving_floor = on_moving_floor
         if on_moving_floor:
             moving_floor_survivors.append(survivor)
+
+        # Houseplant slow-down
+        speed_factor = 1.0
+        if game_data.houseplants and game_data.cell_size > 0:
+            sx_idx = int(survivor.x // game_data.cell_size)
+            sy_idx = int(survivor.y // game_data.cell_size)
+            on_hp = False
+            for dy_idx in range(-1, 2):
+                for dx_idx in range(-1, 2):
+                    hp = game_data.houseplants.get((sx_idx + dx_idx, sy_idx + dy_idx))
+                    if hp and hp.alive():
+                        h_dx = survivor.x - hp.x
+                        h_dy = survivor.y - hp.y
+                        if h_dx * h_dx + h_dy * h_dy <= (survivor.collision_radius + hp.collision_radius) ** 2:
+                            on_hp = True
+                            break
+                if on_hp:
+                    break
+            if on_hp:
+                speed_factor = HOUSEPLANT_HUMANOID_SPEED_FACTOR
+
         survivor.update_behavior(
             target_pos,
             wall_group,
@@ -87,6 +109,7 @@ def update_survivors(
             drift=(drift_x, drift_y),
             player_collision_radius=player.collision_radius,
             now_ms=game_data.state.clock.elapsed_ms,
+            speed_factor=speed_factor,
         )
 
     # Gently prevent survivors from overlapping the player or each other

@@ -105,6 +105,7 @@ class Survivor(pygame.sprite.Sprite):
         player_collision_radius: float | None = None,
         drift: tuple[float, float] = (0.0, 0.0),
         now_ms: int,
+        speed_factor: float = 1.0,
     ) -> None:
         self.pending_pitfall_fall = False
         pitfall_cells = layout.pitfall_cells
@@ -140,6 +141,7 @@ class Survivor(pygame.sprite.Sprite):
                 now=now,
                 level_width=level_width,
                 level_height=level_height,
+                speed_factor=speed_factor,
             )
         else:
             self._update_survivor_behavior(
@@ -153,6 +155,7 @@ class Survivor(pygame.sprite.Sprite):
                 pitfall_cells=pitfall_cells,
                 walkable_cells=walkable_cells,
                 now=now,
+                speed_factor=speed_factor,
             )
 
     def _apply_drift_only(
@@ -166,8 +169,9 @@ class Survivor(pygame.sprite.Sprite):
         pitfall_cells: set[tuple[int, int]],
         walkable_cells: set[tuple[int, int]],
         now: int,
+        speed_factor: float = 1.0,
     ) -> None:
-        move_x, move_y = drift
+        move_x, move_y = drift[0] * speed_factor, drift[1] * speed_factor
         if move_x == 0.0 and move_y == 0.0:
             self.rect.center = (int(self.x), int(self.y))
             return
@@ -229,6 +233,7 @@ class Survivor(pygame.sprite.Sprite):
         now: int,
         level_width: int,
         level_height: int,
+        speed_factor: float = 1.0,
     ) -> None:
         drift_x, drift_y = drift
         if self.rescued or not self.following:
@@ -269,8 +274,8 @@ class Survivor(pygame.sprite.Sprite):
             return
 
         dist = math.sqrt(dist_sq)
-        move_x = (dx / dist) * BUDDY_FOLLOW_SPEED + drift_x
-        move_y = (dy / dist) * BUDDY_FOLLOW_SPEED + drift_y
+        move_x = (dx / dist) * BUDDY_FOLLOW_SPEED * speed_factor + drift_x
+        move_y = (dy / dist) * BUDDY_FOLLOW_SPEED * speed_factor + drift_y
 
         if cell_size is not None:
             move_x, move_y = apply_cell_edge_nudge(
@@ -366,6 +371,7 @@ class Survivor(pygame.sprite.Sprite):
         pitfall_cells: set[tuple[int, int]],
         walkable_cells: set[tuple[int, int]],
         now: int,
+        speed_factor: float = 1.0,
     ) -> None:
         drift_x, drift_y = drift
         dx = player_pos[0] - self.x
@@ -385,6 +391,7 @@ class Survivor(pygame.sprite.Sprite):
                     pitfall_cells=pitfall_cells,
                     walkable_cells=walkable_cells,
                     now=now,
+                    speed_factor=speed_factor,
                 )
                 self._update_input_facing(drift_x, drift_y)
                 self._update_facing_for_bump(False)
@@ -392,8 +399,8 @@ class Survivor(pygame.sprite.Sprite):
             return
 
         dist = math.sqrt(dist_sq)
-        move_x = (dx / dist) * SURVIVOR_APPROACH_SPEED + drift_x
-        move_y = (dy / dist) * SURVIVOR_APPROACH_SPEED + drift_y
+        move_x = (dx / dist) * SURVIVOR_APPROACH_SPEED * speed_factor + drift_x
+        move_y = (dy / dist) * SURVIVOR_APPROACH_SPEED * speed_factor + drift_y
 
         self._update_input_facing(move_x, move_y)
 
