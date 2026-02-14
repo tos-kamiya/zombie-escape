@@ -7,7 +7,7 @@ import pygame
 from pygame import sprite, surface
 
 from ..colors import LIGHT_GRAY, ORANGE, YELLOW
-from ..entities import Camera, Car, Player
+from ..entities import Camera, Car, Player, TrappedZombie
 from ..entities_constants import (
     CAR_HEIGHT,
     CAR_WIDTH,
@@ -111,10 +111,11 @@ def build_zombie_debug_counts_text(
     marker_count = max(0, int(lineformer_marker_count or 0))
     lineformer_total = lineformer + marker_count
     dog_count = sum(1 for kind in kinds if kind == ZombieKind.DOG)
-    normal = max(0, total - tracker - wall - lineformer - dog_count)
+    trapped_count = sum(1 for z in zombies if isinstance(z, TrappedZombie))
+    normal = max(0, total - tracker - wall - lineformer - dog_count - trapped_count)
     debug_counts = (
         f"Z:{total} N:{normal} T:{tracker} W:{wall} "
-        f"L:{lineformer}({lineformer_total}) D:{dog_count}"
+        f"L:{lineformer}({lineformer_total}) D:{dog_count} P:{trapped_count}"
     )
     if falling_spawn_carry is not None:
         debug_counts = f"{debug_counts} C:{max(0, falling_spawn_carry)}"
