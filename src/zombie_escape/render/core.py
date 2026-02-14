@@ -89,7 +89,7 @@ ELECTRIFIED_FLOOR_ACCENT_COLOR = (216, 200, 90)
 ELECTRIFIED_FLOOR_OVERLAY_ALPHA = 26
 ELECTRIFIED_FLOOR_BORDER_ALPHA = 140
 _PUDDLE_TILE_CACHE: dict[
-    tuple[int, tuple[int, int, int], int], surface.Surface
+    tuple[int, tuple[int, int, int], int, bool], surface.Surface
 ] = {}
 
 
@@ -203,37 +203,29 @@ def _get_puddle_tile_surface(
     cell_size: int,
     base_color: tuple[int, int, int],
     phase: int,
+    fall_spawn: bool,
 ) -> surface.Surface:
     key = (
         max(1, int(cell_size)),
         (int(base_color[0]), int(base_color[1]), int(base_color[2])),
         int(phase) % 4,
+        bool(fall_spawn),
     )
     cached = _PUDDLE_TILE_CACHE.get(key)
     if cached is not None:
         return cached
 
     size = key[0]
+    is_fall_spawn = key[3]
     puddle_tile = pygame.Surface((size, size), pygame.SRCALPHA)
     tile_rect = puddle_tile.get_rect()
 
     pygame.draw.rect(puddle_tile, key[1], tile_rect)
-    pygame.draw.rect(
-        puddle_tile,
-        (PUDDLE_TILE_COLOR[0], PUDDLE_TILE_COLOR[1], PUDDLE_TILE_COLOR[2], 60),
-        tile_rect,
-    )
 
     wave_color = (
         min(255, PUDDLE_TILE_COLOR[0] + 40),
         min(255, PUDDLE_TILE_COLOR[1] + 40),
         min(255, PUDDLE_TILE_COLOR[2] + 40),
-        170,
-    )
-    border_color = (
-        wave_color[0],
-        wave_color[1],
-        wave_color[2],
         140,
     )
     base_wave_offset = key[2]
@@ -241,16 +233,8 @@ def _get_puddle_tile_surface(
         -int(size * 0.3) - base_wave_offset,
         -int(size * 0.4) - base_wave_offset,
     )
-    border_rect = base_wave_rect.inflate(int(size * 0.68), int(size * 0.68))
-    pygame.draw.ellipse(
-        puddle_tile,
-        border_color,
-        border_rect,
-        width=1,
-    )
-
     for i in range(2):
-        wave_offset = (base_wave_offset + i * 2) % 4
+        wave_offset = base_wave_offset + i * 2
         wave_rect = tile_rect.inflate(
             -int(size * 0.3) - wave_offset,
             -int(size * 0.5) - wave_offset,
@@ -263,6 +247,14 @@ def _get_puddle_tile_surface(
             wave_rect,
             width=1,
         )
+
+    border_rect = base_wave_rect.inflate(int(size * 0.68), int(size * 0.68))
+    pygame.draw.ellipse(
+        puddle_tile,
+        wave_color,
+        border_rect,
+        width=1,
+    )
 
     _PUDDLE_TILE_CACHE[key] = puddle_tile
     return puddle_tile
@@ -991,6 +983,7 @@ def _draw_play_area(
                         cell_size=grid_snap,
                         base_color=base_color,
                         phase=((elapsed_ms // 400) + parity_phase_offset),
+                        fall_spawn=((x, y) in fall_spawn_cells),
                     )
                     screen.blit(puddle_tile, sr.topleft)
                 continue
