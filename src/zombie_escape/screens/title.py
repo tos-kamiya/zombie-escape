@@ -14,6 +14,7 @@ from ..models import Stage
 from ..progress import load_progress
 from ..render import blit_text_wrapped, wrap_text
 from ..render_assets import (
+    build_flashlight_surface,
     get_character_icon,
     get_tile_icon,
 )
@@ -153,6 +154,7 @@ def title_screen(
         "car": get_character_icon("car", icon_radius),
         "fuel_can": get_character_icon("fuel_can", icon_radius),
         "empty_fuel_can": get_character_icon("empty_fuel_can", icon_radius),
+        "flashlight": build_flashlight_surface(int(icon_radius * 3.2), int(icon_radius * 3.2)),
         "shoes": get_character_icon("shoes", icon_radius),
         "pitfall": get_tile_icon("pitfall", icon_radius),
         "fall_spawn": get_tile_icon("fall_spawn", icon_radius),
@@ -169,13 +171,34 @@ def title_screen(
     pygame.draw.line(car_forbidden, (255, 50, 50), (cw - 2, 1), (1, ch - 2), width=2)
     icon_surfaces["car_forbidden"] = car_forbidden
 
+    flashlight_forbidden = icon_surfaces["flashlight"].copy()
+    fw, fh = flashlight_forbidden.get_size()
+    pygame.draw.line(
+        flashlight_forbidden, (255, 50, 50), (1, 1), (fw - 2, fh - 2), width=2
+    )
+    pygame.draw.line(
+        flashlight_forbidden, (255, 50, 50), (fw - 2, 1), (1, fh - 2), width=2
+    )
+    icon_surfaces["flashlight_forbidden"] = flashlight_forbidden
+
     def _get_stage_icons(stage: Stage) -> list[pygame.Surface]:
         icons = []
+        # 1) Clear-condition related
+        if stage.endurance_stage:
+            icons.append(icon_surfaces["car_forbidden"])
+
+        from ..models import FuelMode
+        if stage.fuel_mode == FuelMode.FUEL_CAN:
+            icons.append(icon_surfaces["fuel_can"])
+        elif stage.fuel_mode == FuelMode.REFUEL_CHAIN:
+            icons.append(icon_surfaces["empty_fuel_can"])
+
         if stage.buddy_required_count > 0:
             icons.append(icon_surfaces["buddy"])
         if stage.survivor_rescue_stage:
             icons.append(icon_surfaces["survivor"])
 
+        # 2) Zombies and plants
         has_zombie = (
             stage.exterior_spawn_weight > 0
             or stage.interior_spawn_weight > 0
@@ -195,32 +218,26 @@ def title_screen(
         if stage.zombie_dog_ratio > 0:
             icons.append(icon_surfaces["zombie_dog"])
 
-        if stage.patrol_bot_spawn_rate > 0:
-            icons.append(icon_surfaces["patrol_bot"])
+        if stage.houseplant_density > 0 or stage.houseplant_zones:
+            icons.append(icon_surfaces["houseplant"])
 
-        from ..models import FuelMode
-        if stage.fuel_mode == FuelMode.FUEL_CAN:
-            icons.append(icon_surfaces["fuel_can"])
-        elif stage.fuel_mode == FuelMode.REFUEL_CHAIN:
-            icons.append(icon_surfaces["empty_fuel_can"])
-
-        if stage.initial_shoes_count > 0:
-            icons.append(icon_surfaces["shoes"])
-
-        if stage.endurance_stage:
-            icons.append(icon_surfaces["car_forbidden"])
-
-        # Floor features
-        if stage.pitfall_density > 0 or stage.pitfall_zones:
-            icons.append(icon_surfaces["pitfall"])
+        # 3) Environment (floor types)
         if stage.interior_fall_spawn_weight > 0 or stage.fall_spawn_zones or stage.fall_spawn_floor_ratio > 0:
             icons.append(icon_surfaces["fall_spawn"])
+        if stage.pitfall_density > 0 or stage.pitfall_zones:
+            icons.append(icon_surfaces["pitfall"])
         if stage.moving_floor_zones or stage.moving_floor_cells:
             icons.append(icon_surfaces["moving_floor"])
         if stage.puddle_density > 0 or stage.puddle_zones:
             icons.append(icon_surfaces["puddle"])
-        if stage.houseplant_density > 0 or stage.houseplant_zones:
-            icons.append(icon_surfaces["houseplant"])
+
+        # 4) Helper items/allies
+        if stage.initial_flashlight_count <= 0:
+            icons.append(icon_surfaces["flashlight_forbidden"])
+        if stage.initial_shoes_count > 0:
+            icons.append(icon_surfaces["shoes"])
+        if stage.patrol_bot_spawn_rate > 0:
+            icons.append(icon_surfaces["patrol_bot"])
 
         return icons
 
