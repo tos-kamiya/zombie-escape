@@ -15,6 +15,7 @@
     },
     "menu": {
       "settings": "Settings",
+      "fullscreen_toggle": "Toggle Fullscreen",
       "quit": "Quit",
       "locked_suffix": "[Locked]",
       "window_hint": "Resize window: [ to shrink by one step (400x300), ] to enlarge by one step.\nF: toggle fullscreen.",
@@ -38,6 +39,7 @@
       },
       "option_help": {
         "settings": "Open Settings to adjust assists and localization.",
+        "fullscreen_toggle": "Toggle fullscreen/windowed mode.",
         "quit": "Close the game.",
         "readme": "Open the GitHub README in your browser. License information is also available there.",
         "readme_stage6": "Open the Stage 6+ guide in your browser."

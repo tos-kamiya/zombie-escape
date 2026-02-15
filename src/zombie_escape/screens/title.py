@@ -121,7 +121,7 @@ class TitleScreenController:
                 self.other_page_size,
             ):
                 self.stage_pages.append(self.stage_options_all[i : i + self.other_page_size])
-        self.resource_options: list[dict[str, Any]] = [
+        self.resource_base_options: list[dict[str, Any]] = [
             {"type": "settings"},
             {"type": "readme"},
             {"type": "quit"},
@@ -313,12 +313,19 @@ class TitleScreenController:
     def _build_options(
         self, page_index: int
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        resource_options = self._build_resource_options(page_index)
         if not self.stage_pages:
-            return list(self.resource_options), []
+            return resource_options, []
         page_index = max(0, min(page_index, len(self.stage_pages) - 1))
         stage_options = self.stage_pages[page_index]
-        options = list(stage_options) + self.resource_options
+        options = list(stage_options) + resource_options
         return options, stage_options
+
+    def _build_resource_options(self, page_index: int) -> list[dict[str, Any]]:
+        options = list(self.resource_base_options)
+        if page_index == 0:
+            options.insert(1, {"type": "fullscreen"})
+        return options
 
     def _switch_page(self, delta: int) -> None:
         if delta < 0:
@@ -352,6 +359,10 @@ class TitleScreenController:
                 seed_text=self.current_seed_text,
                 seed_is_auto=self.current_seed_auto,
             )
+        if current["type"] == "fullscreen":
+            toggle_fullscreen()
+            adjust_menu_logical_size()
+            return None
         if current["type"] == "readme":
             _open_readme_link(use_stage6=self.current_page > 0)
             return None
@@ -571,7 +582,8 @@ class TitleScreenController:
 
             resource_option_size = font_settings.scaled_size(11)
             resource_option_font = _get_font(resource_option_size)
-            for idx, option in enumerate(self.resource_options):
+            resource_options = self._build_resource_options(self.current_page)
+            for idx, option in enumerate(resource_options):
                 option_idx = stage_count + idx
                 row_top = action_rows_start + idx * resource_row_height
                 highlight_rect = pygame.Rect(
@@ -583,6 +595,8 @@ class TitleScreenController:
                     pygame.draw.rect(self.screen, highlight_color, highlight_rect)
                 if option["type"] == "settings":
                     label = tr("menu.settings")
+                elif option["type"] == "fullscreen":
+                    label = tr("menu.fullscreen_toggle")
                 elif option["type"] == "readme":
                     label_key = (
                         "menu.readme_stage6" if self.current_page > 0 else "menu.readme"
@@ -646,6 +660,8 @@ class TitleScreenController:
             help_text = ""
             if current["type"] == "settings":
                 help_text = tr("menu.option_help.settings")
+            elif current["type"] == "fullscreen":
+                help_text = tr("menu.option_help.fullscreen_toggle")
             elif current["type"] == "quit":
                 help_text = tr("menu.option_help.quit")
             elif current["type"] == "readme":
