@@ -2,6 +2,11 @@
 
 This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 
+## Status
+
+- Gameplay mouse steering: DOING
+- Menu mouse navigation (title/settings/game over/pause): INPROGRESS
+
 ## Mouse Steering During Gameplay
 
 ### Goal
@@ -44,7 +49,40 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Mouse steering is ignored while the gameplay window is unfocused.
 - Window focus state should gate mouse steering input to avoid unintended movement from platform-specific mouse event behavior.
 
+## Mouse Navigation In Menu Screens (INPROGRESS)
+
+### Scope
+
+- Title screen
+- Settings screen
+- Game-over screen
+- In-game pause menu
+
+### Rules
+
+1. Cursor visibility
+- Show OS mouse cursor on the screens in scope.
+- Keep keyboard/gamepad navigation enabled at the same time.
+
+2. Hover and selection ownership
+- Mouse motion updates the current selection by hover.
+- Keyboard/gamepad directional input can still move selection.
+- The most recent device interaction owns the visible selection.
+
+3. Click activation
+- Activate items on left-button release (`MOUSEBUTTONUP`).
+- Do not activate disabled/locked items.
+
+4. Focus safety
+- Ignore hover updates and click activation while the window is unfocused.
+- After focus is regained, suppress mouse activation briefly to avoid accidental click-through.
+- Minimum guard: one frame after focus regain.
+
+5. Pause screen requirement
+- Pause must provide explicit selectable menu items (for example: Resume / Return to Title) so mouse navigation has concrete targets.
+
 ## Follow-ups
 
-- Tune deadzone size and cursor visuals based on playtest feedback.
-- Add focused tests for input priority and focus-gated mouse steering.
+- Tune gameplay deadzone and cursor visuals based on playtest feedback.
+- Define final pause menu item set and layout.
+- Add focused tests for input priority and focus-gated mouse interactions.
