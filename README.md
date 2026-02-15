@@ -31,12 +31,14 @@ This game is a simple 2D top-down action game where the player aims to escape by
 -   **Quit Game:** `ESC`/Select (from pause)
 -   **Restart:** `R` key (on Game Over/Clear screen)
 -   **Window/Fullscreen:** `[` to shrink by one step (400x300), `]` to enlarge by one step, `F` to toggle fullscreen
+    -   After any of these operations, gameplay is forced into pause so input/focus state stays explicit.
 -   **FPS Overlay:** Launch with `--show-fps` (implied by `--debug`)
 -   **Time Acceleration:** Hold either `Shift` key or `R1` to run the entire world 4x faster; release to return to normal speed.
 
 **Mouse**
 
 -   **Gameplay** While holding left mouse button, the player moves toward the cursor. Moving the cursor into a corner hotspot triangle pauses the game.
+    -   Resizing the OS window by mouse drag also forces gameplay pause.
 -   **Title/Settings/etc.** Select items by releasing left mouse button.
 
 ## Title Screen
