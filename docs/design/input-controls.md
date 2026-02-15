@@ -7,8 +7,8 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Gameplay mouse steering: DONE
 - Menu mouse navigation (title/settings/game over/pause): INPROGRESS
 - Menu mouse navigation progress:
-  - DONE: title screen, settings screen
-  - INPROGRESS: game-over screen, in-game pause menu
+  - DONE: title screen, settings screen, game-over screen
+  - INPROGRESS: in-game pause menu
 
 ## Mouse Steering During Gameplay
 
@@ -84,6 +84,10 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 
 5. Pause screen requirement
 - Pause must provide explicit selectable menu items (for example: Resume / Return to Title) so mouse navigation has concrete targets.
+
+6. Game-over menu presentation
+- Game-over screen uses explicit selectable buttons (`Return to Title`, `Retry Stage`) instead of a separate key-help line.
+- Each button label includes one representative shortcut hint (for example: `ESC/SOUTH`, `R/START`).
 
 ## Follow-ups
 
