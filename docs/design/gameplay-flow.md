@@ -19,6 +19,16 @@ Key implementation files:
 - `src/zombie_escape/stage_constants.py` (stage feature flags and progression defaults consumed by init/spawn)
 - `src/zombie_escape/gameplay/entity_updates.py` (frame-level movement/AI/timer update orchestration)
 - `src/zombie_escape/input_utils.py` (screen-agnostic action mapping and input snapshots)
+- `src/zombie_escape/screens/gameplay.py` (runtime event handling, pause transitions, and debug-only pause marker)
+
+## Pause and Window Events
+
+- Gameplay enters manual pause on:
+  - `P`/Start or `ESC`/Select in normal play flow.
+  - Corner hotspot mouse hover.
+  - Window mode changes via `[` / `]` / `F`.
+  - Runtime resize events (`VIDEORESIZE`, `WINDOWSIZECHANGED`).
+- In `--debug` runs (pause overlay hidden), paused state renders a small `-- paused --` marker near the top edge.
 
 ## Spawn Phase
 

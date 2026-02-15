@@ -7,6 +7,7 @@ This folder collects developer-facing setup/build notes.
 - `docs/developer/windows-build.md`: Windows binary build notes (PyInstaller).
 - `docs/developer/zone-from-ascii.md`: ASCII map to zone settings tool.
 - `docs/developer/wall-hug-optimization.md`: Parameter tuning for wall-hugging AI.
+- `docs/developer/user-input-spec.md`: User input normalization spec and window-operation pause rules.
 
 ## Quick Setup (3.12)
 

@@ -5,6 +5,7 @@ Primary implementation: `src/zombie_escape/windowing.py`
 ## Fullscreen and Logical Resolution
 
 - Toggle fullscreen/windowed with `F` (startup is windowed).
+- In gameplay, fullscreen/scale changes trigger manual pause immediately after the mode change.
 - Fullscreen selection tries SDL2 display detection from current window location.
 - Falls back to generic fullscreen mode when display detection fails.
 - Window restore tries last window position (may be ignored by some Wayland environments).
@@ -19,6 +20,7 @@ Primary implementation: `src/zombie_escape/windowing.py`
   - fullscreen toggle
   - window scale changes
   - logical-size related mode changes
+- Gameplay treats `VIDEORESIZE` / `WINDOWSIZECHANGED` as pause triggers to avoid ambiguous input/focus transitions right after resize.
 
 ## Platform Stability Notes
 

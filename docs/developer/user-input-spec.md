@@ -1,184 +1,197 @@
-# ユーザー操作仕様（入力正規化・リファクタリング設計）
+# User Input Specification (Normalization and Runtime Policy)
 
-この文書は、`zombie-escape` におけるユーザー操作入力を一元管理するための仕様を定義する。
-対象はキーボードおよびジョイパッド（コントローラー/ジョイスティック）であり、既存挙動を維持しつつ、画面ごとの分岐重複を減らすことを目的とする。
+This document defines how `zombie-escape` handles player input and related
+window/runtime input behavior. It is the implementation-oriented source of
+truth for developers.
 
-## 1. 目的
+Scope:
 
-- 画面ごとに分散している `KEYDOWN` / `JOYBUTTONDOWN` / `JOYHATMOTION` 分岐を統合する。
-- 「デバイス依存の入力」ではなく「ゲーム内アクション」で判定できるようにする。
-- 既存操作（キーマップ・ゲーム体験）を維持したまま、拡張容易性と保守性を上げる。
+- Keyboard, mouse, and gamepad/joystick input normalization.
+- Gameplay pause behavior triggered by input and window operations.
+- Screen-level usage contract for normalized input snapshots.
 
-## 2. 入力分類
+Out of scope:
 
-入力は次の3カテゴリに分類する。
+- Key remapping UI.
+- Multiplayer input routing.
+- Replay/recorded input systems.
 
-### 2.1 KeyboardOnly
+## 1. Goals
 
-キーボード専用で扱う入力。ゲーム進行の共通操作ではなく、UI/ユーティリティ操作・文字入力を含む。
+- Keep gameplay and menu control behavior consistent across devices.
+- Reduce per-screen duplicated event branching.
+- Separate raw device events from game action semantics.
+- Make window/focus transitions predictable during gameplay.
 
-- 例:
-  - タイトルのシード入力（`0-9`, `Backspace`）
-  - ウィンドウ操作（`[`, `]`, `F`）
-  - 設定リセット（`R`）
+## 2. Input Categories
 
-### 2.2 AnalogVectorOnly
+Input is grouped into three categories.
 
-アナログスティック由来の連続ベクトル入力。
+### 2.1 Keyboard-Only
 
-- 対象:
-  - 左スティック（`x`, `y`）
-- 非対象:
-  - D-pad / HAT（これらは離散方向入力として CommonAction に正規化する）
+Keyboard-driven actions that should not be abstracted into cross-device
+actions.
 
-### 2.3 CommonAction
+Examples:
 
-キーボード・ジョイパッドの差異を吸収し、共通キーとして扱う離散操作。
+- Seed text entry on title screen.
+- Window operations: `[` / `]` / `F`.
+- Screen-local utility keys such as settings reset.
 
-- `confirm`（決定）
-- `back`（戻る）
-- `start`（開始/ポーズ）
-- `up`, `down`, `left`, `right`（離散方向）
-- `accel`（時間加速）
+### 2.2 Analog Vector
 
-注: 画面ごとの意味付け（例: `start` が「再挑戦」か「ポーズ」か）は各画面で決める。入力層は意味付けしない。
+Continuous movement vectors from analog input sources.
 
-## 3. 正規化ヘルパの責務
+- Controller API: left stick axes.
+- Joystick API: axis 0/1 fallback.
+- Deadzone is applied before values are exposed.
 
-`InputHelper`（名称は実装時に調整可）を導入し、以下を責務とする。
+### 2.3 Common Actions
 
-- デバイス接続管理
-  - controller/joystick の初期化
-  - デバイス追加/削除イベント反映
-- フレーム入力収集
-  - イベント列と `pygame.key.get_pressed()` を受け取り、正規化状態を作る
-- 入力状態提供
-  - `pressed`（このフレームで押下）
-  - `released`（このフレームで離した）
-  - `held`（押下継続中）
-- ベクトル入力提供
-  - `analog_vector`（左スティック）
-  - `move_vector`（必要時のみ: analog + dpad/hat の合成）
+Device-agnostic discrete actions used by screens and gameplay logic.
 
-## 4. 推奨データモデル
+- `CONFIRM`
+- `BACK`
+- `START`
+- `UP`
+- `DOWN`
+- `LEFT`
+- `RIGHT`
+- `ACCEL`
+
+Screen semantics are screen-defined. Example: `START` means pause in gameplay,
+but may mean open/advance in other screens.
+
+## 3. Normalization Responsibilities
+
+`InputHelper` is responsible for:
+
+- Initializing and tracking controller/joystick availability.
+- Handling device add/remove events.
+- Building per-frame `InputSnapshot` from event stream + key state.
+- Exposing `pressed`, `released`, `held` states for Common Actions.
+- Exposing movement vectors (`analog_vector`, `move_vector`).
+
+`InputHelper` should not decide game semantics (pause, retry, screen transition).
+Those remain screen responsibilities.
+
+## 4. Data Model
+
+Current target model:
 
 ```python
-from dataclasses import dataclass
-from enum import Enum, auto
-
-class CommonAction(Enum):
-    CONFIRM = auto()
-    BACK = auto()
-    START = auto()
-    UP = auto()
-    DOWN = auto()
-    LEFT = auto()
-    RIGHT = auto()
-    ACCEL = auto()
-
 @dataclass(frozen=True)
 class ActionState:
-    pressed: bool
-    released: bool
-    held: bool
+    pressed: bool = False
+    released: bool = False
+    held: bool = False
 
 @dataclass(frozen=True)
 class InputSnapshot:
     actions: dict[CommonAction, ActionState]
-    analog_vector: tuple[float, float]   # left stick only
-    move_vector: tuple[float, float]     # analog + dpad/hat (gameplay用)
-    text_input: str                       # KEYDOWN.unicode の連結
-    keyboard_only_keys_pressed: set[int]  # このフレームで押されたキー
+    analog_vector: tuple[float, float]
+    move_vector: tuple[float, float]
+    text_input: str
+    keyboard_pressed_keys: set[int]
 ```
 
-## 5. マッピング仕様
+Notes:
 
-### 5.1 CommonAction の標準マップ
+- `text_input` is populated only when `include_text=True`.
+- `keyboard_pressed_keys` stores this-frame key presses for keyboard-only logic.
+
+## 5. Default Mappings
+
+### 5.1 Common Actions
 
 - `CONFIRM`
   - Keyboard: `Enter`, `Space`
-  - Gamepad: `South (A)`
+  - Gamepad: South (`A`)
 - `BACK`
-  - Keyboard: `Escape`（画面により `Backspace` 追加可）
-  - Gamepad: `Select/Back`
+  - Keyboard: `Escape`
+  - Gamepad: `Back/Select`
 - `START`
-  - Keyboard: `P`（画面により `R` は KeyboardOnly）
+  - Keyboard: `P`
   - Gamepad: `Start`
-- `UP/DOWN/LEFT/RIGHT`
-  - Keyboard: `Arrow`, `WASD`
-  - Gamepad: D-pad, HAT
+- `UP`/`DOWN`/`LEFT`/`RIGHT`
+  - Keyboard: arrows + `WASD`
+  - Gamepad: D-pad / hat
 - `ACCEL`
-  - Keyboard: `LShift`, `RShift`
-  - Gamepad: `R1` または `Right Trigger > deadzone`
+  - Keyboard: `LShift` / `RShift`
+  - Gamepad: `RB` and/or right trigger threshold
 
-### 5.2 AnalogVectorOnly の標準マップ
+### 5.2 Analog Vector
 
-- `analog_vector`
-  - Controller API: `LEFTX`, `LEFTY`（deadzone 適用）
-  - Joystick API: axis `0`, `1`（deadzone 適用）
+- Left stick (controller API) or axis fallback (joystick API).
+- Deadzone filtering is mandatory.
 
-### 5.3 KeyboardOnly の扱い
+### 5.3 Keyboard-Only Operations
 
-`InputSnapshot.keyboard_only_keys_pressed` と `text_input` を使って処理する。
+- Title seed text entry and edit behavior.
+- Gameplay window operations (`[` / `]` / `F`).
+- Screen-specific utility keys (for example, settings reset).
 
-- タイトル画面
-  - シード数字入力（`text_input`）
-  - `Backspace` で自動シードへ戻す
-- 全画面共通
-  - `[`/`]`/`F` によるウィンドウ管理
-- 設定画面
-  - `R` デフォルト復帰
+## 6. Gameplay Pause and Window Policy
 
-## 6. 画面側の利用契約
+To keep input/focus transitions explicit and safe in gameplay:
 
-各 `screens/*.py` は原則として次の順で入力処理する。
+- Enter manual pause after `[` / `]` / `F` window operations.
+- Enter manual pause on runtime resize events:
+  - `VIDEORESIZE`
+  - `WINDOWSIZECHANGED`
+- In `--debug` mode (when pause overlay is hidden), render a small
+  `-- paused --` marker near the top of the screen while paused.
 
-1. `snapshot = input_helper.poll(events, keys)` を取得
-2. KeyboardOnly を処理
-3. CommonAction を処理
-4. Gameplay では `snapshot.move_vector` を `process_player_input()` に渡す
+This behavior is intentional and should be preserved unless replaced by a
+documented alternative policy.
 
-禁止事項:
+## 7. Screen Usage Contract
 
-- 画面側で `JOYBUTTONDOWN`/`JOYHATMOTION` の個別分岐を再実装しない
-- 画面側で controller/joystick の生 API を直接読まない
+Each `screens/*.py` should process input in this order:
 
-## 7. 既存挙動との互換要件
+1. Read events.
+2. Handle screen-level window/runtime events.
+3. Build `snapshot = input_helper.snapshot(events, keys, ...)`.
+4. Process Keyboard-Only input.
+5. Process Common Actions.
+6. For gameplay movement, use `snapshot.move_vector` plus keyboard/mouse policy.
 
-- 必須互換:
-  - タイトル/設定/ゲームプレイ/ゲームオーバーの操作体験を維持
-  - スタートアップ画面の「confirm 長押し解除待ち」を維持
-  - デバイス hotplug（追加/削除）を維持
-- 許容差分:
-  - 内部実装の分岐場所
-  - 入力ヘルパのクラス名/ファイル配置
+Avoid:
 
-## 8. 実装方針（段階移行）
+- Re-implementing raw gamepad button/hat branching in each screen.
+- Reading controller/joystick raw APIs directly in screen code unless there is a
+  documented exception.
 
-1. `input_utils.py` に `InputHelper` と `InputSnapshot` を追加
-2. 既存関数（`is_confirm_event` 等）は互換レイヤとして残す
-3. `title.py` と `settings.py` を先行移行（分岐削減効果が大きい）
-4. `game_over.py` と `startup_check.py` を移行
-5. `gameplay.py` を移行し、`read_gamepad_move()` 呼び出しを `snapshot.move_vector` に置換
-6. 旧分岐の削除と最終整理
+## 8. Compatibility Requirements
 
-## 9. 検証項目
+Required:
 
-- キーボードのみで全画面遷移可能
-- ジョイパッドのみで全画面遷移可能（KeyboardOnly 操作を除く）
-- アナログスティックと D-pad/HAT の競合時に移動ベクトルが破綻しない
-- `ACCEL`（Shift/R1/RT）動作が現行どおり
-- デバイス抜き差し中にクラッシュしない
+- Keyboard-only operation works across title/settings/gameplay/game-over.
+- Gamepad-only operation works for non-keyboard-only actions.
+- Device hotplug does not crash and recovers cleanly.
+- Acceleration behavior remains consistent with current gameplay expectations.
 
-## 10. 非目標（この仕様で扱わない）
+Allowed internal changes:
 
-- キーコンフィグUIの追加
-- 複数コントローラー同時プレイ
-- 入力遅延補正・リプレイ入力記録
+- Function/class naming.
+- Module boundaries and helper layering.
+- Event handling location, as long as runtime behavior remains equivalent.
 
----
+## 9. Validation Checklist
 
-運用ルール:
+- Verify keyboard navigation across all major screens.
+- Verify gamepad navigation across all major screens.
+- Verify analog + D-pad/hat interaction does not produce unstable vectors.
+- Verify `ACCEL` behavior for Shift and gamepad equivalents.
+- Verify pause enters after `[` / `]` / `F` and resize events.
+- Verify `--debug` paused marker is visible while paused.
+- Verify device add/remove handling during runtime.
 
-- 入力仕様変更時は、この文書と `docs/design/README.md` から辿れる該当設計章を同時更新する。
-- 画面固有の新規キー追加は、必ず「KeyboardOnly / CommonAction / AnalogVectorOnly」のいずれかに分類して記述する。
+## 10. Maintenance Rules (Updated)
+
+- When input behavior changes, update this document in the same change set.
+- When gameplay pause/window policy changes, update both:
+  - `docs/developer/user-input-spec.md`
+  - `docs/design/gameplay-flow.md` and/or `docs/design/windowing-platform.md`
+- Keep this spec implementation-focused; keep long design rationale in design docs.
+- If a new screen introduces keyboard-only controls, add them to section 5.3.
