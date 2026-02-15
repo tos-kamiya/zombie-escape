@@ -5,10 +5,10 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 ## Status
 
 - Gameplay mouse steering: DONE
-- Menu mouse navigation (title/settings/game over/pause): INPROGRESS
+- Menu mouse navigation (title/settings/game over/pause): DONE
 - Menu mouse navigation progress:
-  - DONE: title screen, settings screen, game-over screen
-  - INPROGRESS: in-game pause menu
+  - DONE: title screen, settings screen, game-over screen, in-game pause menu
+- Input UI abstraction (mouse guard + clickable map): INPROGRESS
 
 ## Mouse Steering During Gameplay
 
@@ -82,8 +82,9 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - After focus is regained, suppress mouse activation briefly to avoid accidental click-through.
 - Minimum guard: one frame after focus regain.
 
-5. Pause screen requirement
-- Pause must provide explicit selectable menu items (for example: Resume / Return to Title) so mouse navigation has concrete targets.
+5. Pause screen behavior
+- Pause provides explicit selectable menu items (`Resume`, `Return to Title`) so mouse navigation has concrete targets.
+- While paused, OS cursor is visible and menu items are selectable by hover + left-button release.
 
 6. Game-over menu presentation
 - Game-over screen uses explicit selectable buttons (`Return to Title`, `Retry Stage`) instead of a separate key-help line.
@@ -93,4 +94,5 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 
 - Tune gameplay deadzone and cursor visuals based on playtest feedback.
 - Define final pause menu item set and layout.
+- Consolidate repeated menu mouse-input code via shared input utilities.
 - Add focused tests for input priority and focus-gated mouse interactions.

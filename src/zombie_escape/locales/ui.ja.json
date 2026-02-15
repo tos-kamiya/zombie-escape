@@ -215,6 +215,8 @@
       "need_empty_fuel_can": "燃料缶が必要です！",
       "internal_error": "内部エラー",
       "paused": "一時停止",
+      "pause_menu_resume": "ゲーム再開 (P/START)",
+      "pause_menu_title": "タイトルに戻る (ESC/SELECT)",
       "pause_hint": "P/Start: ゲーム再開  ESC/Select: タイトルに戻る",
       "endurance_timer_label": "夜明けまであと %{time}",
       "time_accel": ">> 4x",

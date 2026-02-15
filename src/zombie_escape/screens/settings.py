@@ -11,8 +11,11 @@ from ..colors import BLACK, GREEN, LIGHT_GRAY, WHITE
 from ..config import DEFAULT_CONFIG, save_config
 from ..font_utils import load_font
 from ..input_utils import (
+    ClickTarget,
+    ClickableMap,
     CommonAction,
     InputHelper,
+    MouseUiGuard,
 )
 from ..localization import (
     get_font_settings,
@@ -195,7 +198,8 @@ def settings_screen(
     row_hitboxes: list[pygame.Rect] = [pygame.Rect(0, 0, 0, 0) for _ in range(row_count)]
     left_toggle_hitboxes: list[pygame.Rect | None] = [None for _ in range(row_count)]
     right_toggle_hitboxes: list[pygame.Rect | None] = [None for _ in range(row_count)]
-    mouse_guard_frames = 0
+    row_click_map = ClickableMap()
+    mouse_ui_guard = MouseUiGuard()
 
     def _exit_settings() -> dict[str, Any]:
         save_config(working, config_path)
@@ -213,6 +217,7 @@ def settings_screen(
         row_hitboxes = [pygame.Rect(0, 0, 0, 0) for _ in range(row_count)]
         left_toggle_hitboxes = [None for _ in range(row_count)]
         right_toggle_hitboxes = [None for _ in range(row_count)]
+        row_targets: list[ClickTarget] = []
 
         screen.fill(BLACK)
         try:
@@ -319,6 +324,7 @@ def settings_screen(
                     col_x, row_y_current - 2, row_width, row_height
                 )
                 row_hitboxes[idx] = highlight_rect.copy()
+                row_targets.append(ClickTarget(idx, highlight_rect.copy()))
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
@@ -484,6 +490,7 @@ def settings_screen(
             )
         except pygame.error as e:
             print(f"Error rendering settings: {e}")
+        row_click_map.set_targets(row_targets)
 
         present(screen)
         clock.tick(fps)
@@ -498,33 +505,27 @@ def settings_screen(
                 adjust_menu_logical_size()
                 continue
             if event.type == pygame.WINDOWFOCUSLOST:
+                mouse_ui_guard.handle_focus_event(event)
                 continue
             if event.type == pygame.WINDOWFOCUSGAINED:
-                mouse_guard_frames = 1
+                mouse_ui_guard.handle_focus_event(event)
                 continue
             if (
                 event.type == pygame.MOUSEMOTION
-                and pygame.mouse.get_focused()
-                and mouse_guard_frames == 0
+                and mouse_ui_guard.can_process_mouse()
             ):
-                for idx, rect in enumerate(row_hitboxes):
-                    if rect.collidepoint(event.pos):
-                        selected = idx
-                        break
+                hover_target = row_click_map.pick_hover(event.pos)
+                if isinstance(hover_target, int):
+                    selected = hover_target
                 continue
             if (
                 event.type == pygame.MOUSEBUTTONUP
                 and event.button == 1
-                and pygame.mouse.get_focused()
-                and mouse_guard_frames == 0
+                and mouse_ui_guard.can_process_mouse()
             ):
-                clicked_index: int | None = None
-                for idx, rect in enumerate(row_hitboxes):
-                    if rect.collidepoint(event.pos):
-                        clicked_index = idx
-                        break
-                if clicked_index is not None:
-                    selected = clicked_index
+                clicked_target = row_click_map.pick_click(event.pos)
+                if isinstance(clicked_target, int):
+                    selected = clicked_target
                     current_row = rows[selected]
                     row_type = current_row.get("type", "toggle")
                     if row_type == "action":
@@ -591,5 +592,4 @@ def settings_screen(
         _render_frame()
         present(screen)
         clock.tick(fps)
-        if mouse_guard_frames > 0:
-            mouse_guard_frames -= 1
+        mouse_ui_guard.end_frame()

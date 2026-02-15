@@ -20,8 +20,11 @@ from ..render_assets import (
 )
 from ..rng import generate_seed
 from ..input_utils import (
+    ClickTarget,
+    ClickableMap,
     CommonAction,
     InputHelper,
+    MouseUiGuard,
 )
 from ..screens import (
     ScreenID,
@@ -153,10 +156,9 @@ class TitleScreenController:
         )
         self.selected = min(selected_stage_index, len(self.options) - 1)
         self.input_helper = InputHelper()
-        self.option_hitboxes: list[pygame.Rect] = []
-        self.mouse_guard_frames = 0
-        self.page_left_button_rect = pygame.Rect(0, 0, 0, 0)
-        self.page_right_button_rect = pygame.Rect(0, 0, 0, 0)
+        self.option_click_map = ClickableMap()
+        self.page_button_click_map = ClickableMap()
+        self.mouse_ui_guard = MouseUiGuard()
         self.stage_pane_rect = pygame.Rect(0, 0, 0, 0)
 
         pygame.mouse.set_visible(True)
@@ -365,7 +367,8 @@ class TitleScreenController:
         self.screen.fill(BLACK)
         try:
             font_settings = get_font_settings()
-            self.option_hitboxes = [pygame.Rect(0, 0, 0, 0) for _ in self.options]
+            option_targets: list[ClickTarget] = []
+            page_targets: list[ClickTarget] = []
             self.stage_pane_rect = pygame.Rect(0, 0, 0, 0)
 
             def _get_font(size: int) -> pygame.font.Font:
@@ -421,8 +424,6 @@ class TitleScreenController:
                 list_column_width,
                 line_height_scale=font_settings.line_height_scale,
             )
-            self.page_left_button_rect = pygame.Rect(0, 0, 0, 0)
-            self.page_right_button_rect = pygame.Rect(0, 0, 0, 0)
             if show_page_arrows:
                 tri_w = 8
                 tri_h = 12
@@ -459,7 +460,7 @@ class TitleScreenController:
                     if mouse_focused and left_bg.collidepoint(mouse_pos):
                         pygame.draw.rect(self.screen, highlight_color, left_bg)
                     pygame.draw.polygon(self.screen, tri_color_enabled, left_points)
-                    self.page_left_button_rect = left_bg
+                    page_targets.append(ClickTarget("page_left", left_bg))
                 if right_enabled:
                     right_bg = pygame.Rect(
                         right_cx - tri_w // 2 - pad,
@@ -470,7 +471,7 @@ class TitleScreenController:
                     if mouse_focused and right_bg.collidepoint(mouse_pos):
                         pygame.draw.rect(self.screen, highlight_color, right_bg)
                     pygame.draw.polygon(self.screen, tri_color_enabled, right_points)
-                    self.page_right_button_rect = right_bg
+                    page_targets.append(ClickTarget("page_right", right_bg))
             stage_header_rect = pygame.Rect(
                 list_column_x, section_top, max(header_width, 1), header_height
             )
@@ -522,7 +523,7 @@ class TitleScreenController:
                 highlight_rect = pygame.Rect(
                     list_column_x, row_top - 2, full_content_width, row_height
                 )
-                self.option_hitboxes[idx] = highlight_rect.copy()
+                option_targets.append(ClickTarget(idx, highlight_rect.copy()))
                 cleared = self.stage_progress.get(option["stage"].id, 0) > 0
                 base_color = WHITE if cleared else _UNCLEARED_STAGE_COLOR
                 color = base_color
@@ -569,7 +570,7 @@ class TitleScreenController:
                 highlight_rect = pygame.Rect(
                     list_column_x, row_top - 2, list_column_width, resource_row_height
                 )
-                self.option_hitboxes[option_idx] = highlight_rect.copy()
+                option_targets.append(ClickTarget(option_idx, highlight_rect.copy()))
                 is_selected = option_idx == self.selected
                 if is_selected:
                     pygame.draw.rect(self.screen, highlight_color, highlight_rect)
@@ -754,6 +755,8 @@ class TitleScreenController:
                 self.width - version_topleft[0],
                 line_height_scale=font_settings.line_height_scale,
             )
+            self.option_click_map.set_targets(option_targets)
+            self.page_button_click_map.set_targets(page_targets)
         except pygame.error as exc:
             print(f"Error rendering title screen: {exc}")
 
@@ -769,43 +772,40 @@ class TitleScreenController:
             adjust_menu_logical_size()
             return None
         if event.type == pygame.WINDOWFOCUSLOST:
+            self.mouse_ui_guard.handle_focus_event(event)
             return None
         if event.type == pygame.WINDOWFOCUSGAINED:
-            self.mouse_guard_frames = 1
+            self.mouse_ui_guard.handle_focus_event(event)
             return None
         if (
             event.type == pygame.MOUSEMOTION
-            and pygame.mouse.get_focused()
-            and self.mouse_guard_frames == 0
+            and self.mouse_ui_guard.can_process_mouse()
         ):
-            for idx, rect in enumerate(self.option_hitboxes):
-                if rect.collidepoint(event.pos):
-                    self.selected = idx
-                    break
+            target = self.option_click_map.pick_hover(event.pos)
+            if isinstance(target, int):
+                self.selected = target
             return None
         if (
             event.type == pygame.MOUSEBUTTONUP
             and event.button == 1
-            and pygame.mouse.get_focused()
-            and self.mouse_guard_frames == 0
+            and self.mouse_ui_guard.can_process_mouse()
             and pygame.time.get_ticks() >= self.confirm_armed_at
         ):
-            if self.page_left_button_rect.collidepoint(event.pos):
+            page_target = self.page_button_click_map.pick_click(event.pos)
+            if page_target == "page_left":
                 self._switch_page(-1)
                 return None
-            if self.page_right_button_rect.collidepoint(event.pos):
+            if page_target == "page_right":
                 self._switch_page(1)
                 return None
-            for idx, rect in enumerate(self.option_hitboxes):
-                if not rect.collidepoint(event.pos):
-                    continue
-                self.selected = idx
+            target = self.option_click_map.pick_click(event.pos)
+            if isinstance(target, int):
+                self.selected = target
                 return self._activate_current_selection()
             return None
         if (
             event.type == pygame.MOUSEWHEEL
-            and pygame.mouse.get_focused()
-            and self.mouse_guard_frames == 0
+            and self.mouse_ui_guard.can_process_mouse()
         ):
             if self.stage_pane_rect.collidepoint(pygame.mouse.get_pos()):
                 wheel_y = int(getattr(event, "y", 0))
@@ -871,8 +871,7 @@ class TitleScreenController:
             self._render_frame()
             present(self.screen)
             self.clock.tick(self.fps)
-            if self.mouse_guard_frames > 0:
-                self.mouse_guard_frames -= 1
+            self.mouse_ui_guard.end_frame()
 
 
 def title_screen(

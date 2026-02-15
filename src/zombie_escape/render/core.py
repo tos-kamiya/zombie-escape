@@ -354,13 +354,18 @@ def blit_message_wrapped(
         print(f"Error rendering font or surface: {e}")
 
 
-def draw_pause_overlay(screen: pygame.Surface) -> None:
+def draw_pause_overlay(
+    screen: pygame.Surface,
+    *,
+    menu_labels: list[str] | None = None,
+    selected_index: int = 0,
+) -> list[pygame.Rect]:
     screen_width, screen_height = screen.get_size()
     overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 150))
-    pause_radius = 53
+    pause_radius = 34
     cx = screen_width // 2
-    cy = screen_height // 2 - 18
+    cy = screen_height // 2 - 20
     pygame.draw.circle(
         overlay,
         LIGHT_GRAY,
@@ -368,9 +373,9 @@ def draw_pause_overlay(screen: pygame.Surface) -> None:
         pause_radius,
         width=3,
     )
-    bar_width = 10
-    bar_height = 38
-    gap = 12
+    bar_width = 6
+    bar_height = 22
+    gap = 8
     pygame.draw.rect(
         overlay,
         LIGHT_GRAY,
@@ -387,15 +392,36 @@ def draw_pause_overlay(screen: pygame.Surface) -> None:
         tr("hud.paused"),
         GAMEPLAY_FONT_SIZE,
         WHITE,
-        (screen_width // 2, 28),
+        (screen_width // 2, cy - pause_radius - 14),
     )
-    blit_message(
-        screen,
-        tr("hud.pause_hint"),
-        GAMEPLAY_FONT_SIZE,
-        LIGHT_GRAY,
-        (screen_width // 2, screen_height // 2 + 70),
-    )
+    option_rects: list[pygame.Rect] = []
+    if menu_labels:
+        font_settings = get_font_settings()
+        menu_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+        line_height = int(round(menu_font.get_linesize() * font_settings.line_height_scale))
+        row_height = line_height + 6
+        menu_width = max(140, int(screen_width * 0.34))
+        menu_top = cy + pause_radius + 10
+        highlight_color = (70, 70, 70)
+        for idx, label in enumerate(menu_labels):
+            rect = pygame.Rect(
+                screen_width // 2 - menu_width // 2,
+                menu_top + idx * row_height,
+                menu_width,
+                row_height,
+            )
+            if idx == selected_index:
+                pygame.draw.rect(screen, highlight_color, rect)
+            text_surface = render_text_surface(
+                menu_font,
+                label,
+                WHITE,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            text_rect = text_surface.get_rect(center=rect.center)
+            screen.blit(text_surface, text_rect)
+            option_rects.append(rect)
+    return option_rects
 
 
 def _max_flashlight_pickups() -> int:

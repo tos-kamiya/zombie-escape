@@ -9,8 +9,11 @@ from ..colors import BLACK, GREEN, LIGHT_GRAY, RED, WHITE
 from ..font_utils import load_font, render_text_surface
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 from ..input_utils import (
+    ClickTarget,
+    ClickableMap,
     CommonAction,
     InputHelper,
+    MouseUiGuard,
 )
 from ..localization import get_font_settings
 from ..localization import translate as tr
@@ -49,8 +52,8 @@ def game_over_screen(
     if stage is not None:
         options.append({"id": "retry", "label": tr("game_over.menu_retry")})
     selected = 0
-    option_hitboxes: list[pygame.Rect] = [pygame.Rect(0, 0, 0, 0) for _ in options]
-    mouse_guard_frames = 0
+    option_click_map = ClickableMap()
+    mouse_ui_guard = MouseUiGuard()
 
     def _activate_option(option_id: str) -> ScreenTransition:
         if option_id == "retry" and stage is not None:
@@ -205,7 +208,7 @@ def game_over_screen(
         menu_center_x = screen_width // 2
         menu_top = screen_height // 2 + 18
         menu_width = max(140, int(screen_width * 0.32))
-        option_hitboxes = [pygame.Rect(0, 0, 0, 0) for _ in options]
+        option_targets: list[ClickTarget] = []
         highlight_color = (70, 70, 70)
         for idx, option in enumerate(options):
             row_rect = pygame.Rect(
@@ -214,12 +217,13 @@ def game_over_screen(
                 menu_width,
                 row_height,
             )
-            option_hitboxes[idx] = row_rect
+            option_targets.append(ClickTarget(idx, row_rect))
             if idx == selected:
                 pygame.draw.rect(screen, highlight_color, row_rect)
             label_surface = menu_font.render(option["label"], False, WHITE)
             label_rect = label_surface.get_rect(center=row_rect.center)
             screen.blit(label_surface, label_rect)
+        option_click_map.set_targets(option_targets)
 
         _draw_status_bar(
             screen,
@@ -241,30 +245,28 @@ def game_over_screen(
                 sync_window_size(event, game_data=game_data)
                 continue
             if event.type == pygame.WINDOWFOCUSLOST:
+                mouse_ui_guard.handle_focus_event(event)
                 continue
             if event.type == pygame.WINDOWFOCUSGAINED:
-                mouse_guard_frames = 1
+                mouse_ui_guard.handle_focus_event(event)
                 continue
             if (
                 event.type == pygame.MOUSEMOTION
-                and pygame.mouse.get_focused()
-                and mouse_guard_frames == 0
+                and mouse_ui_guard.can_process_mouse()
             ):
-                for idx, rect in enumerate(option_hitboxes):
-                    if rect.collidepoint(event.pos):
-                        selected = idx
-                        break
+                hover_target = option_click_map.pick_hover(event.pos)
+                if isinstance(hover_target, int):
+                    selected = hover_target
                 continue
             if (
                 event.type == pygame.MOUSEBUTTONUP
                 and event.button == 1
-                and pygame.mouse.get_focused()
-                and mouse_guard_frames == 0
+                and mouse_ui_guard.can_process_mouse()
             ):
-                for idx, rect in enumerate(option_hitboxes):
-                    if rect.collidepoint(event.pos):
-                        selected = idx
-                        return _activate_option(options[idx]["id"])
+                clicked_target = option_click_map.pick_click(event.pos)
+                if isinstance(clicked_target, int):
+                    selected = clicked_target
+                    return _activate_option(options[clicked_target]["id"])
                 continue
             input_helper.handle_device_event(event)
             if event.type == pygame.KEYDOWN:
@@ -293,5 +295,4 @@ def game_over_screen(
             return ScreenTransition(ScreenID.TITLE)
         if snapshot.pressed(CommonAction.CONFIRM):
             return _activate_option(options[selected]["id"])
-        if mouse_guard_frames > 0:
-            mouse_guard_frames -= 1
+        mouse_ui_guard.end_frame()

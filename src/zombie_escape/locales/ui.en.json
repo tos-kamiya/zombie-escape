@@ -215,6 +215,8 @@
       "need_empty_fuel_can": "Need an empty fuel can first!",
       "internal_error": "Internal error",
       "paused": "PAUSED",
+      "pause_menu_resume": "RESUME (P/START)",
+      "pause_menu_title": "RETURN TO TITLE (ESC/SELECT)",
       "pause_hint": "P/Start: Resume · ESC/Select: Return to Title",
       "endurance_timer_label": "Until dawn %{time}",
       "time_accel": ">> 4x",

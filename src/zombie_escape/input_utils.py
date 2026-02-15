@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Iterable, Sequence, Tuple
+from typing import Any, Iterable, Sequence, Tuple
 
 import pygame
 
@@ -66,6 +66,51 @@ class InputSnapshot:
     def held(self, action: CommonAction) -> bool:
         state = self.actions.get(action)
         return bool(state and state.held)
+
+
+@dataclass(frozen=True)
+class ClickTarget:
+    target_id: Any
+    rect: pygame.Rect
+    enabled: bool = True
+
+
+class ClickableMap:
+    """Simple rect-based target map for hover/click selection."""
+
+    def __init__(self) -> None:
+        self._targets: list[ClickTarget] = []
+
+    def set_targets(self, targets: Iterable[ClickTarget]) -> None:
+        self._targets = list(targets)
+
+    def pick_hover(self, pos: tuple[int, int]) -> Any | None:
+        for target in self._targets:
+            if target.enabled and target.rect.collidepoint(pos):
+                return target.target_id
+        return None
+
+    def pick_click(self, pos: tuple[int, int]) -> Any | None:
+        return self.pick_hover(pos)
+
+
+class MouseUiGuard:
+    """Focus-aware mouse gate with one-frame suppression after focus regain."""
+
+    def __init__(self, *, regain_guard_frames: int = 1) -> None:
+        self._regain_guard_frames = max(0, int(regain_guard_frames))
+        self._guard_frames = 0
+
+    def handle_focus_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.WINDOWFOCUSGAINED:
+            self._guard_frames = self._regain_guard_frames
+
+    def can_process_mouse(self) -> bool:
+        return bool(pygame.mouse.get_focused()) and self._guard_frames == 0
+
+    def end_frame(self) -> None:
+        if self._guard_frames > 0:
+            self._guard_frames -= 1
 
 
 class InputHelper:

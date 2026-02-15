@@ -47,8 +47,11 @@ from ..gameplay.constants import (
     LAYER_ITEMS,
 )
 from ..input_utils import (
+    ClickTarget,
+    ClickableMap,
     CommonAction,
     InputHelper,
+    MouseUiGuard,
 )
 from ..gameplay.spawn import _alive_waiting_cars
 from ..world_grid import build_wall_index
@@ -269,6 +272,10 @@ class GameplayScreenRunner:
         self.profiling_active = False
         self.paused_manual = False
         self.paused_focus = False
+        self.pause_selected_index = 0
+        self.pause_option_ids = ["resume", "title"]
+        self.pause_option_click_map = ClickableMap()
+        self.pause_mouse_ui_guard = MouseUiGuard()
         self.debug_overview = False
         self.reported_internal_errors: set[str] = set()
         self.input_helper = InputHelper()
@@ -310,11 +317,11 @@ class GameplayScreenRunner:
             if transition is not None:
                 return transition
 
-            self._set_mouse_hidden(pygame.mouse.get_focused())
-
             if self.paused_manual or self.paused_focus:
+                self._set_mouse_hidden(False)
                 self._render_paused_state(current_fps)
                 continue
+            self._set_mouse_hidden(pygame.mouse.get_focused())
 
             self._update_world(dt, input_snapshot)
             if self.debug_overview:
@@ -443,10 +450,34 @@ class GameplayScreenRunner:
             self.input_helper.handle_device_event(event)
             if event.type == pygame.WINDOWFOCUSLOST:
                 self.paused_focus = True
+                self.pause_selected_index = 0
+                self.pause_mouse_ui_guard.handle_focus_event(event)
             if event.type == pygame.WINDOWFOCUSGAINED:
-                self.paused_focus = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                self.paused_focus = False
+                self.pause_mouse_ui_guard.handle_focus_event(event)
+            if (
+                (self.paused_manual or self.paused_focus)
+                and event.type == pygame.MOUSEMOTION
+                and self.pause_mouse_ui_guard.can_process_mouse()
+            ):
+                hover_target = self.pause_option_click_map.pick_hover(event.pos)
+                if isinstance(hover_target, int):
+                    self.pause_selected_index = hover_target
+                continue
+            if (
+                (self.paused_manual or self.paused_focus)
+                and event.type == pygame.MOUSEBUTTONUP
+                and event.button == 1
+                and self.pause_mouse_ui_guard.can_process_mouse()
+            ):
+                click_target = self.pause_option_click_map.pick_click(event.pos)
+                if isinstance(click_target, int):
+                    self.pause_selected_index = click_target
+                    transition = self._activate_pause_selection()
+                    if transition is not None:
+                        return transition, self.input_helper.snapshot(
+                            events, pygame.key.get_pressed()
+                        )
+                continue
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_F10:
                     if self.profiler is not None:
@@ -476,16 +507,33 @@ class GameplayScreenRunner:
                 return self._finalize(ScreenTransition(ScreenID.TITLE)), snapshot
             if snapshot.pressed(CommonAction.START):
                 self.paused_manual = not self.paused_manual
+                if self.paused_manual:
+                    self.pause_selected_index = 0
         else:
-            if self.paused_manual:
-                if snapshot.pressed(CommonAction.BACK):
-                    return self._finalize(ScreenTransition(ScreenID.TITLE)), snapshot
-                if snapshot.pressed(CommonAction.START):
-                    self.paused_manual = False
-            elif snapshot.pressed(CommonAction.BACK) or snapshot.pressed(
-                CommonAction.START
+            if not (self.paused_manual or self.paused_focus) and (
+                snapshot.pressed(CommonAction.BACK) or snapshot.pressed(CommonAction.START)
             ):
                 self.paused_manual = True
+                self.pause_selected_index = 0
+            elif self.paused_manual or self.paused_focus:
+                if snapshot.pressed(CommonAction.UP):
+                    self.pause_selected_index = (
+                        self.pause_selected_index - 1
+                    ) % len(self.pause_option_ids)
+                if snapshot.pressed(CommonAction.DOWN):
+                    self.pause_selected_index = (
+                        self.pause_selected_index + 1
+                    ) % len(self.pause_option_ids)
+                if snapshot.pressed(CommonAction.START):
+                    self.paused_manual = False
+                    self.paused_focus = False
+                elif snapshot.pressed(CommonAction.BACK):
+                    return self._finalize(ScreenTransition(ScreenID.TITLE)), snapshot
+                elif snapshot.pressed(CommonAction.CONFIRM):
+                    transition = self._activate_pause_selection()
+                    if transition is not None:
+                        return transition, snapshot
+        self.pause_mouse_ui_guard.end_frame()
         return None, snapshot
 
     def _update_world(self, dt: float, input_snapshot: Any) -> None:
@@ -670,8 +718,29 @@ class GameplayScreenRunner:
                 fps=current_fps,
             )
         if self.show_pause_overlay:
-            draw_pause_overlay(self.screen)
+            labels = [tr("hud.pause_menu_resume"), tr("hud.pause_menu_title")]
+            option_rects = draw_pause_overlay(
+                self.screen,
+                menu_labels=labels,
+                selected_index=self.pause_selected_index,
+            )
+            targets = [
+                ClickTarget(i, rect)
+                for i, rect in enumerate(option_rects)
+                if i < len(self.pause_option_ids)
+            ]
+            self.pause_option_click_map.set_targets(targets)
         present(self.screen)
+
+    def _activate_pause_selection(self) -> ScreenTransition | None:
+        selected_id = self.pause_option_ids[self.pause_selected_index]
+        if selected_id == "resume":
+            self.paused_manual = False
+            self.paused_focus = False
+            return None
+        if selected_id == "title":
+            return self._finalize(ScreenTransition(ScreenID.TITLE))
+        return None
 
     def _is_game_finished(self, frame_ms: int, current_fps: float) -> bool:
         assert self.game_data is not None
