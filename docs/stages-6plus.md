@@ -2,6 +2,10 @@
 
 Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/right to select later stages.
 
+## Control Recommendation (Stage 21+)
+
+From Stage 21 onward (when zombie dogs appear), a gamepad or mouse is recommended. Zombie dogs can rush in quickly from outside your view, so keyboard-only control can lead to over-pressing movement keys.
+
 ## New Additions in Stage 6+
 
 | Name | Image | First Appears | Notes |
@@ -29,7 +33,3 @@ In stages where the empty fuel can appears, fuel handling is different:
 - Stages where the empty fuel can appears: `Player -> empty fuel can -> fuel station -> car`
 
 You cannot skip the station in stages where the empty fuel can appears.
-
-## Control Recommendation (Stage 21+)
-
-From Stage 21 onward (when zombie dogs appear), a gamepad is recommended. Zombie dogs can rush in quickly from outside your view, so with a keyboard, you might end up hitting the keys harder than you mean to.
