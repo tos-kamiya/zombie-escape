@@ -23,6 +23,8 @@ This game is a simple 2D top-down action game where the player aims to escape by
 
 ## Controls
 
+**Keyboard/Gamepad**
+
 -   **Player/Car Movement:** `W` / `↑` (Up), `A` / `←` (Left), `S` / `↓` (Down), `D` / `→` (Right)
 -   **Enter Car:** Overlap the player with the car.
 -   **Pause:** `P`/Start or `ESC`/Select
@@ -31,6 +33,11 @@ This game is a simple 2D top-down action game where the player aims to escape by
 -   **Window/Fullscreen:** `[` to shrink by one step (400x300), `]` to enlarge by one step, `F` to toggle fullscreen
 -   **FPS Overlay:** Launch with `--show-fps` (implied by `--debug`)
 -   **Time Acceleration:** Hold either `Shift` key or `R1` to run the entire world 4x faster; release to return to normal speed.
+
+**Mouse**
+
+-   **Gameplay** While holding left mouse button, the player moves toward the cursor. Moving the cursor into a corner hotspot triangle pauses the game.
+-   **Title/Settings/etc.** Select items by releasing left mouse button.
 
 ## Title Screen
 
