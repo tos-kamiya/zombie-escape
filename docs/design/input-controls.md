@@ -4,7 +4,7 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 
 ## TODO: Mouse Steering During Gameplay
 
-Status: planned, not implemented yet.
+Status: phase 1 implemented (follow-up TODOs remain).
 
 ### Goal
 
@@ -15,6 +15,7 @@ Status: planned, not implemented yet.
 
 1. Simultaneous availability
 - Keyboard, gamepad, and mouse can all be enabled.
+- No dedicated settings toggle is required for mouse steering.
 
 2. Priority order per frame
 - Evaluate keyboard/gamepad movement first.
@@ -23,7 +24,7 @@ Status: planned, not implemented yet.
 
 3. Mouse steering activation
 - Mouse movement steering is active only while mouse button is pressed.
-- Recommended default: left mouse button.
+- Current default: left mouse button.
 - While active, movement direction is computed from:
   - `mouse_screen_pos - player_screen_pos`
 
@@ -35,6 +36,15 @@ Status: planned, not implemented yet.
 - Always use current player screen position to avoid feel changes near map edges.
 
 6. Cursor visibility
-- During mouse steering, show a clear in-game cursor style suitable for gameplay readability.
-- Outside active mouse steering, normal menu/window mouse usage should remain unhindered.
+- Keep OS cursor hidden during gameplay (`pygame.mouse.set_visible(False)`).
+- During active mouse steering, draw a clear in-game cursor style suitable for gameplay readability.
+- Outside active mouse steering, do not draw the in-game cursor.
 
+7. Focus safety
+- Mouse steering is ignored while the gameplay window is unfocused.
+- Window focus state should gate mouse steering input to avoid unintended movement from platform-specific mouse event behavior.
+
+## TODO Follow-ups
+
+- Tune deadzone size and cursor visual style based on playtest feedback.
+- Add focused tests for input priority and focus-gated mouse steering.

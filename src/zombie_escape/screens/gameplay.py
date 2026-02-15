@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -76,6 +77,7 @@ if TYPE_CHECKING:
 
 
 _SHARED_FOG_CACHE: dict[str, Any] | None = None
+_MOUSE_STEERING_DEADZONE_SCALE = 2.0
 
 
 def _resolve_hint_target_type(
@@ -269,6 +271,10 @@ class GameplayScreenRunner:
         self.debug_overview = False
         self.reported_internal_errors: set[str] = set()
         self.input_helper = InputHelper()
+        self.mouse_steering_active = False
+        self.mouse_cursor_screen_pos: tuple[int, int] | None = None
+        self.mouse_player_screen_pos: tuple[int, int] | None = None
+        self.mouse_steering_deadzone_px = 0
 
         self.game_data: Any = None
         self.overview_surface: surface.Surface | None = None
@@ -501,19 +507,24 @@ class GameplayScreenRunner:
             )
             game_data.wall_index_dirty = False
         wall_index = game_data.wall_index
+        pad_vector = input_snapshot.move_vector
 
         for _ in range(substeps):
             player_ref = game_data.player
             if player_ref is None:
                 break
             car_ref = game_data.car
-            pad_vector = input_snapshot.move_vector
+            steering_pad = self._resolve_steering_pad_input(
+                player=player_ref,
+                keys=keys,
+                pad_vector=pad_vector,
+            )
             player_dx, player_dy, car_dx, car_dy = process_player_input(
                 keys,
                 player_ref,
                 car_ref,
                 shoes_count=state.shoes_count,
-                pad_input=pad_vector,
+                pad_input=steering_pad,
             )
             if (
                 state.timed_message
@@ -624,6 +635,7 @@ class GameplayScreenRunner:
             hint_color=hint_color,
             fps=current_fps,
         )
+        self._draw_mouse_steering_overlay()
         if self.profiling_active:
             font_settings = get_font_settings()
             font = load_font(font_settings.resource, font_settings.scaled_size(11))
@@ -735,6 +747,94 @@ class GameplayScreenRunner:
                 y += line_height
         present(self.screen)
         pygame.event.pump()
+
+    def _resolve_steering_pad_input(
+        self,
+        *,
+        player: Any,
+        keys: Any,
+        pad_vector: tuple[float, float],
+    ) -> tuple[float, float]:
+        keyboard_vector = self._read_keyboard_vector(keys)
+        keyboard_active = keyboard_vector != (0.0, 0.0)
+        pad_active = pad_vector != (0.0, 0.0)
+        if keyboard_active or pad_active:
+            self.mouse_steering_active = False
+            self.mouse_cursor_screen_pos = None
+            self.mouse_player_screen_pos = None
+            self.mouse_steering_deadzone_px = 0
+            return pad_vector
+        mouse_vector = self._read_mouse_steering_vector(player)
+        if mouse_vector is None:
+            return pad_vector
+        return mouse_vector
+
+    @staticmethod
+    def _read_keyboard_vector(keys: Any) -> tuple[float, float]:
+        dx, dy = 0.0, 0.0
+        if keys[pygame.K_w] or keys[pygame.K_UP]:
+            dy -= 1.0
+        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+            dy += 1.0
+        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+            dx -= 1.0
+        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+            dx += 1.0
+        return dx, dy
+
+    def _read_mouse_steering_vector(self, player: Any) -> tuple[float, float] | None:
+        if self.paused_focus or not pygame.mouse.get_focused():
+            self.mouse_steering_active = False
+            self.mouse_cursor_screen_pos = None
+            self.mouse_player_screen_pos = None
+            self.mouse_steering_deadzone_px = 0
+            return None
+        buttons = pygame.mouse.get_pressed(3)
+        if not buttons or not buttons[0]:
+            self.mouse_steering_active = False
+            self.mouse_cursor_screen_pos = None
+            self.mouse_player_screen_pos = None
+            self.mouse_steering_deadzone_px = 0
+            return None
+        assert self.game_data is not None
+        player_screen_pos = self.game_data.camera.apply(player).center
+        mouse_screen_pos = pygame.mouse.get_pos()
+        dx = float(mouse_screen_pos[0] - player_screen_pos[0])
+        dy = float(mouse_screen_pos[1] - player_screen_pos[1])
+        magnitude = math.hypot(dx, dy)
+        deadzone = max(2, int(getattr(player, "radius", 4) * _MOUSE_STEERING_DEADZONE_SCALE))
+        self.mouse_steering_active = True
+        self.mouse_cursor_screen_pos = (int(mouse_screen_pos[0]), int(mouse_screen_pos[1]))
+        self.mouse_player_screen_pos = (
+            int(player_screen_pos[0]),
+            int(player_screen_pos[1]),
+        )
+        self.mouse_steering_deadzone_px = deadzone
+        if magnitude <= float(deadzone):
+            return 0.0, 0.0
+        return dx / magnitude, dy / magnitude
+
+    def _draw_mouse_steering_overlay(self) -> None:
+        if not self.mouse_steering_active:
+            return
+        if self.mouse_cursor_screen_pos is None or self.mouse_player_screen_pos is None:
+            return
+        overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
+        px, py = self.mouse_player_screen_pos
+        mx, my = self.mouse_cursor_screen_pos
+        if self.mouse_steering_deadzone_px > 0:
+            pygame.draw.circle(
+                overlay,
+                (220, 220, 220, 70),
+                (px, py),
+                self.mouse_steering_deadzone_px,
+                width=1,
+            )
+        pygame.draw.line(overlay, (255, 230, 80, 110), (px, py), (mx, my), width=1)
+        pygame.draw.circle(overlay, (0, 0, 0, 190), (mx, my), 6, width=2)
+        pygame.draw.line(overlay, (255, 230, 80, 220), (mx - 4, my), (mx + 4, my), width=1)
+        pygame.draw.line(overlay, (255, 230, 80, 220), (mx, my - 4), (mx, my + 4), width=1)
+        self.screen.blit(overlay, (0, 0))
 
     def _dump_profile(self) -> None:
         if self.profiler is None or self.profiler_output is None:
