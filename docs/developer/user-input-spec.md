@@ -180,5 +180,5 @@ class InputSnapshot:
 
 運用ルール:
 
-- 入力仕様変更時は、この文書と `docs/design.md` の該当節を同時更新する。
+- 入力仕様変更時は、この文書と `docs/design/README.md` から辿れる該当設計章を同時更新する。
 - 画面固有の新規キー追加は、必ず「KeyboardOnly / CommonAction / AnalogVectorOnly」のいずれかに分類して記述する。

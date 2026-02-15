@@ -63,6 +63,6 @@ PY_VERSIONS="3.10 3.12" ./scripts/check-multi-py.sh
 
 ## Related docs
 
-- `docs/design.md`: entry point to split design docs.
+- `docs/README.md`: top-level docs index.
 - `docs/design/README.md`: index of detailed design chapters.
 - `docs/developer/user-input-spec.md`: user input normalization spec (keyboard/gamepad).
