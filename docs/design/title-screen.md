@@ -1,0 +1,43 @@
+# Title Screen
+
+## Stage Select Icons
+
+The stage-select mini-icons are built in `src/zombie_escape/screens/title.py` via `_get_stage_icons(stage)`.
+
+Icons are shown only for stages that are both:
+- Cleared at least once.
+- Currently available/unlocked.
+
+Icon order is fixed by category:
+
+1. Clear-condition related
+- `car_forbidden` only for endurance (carless) stages.
+- `fuel_can` for `FuelMode.FUEL_CAN`.
+- `empty_fuel_can` for `FuelMode.REFUEL_CHAIN` (fuel station is intentionally not shown).
+- `buddy` when `buddy_required_count > 0`.
+- `survivor` when `survivor_rescue_stage` is enabled.
+
+2. Zombies and plants
+- `zombie` (normal) when that ratio is present.
+- `zombie_tracker` when that ratio is present.
+- `zombie_wall` when that ratio is present.
+- `zombie_line` when that ratio is present.
+- `zombie_dog` when that ratio is present.
+- `houseplant` when houseplant hazard settings are present.
+
+3. Environment (floor)
+- `fall_spawn` when falling spawn floor settings are present.
+- `pitfall` when pitfall settings are present.
+- `moving_floor` when moving floor settings are present.
+- `puddle` when puddle settings are present.
+
+4. Helper signals
+- `flashlight_forbidden` only when `initial_flashlight_count <= 0`.
+- `shoes` when `initial_shoes_count > 0`.
+- `patrol_bot` when `patrol_bot_spawn_rate > 0`.
+
+## Intentional Exceptions
+
+- Regular `car` icon is not shown, because it appears in almost all stages and adds little information value.
+- Regular `flashlight` icon is not shown; only the "not available" exception is shown as `flashlight_forbidden`.
+
