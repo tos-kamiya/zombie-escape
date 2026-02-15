@@ -57,11 +57,13 @@ Two BFS checks gate acceptance:
 1. Car connectivity (`validate_car_connectivity`)
    - 4-direction traversal from car candidate to at least one exit.
    - Produces reachable cell set used as `car_walkable_cells`.
+   - Skipped for endurance stages (on-foot objective validation is used instead).
 2. Humanoid objective connectivity (`validate_humanoid_objective_connectivity`)
    - 8-direction traversal with moving-floor directional constraints.
    - Objective conditions by fuel mode:
    - `FUEL_CAN`: `P -> reachable f -> C`
    - `REFUEL_CHAIN`: `P -> reachable e -> reachable f -> C` (strict order)
+   - Endurance stages additionally require `P -> reachable E` (on-foot escape path).
    - `START_FULL`: `P -> C`
 
 `validate_connectivity` requires both checks to pass.

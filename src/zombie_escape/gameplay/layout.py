@@ -164,9 +164,12 @@ def generate_level_from_blueprint(
             puddle_density=stage.puddle_density,
             puddle_zones=stage.puddle_zones,
         )
+        require_car_spawn = not stage.endurance_stage
         car_reachable = validate_connectivity(
             blueprint.grid,
             fuel_mode=(stage.fuel_mode if not stage.endurance_stage else FuelMode.START_FULL),
+            require_player_exit_path=stage.endurance_stage,
+            require_car_spawn=require_car_spawn,
         )
         if car_reachable is not None:
             blueprint.car_reachable_cells = car_reachable

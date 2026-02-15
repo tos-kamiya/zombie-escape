@@ -153,12 +153,15 @@ def validate_humanoid_objective_connectivity(
     grid: list[str],
     *,
     fuel_mode: FuelMode = FuelMode.START_FULL,
+    require_player_exit_path: bool = False,
+    require_car_spawn: bool = True,
 ) -> bool:
     """Check objective pathing for humans with moving-floor constraints.
 
     - fuel_mode=1 (FUEL_CAN): P -> any reachable f -> any C
     - fuel_mode=0 (REFUEL_CHAIN): P -> reachable e -> reachable f -> any C
     - fuel_mode=2 (START_FULL): treat P as the fuel start, then P -> any C
+    - require_player_exit_path=True: additionally require P -> any E
     """
     rows = len(grid)
     cols = len(grid[0])
@@ -176,8 +179,11 @@ def validate_humanoid_objective_connectivity(
         (x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "e"
     }
     fuel_cells = {(x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "f"}
+    exit_cells = {(x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "E"}
 
-    if len(player_cells) != 1 or not car_cells:
+    if len(player_cells) != 1:
+        return False
+    if require_car_spawn and not car_cells:
         return False
     player_start = player_cells[0]
 
@@ -186,6 +192,13 @@ def validate_humanoid_objective_connectivity(
         player_start,
         passable_cells=passable_cells,
     )
+    if require_player_exit_path and (
+        not exit_cells or not any(exit_cell in from_player for exit_cell in exit_cells)
+    ):
+        return False
+    if not require_car_spawn:
+        # Car-less stages only require on-foot objective reachability.
+        return fuel_mode == FuelMode.START_FULL
     if fuel_mode == FuelMode.REFUEL_CHAIN:
         if not empty_can_cells or not fuel_cells:
             return False
@@ -234,16 +247,23 @@ def validate_connectivity(
     grid: list[str],
     *,
     fuel_mode: FuelMode = FuelMode.START_FULL,
+    require_player_exit_path: bool = False,
+    require_car_spawn: bool = True,
 ) -> set[tuple[int, int]] | None:
     """Validate both car and humanoid movement conditions.
     Returns car reachable cells if both pass, otherwise None.
     """
-    car_reachable = validate_car_connectivity(grid)
-    if car_reachable is None:
-        return None
+    if require_car_spawn:
+        car_reachable = validate_car_connectivity(grid)
+        if car_reachable is None:
+            return None
+    else:
+        car_reachable = set()
     if not validate_humanoid_objective_connectivity(
         grid,
         fuel_mode=fuel_mode,
+        require_player_exit_path=require_player_exit_path,
+        require_car_spawn=require_car_spawn,
     ):
         return None
     return car_reachable
