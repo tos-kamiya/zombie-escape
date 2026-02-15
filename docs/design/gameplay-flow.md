@@ -15,6 +15,11 @@
 - `setup_player_and_cars(...)` places player and initial cars on valid reachable tiles.
 - `spawn_initial_zombies(...)` seeds initial zombie populations.
 
+Key implementation files:
+- `src/zombie_escape/stage_constants.py` (stage feature flags and progression defaults consumed by init/spawn)
+- `src/zombie_escape/gameplay/entity_updates.py` (frame-level movement/AI/timer update orchestration)
+- `src/zombie_escape/input_utils.py` (screen-agnostic action mapping and input snapshots)
+
 ## Spawn Phase
 
 Major spawn functions in `gameplay/spawn.py`:

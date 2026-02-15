@@ -4,6 +4,10 @@
 
 - `src/zombie_escape/zombie_escape.py`
   - Entry point. Parses CLI options, initializes pygame-ce, and runs the screen loop.
+- `src/zombie_escape/input_utils.py`
+  - Shared keyboard/gamepad input abstraction used by title/settings/gameplay screens.
+- `src/zombie_escape/windowing.py`
+  - Window mode control, logical-size scaling, fullscreen toggles, and presentation bridge.
 - `src/zombie_escape/screens/`
   - Title/settings/gameplay/game-over screen implementations and transitions.
   - Stage-select UI includes mini-icons for stage traits.
@@ -26,6 +30,12 @@
   - `overview.py`: game-over/debug overviews.
 - `src/zombie_escape/level_blueprints.py`
   - Random blueprint generation and constraints.
+- `src/zombie_escape/stage_constants.py`
+  - Canonical stage catalog (`STAGES`) and per-stage feature configuration.
+- `src/zombie_escape/models.py`
+  - Core dataclasses and enums shared across gameplay/render/screen layers.
+- `src/zombie_escape/world_grid.py`
+  - Grid and coordinate helpers used by generation, movement, and rendering code.
 - `src/zombie_escape/config.py`
   - Config defaulting and persistence.
 - `src/zombie_escape/progress.py`
@@ -34,6 +44,8 @@
   - Deterministic MT19937 implementation.
 - `src/zombie_escape/localization.py`, `src/zombie_escape/locales/`
   - UI localization and locale resources.
+- `src/zombie_escape/render_assets.py`
+  - Procedural sprite/icon surface builders shared by HUD, title icons, and exports.
 
 ## Screen Transitions
 

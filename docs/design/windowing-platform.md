@@ -1,5 +1,7 @@
 # Windowing and Platform
 
+Primary implementation: `src/zombie_escape/windowing.py`
+
 ## Fullscreen and Logical Resolution
 
 - Toggle fullscreen/windowed with `F` (startup is windowed).

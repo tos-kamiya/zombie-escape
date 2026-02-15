@@ -1,5 +1,9 @@
 # Data Models
 
+Primary definitions live in:
+- `src/zombie_escape/models.py`
+- `src/zombie_escape/world_grid.py` (shared coordinate and grid utility types/helpers)
+
 ## `ProgressState`
 
 Runtime play-state bundle. Key categories:

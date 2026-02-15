@@ -1,5 +1,9 @@
 # Rendering
 
+Supporting modules:
+- `src/zombie_escape/render_assets.py` (procedural sprite/icon construction used by renderers and UI)
+- `src/zombie_escape/colors.py` (palette selection and ambient color policy)
+
 ## Render Pipeline (`render/core.py`)
 
 `draw(...)` performs rendering in this order:
