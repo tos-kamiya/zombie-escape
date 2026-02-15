@@ -165,6 +165,11 @@
       <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"></td>
       <td>斜線入りの障害物。内部壁と同じく通行不可で、耐久力は内部壁の1.5倍。内部壁破壊後にも出現することがあります。</td>
     </tr>
+    <tr>
+      <td>ゾンビ感染床</td>
+      <td>(動的生成)</td>
+      <td>観葉植物セルに引っかかりゾンビが過密化すると生成。人間系キャラクターが触れると感染し、ゾンビは通行できるが、観葉植物接触時の人間系と同じ減速係数が適用されます。</td>
+    </tr>
   </tbody>
 </table>
 

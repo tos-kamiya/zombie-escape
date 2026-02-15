@@ -51,10 +51,11 @@ Major spawn functions in `gameplay/spawn.py`:
   - Includes tile-edge steering correction near walls.
 - `check_interactions(...)`
   - Handles pickups, rescue boarding, car destruction, and win/loss logic.
+  - Handles houseplant trap overflow conversion into zombie-contaminated tiles.
 - `update_survivors(...)`
   - Survivor/buddy following and obstacle-aware movement.
 - `handle_survivor_zombie_collisions(...)`
-  - Survivor-zombie contact outcomes.
+  - Survivor-zombie contact outcomes and contamination-tile infection conversion.
 - `update_footprints(...)`
   - Footprint recording and expiration.
 
