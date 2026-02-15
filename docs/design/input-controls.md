@@ -2,16 +2,14 @@
 
 This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 
-## TODO: Mouse Steering During Gameplay
-
-Status: phase 1 implemented (follow-up TODOs remain).
+## Mouse Steering During Gameplay
 
 ### Goal
 
 - Allow mouse-based movement steering without breaking existing keyboard/gamepad play.
 - Keep camera edge behavior consistent by basing mouse direction on player screen position.
 
-### Planned Rules
+### Rules
 
 1. Simultaneous availability
 - Keyboard, gamepad, and mouse can all be enabled.
@@ -46,7 +44,7 @@ Status: phase 1 implemented (follow-up TODOs remain).
 - Mouse steering is ignored while the gameplay window is unfocused.
 - Window focus state should gate mouse steering input to avoid unintended movement from platform-specific mouse event behavior.
 
-## TODO Follow-ups
+## Follow-ups
 
 - Tune deadzone size and cursor visuals based on playtest feedback.
 - Add focused tests for input priority and focus-gated mouse steering.
