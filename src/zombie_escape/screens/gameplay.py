@@ -488,6 +488,17 @@ class GameplayScreenRunner:
                 and event.button == 1
                 and self.pause_mouse_ui_guard.can_process_mouse()
             ):
+                if self.debug_mode:
+                    try:
+                        self.pause_selected_index = self.pause_option_ids.index("resume")
+                    except ValueError:
+                        self.pause_selected_index = 0
+                    transition = self._activate_pause_selection()
+                    if transition is not None:
+                        return transition, self.input_helper.snapshot(
+                            events, pygame.key.get_pressed()
+                        )
+                    continue
                 click_target = self.pause_option_click_map.pick_click(event.pos)
                 if isinstance(click_target, int):
                     self.pause_selected_index = click_target
