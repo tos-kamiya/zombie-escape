@@ -33,6 +33,8 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Current default: left mouse button.
 - While active, movement direction is computed from:
   - `mouse_screen_pos - player_screen_pos`
+- Mouse acceleration trigger is also available while holding left mouse button near player center.
+- Acceleration radius is smaller than movement deadzone radius to keep intent clear.
 
 4. Deadzone
 - If cursor is inside a small deadzone around the player, movement is treated as zero.
@@ -86,6 +88,7 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Pause provides explicit selectable menu items (`Resume`, `Return to Title`) so mouse navigation has concrete targets.
 - While paused, OS cursor is visible and menu items are selectable by hover + left-button release.
 - During gameplay (not paused), mouse users can enter pause by moving the cursor into one of the four corner hotspot markers in the mouse-movable area.
+- If pause hotspot intent and mouse acceleration intent conflict, pause hotspot behavior takes priority.
 
 6. Game-over menu presentation
 - Game-over screen uses explicit selectable buttons (`Return to Title`, `Retry Stage`) instead of a separate key-help line.
@@ -94,6 +97,7 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 ## Follow-ups
 
 - Tune gameplay deadzone and cursor visuals based on playtest feedback.
+- Tune mouse acceleration center radius based on playtest feedback.
 - Define final pause menu item set and layout.
 - Consolidate repeated menu mouse-input code via shared input utilities.
 - Add focused tests for input priority and focus-gated mouse interactions.

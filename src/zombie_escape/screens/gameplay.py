@@ -81,8 +81,9 @@ if TYPE_CHECKING:
 
 _SHARED_FOG_CACHE: dict[str, Any] | None = None
 _MOUSE_STEERING_DEADZONE_SCALE = 2.0
+_MOUSE_ACCEL_HOLD_SCALE = 1.2
 _MOUSE_CURSOR_PERSIST_MS = 10_000
-_PAUSE_HOTSPOT_COLOR = (18, 18, 18)
+_PAUSE_HOTSPOT_COLOR = (48, 48, 48)
 _PAUSE_HOTSPOT_TRI_SIZE = 7
 
 
@@ -427,7 +428,7 @@ class GameplayScreenRunner:
         )
         spawn_initial_zombies(self.game_data, player, layout_data, self.config)
         spawn_initial_patrol_bots(self.game_data, player, layout_data)
-        
+
         hp_list = spawn_houseplants(self.game_data, layout_data)
         hp_cells = layout_data.get("houseplant_cells", [])
         for cell, hp in zip(hp_cells, hp_list):
@@ -556,7 +557,15 @@ class GameplayScreenRunner:
         groups = game_data.groups
         keys = pygame.key.get_pressed()
         accel_allowed = not (state.game_over or state.game_won)
-        accel_active = accel_allowed and input_snapshot.held(CommonAction.ACCEL)
+        player_ref = game_data.player
+        mouse_accel_active = (
+            accel_allowed
+            and player_ref is not None
+            and self._is_mouse_accel_active(player_ref)
+        )
+        accel_active = accel_allowed and (
+            input_snapshot.held(CommonAction.ACCEL) or mouse_accel_active
+        )
         state.time_accel_active = accel_active
         substeps = SURVIVAL_TIME_ACCEL_SUBSTEPS if accel_active else 1
         sub_dt = min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
@@ -696,6 +705,7 @@ class GameplayScreenRunner:
             hint_color=hint_color,
             fps=current_fps,
         )
+        self._draw_player_time_accel_indicator()
         self._draw_pause_hotspot_hint()
         self._draw_mouse_steering_overlay()
         if self.profiling_active:
@@ -894,7 +904,7 @@ class GameplayScreenRunner:
         mx, my = self.mouse_cursor_screen_pos
         overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
         if self.mouse_steering_active and pygame.mouse.get_pressed(3)[0]:
-            color = (255, 230, 80, 240)
+            color = (255, 255, 255, 240)
             width = 2
         else:
             color = (255, 255, 255, 220)
@@ -903,6 +913,44 @@ class GameplayScreenRunner:
         pygame.draw.line(overlay, color, (mx - half, my), (mx + half, my), width=width)
         pygame.draw.line(overlay, color, (mx, my - half), (mx, my + half), width=width)
         self.screen.blit(overlay, (0, 0))
+
+    def _is_mouse_accel_active(self, player: Any) -> bool:
+        if self.paused_manual or self.paused_focus or not pygame.mouse.get_focused():
+            return False
+        buttons = pygame.mouse.get_pressed(3)
+        if not buttons or not buttons[0]:
+            return False
+        mouse_pos = tuple(map(int, pygame.mouse.get_pos()))
+        if self._pause_hotspot_kind_at(mouse_pos) is not None:
+            # Prefer pause hotspot behavior over mouse-hold acceleration.
+            return False
+        assert self.game_data is not None
+        player_screen_pos = self.game_data.camera.apply(player).center
+        dx = float(mouse_pos[0] - player_screen_pos[0])
+        dy = float(mouse_pos[1] - player_screen_pos[1])
+        distance = math.hypot(dx, dy)
+        accel_radius = max(2, int(getattr(player, "radius", 4) * _MOUSE_ACCEL_HOLD_SCALE))
+        return distance <= float(accel_radius)
+
+    def _draw_player_time_accel_indicator(self) -> None:
+        assert self.game_data is not None
+        state = self.game_data.state
+        player = self.game_data.player
+        if not state.time_accel_active or player is None:
+            return
+        player_screen_center = self.game_data.camera.apply(player).center
+        font_settings = get_font_settings()
+        font = load_font(font_settings.resource, font_settings.scaled_size(11))
+        label = render_text_surface(
+            font,
+            ">> 4x",
+            WHITE,
+            line_height_scale=font_settings.line_height_scale,
+        )
+        label_rect = label.get_rect(
+            center=(int(player_screen_center[0]), int(player_screen_center[1] - 12))
+        )
+        self.screen.blit(label, label_rect)
 
     def _compute_present_rect(self) -> pygame.Rect:
         window = pygame.display.get_surface()
