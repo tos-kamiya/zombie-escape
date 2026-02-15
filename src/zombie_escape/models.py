@@ -76,10 +76,14 @@ class LevelLayout:
     car_spawn_cells: list[tuple[int, int]]
     fall_spawn_cells: set[tuple[int, int]]
     houseplant_cells: set[tuple[int, int]]
-    zombie_contaminated_cells: set[tuple[int, int]]
-    puddle_cells: set[tuple[int, int]]
-    bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
-    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection]
+    zombie_contaminated_cells: set[tuple[int, int]] = field(default_factory=set)
+    puddle_cells: set[tuple[int, int]] = field(default_factory=set)
+    bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] = field(
+        default_factory=dict
+    )
+    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = field(
+        default_factory=dict
+    )
 
 
 @dataclass
