@@ -65,6 +65,7 @@ from ..render import (
     prewarm_fog_overlays,
     blit_message_wrapped,
 )
+from ..render.hud import build_time_accel_text
 from ..render_constants import (
     GAMEPLAY_FONT_SIZE,
     TIMED_MESSAGE_LEFT_X,
@@ -943,7 +944,7 @@ class GameplayScreenRunner:
         font = load_font(font_settings.resource, font_settings.scaled_size(11))
         label = render_text_surface(
             font,
-            ">> 4x",
+            build_time_accel_text(),
             WHITE,
             line_height_scale=font_settings.line_height_scale,
         )

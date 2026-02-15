@@ -45,6 +45,15 @@ from ..render_constants import (
 )
 
 _HUD_ICON_CACHE: dict[str, surface.Surface] = {}
+_TIME_ACCEL_FRAMES = ("  >>", ">  >", ">>  ", " >> ")
+
+
+def build_time_accel_text(*, now_ms: int | None = None) -> str:
+    """Build animated accel text so 4x state is visible even on static scenes."""
+    if now_ms is None:
+        now_ms = pygame.time.get_ticks()
+    frame_index = (max(0, int(now_ms)) // 180) % len(_TIME_ACCEL_FRAMES)
+    return f"{_TIME_ACCEL_FRAMES[frame_index]}4x"
 
 
 def _scale_icon_to_box(icon: surface.Surface, size: int) -> surface.Surface:
@@ -397,7 +406,7 @@ def _draw_endurance_timer(
         text_rect = text_surface.get_rect(left=bar_rect.left, bottom=text_bottom)
         screen.blit(text_surface, text_rect)
         if state.time_accel_active:
-            accel_text = tr("hud.time_accel")
+            accel_text = build_time_accel_text()
             accel_surface = render_text_surface(
                 font, accel_text, YELLOW, line_height_scale=font_settings.line_height_scale
             )
@@ -434,7 +443,7 @@ def _draw_time_accel_indicator(
             font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
         )
         if state.time_accel_active:
-            text = tr("hud.time_accel")
+            text = build_time_accel_text()
             color = YELLOW
         else:
             text = tr("hud.time_accel_hint")
