@@ -45,16 +45,16 @@ This game is a simple 2D top-down action game where the player aims to escape by
 
 At the title screen you can pick a stage:
 
-- **Stage 1: Find the Car** — you already start with fuel; find the car and escape.
+- **Stage 1: Find the Car** — find the car and escape.
 - **Stage 2: Fuel Run** — you start with no fuel; find a fuel can first, pick it up, then find the car and escape.
-- **Stage 3: Rescue Buddy** — same fuel hunt as Stage 2 (you begin empty) plus locate your buddy, pick them up with the car, then escape together.
-- **Stage 4: Evacuate Survivors** — start fueled, find the car, gather survivors, and escape before zombies reach them. The stage includes extra parked cars; ramming one while driving fully repairs your current ride and adds five seats each time.
-- **Stage 5: Survive Until Dawn** — every car is empty. Endure until sunrise while the horde presses in from every direction. Once dawn hits and outdoor zombies carbonize, walk out through an existing exterior gap to win; cars remain unusable.
+- **Stage 3: Rescue Buddy** — similarly, find fuel, locate your buddy, pick them up with the car, and escape together.
+- **Stage 4: Evacuate Survivors** — find the car, gather survivors, and escape before zombies reach them. The stage has multiple parked cars; ramming one while driving adds +5 capacity.
+- **Stage 5: Survive Until Dawn** — cars are unusable. Survive until sunrise, then leave on foot through an existing exterior opening.
 
 Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/right to select later stages.
 Open the Stage 6+ description: [docs/stages-6plus.md](docs/stages-6plus.md)
 
-**Stage names are red until cleared** and turn white after at least one clear.
+**Stage names are red until cleared** and turn white after at least one clear. Cleared stage names also show icons for characters/items that appear in that stage.
 
 An objective reminder is shown at the top-left during play.
 
