@@ -164,11 +164,6 @@ Open **Settings** from the title to toggle gameplay assists:
       <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/steel-beam.png" width="64"></td>
       <td>Striped obstacle with the same collision as inner walls, but 1.5x durability. Can also appear after an inner wall is destroyed.</td>
     </tr>
-    <tr>
-      <td>Zombie Contamination Tile</td>
-      <td>(dynamic)</td>
-      <td>Created when a houseplant cell overloads with trapped zombies. Touching it infects humans; zombies can pass but use the same speed slowdown factor as humanoids on houseplant contact.</td>
-    </tr>
   </tbody>
 </table>
 

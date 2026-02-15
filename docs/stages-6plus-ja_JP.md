@@ -23,7 +23,7 @@
 | 給油所 | <img src="../imgs/exports/fuel-station.png" width="80"> | ステージ26 | 空の燃料缶が出現するステージで空缶を満タンにする地点。 |
 | 行列ゾンビ | <img src="../imgs/exports/zombie-lineformer.png" width="80"> | ステージ27 | 列を作りたがるゾンビ。 |
 | 水たまり | <img src="../imgs/exports/puddle.png" width="80"> | ステージ28 | 水たまりセル上にいる間、移動速度が低下する。 |
-| トゲトゲの観葉植物 | <img src="../imgs/exports/houseplant.png" width="80"> | ステージ28 | 引っかからないように通り過ぎるのは大変。ゾンビは引っかかる。 |
+| トゲトゲの観葉植物 | <img src="../imgs/exports/houseplant.png" width="80"> | ステージ28 | 通常状態だと人間は移動速度が遅くなる。ゾンビは引っかかる。ゾンビが3体以上引っかかると枯れてしまい、そのセルの床がゾンビ感染源になる。 |
 
 ## 燃料ルールの違い（空の燃料缶が出るステージ）
 
