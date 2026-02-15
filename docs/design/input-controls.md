@@ -37,8 +37,10 @@ Status: phase 1 implemented (follow-up TODOs remain).
 
 6. Cursor visibility
 - Keep OS cursor hidden during gameplay (`pygame.mouse.set_visible(False)`).
-- During active mouse steering, draw a clear in-game cursor style suitable for gameplay readability.
-- Outside active mouse steering, do not draw the in-game cursor.
+- Draw an in-game `+` cursor at mouse position after mouse steering has been used.
+- During active mouse steering (button held): show a thick yellow `+`.
+- After button release: keep showing a thin white `+` for 10 seconds (wall-clock time, not frame count).
+- Do not draw helper line from player to mouse, deadzone ring, or black outline circle around cursor.
 
 7. Focus safety
 - Mouse steering is ignored while the gameplay window is unfocused.
@@ -46,5 +48,5 @@ Status: phase 1 implemented (follow-up TODOs remain).
 
 ## TODO Follow-ups
 
-- Tune deadzone size and cursor visual style based on playtest feedback.
+- Tune deadzone size and cursor visuals based on playtest feedback.
 - Add focused tests for input priority and focus-gated mouse steering.

@@ -78,6 +78,7 @@ if TYPE_CHECKING:
 
 _SHARED_FOG_CACHE: dict[str, Any] | None = None
 _MOUSE_STEERING_DEADZONE_SCALE = 2.0
+_MOUSE_CURSOR_PERSIST_MS = 10_000
 
 
 def _resolve_hint_target_type(
@@ -273,8 +274,7 @@ class GameplayScreenRunner:
         self.input_helper = InputHelper()
         self.mouse_steering_active = False
         self.mouse_cursor_screen_pos: tuple[int, int] | None = None
-        self.mouse_player_screen_pos: tuple[int, int] | None = None
-        self.mouse_steering_deadzone_px = 0
+        self.mouse_cursor_visible_until_ms = 0
 
         self.game_data: Any = None
         self.overview_surface: surface.Surface | None = None
@@ -760,9 +760,6 @@ class GameplayScreenRunner:
         pad_active = pad_vector != (0.0, 0.0)
         if keyboard_active or pad_active:
             self.mouse_steering_active = False
-            self.mouse_cursor_screen_pos = None
-            self.mouse_player_screen_pos = None
-            self.mouse_steering_deadzone_px = 0
             return pad_vector
         mouse_vector = self._read_mouse_steering_vector(player)
         if mouse_vector is None:
@@ -785,55 +782,43 @@ class GameplayScreenRunner:
     def _read_mouse_steering_vector(self, player: Any) -> tuple[float, float] | None:
         if self.paused_focus or not pygame.mouse.get_focused():
             self.mouse_steering_active = False
-            self.mouse_cursor_screen_pos = None
-            self.mouse_player_screen_pos = None
-            self.mouse_steering_deadzone_px = 0
             return None
+        self.mouse_cursor_screen_pos = tuple(map(int, pygame.mouse.get_pos()))
         buttons = pygame.mouse.get_pressed(3)
         if not buttons or not buttons[0]:
             self.mouse_steering_active = False
-            self.mouse_cursor_screen_pos = None
-            self.mouse_player_screen_pos = None
-            self.mouse_steering_deadzone_px = 0
             return None
         assert self.game_data is not None
         player_screen_pos = self.game_data.camera.apply(player).center
-        mouse_screen_pos = pygame.mouse.get_pos()
+        mouse_screen_pos = self.mouse_cursor_screen_pos
         dx = float(mouse_screen_pos[0] - player_screen_pos[0])
         dy = float(mouse_screen_pos[1] - player_screen_pos[1])
         magnitude = math.hypot(dx, dy)
         deadzone = max(2, int(getattr(player, "radius", 4) * _MOUSE_STEERING_DEADZONE_SCALE))
         self.mouse_steering_active = True
-        self.mouse_cursor_screen_pos = (int(mouse_screen_pos[0]), int(mouse_screen_pos[1]))
-        self.mouse_player_screen_pos = (
-            int(player_screen_pos[0]),
-            int(player_screen_pos[1]),
-        )
-        self.mouse_steering_deadzone_px = deadzone
+        self.mouse_cursor_visible_until_ms = pygame.time.get_ticks() + _MOUSE_CURSOR_PERSIST_MS
         if magnitude <= float(deadzone):
             return 0.0, 0.0
         return dx / magnitude, dy / magnitude
 
     def _draw_mouse_steering_overlay(self) -> None:
-        if not self.mouse_steering_active:
+        if not pygame.mouse.get_focused():
             return
-        if self.mouse_cursor_screen_pos is None or self.mouse_player_screen_pos is None:
+        now_ms = pygame.time.get_ticks()
+        if not self.mouse_steering_active and now_ms > self.mouse_cursor_visible_until_ms:
             return
-        overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
-        px, py = self.mouse_player_screen_pos
+        self.mouse_cursor_screen_pos = tuple(map(int, pygame.mouse.get_pos()))
         mx, my = self.mouse_cursor_screen_pos
-        if self.mouse_steering_deadzone_px > 0:
-            pygame.draw.circle(
-                overlay,
-                (220, 220, 220, 70),
-                (px, py),
-                self.mouse_steering_deadzone_px,
-                width=1,
-            )
-        pygame.draw.line(overlay, (255, 230, 80, 110), (px, py), (mx, my), width=1)
-        pygame.draw.circle(overlay, (0, 0, 0, 190), (mx, my), 6, width=2)
-        pygame.draw.line(overlay, (255, 230, 80, 220), (mx - 4, my), (mx + 4, my), width=1)
-        pygame.draw.line(overlay, (255, 230, 80, 220), (mx, my - 4), (mx, my + 4), width=1)
+        overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
+        if self.mouse_steering_active and pygame.mouse.get_pressed(3)[0]:
+            color = (255, 230, 80, 240)
+            width = 2
+        else:
+            color = (255, 255, 255, 220)
+            width = 1
+        half = 5
+        pygame.draw.line(overlay, color, (mx - half, my), (mx + half, my), width=width)
+        pygame.draw.line(overlay, color, (mx, my - half), (mx, my + half), width=width)
         self.screen.blit(overlay, (0, 0))
 
     def _dump_profile(self) -> None:
