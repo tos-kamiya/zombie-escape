@@ -87,6 +87,7 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 5. Pause screen behavior
 - Pause provides explicit selectable menu items (`Resume`, `Return to Title`) so mouse navigation has concrete targets.
 - While paused, OS cursor is visible and menu items are selectable by hover + left-button release.
+- In `--debug` mode (pause overlay hidden), left-button release while paused acts as `Resume`.
 - During gameplay (not paused), mouse users can enter pause by moving the cursor into one of the four corner hotspot markers in the mouse-movable area.
 - If pause hotspot intent and mouse acceleration intent conflict, pause hotspot behavior takes priority.
 

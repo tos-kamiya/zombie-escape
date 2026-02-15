@@ -141,6 +141,8 @@ To keep input/focus transitions explicit and safe in gameplay:
   - `WINDOWSIZECHANGED`
 - In `--debug` mode (when pause overlay is hidden), render a small
   `-- paused --` marker near the top of the screen while paused.
+- In `--debug` mode, left mouse button release while paused should resume
+  gameplay (same behavior as selecting `Resume` in the normal pause overlay).
 
 This behavior is intentional and should be preserved unless replaced by a
 documented alternative policy.
@@ -185,6 +187,7 @@ Allowed internal changes:
 - Verify `ACCEL` behavior for Shift and gamepad equivalents.
 - Verify pause enters after `[` / `]` / `F` and resize events.
 - Verify `--debug` paused marker is visible while paused.
+- Verify `--debug` mode can resume from pause by left-clicking anywhere in the window.
 - Verify device add/remove handling during runtime.
 
 ## 10. Maintenance Rules (Updated)

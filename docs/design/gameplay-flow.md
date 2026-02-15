@@ -29,6 +29,7 @@ Key implementation files:
   - Window mode changes via `[` / `]` / `F`.
   - Runtime resize events (`VIDEORESIZE`, `WINDOWSIZECHANGED`).
 - In `--debug` runs (pause overlay hidden), paused state renders a small `-- paused --` marker near the top edge.
+- In `--debug` runs, releasing left mouse button while paused resumes gameplay (equivalent to selecting `Resume` in normal pause UI).
 
 ## Spawn Phase
 
