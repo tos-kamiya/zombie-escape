@@ -37,7 +37,9 @@ This game is a simple 2D top-down action game where the player aims to escape by
 
 **Mouse**
 
--   **Gameplay** While holding left mouse button, the player moves toward the cursor. Moving the cursor into a corner hotspot triangle pauses the game.
+-   **Gameplay** While holding left mouse button, the player moves toward the cursor.
+    -   While holding left mouse button over the player character, the whole game runs at 4x speed.
+    -   Moving the cursor into a corner hotspot triangle pauses the game.
     -   Resizing the OS window by mouse drag also forces gameplay pause.
 -   **Title/Settings/etc.** Select items by releasing left mouse button.
 
