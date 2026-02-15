@@ -151,7 +151,7 @@ def title_screen(
         "zombie_line": _create_lettered_zombie("L"),
         "zombie_dog": get_character_icon("zombie_dog", icon_radius),
         "patrol_bot": get_character_icon("patrol_bot", icon_radius),
-        "car": get_character_icon("car", icon_radius),
+        "car": pygame.transform.rotate(get_character_icon("car", icon_radius), -90),
         "fuel_can": get_character_icon("fuel_can", icon_radius),
         "empty_fuel_can": get_character_icon("empty_fuel_can", icon_radius),
         "flashlight": build_flashlight_surface(int(icon_radius * 3.2), int(icon_radius * 3.2)),
@@ -163,23 +163,31 @@ def title_screen(
         "houseplant": get_tile_icon("houseplant", icon_radius),
     }
 
-    # Create car_forbidden icon for endurance stages
-    car_forbidden = icon_surfaces["car"].copy()
-    cw, ch = car_forbidden.get_size()
-    # Draw a red X over the car
-    pygame.draw.line(car_forbidden, (255, 50, 50), (1, 1), (cw - 2, ch - 2), width=2)
-    pygame.draw.line(car_forbidden, (255, 50, 50), (cw - 2, 1), (1, ch - 2), width=2)
-    icon_surfaces["car_forbidden"] = car_forbidden
+    forbidden_canvas_size = icon_surfaces["flashlight"].get_size()
 
-    flashlight_forbidden = icon_surfaces["flashlight"].copy()
-    fw, fh = flashlight_forbidden.get_size()
-    pygame.draw.line(
-        flashlight_forbidden, (255, 50, 50), (1, 1), (fw - 2, fh - 2), width=2
+    def _build_forbidden_icon(base_icon: pygame.Surface) -> pygame.Surface:
+        cw, ch = forbidden_canvas_size
+        forbidden = pygame.Surface((cw, ch), pygame.SRCALPHA)
+        bw, bh = base_icon.get_size()
+        forbidden.blit(base_icon, ((cw - bw) // 2, (ch - bh) // 2))
+        # Darken the base to keep the "forbidden" X visible even on bright sprites.
+        shade = pygame.Surface((cw, ch), pygame.SRCALPHA)
+        shade.fill((0, 0, 0, 80))
+        forbidden.blit(shade, (0, 0))
+        # Draw the X using the same fixed geometry as the flashlight forbidden icon.
+        x0, y0 = 1, 1
+        x1, y1 = cw - 2, ch - 2
+        pygame.draw.line(forbidden, BLACK, (x0, y0), (x1, y1), width=2)
+        pygame.draw.line(forbidden, BLACK, (x1, y0), (x0, y1), width=2)
+        pygame.draw.line(forbidden, (255, 50, 50), (x0, y0), (x1, y1), width=1)
+        pygame.draw.line(forbidden, (255, 50, 50), (x1, y0), (x0, y1), width=1)
+        return forbidden
+
+    # Create forbidden icons used in stage list exceptions.
+    icon_surfaces["car_forbidden"] = _build_forbidden_icon(icon_surfaces["car"])
+    icon_surfaces["flashlight_forbidden"] = _build_forbidden_icon(
+        icon_surfaces["flashlight"]
     )
-    pygame.draw.line(
-        flashlight_forbidden, (255, 50, 50), (fw - 2, 1), (1, fh - 2), width=2
-    )
-    icon_surfaces["flashlight_forbidden"] = flashlight_forbidden
 
     def _get_stage_icons(stage: Stage) -> list[pygame.Surface]:
         icons = []

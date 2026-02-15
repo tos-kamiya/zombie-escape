@@ -40,4 +40,8 @@ Icon order is fixed by category:
 
 - Regular `car` icon is not shown, because it appears in almost all stages and adds little information value.
 - Regular `flashlight` icon is not shown; only the "not available" exception is shown as `flashlight_forbidden`.
-
+- In stage-select icons, the car sprite is rotated 90 degrees right to improve readability in the compact icon row.
+- `car_forbidden` and `flashlight_forbidden` share one fixed drawing style:
+  - same canvas size (flashlight icon size),
+  - same X geometry/position,
+  - same line thickness.
