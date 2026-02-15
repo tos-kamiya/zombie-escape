@@ -83,7 +83,8 @@ if TYPE_CHECKING:
 _SHARED_FOG_CACHE: dict[str, Any] | None = None
 _MOUSE_STEERING_DEADZONE_SCALE = 2.0
 _MOUSE_ACCEL_HOLD_SCALE = 1.2
-_MOUSE_CURSOR_PERSIST_MS = 10_000
+_MOUSE_CURSOR_SHOW_MS = 1500
+_MOUSE_CURSOR_MOVE_SHOW_DISTANCE_PX = 10
 _PAUSE_HOTSPOT_COLOR = (48, 48, 48)
 _PAUSE_HOTSPOT_TRI_SIZE = 7
 
@@ -286,7 +287,11 @@ class GameplayScreenRunner:
         self.input_helper = InputHelper()
         self.mouse_steering_active = False
         self.mouse_cursor_screen_pos: tuple[int, int] | None = None
+        self.mouse_cursor_prev_screen_pos: tuple[int, int] | None = None
         self.mouse_cursor_visible_until_ms = 0
+        self.mouse_cursor_move_visible_until_ms = (
+            pygame.time.get_ticks() + _MOUSE_CURSOR_SHOW_MS
+        )
 
         self.game_data: Any = None
         self.overview_surface: surface.Surface | None = None
@@ -929,7 +934,7 @@ class GameplayScreenRunner:
         magnitude = math.hypot(dx, dy)
         deadzone = max(2, int(getattr(player, "radius", 4) * _MOUSE_STEERING_DEADZONE_SCALE))
         self.mouse_steering_active = True
-        self.mouse_cursor_visible_until_ms = pygame.time.get_ticks() + _MOUSE_CURSOR_PERSIST_MS
+        self.mouse_cursor_visible_until_ms = pygame.time.get_ticks() + _MOUSE_CURSOR_SHOW_MS
         if magnitude <= float(deadzone):
             return 0.0, 0.0
         return dx / magnitude, dy / magnitude
@@ -938,9 +943,25 @@ class GameplayScreenRunner:
         if not pygame.mouse.get_focused():
             return
         now_ms = pygame.time.get_ticks()
-        if not self.mouse_steering_active and now_ms > self.mouse_cursor_visible_until_ms:
-            return
         self.mouse_cursor_screen_pos = tuple(map(int, pygame.mouse.get_pos()))
+        if self.mouse_cursor_prev_screen_pos is not None:
+            dx = float(
+                self.mouse_cursor_screen_pos[0] - self.mouse_cursor_prev_screen_pos[0]
+            )
+            dy = float(
+                self.mouse_cursor_screen_pos[1] - self.mouse_cursor_prev_screen_pos[1]
+            )
+            if math.hypot(dx, dy) >= float(_MOUSE_CURSOR_MOVE_SHOW_DISTANCE_PX):
+                self.mouse_cursor_move_visible_until_ms = (
+                    now_ms + _MOUSE_CURSOR_SHOW_MS
+                )
+        self.mouse_cursor_prev_screen_pos = self.mouse_cursor_screen_pos
+
+        show_by_persist = now_ms <= self.mouse_cursor_visible_until_ms
+        show_by_move = now_ms <= self.mouse_cursor_move_visible_until_ms
+        if not self.mouse_steering_active and not show_by_persist and not show_by_move:
+            return
+
         mx, my = self.mouse_cursor_screen_pos
         overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
         if self.mouse_steering_active and pygame.mouse.get_pressed(3)[0]:
