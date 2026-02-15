@@ -425,8 +425,8 @@ class TitleScreenController:
                 line_height_scale=font_settings.line_height_scale,
             )
             if show_page_arrows:
-                tri_w = 8
-                tri_h = 12
+                tri_w = 6
+                tri_h = 10
                 tri_gap = 12
                 tri_color_enabled = LIGHT_GRAY
                 mouse_pos = pygame.mouse.get_pos()
@@ -439,15 +439,22 @@ class TitleScreenController:
                 )
                 left_cx = list_column_x - tri_gap
                 right_cx = list_column_x + header_width + tri_gap
+                thick = 2
                 left_points = [
                     (left_cx + tri_w // 2, header_mid_y - tri_h // 2),
-                    (left_cx + tri_w // 2, header_mid_y + tri_h // 2),
+                    (left_cx + tri_w // 2 - thick, header_mid_y - tri_h // 2),
                     (left_cx - tri_w // 2, header_mid_y),
+                    (left_cx + tri_w // 2 - thick, header_mid_y + tri_h // 2),
+                    (left_cx + tri_w // 2, header_mid_y + tri_h // 2),
+                    (left_cx - tri_w // 2 + thick, header_mid_y),
                 ]
                 right_points = [
                     (right_cx - tri_w // 2, header_mid_y - tri_h // 2),
-                    (right_cx - tri_w // 2, header_mid_y + tri_h // 2),
+                    (right_cx - tri_w // 2 + thick, header_mid_y - tri_h // 2),
                     (right_cx + tri_w // 2, header_mid_y),
+                    (right_cx - tri_w // 2 + thick, header_mid_y + tri_h // 2),
+                    (right_cx - tri_w // 2, header_mid_y + tri_h // 2),
+                    (right_cx + tri_w // 2 - thick, header_mid_y),
                 ]
                 pad = 4
                 if left_enabled:
