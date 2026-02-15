@@ -272,6 +272,8 @@
     "game_over": {
       "win": "YOU ESCAPED!",
       "lose": "GAME OVER",
+      "menu_title": "RETURN TO TITLE (ESC/SOUTH)",
+      "menu_retry": "RETRY STAGE (R/START)",
       "prompt": "ESC/SPACE/Select/South: Title · R/Start: Retry",
       "scream": "AAAAHHH!!",
       "survivors_summary": "Evacuated: %{count}",

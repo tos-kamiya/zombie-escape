@@ -6,11 +6,13 @@ import pygame
 from pygame import surface, time
 
 from ..colors import BLACK, GREEN, LIGHT_GRAY, RED, WHITE
+from ..font_utils import load_font, render_text_surface
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 from ..input_utils import (
     CommonAction,
     InputHelper,
 )
+from ..localization import get_font_settings
 from ..localization import translate as tr
 from ..models import GameData, Stage
 from ..render import (
@@ -18,7 +20,6 @@ from ..render import (
     _draw_status_bar,
     compute_floor_cells,
     draw_level_overview,
-    blit_message,
 )
 from ..screens import ScreenID, ScreenTransition
 from ..windowing import nudge_window_scale, present, sync_window_size, toggle_fullscreen
@@ -39,14 +40,62 @@ def game_over_screen(
     if not game_data:
         return ScreenTransition(ScreenID.TITLE)
 
-    screen_width = screen.get_width()
-    screen_height = screen.get_height()
     state = game_data.state
     wall_group = game_data.groups.wall_group
     footprints_enabled = config.get("footprints", {}).get("enabled", True)
     input_helper = InputHelper()
+    pygame.mouse.set_visible(True)
+    options: list[dict[str, str]] = [{"id": "title", "label": tr("game_over.menu_title")}]
+    if stage is not None:
+        options.append({"id": "retry", "label": tr("game_over.menu_retry")})
+    selected = 0
+    option_hitboxes: list[pygame.Rect] = [pygame.Rect(0, 0, 0, 0) for _ in options]
+    mouse_guard_frames = 0
+
+    def _activate_option(option_id: str) -> ScreenTransition:
+        if option_id == "retry" and stage is not None:
+            return ScreenTransition(
+                ScreenID.GAMEPLAY,
+                stage=stage,
+                seed=state.seed,
+            )
+        return ScreenTransition(ScreenID.TITLE)
+
+    def _draw_message_box(
+        lines: list[tuple[str, tuple[int, int, int]]],
+        *,
+        center: tuple[int, int],
+        size: int = 11,
+    ) -> None:
+        if not lines:
+            return
+        font_settings = get_font_settings()
+        font = load_font(font_settings.resource, font_settings.scaled_size(size))
+        line_height = int(round(font.get_linesize() * font_settings.line_height_scale))
+        line_spacing = 2
+        rendered = [
+            render_text_surface(
+                font, text, color, line_height_scale=font_settings.line_height_scale
+            )
+            for text, color in lines
+        ]
+        max_width = max(s.get_width() for s in rendered)
+        total_height = line_height * len(rendered) + line_spacing * (len(rendered) - 1)
+        bg_padding = 15
+        bg_rect = pygame.Rect(0, 0, max_width + bg_padding * 2, total_height + bg_padding * 2)
+        bg_rect.center = center
+        bg_surface = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+        bg_surface.fill((0, 0, 0, 180))
+        screen.blit(bg_surface, bg_rect.topleft)
+        y = center[1] - total_height // 2
+        for line_surface in rendered:
+            text_rect = line_surface.get_rect(centerx=center[0], y=y)
+            screen.blit(line_surface, text_rect)
+            y += line_height + line_spacing
 
     while True:
+        screen_width = screen.get_width()
+        screen_height = screen.get_height()
         if not state.overview_created:
             level_rect = game_data.layout.field_rect
             level_width = level_rect.width
@@ -117,36 +166,19 @@ def game_over_screen(
                     center=(screen_width // 2, screen_height // 2)
                 ),
             )
+            headline_lines: list[tuple[str, tuple[int, int, int]]] = []
             if state.game_won:
-                blit_message(
-                    screen,
-                    tr("game_over.win"),
-                    11,
-                    GREEN,
-                    (screen_width // 2, screen_height // 2 - 26),
-                )
+                headline_lines.append((tr("game_over.win"), GREEN))
             else:
-                blit_message(
-                    screen,
-                    tr("game_over.lose"),
-                    11,
-                    RED,
-                    (screen_width // 2, screen_height // 2 - 26),
-                )
-            summary_y = screen_height // 2 + 70
+                headline_lines.append((tr("game_over.lose"), RED))
             if stage and (
                 stage.survivor_rescue_stage
                 or stage.survivor_spawn_rate > 0.0
                 or stage.buddy_required_count > 0
             ):
                 total_rescued = state.survivors_rescued + state.buddy_rescued
-                msg = tr("game_over.survivors_summary", count=total_rescued)
-                blit_message(
-                    screen,
-                    msg,
-                    11,
-                    LIGHT_GRAY,
-                    (screen_width // 2, summary_y),
+                headline_lines.append(
+                    (tr("game_over.survivors_summary", count=total_rescued), LIGHT_GRAY)
                 )
             elif stage and stage.endurance_stage:
                 elapsed_ms = max(0, state.endurance_elapsed_ms)
@@ -157,22 +189,38 @@ def game_over_screen(
                 hours = display_ms // 3_600_000
                 minutes = (display_ms % 3_600_000) // 60_000
                 time_label = f"{int(hours):02d}:{int(minutes):02d}"
-                msg = tr("game_over.endurance_duration", time=time_label)
-                blit_message(
-                    screen,
-                    msg,
-                    11,
-                    LIGHT_GRAY,
-                    (screen_width // 2, summary_y),
+                headline_lines.append(
+                    (tr("game_over.endurance_duration", time=time_label), LIGHT_GRAY)
                 )
+            _draw_message_box(
+                headline_lines,
+                center=(screen_width // 2, screen_height // 2 - 18),
+                size=11,
+            )
 
-        blit_message(
-            screen,
-            tr("game_over.prompt"),
-            11,
-            WHITE,
-            (screen_width // 2, screen_height // 2 + 24),
-        )
+        font_settings = get_font_settings()
+        menu_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+        line_height = int(round(menu_font.get_linesize() * font_settings.line_height_scale))
+        row_height = line_height + 6
+        menu_center_x = screen_width // 2
+        menu_top = screen_height // 2 + 18
+        menu_width = max(140, int(screen_width * 0.32))
+        option_hitboxes = [pygame.Rect(0, 0, 0, 0) for _ in options]
+        highlight_color = (70, 70, 70)
+        for idx, option in enumerate(options):
+            row_rect = pygame.Rect(
+                menu_center_x - menu_width // 2,
+                menu_top + idx * row_height,
+                menu_width,
+                row_height,
+            )
+            option_hitboxes[idx] = row_rect
+            if idx == selected:
+                pygame.draw.rect(screen, highlight_color, row_rect)
+            label_surface = menu_font.render(option["label"], False, WHITE)
+            label_rect = label_surface.get_rect(center=row_rect.center)
+            screen.blit(label_surface, label_rect)
+
         _draw_status_bar(
             screen,
             render_assets,
@@ -192,6 +240,32 @@ def game_over_screen(
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event, game_data=game_data)
                 continue
+            if event.type == pygame.WINDOWFOCUSLOST:
+                continue
+            if event.type == pygame.WINDOWFOCUSGAINED:
+                mouse_guard_frames = 1
+                continue
+            if (
+                event.type == pygame.MOUSEMOTION
+                and pygame.mouse.get_focused()
+                and mouse_guard_frames == 0
+            ):
+                for idx, rect in enumerate(option_hitboxes):
+                    if rect.collidepoint(event.pos):
+                        selected = idx
+                        break
+                continue
+            if (
+                event.type == pygame.MOUSEBUTTONUP
+                and event.button == 1
+                and pygame.mouse.get_focused()
+                and mouse_guard_frames == 0
+            ):
+                for idx, rect in enumerate(option_hitboxes):
+                    if rect.collidepoint(event.pos):
+                        selected = idx
+                        return _activate_option(options[idx]["id"])
+                continue
             input_helper.handle_device_event(event)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
@@ -206,18 +280,18 @@ def game_over_screen(
                 if event.key in (pygame.K_ESCAPE, pygame.K_SPACE):
                     return ScreenTransition(ScreenID.TITLE)
                 if event.key == pygame.K_r and stage is not None:
-                    return ScreenTransition(
-                        ScreenID.GAMEPLAY,
-                        stage=stage,
-                        seed=state.seed,
-                    )
+                    return _activate_option("retry")
 
         snapshot = input_helper.snapshot(events, pygame.key.get_pressed())
+        if snapshot.pressed(CommonAction.UP):
+            selected = (selected - 1) % len(options)
+        if snapshot.pressed(CommonAction.DOWN):
+            selected = (selected + 1) % len(options)
         if snapshot.pressed(CommonAction.START) and stage is not None:
-            return ScreenTransition(
-                ScreenID.GAMEPLAY,
-                stage=stage,
-                seed=state.seed,
-            )
-        if snapshot.pressed(CommonAction.BACK) or snapshot.pressed(CommonAction.CONFIRM):
+            return _activate_option("retry")
+        if snapshot.pressed(CommonAction.BACK):
             return ScreenTransition(ScreenID.TITLE)
+        if snapshot.pressed(CommonAction.CONFIRM):
+            return _activate_option(options[selected]["id"])
+        if mouse_guard_frames > 0:
+            mouse_guard_frames -= 1
