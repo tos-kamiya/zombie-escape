@@ -5,9 +5,10 @@ import pygame
 
 from ..entities_constants import (
     HOUSEPLANT_HEALTH,
-    HOUSEPLANT_RADIUS,
     HOUSEPLANT_COLLISION_RADIUS,
+    HOUSEPLANT_RADIUS,
 )
+from ..render_constants import HOUSEPLANT_BODY_COLOR, HOUSEPLANT_SPIKE_COLOR
 
 class SpikyHouseplant(pygame.sprite.Sprite):
     def __init__(self, x: int, y: int):
@@ -21,9 +22,9 @@ class SpikyHouseplant(pygame.sprite.Sprite):
         # Main body
         pygame.draw.circle(
             self.image,
-            (30, 120, 30), # Darker green
+            HOUSEPLANT_BODY_COLOR,
             (self.radius, self.radius),
-            self.radius - 2
+            self.radius - 2,
         )
         # Spikes (just some lines for now)
         for i in range(8):
@@ -38,7 +39,7 @@ class SpikyHouseplant(pygame.sprite.Sprite):
                 self.radius + math.cos(angle) * end_dist,
                 self.radius + math.sin(angle) * end_dist
             )
-            pygame.draw.line(self.image, (150, 255, 150), start_p, end_p, 2)
+            pygame.draw.line(self.image, HOUSEPLANT_SPIKE_COLOR, start_p, end_p, 2)
 
         self.rect = self.image.get_rect(center=(x, y))
         self.x = float(x)

@@ -33,6 +33,7 @@ from .constants import (
     SURVIVOR_OVERLOAD_DAMAGE_RATIO,
 )
 from ..colors import BLUE, YELLOW
+from ..colors import ambient_palette_key_for_flashlights, get_environment_palette
 from ..localization import translate as tr
 from ..models import FuelMode, FuelProgress, GameData
 from ..rng import get_rng
@@ -73,7 +74,10 @@ RNG = get_rng()
 CAR_ZOMBIE_RAM_DAMAGE = 6
 CAR_ZOMBIE_CONTACT_DAMAGE = 2
 CAR_ZOMBIE_HIT_DAMAGE = 20
-HOUSEPLANT_CONTAMINATION_TRAPPED_ZOMBIES = 4
+HOUSEPLANT_CONTAMINATION_TRAPPED_ZOMBIES = 3
+CONTAMINATED_FLOOR_OVERLAY_COLOR = (210, 72, 72)
+CONTAMINATED_FLOOR_OVERLAY_ALPHA = 32
+CONTAMINATED_FLOOR_BORDER_ALPHA = 180
 
 
 class _StaticCellOverlay(pygame.sprite.Sprite):
@@ -85,6 +89,18 @@ class _StaticCellOverlay(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=(left, top))
 
 
+def _grayscale_preserve_luma(surface_in: pygame.Surface) -> pygame.Surface:
+    out = surface_in.copy()
+    width, height = out.get_size()
+    for y in range(height):
+        for x in range(width):
+            r, g, b, a = out.get_at((x, y))
+            # Perceived luma, keep alpha unchanged.
+            gray = int(round((0.299 * r) + (0.587 * g) + (0.114 * b)))
+            out.set_at((x, y), (gray, gray, gray, a))
+    return out
+
+
 def _capture_contaminated_cell_snapshot(
     *,
     hp: pygame.sprite.Sprite,
@@ -92,14 +108,44 @@ def _capture_contaminated_cell_snapshot(
     cell: tuple[int, int],
     cell_size: int,
 ) -> pygame.Surface:
+    palette = get_environment_palette(ambient_palette_key_for_flashlights(0))
+    use_secondary = ((cell[0] // 2) + (cell[1] // 2)) % 2 == 0
+    base_color = palette.floor_secondary if use_secondary else palette.floor_primary
     snapshot = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
+    snapshot.fill(base_color)
     cell_left = cell[0] * cell_size
     cell_top = cell[1] * cell_size
     for sprite_obj in [hp, *trapped_zombies]:
         if not sprite_obj.alive():
             continue
         rel_rect = sprite_obj.rect.move(-cell_left, -cell_top)
-        snapshot.blit(sprite_obj.image, rel_rect)
+        source_image = (
+            _grayscale_preserve_luma(sprite_obj.image)
+            if sprite_obj is hp
+            else sprite_obj.image
+        )
+        snapshot.blit(source_image, rel_rect)
+    overlay = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
+    overlay.fill(
+        (
+            CONTAMINATED_FLOOR_OVERLAY_COLOR[0],
+            CONTAMINATED_FLOOR_OVERLAY_COLOR[1],
+            CONTAMINATED_FLOOR_OVERLAY_COLOR[2],
+            CONTAMINATED_FLOOR_OVERLAY_ALPHA,
+        )
+    )
+    snapshot.blit(overlay, (0, 0))
+    pygame.draw.rect(
+        snapshot,
+        (
+            CONTAMINATED_FLOOR_OVERLAY_COLOR[0],
+            CONTAMINATED_FLOOR_OVERLAY_COLOR[1],
+            CONTAMINATED_FLOOR_OVERLAY_COLOR[2],
+            CONTAMINATED_FLOOR_BORDER_ALPHA,
+        ),
+        snapshot.get_rect(),
+        width=1,
+    )
     return snapshot
 
 

@@ -24,6 +24,8 @@ from .render_constants import (
     ANGLE_BINS,
     BUDDY_COLOR,
     HAND_SPREAD_RAD,
+    HOUSEPLANT_BODY_COLOR,
+    HOUSEPLANT_SPIKE_COLOR,
     HUMANOID_OUTLINE_COLOR,
     HUMANOID_OUTLINE_WIDTH,
     PATROL_BOT_ARROW_COLOR,
@@ -1388,11 +1390,27 @@ def get_tile_icon(kind: str, size: int) -> pygame.Surface:
         # Add a small dot to indicate it's a spawn point?
         pygame.draw.circle(surf, (180, 0, 0), rect.center, size // 2)
     elif kind == "moving_floor":
-        # Gray with diagonal stripes
+        # Gray tile with a simple ">" marker.
         pygame.draw.rect(surf, (90, 90, 90), rect)
-        line_color = (130, 130, 130)
-        for i in range(-rect.width, rect.width, 4):
-            pygame.draw.line(surf, line_color, (i, 0), (i + rect.width, rect.height), width=1)
+        arrow_color = (130, 130, 130)
+        cx, cy = rect.center
+        half_h = max(2, rect.height // 4)
+        left_x = max(1, cx - (rect.width // 5))
+        right_x = min(rect.right - 2, cx + (rect.width // 5))
+        pygame.draw.line(
+            surf,
+            arrow_color,
+            (left_x, cy - half_h),
+            (right_x, cy),
+            width=2,
+        )
+        pygame.draw.line(
+            surf,
+            arrow_color,
+            (left_x, cy + half_h),
+            (right_x, cy),
+            width=2,
+        )
     elif kind == "puddle":
         # Transparent water effect: single ring only, slightly larger for visibility.
         ring_color = (95, 135, 185)
@@ -1407,7 +1425,7 @@ def get_tile_icon(kind: str, size: int) -> pygame.Surface:
         # Simple marker: body + four spikes.
         center = rect.center
         body_radius = max(2, scaled_size // 4)
-        pygame.draw.circle(surf, (30, 120, 30), center, max(1, body_radius - 1))
+        pygame.draw.circle(surf, HOUSEPLANT_BODY_COLOR, center, max(1, body_radius - 1))
         spike_inner = max(1, body_radius)
         spike_outer = max(spike_inner + 1, body_radius + 1)
         for i in range(4):
@@ -1421,7 +1439,7 @@ def get_tile_icon(kind: str, size: int) -> pygame.Surface:
                 int(center[0] + direction.x * spike_outer),
                 int(center[1] + direction.y * spike_outer),
             )
-            pygame.draw.line(surf, (150, 255, 150), start, end, width=1)
+            pygame.draw.line(surf, HOUSEPLANT_SPIKE_COLOR, start, end, width=1)
     else:
         pygame.draw.rect(surf, (128, 128, 128), rect, width=1)
 
