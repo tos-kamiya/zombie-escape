@@ -60,6 +60,7 @@ Two BFS checks gate acceptance:
    - Skipped for endurance stages (on-foot objective validation is used instead).
 2. Humanoid objective connectivity (`validate_humanoid_objective_connectivity`)
    - 8-direction traversal with moving-floor directional constraints.
+   - Treats pitfall (`x`), outer wall band (`B`), and houseplant (`h`) as blocked for path checks.
    - Objective conditions by fuel mode:
    - `FUEL_CAN`: `P -> reachable f -> C`
    - `REFUEL_CHAIN`: `P -> reachable e -> reachable f -> C` (strict order)
