@@ -47,7 +47,10 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Keep OS cursor hidden during gameplay (`pygame.mouse.set_visible(False)`).
 - Draw an in-game `+` cursor at mouse position after mouse steering has been used.
 - During active mouse steering (button held): show a thick yellow `+`.
-- After button release: keep showing a thin white `+` for 10 seconds (wall-clock time, not frame count).
+- Show a thin white `+` for 1.5 seconds (wall-clock time) after any of:
+  - button release after mouse steering
+  - game start
+  - cursor movement of 10px or more between frames
 - Do not draw helper line from player to mouse, deadzone ring, or black outline circle around cursor.
 
 7. Focus safety
