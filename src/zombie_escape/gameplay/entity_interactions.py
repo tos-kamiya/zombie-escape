@@ -194,6 +194,14 @@ def _handle_fuel_station_refuel(
         schedule_timed_message(
             state, None, duration_frames=0, now_ms=state.clock.elapsed_ms
         )
+    schedule_timed_message(
+        state,
+        tr("hud.fuel_refilled"),
+        duration_frames=_ms_to_frames(400),
+        clear_on_input=False,
+        color=YELLOW,
+        now_ms=state.clock.elapsed_ms,
+    )
     state.hint_expires_at = 0
     state.hint_target_type = None
     print("Fuel can filled at station!")
