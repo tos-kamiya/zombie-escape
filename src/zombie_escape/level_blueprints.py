@@ -87,7 +87,7 @@ def validate_humanoid_connectivity(grid: list[str]) -> bool:
             ch = grid[y][x]
             if ch == "P":
                 start_pos = (x, y)
-            if ch not in ("x", "B", "h"):
+            if ch not in ("x", "B"):
                 passable_cells.add((x, y))
 
     if start_pos is None:
@@ -110,7 +110,7 @@ def _humanoid_reachable_cells(
             (x, y)
             for y in range(rows)
             for x in range(cols)
-            if grid[y][x] not in ("x", "B", "h")
+            if grid[y][x] not in ("x", "B")
         }
     if start_pos not in passable_cells:
         return set()
@@ -169,7 +169,7 @@ def validate_humanoid_objective_connectivity(
         (x, y)
         for y in range(rows)
         for x in range(cols)
-        if grid[y][x] not in ("x", "B", "h")
+        if grid[y][x] not in ("x", "B")
     }
     player_cells = [
         (x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "P"
