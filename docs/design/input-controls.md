@@ -4,8 +4,11 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 
 ## Status
 
-- Gameplay mouse steering: DOING
+- Gameplay mouse steering: DONE
 - Menu mouse navigation (title/settings/game over/pause): INPROGRESS
+- Menu mouse navigation progress:
+  - DONE: title screen, settings screen
+  - INPROGRESS: game-over screen, in-game pause menu
 
 ## Mouse Steering During Gameplay
 
@@ -62,6 +65,7 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 
 1. Cursor visibility
 - Show OS mouse cursor on the screens in scope.
+- Fullscreen mode must not force-hide OS cursor globally; each screen controls visibility explicitly.
 - Keep keyboard/gamepad navigation enabled at the same time.
 
 2. Hover and selection ownership

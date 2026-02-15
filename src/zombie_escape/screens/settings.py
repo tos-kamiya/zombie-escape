@@ -191,6 +191,11 @@ def settings_screen(
     sections, rows, row_sections = rebuild_rows()
     row_count = len(rows)
     last_language = get_language()
+    pygame.mouse.set_visible(True)
+    row_hitboxes: list[pygame.Rect] = [pygame.Rect(0, 0, 0, 0) for _ in range(row_count)]
+    left_toggle_hitboxes: list[pygame.Rect | None] = [None for _ in range(row_count)]
+    right_toggle_hitboxes: list[pygame.Rect | None] = [None for _ in range(row_count)]
+    mouse_guard_frames = 0
 
     def _exit_settings() -> dict[str, Any]:
         save_config(working, config_path)
@@ -198,12 +203,16 @@ def settings_screen(
 
     def _render_frame() -> None:
         nonlocal last_language, sections, rows, row_sections, row_count, selected
+        nonlocal row_hitboxes, left_toggle_hitboxes, right_toggle_hitboxes
         current_language = get_language()
         if current_language != last_language:
             sections, rows, row_sections = rebuild_rows()
             row_count = len(rows)
             selected %= row_count
             last_language = current_language
+        row_hitboxes = [pygame.Rect(0, 0, 0, 0) for _ in range(row_count)]
+        left_toggle_hitboxes = [None for _ in range(row_count)]
+        right_toggle_hitboxes = [None for _ in range(row_count)]
 
         screen.fill(BLACK)
         try:
@@ -309,6 +318,7 @@ def settings_screen(
                 highlight_rect = pygame.Rect(
                     col_x, row_y_current - 2, row_width, row_height
                 )
+                row_hitboxes[idx] = highlight_rect.copy()
                 if idx == selected:
                     pygame.draw.rect(screen, highlight_color, highlight_rect)
 
@@ -366,6 +376,8 @@ def settings_screen(
                         segment_width,
                         segment_height,
                     )
+                    left_toggle_hitboxes[idx] = left_rect.copy()
+                    right_toggle_hitboxes[idx] = right_rect.copy()
 
                     left_active = value == row["easy_value"]
                     right_active = not left_active
@@ -485,6 +497,52 @@ def settings_screen(
                 sync_window_size(event)
                 adjust_menu_logical_size()
                 continue
+            if event.type == pygame.WINDOWFOCUSLOST:
+                continue
+            if event.type == pygame.WINDOWFOCUSGAINED:
+                mouse_guard_frames = 1
+                continue
+            if (
+                event.type == pygame.MOUSEMOTION
+                and pygame.mouse.get_focused()
+                and mouse_guard_frames == 0
+            ):
+                for idx, rect in enumerate(row_hitboxes):
+                    if rect.collidepoint(event.pos):
+                        selected = idx
+                        break
+                continue
+            if (
+                event.type == pygame.MOUSEBUTTONUP
+                and event.button == 1
+                and pygame.mouse.get_focused()
+                and mouse_guard_frames == 0
+            ):
+                clicked_index: int | None = None
+                for idx, rect in enumerate(row_hitboxes):
+                    if rect.collidepoint(event.pos):
+                        clicked_index = idx
+                        break
+                if clicked_index is not None:
+                    selected = clicked_index
+                    current_row = rows[selected]
+                    row_type = current_row.get("type", "toggle")
+                    if row_type == "action":
+                        return _exit_settings()
+                    if row_type == "toggle":
+                        left_rect = left_toggle_hitboxes[selected]
+                        right_rect = right_toggle_hitboxes[selected]
+                        if left_rect and left_rect.collidepoint(event.pos):
+                            set_easy_value(current_row, True)
+                        elif right_rect and right_rect.collidepoint(event.pos):
+                            set_easy_value(current_row, False)
+                        else:
+                            toggle_row(current_row)
+                    elif row_type == "choice":
+                        row_rect = row_hitboxes[selected]
+                        direction = -1 if event.pos[0] < row_rect.centerx else 1
+                        cycle_choice(current_row, direction)
+                continue
             input_helper.handle_device_event(event)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFTBRACKET:
@@ -533,3 +591,5 @@ def settings_screen(
         _render_frame()
         present(screen)
         clock.tick(fps)
+        if mouse_guard_frames > 0:
+            mouse_guard_frames -= 1

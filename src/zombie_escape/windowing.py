@@ -220,7 +220,6 @@ def toggle_fullscreen(*, game_data: "GameData | None" = None) -> surface.Surface
         window_width, window_height = _fetch_window_size(window)
         _update_window_caption()
         _update_window_size((window_width, window_height), source="toggle_fullscreen")
-    pygame.mouse.set_visible(not current_maximized)
     if game_data is not None:
         game_data.state.overview_created = False
     return window

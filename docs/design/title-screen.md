@@ -45,3 +45,11 @@ Icon order is fixed by category:
   - same canvas size (flashlight icon size),
   - same X geometry/position,
   - same line thickness.
+
+## Stage List Paging
+
+- Stage pages can be switched by keyboard/gamepad left-right input.
+- The `STAGES` header also shows mouse-clickable left/right triangle buttons when paging in that direction is possible.
+- Mouse wheel input over the stage-list pane also switches stage pages:
+  - wheel up: previous page
+  - wheel down: next page
