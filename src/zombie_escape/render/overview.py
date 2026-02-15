@@ -10,6 +10,7 @@ from ..colors import (
     BLUE,
     FOOTPRINT_COLOR,
     LIGHT_GRAY,
+    RED,
     YELLOW,
     WHITE,
     get_environment_palette,
@@ -138,6 +139,7 @@ def draw_level_overview(
     fall_spawn_cells: set[tuple[int, int]] | None = None,
     moving_floor_cells: dict[tuple[int, int], object] | None = None,
     puddle_cells: set[tuple[int, int]] | None = None,
+    zombie_contaminated_cells: set[tuple[int, int]] | None = None,
     palette_key: str | None = None,
 ) -> None:
     palette = get_environment_palette(palette_key)
@@ -199,6 +201,20 @@ def draw_level_overview(
                     rect=cell_rect,
                     phase=0,
                     color=puddle_wave_color,
+                    width=1,
+                )
+        if zombie_contaminated_cells:
+            for x, y in zombie_contaminated_cells:
+                inset = max(1, int(cell_size * 0.05))
+                pygame.draw.rect(
+                    surface,
+                    RED,
+                    pygame.Rect(
+                        x * cell_size + inset,
+                        y * cell_size + inset,
+                        max(1, cell_size - inset * 2),
+                        max(1, cell_size - inset * 2),
+                    ),
                     width=1,
                 )
 
@@ -376,6 +392,7 @@ def draw_debug_overview(
         fall_spawn_cells=game_data.layout.fall_spawn_cells,
         moving_floor_cells=game_data.layout.moving_floor_cells,
         puddle_cells=game_data.layout.puddle_cells,
+        zombie_contaminated_cells=game_data.layout.zombie_contaminated_cells,
         palette_key=game_data.state.ambient_palette_key,
     )
     fov_target = None

@@ -143,6 +143,7 @@ def game_over_screen(
                 fall_spawn_cells=game_data.layout.fall_spawn_cells,
                 moving_floor_cells=game_data.layout.moving_floor_cells,
                 puddle_cells=game_data.layout.puddle_cells,
+                zombie_contaminated_cells=game_data.layout.zombie_contaminated_cells,
                 palette_key=state.ambient_palette_key,
             )
 
