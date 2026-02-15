@@ -451,6 +451,7 @@ class GameplayScreenRunner:
                 )
             if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
                 sync_window_size(event, game_data=self.game_data)
+                self._enter_manual_pause()
                 continue
             self.input_helper.handle_device_event(event)
             if event.type == pygame.WINDOWFOCUSLOST:
@@ -459,6 +460,9 @@ class GameplayScreenRunner:
                 self.pause_mouse_ui_guard.handle_focus_event(event)
             if event.type == pygame.WINDOWFOCUSGAINED:
                 self.pause_mouse_ui_guard.handle_focus_event(event)
+                if self.paused_focus and not self.paused_manual:
+                    self.paused_focus = False
+                    self.pause_hotspot_inside_prev = False
             if (
                 not (self.paused_manual or self.paused_focus)
                 and event.type == pygame.MOUSEMOTION
@@ -506,15 +510,23 @@ class GameplayScreenRunner:
                     continue
                 if event.key == pygame.K_LEFTBRACKET:
                     nudge_window_scale(0.5, game_data=self.game_data)
+                    self._enter_manual_pause()
                     continue
                 if event.key == pygame.K_RIGHTBRACKET:
                     nudge_window_scale(2.0, game_data=self.game_data)
+                    self._enter_manual_pause()
                     continue
                 if event.key == pygame.K_f:
                     toggle_fullscreen(game_data=self.game_data)
+                    self._enter_manual_pause()
                     continue
                 if self.debug_mode and event.key == pygame.K_o:
                     self.debug_overview = not self.debug_overview
+
+        if self.paused_focus and pygame.key.get_focused() and not self.paused_manual:
+            # Fallback: resume if focus has already returned but focus events were missed.
+            self.paused_focus = False
+            self.pause_hotspot_inside_prev = False
 
         snapshot = self.input_helper.snapshot(events, pygame.key.get_pressed())
         if self.debug_mode:
@@ -755,6 +767,17 @@ class GameplayScreenRunner:
                 if i < len(self.pause_option_ids)
             ]
             self.pause_option_click_map.set_targets(targets)
+        elif self.debug_mode:
+            font_settings = get_font_settings()
+            font = load_font(font_settings.resource, font_settings.scaled_size(10))
+            paused_label = render_text_surface(
+                font,
+                "-- paused --",
+                LIGHT_GRAY,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            label_rect = paused_label.get_rect(midtop=(self.screen_width // 2, 4))
+            self.screen.blit(paused_label, label_rect)
         present(self.screen)
 
     def _activate_pause_selection(self) -> ScreenTransition | None:
@@ -766,6 +789,11 @@ class GameplayScreenRunner:
         if selected_id == "title":
             return self._finalize(ScreenTransition(ScreenID.TITLE))
         return None
+
+    def _enter_manual_pause(self) -> None:
+        self.paused_manual = True
+        self.pause_selected_index = 0
+        self.pause_hotspot_inside_prev = False
 
     def _is_game_finished(self, frame_ms: int, current_fps: float) -> bool:
         assert self.game_data is not None
