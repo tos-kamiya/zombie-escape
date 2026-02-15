@@ -11,6 +11,7 @@ English is the source of truth.
 - `docs/design/ai-zombies.md`: Zombie variants and AI behavior.
 - `docs/design/gameplay-flow.md`: Initialization, spawn, update, and interaction flow.
 - `docs/design/title-screen.md`: Title menu behavior and stage-select icon ordering rules.
+- `docs/design/input-controls.md`: Cross-device input rules and planned mouse steering behavior.
 - `docs/design/rendering.md`: Render pipeline, fog, shadows, HUD.
 - `docs/design/windowing-platform.md`: Window/fullscreen behavior and platform notes.
 - `docs/design/level-generation.md`: Blueprint generation and connectivity validation.
