@@ -82,6 +82,8 @@ if TYPE_CHECKING:
 _SHARED_FOG_CACHE: dict[str, Any] | None = None
 _MOUSE_STEERING_DEADZONE_SCALE = 2.0
 _MOUSE_CURSOR_PERSIST_MS = 10_000
+_PAUSE_HOTSPOT_COLOR = (18, 18, 18)
+_PAUSE_HOTSPOT_TRI_SIZE = 7
 
 
 def _resolve_hint_target_type(
@@ -276,6 +278,7 @@ class GameplayScreenRunner:
         self.pause_option_ids = ["resume", "title"]
         self.pause_option_click_map = ClickableMap()
         self.pause_mouse_ui_guard = MouseUiGuard()
+        self.pause_hotspot_inside_prev = False
         self.debug_overview = False
         self.reported_internal_errors: set[str] = set()
         self.input_helper = InputHelper()
@@ -454,6 +457,16 @@ class GameplayScreenRunner:
                 self.pause_mouse_ui_guard.handle_focus_event(event)
             if event.type == pygame.WINDOWFOCUSGAINED:
                 self.pause_mouse_ui_guard.handle_focus_event(event)
+            if (
+                not (self.paused_manual or self.paused_focus)
+                and event.type == pygame.MOUSEMOTION
+            ):
+                now_inside_hotspot = self._pause_hotspot_kind_at(event.pos) is not None
+                if now_inside_hotspot and not self.pause_hotspot_inside_prev:
+                    self.paused_manual = True
+                    self.pause_selected_index = 0
+                self.pause_hotspot_inside_prev = now_inside_hotspot
+                continue
             if (
                 (self.paused_manual or self.paused_focus)
                 and event.type == pygame.MOUSEMOTION
@@ -683,6 +696,7 @@ class GameplayScreenRunner:
             hint_color=hint_color,
             fps=current_fps,
         )
+        self._draw_pause_hotspot_hint()
         self._draw_mouse_steering_overlay()
         if self.profiling_active:
             font_settings = get_font_settings()
@@ -889,6 +903,60 @@ class GameplayScreenRunner:
         pygame.draw.line(overlay, color, (mx - half, my), (mx + half, my), width=width)
         pygame.draw.line(overlay, color, (mx, my - half), (mx, my + half), width=width)
         self.screen.blit(overlay, (0, 0))
+
+    def _compute_present_rect(self) -> pygame.Rect:
+        window = pygame.display.get_surface()
+        if window is None:
+            return pygame.Rect(0, 0, self.screen_width, self.screen_height)
+        window_width, window_height = window.get_size()
+        logical_width, logical_height = self.screen.get_size()
+        if logical_width <= 0 or logical_height <= 0:
+            return pygame.Rect(0, 0, window_width, window_height)
+        scale_x = window_width / float(logical_width)
+        scale_y = window_height / float(logical_height)
+        scale = min(scale_x, scale_y)
+        present_width = max(1, int(logical_width * scale))
+        present_height = max(1, int(logical_height * scale))
+        offset_x = (window_width - present_width) // 2
+        offset_y = (window_height - present_height) // 2
+        return pygame.Rect(offset_x, offset_y, present_width, present_height)
+
+    def _pause_hotspot_kind_at(self, pos: tuple[int, int]) -> str | None:
+        present_rect = self._compute_present_rect()
+        if not present_rect.collidepoint(pos):
+            return None
+        local_x = int(pos[0]) - present_rect.left
+        local_y = int(pos[1]) - present_rect.top
+        local_w = present_rect.width
+        local_h = present_rect.height
+        tri_size = max(
+            8,
+            int(
+                _PAUSE_HOTSPOT_TRI_SIZE
+                * (present_rect.width / max(1, self.screen_width))
+            ),
+        )
+        if local_x + local_y <= tri_size:
+            return "corner"
+        if (local_w - 1 - local_x) + local_y <= tri_size:
+            return "corner"
+        if local_x + (local_h - 1 - local_y) <= tri_size:
+            return "corner"
+        if (local_w - 1 - local_x) + (local_h - 1 - local_y) <= tri_size:
+            return "corner"
+        return None
+
+    def _draw_pause_hotspot_hint(self) -> None:
+        w, h = self.screen.get_size()
+        s = _PAUSE_HOTSPOT_TRI_SIZE
+        top_left = [(1, 1), (1 + s, 1), (1, 1 + s)]
+        top_right = [(w - 2, 1), (w - 2 - s, 1), (w - 2, 1 + s)]
+        bottom_left = [(1, h - 2), (1 + s, h - 2), (1, h - 2 - s)]
+        bottom_right = [(w - 2, h - 2), (w - 2 - s, h - 2), (w - 2, h - 2 - s)]
+        pygame.draw.polygon(self.screen, _PAUSE_HOTSPOT_COLOR, top_left)
+        pygame.draw.polygon(self.screen, _PAUSE_HOTSPOT_COLOR, top_right)
+        pygame.draw.polygon(self.screen, _PAUSE_HOTSPOT_COLOR, bottom_left)
+        pygame.draw.polygon(self.screen, _PAUSE_HOTSPOT_COLOR, bottom_right)
 
     def _dump_profile(self) -> None:
         if self.profiler is None or self.profiler_output is None:

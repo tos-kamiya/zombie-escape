@@ -85,6 +85,7 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 5. Pause screen behavior
 - Pause provides explicit selectable menu items (`Resume`, `Return to Title`) so mouse navigation has concrete targets.
 - While paused, OS cursor is visible and menu items are selectable by hover + left-button release.
+- During gameplay (not paused), mouse users can enter pause by moving the cursor into one of the four corner hotspot markers in the mouse-movable area.
 
 6. Game-over menu presentation
 - Game-over screen uses explicit selectable buttons (`Return to Title`, `Retry Stage`) instead of a separate key-help line.
