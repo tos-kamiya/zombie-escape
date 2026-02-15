@@ -26,6 +26,19 @@ def is_in_puddle_cell(
     return cell in puddle_cells
 
 
+def is_in_contaminated_cell(
+    x: float,
+    y: float,
+    *,
+    cell_size: int,
+    contaminated_cells: set[tuple[int, int]],
+) -> bool:
+    if cell_size <= 0 or not contaminated_cells:
+        return False
+    cell = (int(x // cell_size), int(y // cell_size))
+    return cell in contaminated_cells
+
+
 def is_touching_houseplant(
     x: float,
     y: float,

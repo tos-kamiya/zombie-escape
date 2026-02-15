@@ -30,11 +30,12 @@ from ..entities_constants import (
     PATROL_BOT_PARALYZE_BLINK_MS,
     PATROL_BOT_PARALYZE_MARKER_COLOR,
     PUDDLE_SPEED_FACTOR,
+    ZOMBIE_CONTAMINATED_SPEED_FACTOR,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
 )
 from ..rng import get_rng
-from ..surface_effects import is_in_puddle_cell
+from ..surface_effects import is_in_contaminated_cell, is_in_puddle_cell
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_dog_directional_surfaces,
@@ -431,6 +432,14 @@ class ZombieDog(pygame.sprite.Sprite):
         ):
             move_x *= PUDDLE_SPEED_FACTOR
             move_y *= PUDDLE_SPEED_FACTOR
+        if is_in_contaminated_cell(
+            self.x,
+            self.y,
+            cell_size=cell_size,
+            contaminated_cells=layout.zombie_contaminated_cells,
+        ):
+            move_x *= ZOMBIE_CONTAMINATED_SPEED_FACTOR
+            move_y *= ZOMBIE_CONTAMINATED_SPEED_FACTOR
 
         if nearby_zombies:
             move_x, move_y = self._avoid_other_zombies(

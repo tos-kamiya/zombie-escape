@@ -373,12 +373,11 @@ def handle_survivor_zombie_collisions(
         return
     zombie_group = game_data.groups.zombie_group
     zombies = [z for z in zombie_group if z.alive()]
-    if not zombies:
-        return
     zombies.sort(key=lambda s: s.rect.centerx)
     zombie_xs = [z.rect.centerx for z in zombies]
     camera = game_data.camera
     walkable_cells = game_data.layout.walkable_cells
+    contaminated_cells = game_data.layout.zombie_contaminated_cells
     cell_size = game_data.cell_size
     player = game_data.player
     car = game_data.car
@@ -386,8 +385,41 @@ def handle_survivor_zombie_collisions(
     fov_target = active_car if player and player.in_car and active_car else player
     now = game_data.state.clock.elapsed_ms
 
+    def _is_on_contaminated_cell(survivor: Survivor) -> bool:
+        if cell_size <= 0 or not contaminated_cells:
+            return False
+        cell = (
+            int(survivor.rect.centerx // cell_size),
+            int(survivor.rect.centery // cell_size),
+        )
+        return cell in contaminated_cells
+
+    def _convert_survivor_to_zombie(
+        survivor: Survivor,
+        *,
+        zombie_kind: ZombieKind,
+    ) -> None:
+        survivor.kill()
+        line = random_survivor_conversion_line(game_data.stage.id)
+        if line:
+            add_survivor_message(game_data, line)
+        new_zombie = _create_zombie(
+            config,
+            start_pos=survivor.rect.center,
+            stage=game_data.stage,
+            kind=zombie_kind,
+        )
+        zombie_group.add(new_zombie)
+        game_data.groups.all_sprites.add(new_zombie, layer=LAYER_ZOMBIES)
+        insert_idx = bisect_left(zombie_xs, new_zombie.rect.centerx)
+        zombie_xs.insert(insert_idx, new_zombie.rect.centerx)
+        zombies.insert(insert_idx, new_zombie)
+
     for survivor in list(survivor_group):
         if not survivor.alive():
+            continue
+        if _is_on_contaminated_cell(survivor):
+            _convert_survivor_to_zombie(survivor, zombie_kind=ZombieKind.NORMAL)
             continue
         survivor_radius = survivor.collision_radius
         search_radius = survivor_radius + ZOMBIE_RADIUS
@@ -430,23 +462,14 @@ def handle_survivor_zombie_collisions(
             )
             survivor.teleport(spawn_pos)
             continue
-        survivor.kill()
-        line = random_survivor_conversion_line(game_data.stage.id)
-        if line:
-            add_survivor_message(game_data, line)
-        new_zombie = _create_zombie(
-            config,
-            start_pos=survivor.rect.center,
-            stage=game_data.stage,
-            kind=ZombieKind.NORMAL
-            if isinstance(collided_zombie, ZombieDog)
-            else getattr(collided_zombie, "kind", ZombieKind.NORMAL),
+        _convert_survivor_to_zombie(
+            survivor,
+            zombie_kind=(
+                ZombieKind.NORMAL
+                if isinstance(collided_zombie, ZombieDog)
+                else getattr(collided_zombie, "kind", ZombieKind.NORMAL)
+            ),
         )
-        zombie_group.add(new_zombie)
-        game_data.groups.all_sprites.add(new_zombie, layer=LAYER_ZOMBIES)
-        insert_idx = bisect_left(zombie_xs, new_zombie.rect.centerx)
-        zombie_xs.insert(insert_idx, new_zombie.rect.centerx)
-        zombies.insert(insert_idx, new_zombie)
 
 
 def respawn_buddies_near_player(game_data: GameData) -> None:

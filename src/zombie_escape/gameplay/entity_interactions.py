@@ -28,6 +28,7 @@ from ..entities_constants import (
 )
 from .constants import (
     FUEL_HINT_DURATION_MS,
+    LAYER_HOUSEPLANTS,
     LAYER_PLAYERS,
     SURVIVOR_OVERLOAD_DAMAGE_RATIO,
 )
@@ -72,6 +73,34 @@ RNG = get_rng()
 CAR_ZOMBIE_RAM_DAMAGE = 6
 CAR_ZOMBIE_CONTACT_DAMAGE = 2
 CAR_ZOMBIE_HIT_DAMAGE = 20
+HOUSEPLANT_CONTAMINATION_TRAPPED_ZOMBIES = 4
+
+
+class _StaticCellOverlay(pygame.sprite.Sprite):
+    """Static cell overlay used for frozen contamination snapshots."""
+
+    def __init__(self, *, image: pygame.Surface, left: int, top: int) -> None:
+        super().__init__()
+        self.image = image
+        self.rect = self.image.get_rect(topleft=(left, top))
+
+
+def _capture_contaminated_cell_snapshot(
+    *,
+    hp: pygame.sprite.Sprite,
+    trapped_zombies: list[pygame.sprite.Sprite],
+    cell: tuple[int, int],
+    cell_size: int,
+) -> pygame.Surface:
+    snapshot = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
+    cell_left = cell[0] * cell_size
+    cell_top = cell[1] * cell_size
+    for sprite_obj in [hp, *trapped_zombies]:
+        if not sprite_obj.alive():
+            continue
+        rel_rect = sprite_obj.rect.move(-cell_left, -cell_top)
+        snapshot.blit(sprite_obj.image, rel_rect)
+    return snapshot
 
 
 def _handle_houseplant_trapping(game_data: GameData) -> None:
@@ -112,6 +141,41 @@ def _handle_houseplant_trapping(game_data: GameData) -> None:
                 zombie.kill()
                 zombie_group.add(trapped)
                 all_sprites.add(trapped, layer=LAYER_ZOMBIES)
+
+    contaminated_cells = game_data.layout.zombie_contaminated_cells
+    trapped_by_cell: dict[tuple[int, int], list[pygame.sprite.Sprite]] = {}
+    for zombie in zombie_group:
+        if not zombie.alive() or not getattr(zombie, "is_trapped", False):
+            continue
+        cell = (int(zombie.x // cell_size), int(zombie.y // cell_size))
+        if cell in contaminated_cells:
+            continue
+        trapped_by_cell.setdefault(cell, []).append(zombie)
+
+    for cell, trapped_here in trapped_by_cell.items():
+        if len(trapped_here) < HOUSEPLANT_CONTAMINATION_TRAPPED_ZOMBIES:
+            continue
+        hp = houseplants.get(cell)
+        if not hp or not hp.alive():
+            continue
+        snapshot = _capture_contaminated_cell_snapshot(
+            hp=hp,
+            trapped_zombies=trapped_here,
+            cell=cell,
+            cell_size=cell_size,
+        )
+        overlay = _StaticCellOverlay(
+            image=snapshot,
+            left=cell[0] * cell_size,
+            top=cell[1] * cell_size,
+        )
+        all_sprites.add(overlay, layer=LAYER_HOUSEPLANTS)
+        contaminated_cells.add(cell)
+        game_data.layout.houseplant_cells.discard(cell)
+        hp.kill()
+        houseplants.pop(cell, None)
+        for trapped in trapped_here:
+            trapped.kill()
 
 
 def _handle_fuel_pickup(
@@ -535,6 +599,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     camera = game_data.camera
     stage = game_data.stage
     cell_size = game_data.cell_size
+    contaminated_cells = game_data.layout.zombie_contaminated_cells
     need_fuel_text = tr("hud.need_fuel")
     need_empty_can_text = tr("hud.need_empty_fuel_can")
     survivor_boarding_enabled = (
@@ -586,6 +651,15 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
 
     def _player_near_car(car_obj: Car | None) -> bool:
         return _player_near_sprite(car_obj, car_interaction_radius)
+
+    def _entity_on_contaminated_cell(entity: pygame.sprite.Sprite) -> bool:
+        if cell_size <= 0 or not contaminated_cells:
+            return False
+        cell = (
+            int(entity.rect.centerx // cell_size),
+            int(entity.rect.centery // cell_size),
+        )
+        return cell in contaminated_cells
 
     if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
         picked_empty_this_frame = _handle_empty_fuel_can_pickup(
@@ -855,7 +929,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         survivor_boarding_enabled=survivor_boarding_enabled,
     )
 
-    # Player getting caught by zombies
+    # Player getting caught by zombies or touching a contaminated tile
     if not player.in_car and player in all_sprites:
         shrunk_player = get_shrunk_sprite(player, 0.8)
         collisions = pygame.sprite.spritecollide(
@@ -866,9 +940,10 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             center=(player.x, player.y),
             radius=max(1.0, float(getattr(player, "collision_radius", HUMANOID_RADIUS))),
         )
+        contaminated_hit = _entity_on_contaminated_cell(player)
         if any(
             is_active_zombie_threat(zombie, now_ms=now) for zombie in collisions
-        ) or marker_hit:
+        ) or marker_hit or contaminated_hit:
             if not state.game_over:
                 player.set_zombified_visual()
                 state.game_over = True

@@ -20,6 +20,7 @@ from ..entities_constants import (
     ZOMBIE_DOG_LONG_AXIS_RATIO,
     ZOMBIE_DOG_SHORT_AXIS_RATIO,
     PUDDLE_SPEED_FACTOR,
+    ZOMBIE_CONTAMINATED_SPEED_FACTOR,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SPEED,
@@ -44,7 +45,7 @@ from ..render_assets import (
 )
 from ..render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR, ZOMBIE_OUTLINE_COLOR
 from ..rng import get_rng
-from ..surface_effects import is_in_puddle_cell
+from ..surface_effects import is_in_contaminated_cell, is_in_puddle_cell
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from ..world_grid import apply_cell_edge_nudge
 from .patrol_paralyze import draw_paralyze_marker
@@ -517,6 +518,14 @@ class Zombie(pygame.sprite.Sprite):
         ):
             move_x *= PUDDLE_SPEED_FACTOR
             move_y *= PUDDLE_SPEED_FACTOR
+        if is_in_contaminated_cell(
+            self.x,
+            self.y,
+            cell_size=cell_size,
+            contaminated_cells=layout.zombie_contaminated_cells,
+        ):
+            move_x *= ZOMBIE_CONTAMINATED_SPEED_FACTOR
+            move_y *= ZOMBIE_CONTAMINATED_SPEED_FACTOR
 
         if dist_to_player_sq <= avoid_radius_sq or self.kind == ZombieKind.WALL_HUGGER:
             move_x, move_y = self._avoid_other_zombies(move_x, move_y, nearby_zombies)

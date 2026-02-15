@@ -76,6 +76,7 @@ class LevelLayout:
     car_spawn_cells: list[tuple[int, int]]
     fall_spawn_cells: set[tuple[int, int]]
     houseplant_cells: set[tuple[int, int]]
+    zombie_contaminated_cells: set[tuple[int, int]]
     puddle_cells: set[tuple[int, int]]
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection]
