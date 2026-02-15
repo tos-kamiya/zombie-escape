@@ -27,6 +27,7 @@ from ..entities import (
     SpikyHouseplant,
     SteelBeam,
     Survivor,
+    TrappedZombie,
     Wall,
     Zombie,
     ZombieDog,
@@ -35,7 +36,11 @@ from ..font_utils import load_font, render_text_surface
 from ..localization import get_font_settings
 from ..models import Footprint, GameData
 from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
-from ..render_constants import MOVING_FLOOR_OVERVIEW_COLOR
+from ..render_constants import (
+    LINEFORMER_MARKER_OVERVIEW_COLOR,
+    MOVING_FLOOR_OVERVIEW_COLOR,
+    TRAPPED_ZOMBIE_OVERVIEW_COLOR,
+)
 from ..entities_constants import PATROL_BOT_COLLISION_RADIUS
 from .hud import _get_fog_scale, build_zombie_debug_counts_text
 from .puddle import draw_puddle_rings, get_puddle_wave_color
@@ -318,7 +323,6 @@ def draw_level_overview(
                 )
     if zombies:
         zombie_color = (200, 80, 80)
-        lineformer_marker_color = (150, 50, 50)
         zombie_radius = max(2, int(assets.player_radius * 1.2))
         for zombie in zombies:
             if not zombie.alive():
@@ -330,13 +334,20 @@ def draw_level_overview(
                     zombie.rect.center,
                     zombie_radius,
                 )
+            elif isinstance(zombie, TrappedZombie):
+                pygame.draw.circle(
+                    surface,
+                    TRAPPED_ZOMBIE_OVERVIEW_COLOR,
+                    zombie.rect.center,
+                    zombie_radius,
+                )
         if lineformer_trains is not None:
             marker_radius = max(1, zombie_radius - 1)
             marker_draw_data = lineformer_trains.iter_marker_draw_data(zombies)
             for marker_x, marker_y, _ in marker_draw_data:
                 pygame.draw.circle(
                     surface,
-                    lineformer_marker_color,
+                    LINEFORMER_MARKER_OVERVIEW_COLOR,
                     (int(marker_x), int(marker_y)),
                     marker_radius,
                 )
