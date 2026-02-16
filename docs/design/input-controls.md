@@ -33,7 +33,10 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Current default: left mouse button.
 - While active, movement direction is computed from:
   - `mouse_screen_pos - player_screen_pos`
-- Mouse acceleration trigger is also available while holding left mouse button near player center.
+- Mouse acceleration trigger (`4x`) requires an armed press:
+  - Left button must be pressed down while the cursor is already on the player.
+  - After that, `4x` remains active only while the same press is held and the cursor stays on the player.
+  - Sliding onto the player while already holding left button must not activate `4x`.
 - Acceleration radius is smaller than movement deadzone radius to keep intent clear.
 
 4. Deadzone
@@ -51,6 +54,8 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
   - button release after mouse steering
   - game start
   - cursor movement of 10px or more between frames
+- When left button is not pressed and cursor hovers over the player, show static `>> 4x` near the player (no animation).
+- Do not use right-bottom HUD animated/yellow `4x` status text.
 - Do not draw helper line from player to mouse, deadzone ring, or black outline circle around cursor.
 
 7. Focus safety

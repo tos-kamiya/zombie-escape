@@ -286,6 +286,7 @@ class GameplayScreenRunner:
         self.reported_internal_errors: set[str] = set()
         self.input_helper = InputHelper()
         self.mouse_steering_active = False
+        self.mouse_accel_armed = False
         self.mouse_cursor_screen_pos: tuple[int, int] | None = None
         self.mouse_cursor_prev_screen_pos: tuple[int, int] | None = None
         self.mouse_cursor_visible_until_ms = 0
@@ -459,8 +460,20 @@ class GameplayScreenRunner:
                 self._enter_manual_pause()
                 continue
             self.input_helper.handle_device_event(event)
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                player_for_accel = self.game_data.player
+                if player_for_accel is None:
+                    self.mouse_accel_armed = False
+                else:
+                    self.mouse_accel_armed = self._is_mouse_over_player_accel_zone(
+                        player_for_accel,
+                        mouse_pos=tuple(map(int, event.pos)),
+                    )
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                self.mouse_accel_armed = False
             if event.type == pygame.WINDOWFOCUSLOST:
                 self.paused_focus = True
+                self.mouse_accel_armed = False
                 self.pause_selected_index = 0
                 self.pause_mouse_ui_guard.handle_focus_event(event)
             if event.type == pygame.WINDOWFOCUSGAINED:
@@ -978,6 +991,8 @@ class GameplayScreenRunner:
     def _is_mouse_accel_active(self, player: Any) -> bool:
         if self.paused_manual or self.paused_focus or not pygame.mouse.get_focused():
             return False
+        if not self.mouse_accel_armed:
+            return False
         buttons = pygame.mouse.get_pressed(3)
         if not buttons or not buttons[0]:
             return False
@@ -985,7 +1000,17 @@ class GameplayScreenRunner:
         if self._pause_hotspot_kind_at(mouse_pos) is not None:
             # Prefer pause hotspot behavior over mouse-hold acceleration.
             return False
+        return self._is_mouse_over_player_accel_zone(player, mouse_pos=mouse_pos)
+
+    def _is_mouse_over_player_accel_zone(
+        self,
+        player: Any,
+        *,
+        mouse_pos: tuple[int, int] | None = None,
+    ) -> bool:
         assert self.game_data is not None
+        if mouse_pos is None:
+            mouse_pos = tuple(map(int, pygame.mouse.get_pos()))
         player_screen_pos = self.game_data.camera.apply(player).center
         dx = float(mouse_pos[0] - player_screen_pos[0])
         dy = float(mouse_pos[1] - player_screen_pos[1])
@@ -997,15 +1022,27 @@ class GameplayScreenRunner:
         assert self.game_data is not None
         state = self.game_data.state
         player = self.game_data.player
-        if not state.time_accel_active or player is None:
+        if player is None:
             return
         player_screen_center = self.game_data.camera.apply(player).center
         font_settings = get_font_settings()
         font = load_font(font_settings.resource, font_settings.scaled_size(11))
+        if state.time_accel_active:
+            text = build_time_accel_text()
+            color = WHITE
+        elif (
+            pygame.mouse.get_focused()
+            and not pygame.mouse.get_pressed(3)[0]
+            and self._is_mouse_over_player_accel_zone(player)
+        ):
+            text = ">> 4x"
+            color = LIGHT_GRAY
+        else:
+            return
         label = render_text_surface(
             font,
-            build_time_accel_text(),
-            WHITE,
+            text,
+            color,
             line_height_scale=font_settings.line_height_scale,
         )
         label_rect = label.get_rect(

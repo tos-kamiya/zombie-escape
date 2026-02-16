@@ -405,25 +405,15 @@ def _draw_endurance_timer(
         )
         text_rect = text_surface.get_rect(left=bar_rect.left, bottom=text_bottom)
         screen.blit(text_surface, text_rect)
-        if state.time_accel_active:
-            accel_text = build_time_accel_text()
-            accel_surface = render_text_surface(
-                font, accel_text, YELLOW, line_height_scale=font_settings.line_height_scale
-            )
-            accel_rect = accel_surface.get_rect(
-                right=bar_rect.right, bottom=text_bottom
-            )
-            screen.blit(accel_surface, accel_rect)
-        else:
-            hint_text = tr("hud.time_accel_hint")
-            hint_surface = render_text_surface(
-                font,
-                hint_text,
-                LIGHT_GRAY,
-                line_height_scale=font_settings.line_height_scale,
-            )
-            hint_rect = hint_surface.get_rect(right=bar_rect.right, bottom=text_bottom)
-            screen.blit(hint_surface, hint_rect)
+        hint_text = tr("hud.time_accel_hint")
+        hint_surface = render_text_surface(
+            font,
+            hint_text,
+            LIGHT_GRAY,
+            line_height_scale=font_settings.line_height_scale,
+        )
+        hint_rect = hint_surface.get_rect(right=bar_rect.right, bottom=text_bottom)
+        screen.blit(hint_surface, hint_rect)
     except pygame.error as e:
         print(f"Error rendering endurance timer: {e}")
 
@@ -442,12 +432,8 @@ def _draw_time_accel_indicator(
         font = load_font(
             font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
         )
-        if state.time_accel_active:
-            text = build_time_accel_text()
-            color = YELLOW
-        else:
-            text = tr("hud.time_accel_hint")
-            color = LIGHT_GRAY
+        text = tr("hud.time_accel_hint")
+        color = LIGHT_GRAY
         text_surface = render_text_surface(
             font, text, color, line_height_scale=font_settings.line_height_scale
         )

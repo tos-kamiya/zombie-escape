@@ -19,7 +19,7 @@ Key implementation files:
 - `src/zombie_escape/stage_constants.py` (stage feature flags and progression defaults consumed by init/spawn)
 - `src/zombie_escape/gameplay/entity_updates.py` (frame-level movement/AI/timer update orchestration)
 - `src/zombie_escape/input_utils.py` (screen-agnostic action mapping and input snapshots)
-- `src/zombie_escape/screens/gameplay.py` (runtime event handling, pause transitions, and debug-only pause marker)
+- `src/zombie_escape/screens/gameplay.py` (runtime event handling, pause transitions, mouse-accel arming, and debug-only pause marker)
 
 ## Pause and Window Events
 
@@ -50,6 +50,8 @@ Major spawn functions in `gameplay/spawn.py`:
 - `update_entities(...)`
   - Applies movement, camera updates, AI updates, pitfall/jump handling.
   - Includes tile-edge steering correction near walls.
+- Mouse acceleration (`4x`) requires left-button press-down on the player before hold is considered valid.
+- Hovering the cursor over the player (without pressing left button) displays static `>> 4x` near the player.
 - `check_interactions(...)`
   - Handles pickups, rescue boarding, car destruction, and win/loss logic.
   - Handles houseplant trap overflow conversion into zombie-contaminated tiles.
