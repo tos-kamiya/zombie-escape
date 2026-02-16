@@ -499,7 +499,10 @@ def export_images(
         target_rect=reinforced_wall.rect,
         sprites=[reinforced_wall],
     )
-    reinforced_wall_path = out / "wall-reinforced-concept.png"
+    legacy_reinforced_wall_path = out / "wall-reinforced-concept.png"
+    if legacy_reinforced_wall_path.exists():
+        legacy_reinforced_wall_path.unlink()
+    reinforced_wall_path = out / "wall-reinforced.png"
     _save_surface(reinforced_wall_surface, reinforced_wall_path, scale=output_scale)
     saved.append(reinforced_wall_path)
 
