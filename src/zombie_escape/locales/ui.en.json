@@ -202,6 +202,10 @@
         "name": "#30 Maze Attraction",
         "description": "A maze meant to be fun. It seems some people were left behind.",
         "intro": "The place I fled into was\na maze attraction.\nIt seems some people are\nstill left behind."
+      },
+      "stage32": {
+        "name": "#32 Spiky Houseplant",
+        "description": "Use the spiky houseplants to block the zombies."
       }
     },
     "status": {
