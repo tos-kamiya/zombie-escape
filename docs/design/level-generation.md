@@ -4,6 +4,7 @@
 
 - `O`: outside area (victory zone)
 - `B`: outer wall band
+- `R`: reinforced inner wall (non-destructible)
 - `E`: exit
 - `1`: interior wall
 - `.`: walkable floor
@@ -38,9 +39,7 @@ Reserved cells are protected from incompatible terrain placement.
 - `sparse_moore` and `sparse_moore.<int>%`: sparse scattered walls with 8-neighbor restrictions
 - `sparse_ortho` and `sparse_ortho.<int>%`: sparse scattered walls with 4-neighbor restrictions
 
-## INPROGRESS: Reinforced Inner Wall Spec
-
-Planned new terrain: a non-destructible interior wall, distinct from standard interior walls.
+## Reinforced Inner Walls
 
 - Stage parameters:
   - `reinforced_wall_density`: density-based placement ratio

@@ -7,6 +7,7 @@ from zombie_escape.level_blueprints import (
     validate_humanoid_connectivity,
 )
 from zombie_escape.models import FuelMode
+from zombie_escape.entities_constants import MovingFloorDirection
 from zombie_escape.rng import seed_rng
 
 
@@ -15,6 +16,18 @@ def test_validate_car_connectivity_blocks_pitfalls() -> None:
         "BBBBB",
         "B.C.B",
         "BxxxB",
+        "B..EB",
+        "BBBBB",
+    ]
+
+    assert validate_car_connectivity(grid) is None
+
+
+def test_validate_car_connectivity_blocks_reinforced_walls() -> None:
+    grid = [
+        "BBBBB",
+        "B.C.B",
+        "BRRRB",
         "B..EB",
         "BBBBB",
     ]
@@ -166,3 +179,23 @@ def test_generate_random_blueprint_allows_puddle_density_on_fall_spawn_zone() ->
 
     # Puddle density is allowed to overlap a configured fall-spawn zone.
     assert with_fall_zone.grid[target[1]][target[0]] == "w"
+
+
+def test_generate_random_blueprint_reinforced_wall_density_skips_moving_floor() -> None:
+    seed_rng(12345)
+    blueprint = generate_random_blueprint(
+        steel_chance=0.0,
+        cols=10,
+        rows=10,
+        wall_algo="empty",
+        reinforced_wall_density=1.0,
+        moving_floor_cells={(5, 5): MovingFloorDirection.UP},
+        fuel_count=0,
+        empty_fuel_can_count=0,
+        fuel_station_count=0,
+        flashlight_count=0,
+        shoes_count=0,
+    )
+
+    # Reinforced walls should not overwrite moving-floor cells.
+    assert blueprint.grid[5][5] == "^"

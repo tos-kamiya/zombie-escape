@@ -958,6 +958,7 @@ STAGES: list[Stage] = [
         grid_cols=10,
         grid_rows=10,
         wall_algorithm="empty",
+        reinforced_wall_density=0.1,
         initial_interior_spawn_rate=0.0,
         exterior_spawn_weight=0.0,
         interior_spawn_weight=1.0,

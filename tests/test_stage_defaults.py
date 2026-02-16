@@ -78,3 +78,16 @@ def test_stage_zone_exclusivity_assertion() -> None:
             puddle_zones=[(5, 5, 1, 1)],
             zombie_normal_ratio=1.0,
         )
+
+    # Moving Floor vs Reinforced Wall
+    with pytest.raises(
+        AssertionError, match="Moving Floor and Reinforced Wall zones overlap"
+    ):
+        Stage(
+            id="overlap_4",
+            name_key="n",
+            description_key="d",
+            moving_floor_zones={"U": [(1, 1, 4, 4)]},
+            reinforced_wall_zones=[(2, 2, 1, 1)],
+            zombie_normal_ratio=1.0,
+        )

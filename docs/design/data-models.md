@@ -47,7 +47,7 @@ Per-stage tunables and feature toggles.
 - Terrain features:
   - wall algorithm, rubble ratio, pitfall/houseplant/puddle settings
   - moving-floor and fall-spawn zone controls
-  - INPROGRESS: reinforced inner wall controls (`reinforced_wall_density`, `reinforced_wall_zones`)
+  - reinforced inner wall controls (`reinforced_wall_density`, `reinforced_wall_zones`)
 - Progression controls:
   - waiting car target count, intro line key, availability
 - Grid scale:

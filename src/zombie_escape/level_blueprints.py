@@ -50,7 +50,7 @@ def validate_car_connectivity(grid: list[str]) -> set[tuple[int, int]] | None:
             if ch == "C":
                 start_pos = (x, y)
             # Car can drive through moving-floor cells; only solid blockers are excluded.
-            if ch not in ("x", "B", "O"):
+            if ch not in ("x", "B", "R", "O"):
                 passable_cells.add((x, y))
                 if ch == "E":
                     exit_cells.add((x, y))
@@ -87,7 +87,7 @@ def validate_humanoid_connectivity(grid: list[str]) -> bool:
             ch = grid[y][x]
             if ch == "P":
                 start_pos = (x, y)
-            if ch not in ("x", "B"):
+            if ch not in ("x", "B", "R"):
                 passable_cells.add((x, y))
 
     if start_pos is None:
@@ -110,7 +110,7 @@ def _humanoid_reachable_cells(
             (x, y)
             for y in range(rows)
             for x in range(cols)
-            if grid[y][x] not in ("x", "B")
+            if grid[y][x] not in ("x", "B", "R")
         }
     if start_pos not in passable_cells:
         return set()
@@ -169,7 +169,7 @@ def validate_humanoid_objective_connectivity(
         (x, y)
         for y in range(rows)
         for x in range(cols)
-        if grid[y][x] not in ("x", "B")
+        if grid[y][x] not in ("x", "B", "R")
     }
     player_cells = [
         (x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "P"
@@ -844,6 +844,59 @@ def _place_puddle_density(
                 grid[y][x] = "w"
 
 
+def _place_reinforced_wall_zones(
+    grid: list[list[str]],
+    *,
+    reinforced_wall_zones: list[tuple[int, int, int, int]] | None = None,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Place zone-defined reinforced walls on empty floor cells."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+
+    if not reinforced_wall_zones:
+        return
+    for col, row, width, height in reinforced_wall_zones:
+        if width <= 0 or height <= 0:
+            continue
+        start_x = max(0, col)
+        start_y = max(0, row)
+        end_x = min(cols, col + width)
+        end_y = min(rows, row + height)
+        for y in range(start_y, end_y):
+            for x in range(start_x, end_x):
+                if (x, y) in forbidden:
+                    continue
+                if grid[y][x] == ".":
+                    grid[y][x] = "R"
+
+
+def _place_reinforced_wall_density(
+    grid: list[list[str]],
+    *,
+    density: float,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Replace empty floor cells with reinforced walls based on density."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+
+    if density <= 0.0:
+        return
+    for y in range(1, rows - 1):
+        for x in range(1, cols - 1):
+            if (x, y) in forbidden:
+                continue
+            if grid[y][x] != ".":
+                continue
+            if RNG.random() < density:
+                grid[y][x] = "R"
+
+
 def _pick_empty_cell(
     grid: list[list[str]],
     margin: int,
@@ -907,6 +960,8 @@ def generate_random_blueprint(
     houseplant_zones: list[tuple[int, int, int, int]] | None = None,
     puddle_density: float = 0.0,
     puddle_zones: list[tuple[int, int, int, int]] | None = None,
+    reinforced_wall_density: float = 0.0,
+    reinforced_wall_zones: list[tuple[int, int, int, int]] | None = None,
     fall_spawn_zones: list[tuple[int, int, int, int]] | None = None,
 ) -> Blueprint:
     """Generate a single randomized blueprint grid without connectivity validation."""
@@ -967,6 +1022,21 @@ def generate_random_blueprint(
             grid,
             houseplant_zones=houseplant_zones,
             forbidden_cells=reserved_cells,
+        )
+
+    # Place zone-defined reinforced walls.
+    if reinforced_wall_zones:
+        _place_reinforced_wall_zones(
+            grid,
+            reinforced_wall_zones=reinforced_wall_zones,
+            forbidden_cells=reserved_cells,
+        )
+        reserved_cells.update(
+            _expand_zone_cells(
+                reinforced_wall_zones,
+                grid_cols=cols,
+                grid_rows=rows,
+            )
         )
         reserved_cells.update(
             _expand_zone_cells(
@@ -1143,6 +1213,12 @@ def generate_random_blueprint(
     _place_houseplant_density(
         grid,
         density=houseplant_density,
+        forbidden_cells=reserved_cells,
+    )
+    # Place density-based reinforced walls.
+    _place_reinforced_wall_density(
+        grid,
+        density=reinforced_wall_density,
         forbidden_cells=reserved_cells,
     )
 

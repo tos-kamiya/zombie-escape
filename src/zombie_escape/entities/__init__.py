@@ -34,7 +34,7 @@ from ..render_assets import (
 from ..rng import get_rng
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from .collisions import spritecollideany_walls
-from .walls import SteelBeam, Wall, RubbleWall
+from .walls import SteelBeam, Wall, RubbleWall, ReinforcedWall
 from .car import Car
 from .player import Player
 from .survivor import Survivor
@@ -147,6 +147,7 @@ class Shoes(pygame.sprite.Sprite):
 __all__ = [
     "Wall",
     "RubbleWall",
+    "ReinforcedWall",
     "SteelBeam",
     "spritecollideany_walls",
     "Camera",

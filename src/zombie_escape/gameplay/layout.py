@@ -6,7 +6,7 @@ from typing import Any
 import pygame
 
 from ..colors import get_environment_palette
-from ..entities import RubbleWall, SteelBeam, Wall
+from ..entities import ReinforcedWall, RubbleWall, SteelBeam, Wall
 from ..entities_constants import (
     INTERNAL_WALL_BEVEL_DEPTH,
     INTERNAL_WALL_HEALTH,
@@ -153,6 +153,8 @@ def generate_level_from_blueprint(
             wall_algo=stage.wall_algorithm,
             pitfall_density=stage.pitfall_density,
             pitfall_zones=stage.pitfall_zones,
+            reinforced_wall_density=stage.reinforced_wall_density,
+            reinforced_wall_zones=stage.reinforced_wall_zones,
             moving_floor_cells=base_moving_floor_cells,
             fuel_count=fuel_count,
             empty_fuel_can_count=empty_fuel_can_count,
@@ -195,7 +197,7 @@ def generate_level_from_blueprint(
         (x, y)
         for y, row in enumerate(blueprint)
         for x, ch in enumerate(row)
-        if ch in {"B", "1"}
+        if ch in {"B", "1", "R"}
     }
 
     def _has_wall(nx: int, ny: int) -> bool:
@@ -260,6 +262,40 @@ def generate_level_from_blueprint(
                     palette=palette,
                     palette_category="outer_wall",
                     bevel_depth=0,
+                    draw_bottom_side=draw_bottom_side,
+                    on_destroy=(lambda _w, cell=wall_cell: remove_wall_cell(cell)),
+                )
+                wall_group.add(wall)
+                all_sprites.add(wall, layer=LAYER_WALLS)
+                continue
+            if ch == "R":
+                draw_bottom_side = not _has_wall(x, y + 1)
+                bevel_mask = (
+                    not _has_wall(x, y - 1)
+                    and not _has_wall(x - 1, y)
+                    and not _has_wall(x - 1, y - 1),
+                    not _has_wall(x, y - 1)
+                    and not _has_wall(x + 1, y)
+                    and not _has_wall(x + 1, y - 1),
+                    not _has_wall(x, y + 1)
+                    and not _has_wall(x + 1, y)
+                    and not _has_wall(x + 1, y + 1),
+                    not _has_wall(x, y + 1)
+                    and not _has_wall(x - 1, y)
+                    and not _has_wall(x - 1, y + 1),
+                )
+                if any(bevel_mask):
+                    bevel_corners[(x, y)] = bevel_mask
+                wall_cell = (x, y)
+                wall = ReinforcedWall(
+                    cell_rect.x,
+                    cell_rect.y,
+                    cell_rect.width,
+                    cell_rect.height,
+                    health=OUTER_WALL_HEALTH,
+                    palette=palette,
+                    bevel_depth=INTERNAL_WALL_BEVEL_DEPTH,
+                    bevel_mask=bevel_mask,
                     draw_bottom_side=draw_bottom_side,
                     on_destroy=(lambda _w, cell=wall_cell: remove_wall_cell(cell)),
                 )

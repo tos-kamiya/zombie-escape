@@ -208,6 +208,128 @@ class RubbleWall(Wall):
         self.image.blit(rubble_surface, (0, 0))
 
 
+class ReinforcedWall(Wall):
+    """Non-destructible-looking inner wall with metallic frame highlights."""
+
+    def __init__(
+        self: Self,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        *,
+        health: int = INTERNAL_WALL_HEALTH,
+        palette: EnvironmentPalette | None = None,
+        bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
+        bevel_mask: tuple[bool, bool, bool, bool] | None = None,
+        draw_bottom_side: bool = False,
+        bottom_side_ratio: float = 0.1,
+        side_shade_ratio: float = 0.9,
+        on_destroy: Callable[[Self], None] | None = None,
+    ) -> None:
+        super().__init__(
+            x,
+            y,
+            width,
+            height,
+            health=health,
+            palette=palette,
+            palette_category="outer_wall",
+            bevel_depth=bevel_depth,
+            bevel_mask=bevel_mask,
+            draw_bottom_side=draw_bottom_side,
+            bottom_side_ratio=bottom_side_ratio,
+            side_shade_ratio=side_shade_ratio,
+            on_destroy=on_destroy,
+        )
+
+    def _update_color(self: Self) -> None:
+        if self.health <= 0:
+            health_ratio = 0.0
+        else:
+            health_ratio = max(0.0, self.health / self.max_health)
+        fill_color, border_color = resolve_wall_colors(
+            health_ratio=health_ratio,
+            palette_category="outer_wall",
+            palette=self.palette,
+        )
+        paint_wall_surface(
+            self.image,
+            fill_color=fill_color,
+            border_color=border_color,
+            bevel_depth=self.bevel_depth,
+            bevel_mask=self.bevel_mask,
+            draw_bottom_side=self.draw_bottom_side,
+            bottom_side_ratio=self.bottom_side_ratio,
+            side_shade_ratio=self.side_shade_ratio,
+        )
+
+        w, h = self.image.get_size()
+        side_height = max(1, int(h * max(0.0, self.bottom_side_ratio)))
+        top_height = max(1, h - side_height)
+        frame_width = max(2, min(w, top_height) // 6)
+        inset = max(4, frame_width + 2)
+        frame_rect = pygame.Rect(
+            inset,
+            inset,
+            max(4, w - inset * 2),
+            max(4, top_height - inset * 2),
+        )
+
+        frame_color = (
+            max(0, int(border_color[0] * 0.82)),
+            max(0, int(border_color[1] * 0.82)),
+            max(0, int(border_color[2] * 0.88)),
+        )
+        highlight = (
+            min(255, int(fill_color[0] * 1.14)),
+            min(255, int(fill_color[1] * 1.14)),
+            min(255, int(fill_color[2] * 1.14)),
+        )
+        thin_highlight = (
+            min(255, int(fill_color[0] * 1.22)),
+            min(255, int(fill_color[1] * 1.22)),
+            min(255, int(fill_color[2] * 1.22)),
+        )
+
+        pygame.draw.rect(self.image, frame_color, frame_rect)
+
+        frame_overlay = pygame.Surface((w, h), pygame.SRCALPHA)
+        base_step = max(5, frame_width)
+        rhythm = [base_step, max(3, base_step - 2), base_step + 2, max(4, base_step - 1)]
+        thick_width = max(1, frame_width // 3)
+        sx = frame_rect.left - frame_rect.height
+        i = 0
+        while sx <= frame_rect.right + frame_rect.height:
+            start = (sx, frame_rect.bottom)
+            end = (sx + frame_rect.height, frame_rect.top)
+            pygame.draw.line(frame_overlay, highlight, start, end, width=thick_width)
+            thin_offset = max(2, thick_width + 1)
+            pygame.draw.line(
+                frame_overlay,
+                thin_highlight,
+                (start[0] + thin_offset, start[1]),
+                (end[0] + thin_offset, end[1]),
+                width=1,
+            )
+            sx += rhythm[i % len(rhythm)]
+            i += 1
+        frame_mask = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.rect(frame_mask, (255, 255, 255, 255), frame_rect)
+        pygame.draw.rect(
+            frame_mask,
+            (0, 0, 0, 0),
+            pygame.Rect(0, top_height, w, h - top_height),
+        )
+        frame_overlay.blit(frame_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        self.image.blit(frame_overlay, (0, 0))
+
+        inner_rect = frame_rect.inflate(-frame_width * 2, -frame_width * 2)
+        if inner_rect.width > 0 and inner_rect.height > 0:
+            panel_color = self.image.get_at((w // 2, max(0, (top_height // 2))))[:3]
+            pygame.draw.rect(self.image, panel_color, inner_rect)
+
+
 class SteelBeam(pygame.sprite.Sprite):
     """Single-cell obstacle that behaves like a tougher internal wall."""
 

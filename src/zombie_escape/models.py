@@ -251,6 +251,8 @@ class Stage:
         default_factory=lambda: ["top", "bottom", "left", "right"]
     )
     wall_rubble_ratio: float = 0.0
+    reinforced_wall_density: float = 0.0
+    reinforced_wall_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
     fall_spawn_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
     fall_spawn_cell_ratio: float = 0.0
     pitfall_density: float = 0.0
@@ -341,7 +343,7 @@ class Stage:
         self._validate_zone_exclusivity()
 
     def _validate_zone_exclusivity(self) -> None:
-        """Ensure that exclusive gimmicks (pitfall, floor, houseplant, puddle) do not overlap in zones."""
+        """Ensure that exclusive gimmicks do not overlap in zones."""
         
         def _get_cells(zones: list[tuple[int, int, int, int]]) -> set[tuple[int, int]]:
             cells = set()
@@ -353,6 +355,7 @@ class Stage:
 
         # Collect all cells from different gimmicks
         pitfall_cells = _get_cells(self.pitfall_zones)
+        reinforced_cells = _get_cells(self.reinforced_wall_zones)
         
         floor_cells = set()
         for zones in self.moving_floor_zones.values():
@@ -370,6 +373,7 @@ class Stage:
         # 2. Moving Floor vs others
         assert not (floor_cells & plant_cells), f"Stage {self.id}: Moving Floor and Houseplant zones overlap"
         assert not (floor_cells & water_cells), f"Stage {self.id}: Moving Floor and Puddle zones overlap"
+        assert not (floor_cells & reinforced_cells), f"Stage {self.id}: Moving Floor and Reinforced Wall zones overlap"
         
         # 3. Houseplant vs Puddle
         assert not (plant_cells & water_cells), f"Stage {self.id}: Houseplant and Puddle zones overlap"
