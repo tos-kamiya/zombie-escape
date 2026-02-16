@@ -24,11 +24,9 @@ from ..localization import (
     language_options,
     set_language,
 )
-from ..localization import (
-    translate as tr,
-)
-from ..render import blit_text_wrapped, wrap_text
+from ..localization import translate as tr
 from ..progress import user_progress_path
+from ..render import blit_text_wrapped, wrap_text
 from ..screens import TITLE_HEADER_Y, TITLE_SECTION_TOP
 from ..windowing import (
     adjust_menu_logical_size,
@@ -39,37 +37,82 @@ from ..windowing import (
 )
 
 
-def settings_screen(
-    screen: surface.Surface,
-    clock: time.Clock,
-    config: dict[str, Any],
-    fps: int,
-    *,
-    config_path: Path,
-    screen_size: tuple[int, int],
-) -> dict[str, Any]:
-    """Settings menu shown from the title screen."""
+class SettingsScreenRunner:
+    def __init__(
+        self,
+        *,
+        screen: surface.Surface,
+        clock: time.Clock,
+        config: dict[str, Any],
+        fps: int,
+        config_path: Path,
+        screen_size: tuple[int, int],
+    ) -> None:
+        self.screen = screen
+        self.clock = clock
+        self.fps = fps
+        self.config = config
+        self.config_path = config_path
+        self.screen_size = screen_size
 
-    screen_width, screen_height = screen.get_size()
-    if screen_width <= 0 or screen_height <= 0:
-        screen_width, screen_height = screen_size
-    working = copy.deepcopy(config)
-    set_language(working.get("language"))
-    selected = 0
-    languages = language_options()
-    language_codes = [lang.code for lang in languages]
-    input_helper = InputHelper()
+        screen_width, screen_height = screen.get_size()
+        if screen_width <= 0 or screen_height <= 0:
+            screen_width, screen_height = screen_size
+        self.screen_width = screen_width
+        self.screen_height = screen_height
 
-    def _ensure_parent(path: tuple[str, ...]) -> tuple[dict, str]:
-        node = working
+        self.working = copy.deepcopy(config)
+        set_language(self.working.get("language"))
+        self.selected = 0
+        self.languages = language_options()
+        self.language_codes = [lang.code for lang in self.languages]
+        self.input_helper = InputHelper()
+        self.mouse_ui_guard = MouseUiGuard()
+        self.row_click_map = ClickableMap()
+
+        self.sections, self.rows, self.row_sections = self._rebuild_rows()
+        self.row_count = len(self.rows)
+        self.last_language = get_language()
+        pygame.mouse.set_visible(True)
+
+        self.row_hitboxes: list[pygame.Rect] = [
+            pygame.Rect(0, 0, 0, 0) for _ in range(self.row_count)
+        ]
+        self.left_toggle_hitboxes: list[pygame.Rect | None] = [
+            None for _ in range(self.row_count)
+        ]
+        self.right_toggle_hitboxes: list[pygame.Rect | None] = [
+            None for _ in range(self.row_count)
+        ]
+
+    def run(self) -> dict[str, Any]:
+        while True:
+            events = pygame.event.get()
+            for event in events:
+                transition = self._handle_event(event, events)
+                if transition is not None:
+                    return transition
+
+            snapshot = self.input_helper.snapshot(events, pygame.key.get_pressed())
+            transition = self._handle_snapshot(snapshot)
+            if transition is not None:
+                return transition
+
+            self._render_frame()
+            present(self.screen)
+            self.clock.tick(self.fps)
+            self.mouse_ui_guard.end_frame()
+
+    def _ensure_parent(self, path: tuple[str, ...]) -> tuple[dict[str, Any], str]:
+        node = self.working
         for key in path[:-1]:
             node = node.setdefault(key, {})
         return node, path[-1]
 
-    def _get_value(path: tuple[str, ...], default: Any) -> Any:
-        node = working
+    def _get_value(self, path: tuple[str, ...], default: Any) -> Any:
+        node: Any = self.working
         for key in path[:-1]:
-            next_node = node.get(key)
+            next_node = node.get(key) if isinstance(node, dict) else None
             if not isinstance(next_node, dict):
                 return default
             node = next_node
@@ -77,35 +120,35 @@ def settings_screen(
             return node.get(path[-1], default)
         return default
 
-    def set_value(path: tuple[str, ...], value: Any) -> None:
-        node, leaf = _ensure_parent(path)
+    def _set_value(self, path: tuple[str, ...], value: Any) -> None:
+        node, leaf = self._ensure_parent(path)
         node[leaf] = value
 
-    def toggle_row(row: dict) -> None:
-        current = bool(_get_value(row["path"], row.get("easy_value", True)))
-        set_value(row["path"], not current)
+    def _toggle_row(self, row: dict[str, Any]) -> None:
+        current = bool(self._get_value(row["path"], row.get("easy_value", True)))
+        self._set_value(row["path"], not current)
 
-    def set_easy_value(row: dict, use_easy: bool) -> None:
+    def _set_easy_value(self, row: dict[str, Any], use_easy: bool) -> None:
         target = row.get("easy_value", True)
-        set_value(row["path"], target if use_easy else not target)
+        self._set_value(row["path"], target if use_easy else not target)
 
-    def cycle_choice(row: dict, direction: int) -> None:
+    def _cycle_choice(self, row: dict[str, Any], direction: int) -> None:
         values = row.get("choices", [])
         if not values:
             return
-        current = _get_value(row["path"], values[0])
+        current = self._get_value(row["path"], values[0])
         try:
             idx = values.index(current)
         except ValueError:
             idx = 0
         idx = (idx + direction) % len(values)
         new_value = values[idx]
-        set_value(row["path"], new_value)
+        self._set_value(row["path"], new_value)
         on_change = row.get("on_change")
         if on_change:
             on_change(new_value)
 
-    def build_sections() -> list[dict]:
+    def _build_sections(self) -> list[dict[str, Any]]:
         return [
             {
                 "label": tr("settings.sections.menu"),
@@ -123,7 +166,7 @@ def settings_screen(
                         "type": "choice",
                         "label": tr("settings.rows.language"),
                         "path": ("language",),
-                        "choices": language_codes,
+                        "choices": self.language_codes,
                         "get_display": get_language_name,
                         "on_change": set_language,
                     }
@@ -181,9 +224,9 @@ def settings_screen(
             },
         ]
 
-    def rebuild_rows() -> tuple[list[dict], list[dict], list[str]]:
-        current_sections = build_sections()
-        flat_rows: list[dict] = []
+    def _rebuild_rows(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+        current_sections = self._build_sections()
+        flat_rows: list[dict[str, Any]] = []
         flat_sections: list[str] = []
         for section in current_sections:
             for row in section["rows"]:
@@ -191,41 +234,135 @@ def settings_screen(
                 flat_sections.append(section["label"])
         return current_sections, flat_rows, flat_sections
 
-    sections, rows, row_sections = rebuild_rows()
-    row_count = len(rows)
-    last_language = get_language()
-    pygame.mouse.set_visible(True)
-    row_hitboxes: list[pygame.Rect] = [pygame.Rect(0, 0, 0, 0) for _ in range(row_count)]
-    left_toggle_hitboxes: list[pygame.Rect | None] = [None for _ in range(row_count)]
-    right_toggle_hitboxes: list[pygame.Rect | None] = [None for _ in range(row_count)]
-    row_click_map = ClickableMap()
-    mouse_ui_guard = MouseUiGuard()
-
-    def _exit_settings() -> dict[str, Any]:
-        save_config(working, config_path)
-        return working
-
-    def _render_frame() -> None:
-        nonlocal last_language, sections, rows, row_sections, row_count, selected
-        nonlocal row_hitboxes, left_toggle_hitboxes, right_toggle_hitboxes
+    def _refresh_rows_if_language_changed(self) -> None:
         current_language = get_language()
-        if current_language != last_language:
-            sections, rows, row_sections = rebuild_rows()
-            row_count = len(rows)
-            selected %= row_count
-            last_language = current_language
-        row_hitboxes = [pygame.Rect(0, 0, 0, 0) for _ in range(row_count)]
-        left_toggle_hitboxes = [None for _ in range(row_count)]
-        right_toggle_hitboxes = [None for _ in range(row_count)]
+        if current_language == self.last_language:
+            return
+        self.sections, self.rows, self.row_sections = self._rebuild_rows()
+        self.row_count = len(self.rows)
+        self.selected %= self.row_count
+        self.last_language = current_language
+
+    def _exit_settings(self) -> dict[str, Any]:
+        save_config(self.working, self.config_path)
+        return self.working
+
+    def _handle_event(
+        self,
+        event: pygame.event.Event,
+        events: list[pygame.event.Event],
+    ) -> dict[str, Any] | None:
+        if event.type == pygame.QUIT:
+            return self.config
+        if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
+            sync_window_size(event)
+            adjust_menu_logical_size()
+            return None
+        if event.type == pygame.WINDOWFOCUSLOST:
+            self.mouse_ui_guard.handle_focus_event(event)
+            return None
+        if event.type == pygame.WINDOWFOCUSGAINED:
+            self.mouse_ui_guard.handle_focus_event(event)
+            return None
+        if event.type == pygame.MOUSEMOTION and self.mouse_ui_guard.can_process_mouse():
+            hover_target = self.row_click_map.pick_hover(event.pos)
+            if isinstance(hover_target, int):
+                self.selected = hover_target
+            return None
+        if (
+            event.type == pygame.MOUSEBUTTONUP
+            and event.button == 1
+            and self.mouse_ui_guard.can_process_mouse()
+        ):
+            clicked_target = self.row_click_map.pick_click(event.pos)
+            if isinstance(clicked_target, int):
+                self.selected = clicked_target
+                current_row = self.rows[self.selected]
+                row_type = current_row.get("type", "toggle")
+                if row_type == "action":
+                    return self._exit_settings()
+                if row_type == "toggle":
+                    left_rect = self.left_toggle_hitboxes[self.selected]
+                    right_rect = self.right_toggle_hitboxes[self.selected]
+                    if left_rect and left_rect.collidepoint(event.pos):
+                        self._set_easy_value(current_row, True)
+                    elif right_rect and right_rect.collidepoint(event.pos):
+                        self._set_easy_value(current_row, False)
+                    else:
+                        self._toggle_row(current_row)
+                elif row_type == "choice":
+                    row_rect = self.row_hitboxes[self.selected]
+                    direction = -1 if event.pos[0] < row_rect.centerx else 1
+                    self._cycle_choice(current_row, direction)
+            return None
+
+        self.input_helper.handle_device_event(event)
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFTBRACKET:
+                nudge_menu_window_scale(0.5)
+                return None
+            if event.key == pygame.K_RIGHTBRACKET:
+                nudge_menu_window_scale(2.0)
+                return None
+            if event.key == pygame.K_f:
+                toggle_fullscreen()
+                adjust_menu_logical_size()
+                return None
+            if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+                return self._exit_settings()
+            if event.key == pygame.K_r:
+                self.working = copy.deepcopy(DEFAULT_CONFIG)
+                set_language(self.working.get("language"))
+                self.sections, self.rows, self.row_sections = self._rebuild_rows()
+                self.row_count = len(self.rows)
+                self.selected %= self.row_count
+                self.last_language = get_language()
+                return None
+        return None
+
+    def _handle_snapshot(self, snapshot: Any) -> dict[str, Any] | None:
+        if snapshot.pressed(CommonAction.BACK):
+            return self._exit_settings()
+        if snapshot.pressed(CommonAction.UP):
+            self.selected = (self.selected - 1) % self.row_count
+        if snapshot.pressed(CommonAction.DOWN):
+            self.selected = (self.selected + 1) % self.row_count
+
+        current_row = self.rows[self.selected]
+        row_type = current_row.get("type", "toggle")
+        if snapshot.pressed(CommonAction.CONFIRM):
+            if row_type == "action":
+                return self._exit_settings()
+            if row_type == "toggle":
+                self._toggle_row(current_row)
+            elif row_type == "choice":
+                self._cycle_choice(current_row, 1)
+        if snapshot.pressed(CommonAction.LEFT) and row_type != "action":
+            if row_type == "toggle":
+                self._set_easy_value(current_row, True)
+            elif row_type == "choice":
+                self._cycle_choice(current_row, -1)
+        if snapshot.pressed(CommonAction.RIGHT) and row_type != "action":
+            if row_type == "toggle":
+                self._set_easy_value(current_row, False)
+            elif row_type == "choice":
+                self._cycle_choice(current_row, 1)
+        return None
+
+    def _render_frame(self) -> None:
+        self._refresh_rows_if_language_changed()
+        self.row_hitboxes = [pygame.Rect(0, 0, 0, 0) for _ in range(self.row_count)]
+        self.left_toggle_hitboxes = [None for _ in range(self.row_count)]
+        self.right_toggle_hitboxes = [None for _ in range(self.row_count)]
         row_targets: list[ClickTarget] = []
 
-        screen.fill(BLACK)
+        self.screen.fill(BLACK)
         try:
             font_settings = get_font_settings()
             highlight_color = (70, 70, 70)
             title_text = tr("settings.title")
             title_font = load_font(font_settings.resource, font_settings.scaled_size(33))
-            title_lines = wrap_text(title_text, title_font, screen_width)
+            title_lines = wrap_text(title_text, title_font, self.screen_width)
             title_line_height = int(
                 round(title_font.get_linesize() * font_settings.line_height_scale)
             )
@@ -234,16 +371,16 @@ def settings_screen(
                 (title_font.size(line)[0] for line in title_lines if line), default=0
             )
             title_topleft = (
-                screen_width // 2 - title_width // 2,
+                self.screen_width // 2 - title_width // 2,
                 TITLE_HEADER_Y - title_height // 2,
             )
             blit_text_wrapped(
-                screen,
+                self.screen,
                 title_text,
                 title_font,
                 LIGHT_GRAY,
                 title_topleft,
-                screen_width,
+                self.screen_width,
                 line_height_scale=font_settings.line_height_scale,
             )
 
@@ -266,15 +403,15 @@ def settings_screen(
             segment_total_width = segment_width * 2 + segment_gap
 
             column_margin = 24
-            column_width = screen_width // 2 - column_margin * 2
+            column_width = self.screen_width // 2 - column_margin * 2
             section_spacing = 4
             row_indent = 12
             value_padding = 20
 
-            section_states: dict[str, dict] = {}
+            section_states: dict[str, dict[str, Any]] = {}
             y_cursor = start_y
             header_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            for section in sections:
+            for section in self.sections:
                 header_lines = wrap_text(section["label"], header_font, column_width)
                 header_line_height = int(
                     round(header_font.get_linesize() * font_settings.line_height_scale)
@@ -294,7 +431,7 @@ def settings_screen(
 
             for state in section_states.values():
                 blit_text_wrapped(
-                    screen,
+                    self.screen,
                     state["header_text"],
                     header_font,
                     LIGHT_GRAY,
@@ -305,15 +442,15 @@ def settings_screen(
 
             label_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             value_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            for idx, row in enumerate(rows):
-                section_label = row_sections[idx]
+            for idx, row in enumerate(self.rows):
+                section_label = self.row_sections[idx]
                 state = section_states[section_label]
                 col_x = column_margin + row_indent
                 row_width = column_width - row_indent + value_padding
                 row_type = row.get("type", "toggle")
                 value = None
                 if row_type != "action":
-                    value = _get_value(
+                    value = self._get_value(
                         row["path"],
                         row.get("easy_value", row.get("choices", [None])[0]),
                     )
@@ -323,18 +460,16 @@ def settings_screen(
                 highlight_rect = pygame.Rect(
                     col_x, row_y_current - 2, row_width, row_height
                 )
-                row_hitboxes[idx] = highlight_rect.copy()
+                self.row_hitboxes[idx] = highlight_rect.copy()
                 row_targets.append(ClickTarget(idx, highlight_rect.copy()))
-                if idx == selected:
-                    pygame.draw.rect(screen, highlight_color, highlight_rect)
+                if idx == self.selected:
+                    pygame.draw.rect(self.screen, highlight_color, highlight_rect)
 
                 label_height = int(
-                    round(
-                        label_font.get_linesize() * font_settings.line_height_scale
-                    )
+                    round(label_font.get_linesize() * font_settings.line_height_scale)
                 )
                 blit_text_wrapped(
-                    screen,
+                    self.screen,
                     row["label"],
                     label_font,
                     WHITE,
@@ -359,7 +494,7 @@ def settings_screen(
                         )
                     )
                     blit_text_wrapped(
-                        screen,
+                        self.screen,
                         display_text,
                         value_font,
                         WHITE,
@@ -382,214 +517,153 @@ def settings_screen(
                         segment_width,
                         segment_height,
                     )
-                    left_toggle_hitboxes[idx] = left_rect.copy()
-                    right_toggle_hitboxes[idx] = right_rect.copy()
+                    self.left_toggle_hitboxes[idx] = left_rect.copy()
+                    self.right_toggle_hitboxes[idx] = right_rect.copy()
 
                     left_active = value == row["easy_value"]
                     right_active = not left_active
 
-                    def draw_segment(
-                        rect: pygame.Rect, text: str, active: bool
-                    ) -> None:
-                        base_color = (35, 35, 35)
-                        active_color = (60, 90, 60) if active else base_color
-                        outline_color = GREEN if active else LIGHT_GRAY
-                        pygame.draw.rect(screen, active_color, rect)
-                        pygame.draw.rect(screen, outline_color, rect, width=2)
-                        text_width = value_font.size(text)[0]
-                        text_height = int(
-                            round(
-                                value_font.get_linesize()
-                                * font_settings.line_height_scale
-                            )
-                        )
-                        blit_text_wrapped(
-                            screen,
-                            text,
-                            value_font,
-                            WHITE,
-                            (
-                                rect.centerx - text_width // 2,
-                                rect.centery - text_height // 2,
-                            ),
-                            rect.width,
-                            line_height_scale=font_settings.line_height_scale,
-                        )
+                    self._draw_toggle_segment(
+                        value_font=value_font,
+                        font_settings=font_settings,
+                        rect=left_rect,
+                        text=row["left_label"],
+                        active=left_active,
+                    )
+                    self._draw_toggle_segment(
+                        value_font=value_font,
+                        font_settings=font_settings,
+                        rect=right_rect,
+                        text=row["right_label"],
+                        active=right_active,
+                    )
 
-                    draw_segment(left_rect, row["left_label"], left_active)
-                    draw_segment(right_rect, row["right_label"], right_active)
+            self._render_hints(font_settings=font_settings, start_y=start_y)
+            self._render_paths(font_settings=font_settings)
+        except pygame.error as e:
+            print(f"Error rendering settings: {e}")
 
-            hint_start_y = start_y
-            hint_start_x = screen_width // 2 + 16
-            hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            hint_lines = [
-                tr("settings.hints.navigate"),
-                tr("settings.hints.adjust"),
-                tr("settings.hints.toggle"),
-                tr("settings.hints.reset"),
-                tr("settings.hints.exit"),
-            ]
-            hint_line_height = int(
-                round(hint_font.get_linesize() * font_settings.line_height_scale)
-            )
-            hint_max_width = screen_width - hint_start_x - 16
-            y_cursor = hint_start_y
-            for line in hint_lines:
-                blit_text_wrapped(
-                    screen,
-                    line,
-                    hint_font,
-                    WHITE,
-                    (hint_start_x, y_cursor),
-                    hint_max_width,
-                    line_height_scale=font_settings.line_height_scale,
-                )
-                y_cursor += hint_line_height
+        self.row_click_map.set_targets(row_targets)
 
-            y_cursor += 26
-            window_hint = tr("menu.window_hint")
-            window_lines = wrap_text(window_hint, hint_font, hint_max_width)
-            window_height = max(1, len(window_lines)) * hint_line_height
+    def _draw_toggle_segment(
+        self,
+        *,
+        value_font: pygame.font.Font,
+        font_settings: Any,
+        rect: pygame.Rect,
+        text: str,
+        active: bool,
+    ) -> None:
+        base_color = (35, 35, 35)
+        active_color = (60, 90, 60) if active else base_color
+        outline_color = GREEN if active else LIGHT_GRAY
+        pygame.draw.rect(self.screen, active_color, rect)
+        pygame.draw.rect(self.screen, outline_color, rect, width=2)
+        text_width = value_font.size(text)[0]
+        text_height = int(
+            round(value_font.get_linesize() * font_settings.line_height_scale)
+        )
+        blit_text_wrapped(
+            self.screen,
+            text,
+            value_font,
+            WHITE,
+            (
+                rect.centerx - text_width // 2,
+                rect.centery - text_height // 2,
+            ),
+            rect.width,
+            line_height_scale=font_settings.line_height_scale,
+        )
+
+    def _render_hints(self, *, font_settings: Any, start_y: int) -> None:
+        hint_start_x = self.screen_width // 2 + 16
+        hint_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+        hint_lines = [
+            tr("settings.hints.navigate"),
+            tr("settings.hints.adjust"),
+            tr("settings.hints.toggle"),
+            tr("settings.hints.reset"),
+            tr("settings.hints.exit"),
+        ]
+        hint_line_height = int(
+            round(hint_font.get_linesize() * font_settings.line_height_scale)
+        )
+        hint_max_width = self.screen_width - hint_start_x - 16
+        y_cursor = start_y
+        for line in hint_lines:
             blit_text_wrapped(
-                screen,
-                window_hint,
+                self.screen,
+                line,
                 hint_font,
                 WHITE,
                 (hint_start_x, y_cursor),
                 hint_max_width,
                 line_height_scale=font_settings.line_height_scale,
             )
-            y_cursor += window_height
+            y_cursor += hint_line_height
 
-            config_text = tr("settings.config_path", path=str(config_path))
-            progress_text = tr("settings.progress_path", path=str(user_progress_path()))
-            path_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            config_width = path_font.size(config_text)[0]
-            config_height = int(
-                round(path_font.get_linesize() * font_settings.line_height_scale)
-            )
-            progress_width = path_font.size(progress_text)[0]
-            config_top = screen_height - 32 - config_height
-            blit_text_wrapped(
-                screen,
-                config_text,
-                path_font,
-                LIGHT_GRAY,
-                (screen_width // 2 - config_width // 2, config_top),
-                screen_width,
-                line_height_scale=font_settings.line_height_scale,
-            )
-            blit_text_wrapped(
-                screen,
-                progress_text,
-                path_font,
-                LIGHT_GRAY,
-                (screen_width // 2 - progress_width // 2, screen_height - 32),
-                screen_width,
-                line_height_scale=font_settings.line_height_scale,
-            )
-        except pygame.error as e:
-            print(f"Error rendering settings: {e}")
-        row_click_map.set_targets(row_targets)
+        y_cursor += 26
+        window_hint = tr("menu.window_hint")
+        window_lines = wrap_text(window_hint, hint_font, hint_max_width)
+        window_height = max(1, len(window_lines)) * hint_line_height
+        blit_text_wrapped(
+            self.screen,
+            window_hint,
+            hint_font,
+            WHITE,
+            (hint_start_x, y_cursor),
+            hint_max_width,
+            line_height_scale=font_settings.line_height_scale,
+        )
+        _ = window_height  # keep local behavior equivalent
 
-        present(screen)
-        clock.tick(fps)
+    def _render_paths(self, *, font_settings: Any) -> None:
+        config_text = tr("settings.config_path", path=str(self.config_path))
+        progress_text = tr("settings.progress_path", path=str(user_progress_path()))
+        path_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+        config_width = path_font.size(config_text)[0]
+        config_height = int(
+            round(path_font.get_linesize() * font_settings.line_height_scale)
+        )
+        progress_width = path_font.size(progress_text)[0]
+        config_top = self.screen_height - 32 - config_height
+        blit_text_wrapped(
+            self.screen,
+            config_text,
+            path_font,
+            LIGHT_GRAY,
+            (self.screen_width // 2 - config_width // 2, config_top),
+            self.screen_width,
+            line_height_scale=font_settings.line_height_scale,
+        )
+        blit_text_wrapped(
+            self.screen,
+            progress_text,
+            path_font,
+            LIGHT_GRAY,
+            (self.screen_width // 2 - progress_width // 2, self.screen_height - 32),
+            self.screen_width,
+            line_height_scale=font_settings.line_height_scale,
+        )
 
-    while True:
-        events = pygame.event.get()
-        for event in events:
-            if event.type == pygame.QUIT:
-                return config
-            if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
-                sync_window_size(event)
-                adjust_menu_logical_size()
-                continue
-            if event.type == pygame.WINDOWFOCUSLOST:
-                mouse_ui_guard.handle_focus_event(event)
-                continue
-            if event.type == pygame.WINDOWFOCUSGAINED:
-                mouse_ui_guard.handle_focus_event(event)
-                continue
-            if (
-                event.type == pygame.MOUSEMOTION
-                and mouse_ui_guard.can_process_mouse()
-            ):
-                hover_target = row_click_map.pick_hover(event.pos)
-                if isinstance(hover_target, int):
-                    selected = hover_target
-                continue
-            if (
-                event.type == pygame.MOUSEBUTTONUP
-                and event.button == 1
-                and mouse_ui_guard.can_process_mouse()
-            ):
-                clicked_target = row_click_map.pick_click(event.pos)
-                if isinstance(clicked_target, int):
-                    selected = clicked_target
-                    current_row = rows[selected]
-                    row_type = current_row.get("type", "toggle")
-                    if row_type == "action":
-                        return _exit_settings()
-                    if row_type == "toggle":
-                        left_rect = left_toggle_hitboxes[selected]
-                        right_rect = right_toggle_hitboxes[selected]
-                        if left_rect and left_rect.collidepoint(event.pos):
-                            set_easy_value(current_row, True)
-                        elif right_rect and right_rect.collidepoint(event.pos):
-                            set_easy_value(current_row, False)
-                        else:
-                            toggle_row(current_row)
-                    elif row_type == "choice":
-                        row_rect = row_hitboxes[selected]
-                        direction = -1 if event.pos[0] < row_rect.centerx else 1
-                        cycle_choice(current_row, direction)
-                continue
-            input_helper.handle_device_event(event)
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFTBRACKET:
-                    nudge_menu_window_scale(0.5)
-                    continue
-                if event.key == pygame.K_RIGHTBRACKET:
-                    nudge_menu_window_scale(2.0)
-                    continue
-                if event.key == pygame.K_f:
-                    toggle_fullscreen()
-                    adjust_menu_logical_size()
-                    continue
-                if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
-                    return _exit_settings()
-                if event.key == pygame.K_r:
-                    working = copy.deepcopy(DEFAULT_CONFIG)
-                    set_language(working.get("language"))
 
-        snapshot = input_helper.snapshot(events, pygame.key.get_pressed())
-        if snapshot.pressed(CommonAction.BACK):
-            return _exit_settings()
-        if snapshot.pressed(CommonAction.UP):
-            selected = (selected - 1) % row_count
-        if snapshot.pressed(CommonAction.DOWN):
-            selected = (selected + 1) % row_count
-        current_row = rows[selected]
-        row_type = current_row.get("type", "toggle")
-        if snapshot.pressed(CommonAction.CONFIRM):
-            if row_type == "action":
-                return _exit_settings()
-            if row_type == "toggle":
-                toggle_row(current_row)
-            elif row_type == "choice":
-                cycle_choice(current_row, 1)
-        if snapshot.pressed(CommonAction.LEFT) and row_type != "action":
-            if row_type == "toggle":
-                set_easy_value(current_row, True)
-            elif row_type == "choice":
-                cycle_choice(current_row, -1)
-        if snapshot.pressed(CommonAction.RIGHT) and row_type != "action":
-            if row_type == "toggle":
-                set_easy_value(current_row, False)
-            elif row_type == "choice":
-                cycle_choice(current_row, 1)
-
-        _render_frame()
-        present(screen)
-        clock.tick(fps)
-        mouse_ui_guard.end_frame()
+def settings_screen(
+    screen: surface.Surface,
+    clock: time.Clock,
+    config: dict[str, Any],
+    fps: int,
+    *,
+    config_path: Path,
+    screen_size: tuple[int, int],
+) -> dict[str, Any]:
+    """Settings menu shown from the title screen."""
+    runner = SettingsScreenRunner(
+        screen=screen,
+        clock=clock,
+        config=config,
+        fps=fps,
+        config_path=config_path,
+        screen_size=screen_size,
+    )
+    return runner.run()
