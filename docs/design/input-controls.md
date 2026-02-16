@@ -8,8 +8,6 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Menu mouse navigation (title/settings/game over/pause): DONE
 - Menu mouse navigation progress:
   - DONE: title screen, settings screen, game-over screen, in-game pause menu
-- Input UI abstraction (mouse guard + clickable map): INPROGRESS
-- Settings screen layout/path info relocation: INPROGRESS
 
 ## Mouse Steering During Gameplay
 
@@ -63,7 +61,7 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Mouse steering is ignored while the gameplay window is unfocused.
 - Window focus state should gate mouse steering input to avoid unintended movement from platform-specific mouse event behavior.
 
-## Mouse Navigation In Menu Screens (INPROGRESS)
+## Mouse Navigation In Menu Screens
 
 ### Scope
 
@@ -113,7 +111,7 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Consolidate repeated menu mouse-input code via shared input utilities.
 - Add focused tests for input priority and focus-gated mouse interactions.
 
-## Settings Screen Layout (INPROGRESS)
+## Settings Screen Layout
 
 ### Motivation
 
