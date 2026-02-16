@@ -86,6 +86,7 @@ _MOUSE_ACCEL_HOLD_SCALE = 1.2
 _MOUSE_CURSOR_SHOW_MS = 1500
 _MOUSE_CURSOR_MOVE_SHOW_DISTANCE_PX = 10
 _PAUSE_HOTSPOT_COLOR = (48, 48, 48)
+_PAUSE_HOTSPOT_HOVER_COLOR = (128, 128, 128)
 _PAUSE_HOTSPOT_TRI_SIZE = 7
 
 
@@ -278,7 +279,7 @@ class GameplayScreenRunner:
         self.paused_manual = False
         self.paused_focus = False
         self.pause_selected_index = 0
-        self.pause_option_ids = ["resume", "title"]
+        self.pause_option_ids = ["resume", "title", "fullscreen"]
         self.pause_option_click_map = ClickableMap()
         self.pause_mouse_ui_guard = MouseUiGuard()
         self.pause_hotspot_inside_prev = False
@@ -485,12 +486,20 @@ class GameplayScreenRunner:
                 not (self.paused_manual or self.paused_focus)
                 and event.type == pygame.MOUSEMOTION
             ):
-                now_inside_hotspot = self._pause_hotspot_kind_at(event.pos) is not None
-                if now_inside_hotspot and not self.pause_hotspot_inside_prev:
+                self.pause_hotspot_inside_prev = (
+                    self._pause_hotspot_kind_at(event.pos) is not None
+                )
+                continue
+            if (
+                not (self.paused_manual or self.paused_focus)
+                and event.type == pygame.MOUSEBUTTONUP
+                and event.button == 1
+            ):
+                if self._pause_hotspot_kind_at(event.pos) is not None:
                     self.paused_manual = True
                     self.pause_selected_index = 0
-                self.pause_hotspot_inside_prev = now_inside_hotspot
-                continue
+                    self.pause_hotspot_inside_prev = True
+                    continue
             if (
                 (self.paused_manual or self.paused_focus)
                 and event.type == pygame.MOUSEMOTION
@@ -784,7 +793,11 @@ class GameplayScreenRunner:
                 fps=current_fps,
             )
         if self.show_pause_overlay:
-            labels = [tr("hud.pause_menu_resume"), tr("hud.pause_menu_title")]
+            labels = [
+                tr("hud.pause_menu_resume"),
+                tr("hud.pause_menu_title"),
+                tr("menu.fullscreen_toggle"),
+            ]
             option_rects = draw_pause_overlay(
                 self.screen,
                 menu_labels=labels,
@@ -817,6 +830,10 @@ class GameplayScreenRunner:
             return None
         if selected_id == "title":
             return self._finalize(ScreenTransition(ScreenID.TITLE))
+        if selected_id == "fullscreen":
+            assert self.game_data is not None
+            toggle_fullscreen(game_data=self.game_data)
+            return None
         return None
 
     def _enter_manual_pause(self) -> None:
@@ -1083,26 +1100,49 @@ class GameplayScreenRunner:
             ),
         )
         if local_x + local_y <= tri_size:
-            return "corner"
+            return "top_left"
         if (local_w - 1 - local_x) + local_y <= tri_size:
-            return "corner"
+            return "top_right"
         if local_x + (local_h - 1 - local_y) <= tri_size:
-            return "corner"
+            return "bottom_left"
         if (local_w - 1 - local_x) + (local_h - 1 - local_y) <= tri_size:
-            return "corner"
+            return "bottom_right"
         return None
 
     def _draw_pause_hotspot_hint(self) -> None:
         w, h = self.screen.get_size()
         s = _PAUSE_HOTSPOT_TRI_SIZE
+        hovered: str | None = None
+        if pygame.mouse.get_focused():
+            hovered = self._pause_hotspot_kind_at(tuple(map(int, pygame.mouse.get_pos())))
+        top_left_color = (
+            _PAUSE_HOTSPOT_HOVER_COLOR
+            if hovered == "top_left"
+            else _PAUSE_HOTSPOT_COLOR
+        )
+        top_right_color = (
+            _PAUSE_HOTSPOT_HOVER_COLOR
+            if hovered == "top_right"
+            else _PAUSE_HOTSPOT_COLOR
+        )
+        bottom_left_color = (
+            _PAUSE_HOTSPOT_HOVER_COLOR
+            if hovered == "bottom_left"
+            else _PAUSE_HOTSPOT_COLOR
+        )
+        bottom_right_color = (
+            _PAUSE_HOTSPOT_HOVER_COLOR
+            if hovered == "bottom_right"
+            else _PAUSE_HOTSPOT_COLOR
+        )
         top_left = [(1, 1), (1 + s, 1), (1, 1 + s)]
         top_right = [(w - 2, 1), (w - 2 - s, 1), (w - 2, 1 + s)]
         bottom_left = [(1, h - 2), (1 + s, h - 2), (1, h - 2 - s)]
         bottom_right = [(w - 2, h - 2), (w - 2 - s, h - 2), (w - 2, h - 2 - s)]
-        pygame.draw.polygon(self.screen, _PAUSE_HOTSPOT_COLOR, top_left)
-        pygame.draw.polygon(self.screen, _PAUSE_HOTSPOT_COLOR, top_right)
-        pygame.draw.polygon(self.screen, _PAUSE_HOTSPOT_COLOR, bottom_left)
-        pygame.draw.polygon(self.screen, _PAUSE_HOTSPOT_COLOR, bottom_right)
+        pygame.draw.polygon(self.screen, top_left_color, top_left)
+        pygame.draw.polygon(self.screen, top_right_color, top_right)
+        pygame.draw.polygon(self.screen, bottom_left_color, bottom_left)
+        pygame.draw.polygon(self.screen, bottom_right_color, bottom_right)
 
     def _dump_profile(self) -> None:
         if self.profiler is None or self.profiler_output is None:

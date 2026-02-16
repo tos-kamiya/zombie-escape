@@ -9,6 +9,7 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Menu mouse navigation progress:
   - DONE: title screen, settings screen, game-over screen, in-game pause menu
 - Input UI abstraction (mouse guard + clickable map): INPROGRESS
+- Settings screen layout/path info relocation: INPROGRESS
 
 ## Mouse Steering During Gameplay
 
@@ -93,10 +94,11 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Minimum guard: one frame after focus regain.
 
 5. Pause screen behavior
-- Pause provides explicit selectable menu items (`Resume`, `Return to Title`) so mouse navigation has concrete targets.
+- Pause provides explicit selectable menu items (`Resume`, `Return to Title`, `Toggle Fullscreen`) so mouse navigation has concrete targets.
 - While paused, OS cursor is visible and menu items are selectable by hover + left-button release.
 - In `--debug` mode (pause overlay hidden), left-button release while paused acts as `Resume`.
-- During gameplay (not paused), mouse users can enter pause by moving the cursor into one of the four corner hotspot markers in the mouse-movable area.
+- During gameplay (not paused), corner hotspot triangles only highlight on hover.
+- Left-clicking a corner hotspot enters pause.
 - If pause hotspot intent and mouse acceleration intent conflict, pause hotspot behavior takes priority.
 
 6. Game-over menu presentation
@@ -110,3 +112,25 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Define final pause menu item set and layout.
 - Consolidate repeated menu mouse-input code via shared input utilities.
 - Add focused tests for input priority and focus-gated mouse interactions.
+
+## Settings Screen Layout (INPROGRESS)
+
+### Motivation
+
+- The settings list is vertically dense, and persistent path rows at the bottom
+  consume layout space needed for interactive options.
+
+### Proposed Rules
+
+- Remove always-on path rows from the bottom strip in the settings screen.
+- Keep path information as read-only text in the right description pane.
+- Add a fixed `Storage Paths` block at the bottom of the right pane:
+  - `Config file: <path>`
+  - `Progress file: <path>`
+- This block is informational only (no click/open/copy actions).
+- Keep it visible regardless of which left-pane setting is selected.
+
+### Non-Goals
+
+- Do not encourage direct file editing from UI.
+- Do not add external-folder launch links for these paths.

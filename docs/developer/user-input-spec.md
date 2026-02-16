@@ -139,10 +139,12 @@ To keep input/focus transitions explicit and safe in gameplay:
 - Enter manual pause on runtime resize events:
   - `VIDEORESIZE`
   - `WINDOWSIZECHANGED`
+- Corner hotspot triangles trigger pause on left-click, not on hover.
 - In `--debug` mode (when pause overlay is hidden), render a small
   `-- paused --` marker near the top of the screen while paused.
 - In `--debug` mode, left mouse button release while paused should resume
   gameplay (same behavior as selecting `Resume` in the normal pause overlay).
+- Pause overlay menu should expose `Resume`, `Return to Title`, and `Toggle Fullscreen`.
 
 This behavior is intentional and should be preserved unless replaced by a
 documented alternative policy.

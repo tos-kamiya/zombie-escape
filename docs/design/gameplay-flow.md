@@ -25,11 +25,12 @@ Key implementation files:
 
 - Gameplay enters manual pause on:
   - `P`/Start or `ESC`/Select in normal play flow.
-  - Corner hotspot mouse hover.
+  - Corner hotspot left-click.
   - Window mode changes via `[` / `]` / `F`.
   - Runtime resize events (`VIDEORESIZE`, `WINDOWSIZECHANGED`).
 - In `--debug` runs (pause overlay hidden), paused state renders a small `-- paused --` marker near the top edge.
 - In `--debug` runs, releasing left mouse button while paused resumes gameplay (equivalent to selecting `Resume` in normal pause UI).
+- Pause menu includes a `Toggle Fullscreen` item in addition to `Resume` and `Return to Title`.
 
 ## Spawn Phase
 
