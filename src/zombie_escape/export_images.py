@@ -61,6 +61,73 @@ def _save_surface(surface: pygame.Surface, path: Path, *, scale: int = 1) -> Non
     pygame.image.save(surface, str(path))
 
 
+def _paint_reinforced_wall_concept(
+    surface: pygame.Surface, *, bottom_side_ratio: float = 0.1
+) -> None:
+    """Apply a white+metal concept look for reinforced inner wall previews."""
+    w, h = surface.get_size()
+    base_tint = (236, 239, 243, 172)  # off-white tint; keep base bevel details
+    border_color = (95, 103, 114)  # dark metal frame
+    highlight = (208, 215, 224)  # metallic slash highlight
+
+    # Keep the original beveled shading by tinting instead of flat-filling.
+    tint = pygame.Surface((w, h), pygame.SRCALPHA)
+    tint.fill(base_tint)
+    surface.blit(tint, (0, 0))
+    # Use the current wall tone so the inner panel matches pillar color exactly.
+    panel_color = tuple(surface.get_at((w // 2, h // 2))[:3])
+
+    side_height = max(1, int(h * max(0.0, bottom_side_ratio)))
+    top_height = max(1, h - side_height)
+    top_area = pygame.Rect(0, 0, w, top_height)
+
+    # Keep outer bevel visible: frame is inset and thicker, limited to top face.
+    frame_width = max(3, min(w, h) // 6)
+    inset = max(4, frame_width + 2)
+    frame_rect = pygame.Rect(
+        inset,
+        inset,
+        max(4, top_area.width - inset * 2),
+        max(4, top_area.height - inset * 2),
+    )
+    pygame.draw.rect(surface, border_color, frame_rect)
+
+    # Draw diagonal metallic slashes only within the filled frame area.
+    frame_overlay = pygame.Surface((w, h), pygame.SRCALPHA)
+    base_step = max(5, frame_width)
+    thick_width = max(1, frame_width // 3)
+    thin_width = 1
+    rhythm = [base_step, max(3, base_step - 2), base_step + 2, max(4, base_step - 1)]
+    start_min = frame_rect.left - frame_rect.height
+    start_max = frame_rect.right + frame_rect.height
+    sx = start_min
+    i = 0
+    while sx <= start_max:
+        start = (sx, frame_rect.bottom)
+        end = (sx + frame_rect.height, frame_rect.top)
+        pygame.draw.line(frame_overlay, highlight, start, end, width=thick_width)
+        # Add a nearby thin highlight for metallic layering.
+        thin_offset = max(2, thick_width + 1)
+        pygame.draw.line(
+            frame_overlay,
+            (228, 234, 242),
+            (start[0] + thin_offset, start[1]),
+            (end[0] + thin_offset, end[1]),
+            width=thin_width,
+        )
+        sx += rhythm[i % len(rhythm)]
+        i += 1
+    frame_mask = pygame.Surface((w, h), pygame.SRCALPHA)
+    pygame.draw.rect(frame_mask, (255, 255, 255, 255), frame_rect)
+    pygame.draw.rect(frame_mask, (0, 0, 0, 0), pygame.Rect(0, top_height, w, h - top_height))
+    frame_overlay.blit(frame_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    surface.blit(frame_overlay, (0, 0))
+
+    inner_rect = frame_rect.inflate(-frame_width * 2, -frame_width * 2)
+    if inner_rect.width > 0 and inner_rect.height > 0:
+        pygame.draw.rect(surface, panel_color, inner_rect)
+
+
 def _studio_grid_size(cell_size: int) -> tuple[int, int]:
     cols = max(3, math.ceil(SCREEN_WIDTH / cell_size) + 2)
     rows = max(3, math.ceil(SCREEN_HEIGHT / cell_size) + 2)
@@ -77,6 +144,7 @@ def _build_studio_stage(cell_size: int) -> Stage:
         cell_size=cell_size,
         grid_cols=cols,
         grid_rows=rows,
+        zombie_normal_ratio=1.0,
     )
 
 
@@ -479,6 +547,31 @@ def export_images(
     outer_wall_path = out / "wall-outer.png"
     _save_surface(outer_wall_surface, outer_wall_path, scale=output_scale)
     saved.append(outer_wall_path)
+
+    reinforced_wall = Wall(
+        center_x - cell_size // 2,
+        center_y - cell_size // 2,
+        cell_size,
+        cell_size,
+        palette_category="outer_wall",
+        bevel_depth=INTERNAL_WALL_BEVEL_DEPTH,
+        bevel_mask=(True, True, True, True),
+        draw_bottom_side=True,
+        bottom_side_ratio=0.1,
+        side_shade_ratio=0.9,
+    )
+    _paint_reinforced_wall_concept(
+        reinforced_wall.image,
+        bottom_side_ratio=reinforced_wall.bottom_side_ratio,
+    )
+    reinforced_wall_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=reinforced_wall.rect,
+        sprites=[reinforced_wall],
+    )
+    reinforced_wall_path = out / "wall-reinforced-concept.png"
+    _save_surface(reinforced_wall_surface, reinforced_wall_path, scale=output_scale)
+    saved.append(reinforced_wall_path)
 
     pitfall_rect = pygame.Rect(
         cell_x * cell_size,
