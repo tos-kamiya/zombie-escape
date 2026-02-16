@@ -265,7 +265,11 @@ class ReinforcedWall(Wall):
         )
 
         w, h = self.image.get_size()
-        side_height = max(1, int(h * max(0.0, self.bottom_side_ratio)))
+        side_height = (
+            max(1, int(h * max(0.0, self.bottom_side_ratio)))
+            if self.draw_bottom_side
+            else 0
+        )
         top_height = max(1, h - side_height)
         frame_width = max(2, min(w, top_height) // 6)
         inset = max(4, frame_width + 2)
@@ -277,9 +281,9 @@ class ReinforcedWall(Wall):
         )
 
         frame_color = (
-            max(0, int(border_color[0] * 0.82)),
-            max(0, int(border_color[1] * 0.82)),
-            max(0, int(border_color[2] * 0.88)),
+            max(0, int(border_color[0] * 0.656)),
+            max(0, int(border_color[1] * 0.656)),
+            max(0, int(border_color[2] * 0.704)),
         )
         highlight = (
             min(255, int(fill_color[0] * 1.14)),
@@ -326,7 +330,7 @@ class ReinforcedWall(Wall):
 
         inner_rect = frame_rect.inflate(-frame_width * 2, -frame_width * 2)
         if inner_rect.width > 0 and inner_rect.height > 0:
-            panel_color = self.image.get_at((w // 2, max(0, (top_height // 2))))[:3]
+            panel_color = fill_color
             pygame.draw.rect(self.image, panel_color, inner_rect)
 
 
