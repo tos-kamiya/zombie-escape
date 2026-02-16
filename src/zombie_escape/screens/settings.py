@@ -622,19 +622,26 @@ class SettingsScreenRunner:
         config_text = tr("settings.config_path", path=str(self.config_path))
         progress_text = tr("settings.progress_path", path=str(user_progress_path()))
         path_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-        config_width = path_font.size(config_text)[0]
-        config_height = int(
+        line_height = int(
             round(path_font.get_linesize() * font_settings.line_height_scale)
         )
-        progress_width = path_font.size(progress_text)[0]
-        config_top = self.screen_height - 32 - config_height
+        pane_x = self.screen_width // 2 + 16
+        pane_width = self.screen_width - pane_x - 16
+        config_lines = wrap_text(config_text, path_font, pane_width)
+        progress_lines = wrap_text(progress_text, path_font, pane_width)
+        config_height = max(1, len(config_lines)) * line_height
+        progress_height = max(1, len(progress_lines)) * line_height
+        gap = max(4, line_height // 2)
+        block_height = config_height + gap + progress_height
+        block_top = self.screen_height - 16 - block_height
+
         blit_text_wrapped(
             self.screen,
             config_text,
             path_font,
             LIGHT_GRAY,
-            (self.screen_width // 2 - config_width // 2, config_top),
-            self.screen_width,
+            (pane_x, block_top),
+            pane_width,
             line_height_scale=font_settings.line_height_scale,
         )
         blit_text_wrapped(
@@ -642,8 +649,8 @@ class SettingsScreenRunner:
             progress_text,
             path_font,
             LIGHT_GRAY,
-            (self.screen_width // 2 - progress_width // 2, self.screen_height - 32),
-            self.screen_width,
+            (pane_x, block_top + config_height + gap),
+            pane_width,
             line_height_scale=font_settings.line_height_scale,
         )
 
