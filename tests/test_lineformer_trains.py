@@ -11,6 +11,7 @@ def _make_game_data():
         id="test",
         name_key="stages.test.name",
         description_key="stages.test.description",
+        zombie_normal_ratio=1.0,
     )
     return initialize_game_state({}, stage)
 

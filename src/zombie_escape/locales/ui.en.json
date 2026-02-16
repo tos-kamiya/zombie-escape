@@ -206,6 +206,10 @@
       "stage32": {
         "name": "#32 Spiky Houseplant",
         "description": "Use the spiky houseplants to block the zombies."
+      },
+      "stage33": {
+        "name": "#33 Dog Field Test",
+        "description": "Only normal zombies and zombie dogs appear."
       }
     },
     "status": {

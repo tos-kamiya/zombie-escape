@@ -18,6 +18,7 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
   - Only head is a real zombie entity; followers are marker positions.
 - Zombie dog
   - State-based behavior (`WANDER`, `CHARGE`, `CHASE`).
+  - When `friendliness_max > 0`, can run friendly-orbit behavior and later fall back to feral states.
 
 ## Tracker Details
 
@@ -49,6 +50,7 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
   - `zombie_wall_hugging_ratio`
   - `zombie_lineformer_ratio`
   - `zombie_dog_ratio`
+- Nimble dog spawn share is controlled by `zombie_nimble_dog_ratio` (applied only when dog variant is chosen).
 
 ## Congestion Mitigation for Trackers
 

@@ -95,6 +95,7 @@ STAGES: list[Stage] = [
         available=True,
         exterior_spawn_weight=0.97,
         interior_spawn_weight=0.03,
+        zombie_normal_ratio=1.0,
     ),
     Stage(
         id="stage2",
@@ -105,6 +106,7 @@ STAGES: list[Stage] = [
         initial_interior_spawn_rate=0.007,
         exterior_spawn_weight=0.97,
         interior_spawn_weight=0.03,
+        zombie_normal_ratio=1.0,
     ),
     Stage(
         id="stage3",
@@ -116,6 +118,7 @@ STAGES: list[Stage] = [
         initial_interior_spawn_rate=0.007,
         exterior_spawn_weight=0.97,
         interior_spawn_weight=0.03,
+        zombie_normal_ratio=1.0,
     ),
     Stage(
         id="stage4",
@@ -125,6 +128,7 @@ STAGES: list[Stage] = [
         survivor_rescue_stage=True,
         waiting_car_target_count=2,
         initial_interior_spawn_rate=0.007,
+        zombie_normal_ratio=1.0,
         survivor_spawn_rate=SURVIVOR_SPAWN_RATE,
     ),
     Stage(
@@ -140,6 +144,7 @@ STAGES: list[Stage] = [
         initial_interior_spawn_rate=0.02,
         exterior_spawn_weight=0.15,
         interior_spawn_weight=0.85,
+        zombie_normal_ratio=1.0,
         zombie_decay_duration_frames=int(ZOMBIE_DECAY_DURATION_FRAMES * 1.5),
     ),
     Stage(
@@ -260,6 +265,7 @@ STAGES: list[Stage] = [
         exterior_spawn_weight=0.5,
         interior_spawn_weight=0.2,
         interior_fall_spawn_weight=0.3,
+        zombie_normal_ratio=1.0,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
@@ -302,6 +308,7 @@ STAGES: list[Stage] = [
         exterior_spawn_weight=0.2,
         interior_spawn_weight=0.1,
         interior_fall_spawn_weight=0.7,
+        zombie_normal_ratio=1.0,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
@@ -345,6 +352,7 @@ STAGES: list[Stage] = [
         initial_interior_spawn_rate=0.05,
         exterior_spawn_weight=0.7,
         interior_spawn_weight=0.3,
+        zombie_normal_ratio=1.0,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
     Stage(
@@ -940,6 +948,26 @@ STAGES: list[Stage] = [
         zombie_spawn_count_per_interval=3,
         endurance_stage=True,
         endurance_goal_ms=500_000,
+    ),
+    Stage(
+        id="stage33",
+        name_key="stages.stage33.name",
+        description_key="stages.stage33.description",
+        available=True,
+        cell_size=50,
+        grid_cols=10,
+        grid_rows=10,
+        wall_algorithm="empty",
+        initial_interior_spawn_rate=0.0,
+        exterior_spawn_weight=0.0,
+        interior_spawn_weight=1.0,
+        zombie_normal_ratio=0.0,
+        zombie_dog_ratio=0.0,
+        zombie_tracker_ratio=0.0,
+        zombie_wall_hugging_ratio=0.0,
+        zombie_lineformer_ratio=0.0,
+        zombie_nimble_dog_ratio=1.0,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

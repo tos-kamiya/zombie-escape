@@ -19,6 +19,7 @@ def test_zombie_tracker_ratio_controls_tracker() -> None:
         name_key="stages.stage1.name",
         description_key="stages.stage1.description",
         zombie_tracker_ratio=0.0,
+        zombie_normal_ratio=1.0,
     )
     zombie = _create_zombie(config, stage=stage_off)
     assert zombie.kind != ZombieKind.TRACKER
