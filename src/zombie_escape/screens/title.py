@@ -279,7 +279,7 @@ class TitleScreenController:
         if (
             stage.interior_fall_spawn_weight > 0
             or stage.fall_spawn_zones
-            or stage.fall_spawn_floor_ratio > 0
+            or stage.fall_spawn_cell_ratio > 0
         ):
             icons.append(self.icon_surfaces["fall_spawn"])
         if stage.pitfall_density > 0 or stage.pitfall_zones:

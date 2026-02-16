@@ -47,7 +47,8 @@ Reserved cells are protected from incompatible terrain placement.
 ## Fall Spawn and Overlap Policy
 
 - `fall_spawn_zones` expands to `fall_spawn_cells`.
-- `fall_spawn_floor_ratio` can add interior cells by ratio.
+- `fall_spawn_cell_ratio` can add interior cells by ratio.
+- `fall_spawn_cells` is a spawn-tag attribute (not a terrain tile type).
 - Fall-spawn designation can overlap with other floor features.
 
 ## Connectivity Validation

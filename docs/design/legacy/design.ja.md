@@ -157,7 +157,7 @@
 - 落とし穴の固定配置: `pitfall_zones`（矩形指定で落とし穴セルを確定配置）
 - 観葉植物の出現率/固定配置: `houseplant_density`, `houseplant_zones`
 - 水たまりの出現率/固定配置: `puddle_density`, `puddle_zones`
-- 落下スポーン領域: `fall_spawn_zones`, `fall_spawn_floor_ratio`
+- 落下スポーン領域: `fall_spawn_zones`, `fall_spawn_cell_ratio`
 - ステージ公開: `available`
 - セルサイズ: `cell_size`（ステージごとのワールド縮尺）
 - グリッドサイズ: `grid_cols`, `grid_rows`（タイル数。デフォルトは `level_constants.py` の値）
@@ -593,7 +593,7 @@
 
 - 落下ゾンビ用タイル
   - `fall_spawn_zones`（ステージ定義の矩形群）をセル集合に展開し、`fall_spawn_cells` として保持。
-  - `fall_spawn_floor_ratio` が有効なら、内部セルから一定割合を落下候補セルに追加。
+  - `fall_spawn_cell_ratio` が有効なら、内部セルから一定割合を落下候補セルに追加。
   - `fall_spawn_cells` は「落下スポーン候補」という属性であり、移動床/水たまり/観葉植物などの床ギミックと重複可能。
   - `fall_spawn_cells` は落下スポーン位置の候補として利用される（床のハイライトにも使用）。
   - `draw_level_overview()` でも暗色で可視化される。

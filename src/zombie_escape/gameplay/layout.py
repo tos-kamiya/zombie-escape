@@ -442,7 +442,7 @@ def generate_level_from_blueprint(
         grid_rows=stage.grid_rows,
     )
     walkable_set = set(walkable_cells)
-    floor_ratio = max(0.0, min(1.0, stage.fall_spawn_floor_ratio))
+    floor_ratio = max(0.0, min(1.0, stage.fall_spawn_cell_ratio))
     if floor_ratio > 0.0 and interior_min_x <= interior_max_x:
         for y in range(interior_min_y, interior_max_y + 1):
             for x in range(interior_min_x, interior_max_x + 1):
