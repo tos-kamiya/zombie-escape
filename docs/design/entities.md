@@ -51,7 +51,7 @@
 - Fixed trap centered in a cell.
 - Captures zombies/zombie dogs into immobile trapped variants.
 - Trapped entities remain threats and continue decay.
-- When 4+ trapped zombies accumulate on one houseplant cell, the cell converts to a zombie-contaminated tile.
+- When 3+ trapped zombies accumulate on one houseplant cell, the cell converts to a zombie-contaminated tile.
 - Conversion snapshots the current trapped scene into a static overlay and removes live trapped entities/houseplant sprite logic for that cell.
 - Humanoids/cars can pass through but get heavy speed penalty.
 - Car contact destroys the plant and applies minor car damage.
