@@ -29,6 +29,7 @@ Example formatted output:
         "right": [(0, 8, 12, 2)],
     },
     "pitfall_zones": [],
+    "reinforced_wall_zones": [],
     "fall_spawn_zones": [],
     "houseplant_zones": [],
     "puddle_zones": [],
@@ -46,10 +47,11 @@ and spaces/tabs are treated as `.`.
 - `<` moving floor (left)
 - `>` moving floor (right)
 - `x` pitfall
+- `R` reinforced wall zone
 - `?` fall spawn zone
 - `h` houseplant zone
 - `w` puddle zone
-- `A`-`Z` custom zones (emitted as `zone_a`, `zone_b`, ...)
+- `A`-`Z` custom zones except `R` (emitted as `zone_a`, `zone_b`, ...)
 
 ## Output (Python Literal)
 
@@ -64,6 +66,7 @@ The output is intended to be dropped into a `Stage` definition:
     "right": [(x, y, w, h)]
   },
   "pitfall_zones": [(x, y, w, h)],
+  "reinforced_wall_zones": [(x, y, w, h)],
   "fall_spawn_zones": [(x, y, w, h)],
   "houseplant_zones": [(x, y, w, h)],
   "puddle_zones": [(x, y, w, h)],

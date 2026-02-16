@@ -7,6 +7,8 @@ import argparse
 import sys
 import unicodedata
 
+# Keep ASCII markers aligned with docs/design/level-generation.md
+# (Blueprint Legend) as much as possible.
 MOVING_FLOOR_MAP = {
     "^": "up",
     "v": "down",
@@ -15,6 +17,7 @@ MOVING_FLOOR_MAP = {
 }
 
 PITFALL_CHAR = "x"
+REINFORCED_WALL_CHAR = "R"
 FALL_SPAWN_CHAR = "?"
 HOUSEPLANT_CHAR = "h"
 PUDDLE_CHAR = "w"
@@ -69,13 +72,21 @@ def _compress_rectangles(grid: list[str], target: str) -> list[tuple[int, int, i
 
 
 def _collect_zone_letters(grid: list[str]) -> list[str]:
-    letters = sorted({ch for row in grid for ch in row if "A" <= ch <= "Z"})
+    letters = sorted(
+        {
+            ch
+            for row in grid
+            for ch in row
+            if "A" <= ch <= "Z" and ch != REINFORCED_WALL_CHAR
+        }
+    )
     return letters
 
 
 def _validate_grid(grid: list[str]) -> None:
     allowed = set(MOVING_FLOOR_MAP) | {
         PITFALL_CHAR,
+        REINFORCED_WALL_CHAR,
         FALL_SPAWN_CHAR,
         HOUSEPLANT_CHAR,
         PUDDLE_CHAR,
@@ -102,6 +113,9 @@ def generate_zone_data(lines: list[str]) -> dict[str, object]:
     }
     output["moving_floor_zones"] = moving_floor_zones
     output["pitfall_zones"] = _compress_rectangles(grid, PITFALL_CHAR)
+    output["reinforced_wall_zones"] = _compress_rectangles(
+        grid, REINFORCED_WALL_CHAR
+    )
     output["fall_spawn_zones"] = _compress_rectangles(grid, FALL_SPAWN_CHAR)
     output["houseplant_zones"] = _compress_rectangles(grid, HOUSEPLANT_CHAR)
     output["puddle_zones"] = _compress_rectangles(grid, PUDDLE_CHAR)
