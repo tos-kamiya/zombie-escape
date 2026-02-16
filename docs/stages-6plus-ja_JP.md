@@ -16,6 +16,7 @@
 | 落下スポーン床 | <img src="../imgs/exports/fall-zone.png" width="80"> | ステージ12 | 通常の床とは違って錆びた鉄のような色。ゾンビが上から落ちてくる場所。 |
 | 崩落壁 | <img src="../imgs/exports/wall-rubble.png" width="80"> | ステージ14 | 内部壁の崩落した見た目になったバリエーション。 |
 | 落とし穴 | <img src="../imgs/exports/pitfall.png" width="80"> | ステージ16 | ゾンビは落下する。人間はコーナーの短い距離なら飛び越えられるが、飛び越え損なうと落下する。 |
+| 強化壁 | <img src="../imgs/exports/wall-reinforced.png" width="80"> | ステージ18 | 外周壁と同じ硬さの壊せない内部壁。 |
 | ゾンビ犬 | <img src="../imgs/exports/zombie-dog.png" width="80"> | ステージ21 | 突進する個体。近くのゾンビを追う性質もある。 |
 | 巡回ロボット | <img src="../imgs/exports/patrol-bot.png" width="80"> | ステージ22 | 不審者を見分ける機能がある頼もしいロボット。ゾンビには麻痺とダメージを与える。中央に乗ると向きを指示できる。 |
 | 動く床 | <img src="../imgs/exports/moving-floor.png" width="80"> | ステージ24 | 乗ると高速に移動できる床。 |
