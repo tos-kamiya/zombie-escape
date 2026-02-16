@@ -38,6 +38,24 @@ Reserved cells are protected from incompatible terrain placement.
 - `sparse_moore` and `sparse_moore.<int>%`: sparse scattered walls with 8-neighbor restrictions
 - `sparse_ortho` and `sparse_ortho.<int>%`: sparse scattered walls with 4-neighbor restrictions
 
+## INPROGRESS: Reinforced Inner Wall Spec
+
+Planned new terrain: a non-destructible interior wall, distinct from standard interior walls.
+
+- Stage parameters:
+  - `reinforced_wall_density`: density-based placement ratio
+  - `reinforced_wall_zones`: explicit zone-based placement
+- Behavior:
+  - Treated as an interior wall for layout/collision (`wall_cells`).
+  - Non-destructible using the same high-health policy as outer walls.
+  - Not affected by rubble conversion (`wall_rubble_ratio` does not apply).
+- Overlap policy:
+  - Must not overlap with moving floors.
+  - Other overlap policies are to be finalized separately.
+- Visual direction:
+  - Base tone close to outer walls, but with a clearly distinguishable appearance.
+  - Final art details are deferred.
+
 ## Fuel/Item Candidate Guarantees
 
 - `FUEL_CAN`: reserves `f` candidates.
