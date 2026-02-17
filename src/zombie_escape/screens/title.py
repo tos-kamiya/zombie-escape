@@ -190,6 +190,12 @@ class TitleScreenController:
         elif letter == "L":
             pygame.draw.line(surf, color, (ox, oy), (ox, oy + 4))
             pygame.draw.line(surf, color, (ox, oy + 4), (ox + 2, oy + 4))
+        elif letter == "S":
+            pygame.draw.line(surf, color, (ox, oy), (ox + 2, oy))
+            pygame.draw.line(surf, color, (ox, oy + 2), (ox + 2, oy + 2))
+            pygame.draw.line(surf, color, (ox, oy + 4), (ox + 2, oy + 4))
+            pygame.draw.line(surf, color, (ox, oy), (ox, oy + 2))
+            pygame.draw.line(surf, color, (ox + 2, oy + 2), (ox + 2, oy + 4))
         return surf
 
     def _create_lettered_zombie_dog(self, letter: str) -> pygame.Surface:
@@ -229,6 +235,7 @@ class TitleScreenController:
             "zombie_tracker": self._create_lettered_zombie("T"),
             "zombie_wall": self._create_lettered_zombie("W"),
             "zombie_line": self._create_lettered_zombie("L"),
+            "zombie_solitary": self._create_lettered_zombie("S"),
             "zombie_dog": get_character_icon("zombie_dog", self.icon_radius),
             "zombie_dog_nimble": self._create_lettered_zombie_dog("N"),
             "patrol_bot": get_character_icon("patrol_bot", self.icon_radius),
@@ -285,6 +292,8 @@ class TitleScreenController:
                 icons.append(self.icon_surfaces["zombie_wall"])
             if stage.zombie_lineformer_ratio > 0:
                 icons.append(self.icon_surfaces["zombie_line"])
+            if stage.zombie_solitary_ratio > 0:
+                icons.append(self.icon_surfaces["zombie_solitary"])
 
         if stage.zombie_dog_ratio > 0:
             icons.append(self.icon_surfaces["zombie_dog"])

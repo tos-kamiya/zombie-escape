@@ -302,6 +302,18 @@ def export_images(
     _save_surface(lineformer_surface, lineformer_path, scale=output_scale)
     saved.append(lineformer_path)
 
+    solitary = Zombie(center_x, center_y, kind=ZombieKind.SOLITARY)
+    solitary._apply_render_overlays()
+    solitary_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=solitary.rect,
+        sprites=[solitary],
+        enable_shadows=True,
+    )
+    solitary_path = out / "zombie-solitary.png"
+    _save_surface(solitary_surface, solitary_path, scale=output_scale)
+    saved.append(solitary_path)
+
     zombie_dog = ZombieDog(center_x, center_y)
     zombie_dog_surface = _render_studio_snapshot(
         cell_size=cell_size,
