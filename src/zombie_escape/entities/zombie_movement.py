@@ -441,7 +441,7 @@ def _zombie_solitary_movement(
     zombie.solitary_eval_frame_counter -= 1
     if zombie.solitary_committed_move is None:
         return 0.0, 0.0
-    step_speed = zombie.speed * 2.0
+    step_speed = zombie.speed * 2.2
     move_x = float(zombie.solitary_committed_move[0]) * step_speed
     move_y = float(zombie.solitary_committed_move[1]) * step_speed
     if move_x != 0.0 and move_y != 0.0:
