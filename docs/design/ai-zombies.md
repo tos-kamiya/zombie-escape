@@ -41,6 +41,13 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
 - Merging requires proximity + history-gate conditions.
 - If head disappears, train dissolves by respawning members sequentially.
 - Marker movement follows sampled head history with interpolation.
+- Target selection rules:
+  - Non-lineformer targets are preferred when available.
+  - ID-order gating (`target_id < self_id`) is applied only when the candidate target is another lineformer (to avoid cyclic lineformer targeting while keeping normal-zombie targeting available).
+- Merge behavior:
+  - When a lineformer-targeting train reaches the tail of a train that is targeting a non-lineformer, the source train is absorbed as a whole (head + all markers) into the destination train.
+- Contact response:
+  - When a lineformer head physically overlaps its current target, it applies a short repel movement away from the target instead of staying pressed against it.
 
 ## Spawn Ratio Selection
 
