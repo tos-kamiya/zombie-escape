@@ -500,25 +500,7 @@ def draw_lineformer_direction_arm(
     angle_rad: float,
     color: tuple[int, int, int],
 ) -> None:
-    draw_lineformer_direction_arm_at(
-        surface,
-        center=surface.get_rect().center,
-        radius=radius,
-        angle_rad=angle_rad,
-        color=color,
-    )
-
-
-def draw_lineformer_direction_arm_at(
-    surface: pygame.Surface,
-    *,
-    center: tuple[int, int],
-    radius: int,
-    angle_rad: float,
-    color: tuple[int, int, int],
-    width: int = 2,
-) -> None:
-    center_x, center_y = center
+    center_x, center_y = surface.get_rect().center
     forward_x = math.cos(angle_rad)
     forward_y = math.sin(angle_rad)
     right_x = -forward_y
@@ -551,7 +533,7 @@ def draw_lineformer_direction_arm_at(
         color,
         False,
         points,
-        width=width,
+        width=2,
     )
 
 
@@ -1514,7 +1496,6 @@ __all__ = [
     "draw_humanoid_hand",
     "draw_humanoid_nose",
     "draw_lineformer_direction_arm",
-    "draw_lineformer_direction_arm_at",
     "draw_lightning_marker",
     "build_survivor_directional_surfaces",
     "build_zombie_directional_surfaces",

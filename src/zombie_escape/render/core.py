@@ -42,7 +42,8 @@ from ..models import (
 )
 from ..render_assets import (
     RenderAssets,
-    draw_lineformer_direction_arm_at,
+    build_zombie_directional_surfaces,
+    draw_lineformer_direction_arm,
 )
 from ..render_constants import (
     ENTITY_SHADOW_ALPHA,
@@ -62,7 +63,6 @@ from ..render_constants import (
     PLAYER_SHADOW_ALPHA_MULT,
     PLAYER_SHADOW_RADIUS_MULT,
     FADE_IN_DURATION_MS,
-    ZOMBIE_BODY_COLOR,
     ZOMBIE_OUTLINE_COLOR,
 )
 
@@ -94,6 +94,28 @@ ELECTRIFIED_FLOOR_BORDER_ALPHA = 140
 _PUDDLE_TILE_CACHE: dict[
     tuple[int, tuple[int, int, int], int, bool], surface.Surface
 ] = {}
+_LINEFORMER_MARKER_SURFACES: dict[int, list[surface.Surface]] = {}
+
+
+def _get_lineformer_marker_surfaces(radius: int) -> list[surface.Surface]:
+    cached = _LINEFORMER_MARKER_SURFACES.get(radius)
+    if cached is not None:
+        return cached
+    base_surfaces = build_zombie_directional_surfaces(radius, draw_hands=False)
+    bins = len(base_surfaces)
+    step = math.tau / bins
+    surfaces: list[surface.Surface] = []
+    for idx, base_surface in enumerate(base_surfaces):
+        marker_surface = base_surface.copy()
+        draw_lineformer_direction_arm(
+            marker_surface,
+            radius=radius,
+            angle_rad=idx * step,
+            color=ZOMBIE_OUTLINE_COLOR,
+        )
+        surfaces.append(marker_surface)
+    _LINEFORMER_MARKER_SURFACES[radius] = surfaces
+    return surfaces
 
 
 def blit_message(
@@ -1122,33 +1144,24 @@ def _draw_lineformer_train_markers(
     if not marker_draw_data:
         return
     marker_radius = max(2, int(ZOMBIE_RADIUS))
+    marker_surfaces = _get_lineformer_marker_surfaces(marker_radius)
+    bins = len(marker_surfaces)
+    angle_step = math.tau / bins
     screen_rect_inflated = screen.get_rect().inflate(100, 100)
     for world_x, world_y, angle_rad in marker_draw_data:
-        world_rect = pygame.Rect(
-            int(world_x - marker_radius),
-            int(world_y - marker_radius),
-            marker_radius * 2,
-            marker_radius * 2,
+        bin_idx = int(round(angle_rad / angle_step)) % bins
+        marker_image = marker_surfaces[bin_idx]
+        world_center = pygame.Rect(
+            int(round(world_x)),
+            int(round(world_y)),
+            0,
+            0,
         )
-        marker_rect = camera.apply_rect(world_rect)
+        screen_center = camera.apply_rect(world_center).topleft
+        marker_rect = marker_image.get_rect(center=screen_center)
         if not marker_rect.colliderect(screen_rect_inflated):
             continue
-        center_x, center_y = marker_rect.center
-        pygame.draw.circle(screen, ZOMBIE_BODY_COLOR, (center_x, center_y), marker_radius)
-        pygame.draw.circle(
-            screen,
-            ZOMBIE_OUTLINE_COLOR,
-            (center_x, center_y),
-            marker_radius,
-            width=1,
-        )
-        draw_lineformer_direction_arm_at(
-            screen,
-            center=(center_x, center_y),
-            radius=marker_radius,
-            angle_rad=angle_rad,
-            color=ZOMBIE_OUTLINE_COLOR,
-        )
+        screen.blit(marker_image, marker_rect)
 
 
 def _draw_fuel_indicator(
