@@ -16,6 +16,12 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
 - Lineformer
   - Managed as train units (`LineformerTrainManager`).
   - Only head is a real zombie entity; followers are marker positions.
+- Loner (`zombie_loner_movement`)
+  - Uses a 10-frame commit cycle.
+  - Compares local zombie counts in 3-cell side bands (up/down/left/right) around its tile and moves toward lower-density sides.
+  - Can move in 8 directions when both axes have a lower-density side.
+  - Excludes trapped zombies and zombie dogs from its local counting.
+  - If player/survivor target is within short sight range (`ZOMBIE_TRACKER_SIGHT_RANGE`), temporarily switches to direct chase.
 - Zombie dog
   - State-based behavior (`WANDER`, `CHARGE`, `CHASE`).
   - When `friendliness_max > 0`, can run friendly-orbit behavior and later fall back to feral states.
@@ -56,6 +62,7 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
   - `zombie_tracker_ratio`
   - `zombie_wall_hugging_ratio`
   - `zombie_lineformer_ratio`
+  - `zombie_loner_ratio`
   - `zombie_dog_ratio`
 - Nimble dog spawn share is controlled by `zombie_nimble_dog_ratio` (applied only when dog variant is chosen).
 
@@ -74,34 +81,20 @@ To avoid over-stacking on the same footprint lane:
 - Zombies can fall and be removed when entering pitfall cells.
 - Wander logic attempts pitfall avoidance; chase paths may still fall.
 
-## [INPROGRESS] Loner Zombie Design
+## Loner Notes
 
-This section describes a planned zombie variant, `loner`. It is design-only and not yet implemented.
-
-### Behavior Spec
-
-- Baseline behavior: stay still.
-- Evaluation cadence: every 10 frames.
-- Observation area: 5x5 neighborhood centered on self.
-  - Directional counting excludes diagonal-equal offsets (`|dx| == |dy|`), which effectively drops the 4 corner tiles.
-  - Resulting counted set size is 16 tiles (from the 21-tile 5x5-minus-corners set).
-- Count target set: standard zombie entities only.
-  - Excludes lineformer markers for performance and behavior simplicity.
-  - Excludes self.
-- Direction choice:
-  - Count zombies in `up/down/left/right`.
-  - Move 1 tile toward the direction(s) with the smallest count.
-  - If tied, pick randomly.
-- Last-direction suppression:
-  - Keep `last_move_dir`.
-  - When multiple minimum-count candidates exist, remove `last_move_dir` from the candidate set once.
-  - If removal would make the set empty, restore the original candidates and pick randomly.
-- Blocked move:
-  - If chosen direction is not passable, do not move this cycle.
-
-### Integration Plan
-
-- Add a new zombie kind: `LONER`.
-- Add a dedicated movement strategy function (do not merge into existing normal/tracker/wall-hugger logic).
-- Keep directional counting as a small pure helper to simplify unit testing and tuning.
-- Add stage ratio support for loner spawn selection (name to be finalized at implementation time).
+- Decision cadence is fixed at 10 frames; the chosen move vector is committed for that window.
+- Local counting is based on a tile window around the loner and currently uses:
+  - up-side cells: immediate upper row (`y-1`, `x-1..x+1`)
+  - down-side cells: immediate lower row (`y+1`, `x-1..x+1`)
+  - left-side cells: immediate left column (`x-1`, `y-1..y+1`)
+  - right-side cells: immediate right column (`x+1`, `y-1..y+1`)
+- Movement choice:
+  - Y axis: move toward the side with fewer zombies (`up` or `down`) if counts differ.
+  - X axis: move toward the side with fewer zombies (`left` or `right`) if counts differ.
+  - If both axes are chosen, move diagonally (8-direction support).
+  - If both axes are tied, stay still.
+- Anti-oscillation:
+  - Immediate full reversal of the last committed move is suppressed.
+- Spatial lookup:
+  - Loner uses spatial-index cell-window querying (`query_cells`) instead of radius querying.

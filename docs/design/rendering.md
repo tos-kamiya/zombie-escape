@@ -14,7 +14,7 @@ Supporting modules:
 4. Compose shadow layer (walls + entities).
 5. Draw fading footprints.
 6. Draw sprites with camera transforms.
-7. Draw variant markers (tracker/wall-hugger/lineformer visuals).
+7. Draw variant markers (tracker/wall-hugger/lineformer/loner visuals).
 8. Draw hint arrow.
 9. Draw fog (`hard` mask + `soft` hatch overlay).
 10. Draw HUD/status/objective text.

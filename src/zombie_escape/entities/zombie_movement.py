@@ -8,6 +8,7 @@ import pygame
 from ..entities_constants import (
     ZombieKind,
     ZOMBIE_LONER_EVAL_INTERVAL_FRAMES,
+    ZOMBIE_LONER_SIGHT_RANGE,
     ZOMBIE_LINEFORMER_FOLLOW_DISTANCE,
     ZOMBIE_LINEFORMER_FOLLOW_TOLERANCE,
     ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
@@ -375,7 +376,7 @@ def _zombie_loner_movement(
     del now_ms
     if cell_size <= 0:
         return 0.0, 0.0
-    is_in_sight = zombie._update_mode(_player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
+    is_in_sight = zombie._update_mode(_player_center, ZOMBIE_LONER_SIGHT_RANGE)
     if is_in_sight:
         return _zombie_move_toward(zombie, _player_center)
     if zombie.loner_eval_frame_counter <= 0:
