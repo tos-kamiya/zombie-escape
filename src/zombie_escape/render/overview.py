@@ -264,6 +264,14 @@ def draw_level_overview(
     if fuel and fuel.alive():
         pygame.draw.rect(surface, YELLOW, fuel.rect, border_radius=3)
         pygame.draw.rect(surface, BLACK, fuel.rect, width=2, border_radius=3)
+    if empty_fuel_can and empty_fuel_can.alive():
+        pygame.draw.rect(surface, LIGHT_GRAY, empty_fuel_can.rect, border_radius=3)
+        pygame.draw.rect(
+            surface, BLACK, empty_fuel_can.rect, width=2, border_radius=3
+        )
+    if fuel_station and fuel_station.alive():
+        pygame.draw.rect(surface, YELLOW, fuel_station.rect, border_radius=2)
+        pygame.draw.rect(surface, BLACK, fuel_station.rect, width=2, border_radius=2)
     if flashlights:
         for flashlight in flashlights:
             if flashlight.alive():
