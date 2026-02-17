@@ -339,6 +339,42 @@ def _place_exits(
             grid[y][x] = "E"
 
 
+def _place_corner_outer_walls_for_closed_sides(
+    grid: list[list[str]],
+    *,
+    exit_sides: list[str] | None,
+) -> None:
+    """Add corner outer walls when a side has no exits configured."""
+    cols, rows = len(grid[0]), len(grid)
+    valid_sides = {"top", "bottom", "left", "right"}
+    if not exit_sides:
+        open_sides = valid_sides
+    else:
+        open_sides = {side for side in exit_sides if side in valid_sides}
+        if not open_sides:
+            open_sides = valid_sides
+    closed_sides = valid_sides - open_sides
+    if not closed_sides:
+        return
+
+    corner_cells: set[tuple[int, int]] = set()
+    if "top" in closed_sides:
+        corner_cells.add((0, 0))
+        corner_cells.add((cols - 1, 0))
+    if "bottom" in closed_sides:
+        corner_cells.add((0, rows - 1))
+        corner_cells.add((cols - 1, rows - 1))
+    if "left" in closed_sides:
+        corner_cells.add((0, 0))
+        corner_cells.add((0, rows - 1))
+    if "right" in closed_sides:
+        corner_cells.add((cols - 1, 0))
+        corner_cells.add((cols - 1, rows - 1))
+
+    for x, y in corner_cells:
+        grid[y][x] = "B"
+
+
 def _place_walls_default(
     grid: list[list[str]],
     *,
@@ -967,6 +1003,7 @@ def generate_random_blueprint(
     """Generate a single randomized blueprint grid without connectivity validation."""
     grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE, exit_sides)
+    _place_corner_outer_walls_for_closed_sides(grid, exit_sides=exit_sides)
 
     # Reserved cells (player, car, items, exits)
     reserved_cells = set(reserved_cells or set())

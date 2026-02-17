@@ -199,3 +199,24 @@ def test_generate_random_blueprint_reinforced_wall_density_skips_moving_floor() 
 
     # Reinforced walls should not overwrite moving-floor cells.
     assert blueprint.grid[5][5] == "^"
+
+
+def test_generate_random_blueprint_adds_corner_outer_walls_for_closed_exit_side() -> None:
+    seed_rng(12345)
+    blueprint = generate_random_blueprint(
+        steel_chance=0.0,
+        cols=10,
+        rows=10,
+        wall_algo="empty",
+        exit_sides=["top", "bottom"],
+        fuel_count=0,
+        empty_fuel_can_count=0,
+        fuel_station_count=0,
+        flashlight_count=0,
+        shoes_count=0,
+    )
+
+    assert blueprint.grid[0][0] == "B"
+    assert blueprint.grid[0][-1] == "B"
+    assert blueprint.grid[-1][0] == "B"
+    assert blueprint.grid[-1][-1] == "B"
