@@ -191,6 +191,19 @@ class TitleScreenController:
             pygame.draw.line(surf, color, (ox, oy + 4), (ox + 2, oy + 4))
         return surf
 
+    def _create_lettered_zombie_dog(self, letter: str) -> pygame.Surface:
+        surf = get_character_icon("zombie_dog", self.icon_radius).copy()
+        if not letter:
+            return surf
+        w, h = surf.get_size()
+        color = WHITE
+        ox, oy = w - 5, h - 6
+        if letter == "N":
+            pygame.draw.line(surf, color, (ox, oy + 4), (ox, oy))
+            pygame.draw.line(surf, color, (ox, oy), (ox + 4, oy + 4))
+            pygame.draw.line(surf, color, (ox + 4, oy + 4), (ox + 4, oy))
+        return surf
+
     def _build_forbidden_icon(self, base_icon: pygame.Surface) -> pygame.Surface:
         cw, ch = self.icon_surfaces["flashlight"].get_size()
         forbidden = pygame.Surface((cw, ch), pygame.SRCALPHA)
@@ -216,6 +229,7 @@ class TitleScreenController:
             "zombie_wall": self._create_lettered_zombie("W"),
             "zombie_line": self._create_lettered_zombie("L"),
             "zombie_dog": get_character_icon("zombie_dog", self.icon_radius),
+            "zombie_dog_nimble": self._create_lettered_zombie_dog("N"),
             "patrol_bot": get_character_icon("patrol_bot", self.icon_radius),
             "car": pygame.transform.rotate(
                 get_character_icon("car", self.icon_radius), -90
@@ -273,6 +287,8 @@ class TitleScreenController:
 
         if stage.zombie_dog_ratio > 0:
             icons.append(self.icon_surfaces["zombie_dog"])
+        if stage.zombie_nimble_dog_ratio > 0:
+            icons.append(self.icon_surfaces["zombie_dog_nimble"])
         if stage.houseplant_density > 0 or stage.houseplant_zones:
             icons.append(self.icon_surfaces["houseplant"])
 
