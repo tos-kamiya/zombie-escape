@@ -51,6 +51,7 @@ from ..input_utils import (
     ClickableMap,
     CommonAction,
     InputHelper,
+    KeyboardShortcut,
     MouseUiGuard,
 )
 from ..gameplay.spawn import _alive_waiting_cars
@@ -546,18 +547,6 @@ class GameplayScreenRunner:
                             self.profiling_active = True
                             print("Profile started (F10 to stop and save).")
                     continue
-                if event.key == pygame.K_LEFTBRACKET:
-                    nudge_window_scale(0.5, game_data=self.game_data)
-                    self._enter_manual_pause()
-                    continue
-                if event.key == pygame.K_RIGHTBRACKET:
-                    nudge_window_scale(2.0, game_data=self.game_data)
-                    self._enter_manual_pause()
-                    continue
-                if event.key == pygame.K_f:
-                    toggle_fullscreen(game_data=self.game_data)
-                    self._enter_manual_pause()
-                    continue
                 if self.debug_mode and event.key == pygame.K_o:
                     self.debug_overview = not self.debug_overview
 
@@ -567,6 +556,15 @@ class GameplayScreenRunner:
             self.pause_hotspot_inside_prev = False
 
         snapshot = self.input_helper.snapshot(events, pygame.key.get_pressed())
+        if snapshot.shortcut_pressed(KeyboardShortcut.WINDOW_SCALE_DOWN):
+            nudge_window_scale(0.5, game_data=self.game_data)
+            self._enter_manual_pause()
+        if snapshot.shortcut_pressed(KeyboardShortcut.WINDOW_SCALE_UP):
+            nudge_window_scale(2.0, game_data=self.game_data)
+            self._enter_manual_pause()
+        if snapshot.shortcut_pressed(KeyboardShortcut.TOGGLE_FULLSCREEN):
+            toggle_fullscreen(game_data=self.game_data)
+            self._enter_manual_pause()
         if self.debug_mode:
             if snapshot.pressed(CommonAction.BACK):
                 return self._finalize(ScreenTransition(ScreenID.TITLE)), snapshot

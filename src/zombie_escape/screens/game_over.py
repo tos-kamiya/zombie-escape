@@ -13,6 +13,7 @@ from ..input_utils import (
     ClickableMap,
     CommonAction,
     InputHelper,
+    KeyboardShortcut,
     MouseUiGuard,
 )
 from ..localization import get_font_settings
@@ -270,22 +271,16 @@ def game_over_screen(
                     return _activate_option(options[clicked_target]["id"])
                 continue
             input_helper.handle_device_event(event)
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFTBRACKET:
-                    nudge_window_scale(0.5, game_data=game_data)
-                    continue
-                if event.key == pygame.K_RIGHTBRACKET:
-                    nudge_window_scale(2.0, game_data=game_data)
-                    continue
-                if event.key == pygame.K_f:
-                    toggle_fullscreen(game_data=game_data)
-                    continue
-                if event.key == pygame.K_ESCAPE:
-                    return ScreenTransition(ScreenID.TITLE)
-                if event.key == pygame.K_r and stage is not None:
-                    return _activate_option("retry")
 
         snapshot = input_helper.snapshot(events, pygame.key.get_pressed())
+        if snapshot.shortcut_pressed(KeyboardShortcut.WINDOW_SCALE_DOWN):
+            nudge_window_scale(0.5, game_data=game_data)
+        if snapshot.shortcut_pressed(KeyboardShortcut.WINDOW_SCALE_UP):
+            nudge_window_scale(2.0, game_data=game_data)
+        if snapshot.shortcut_pressed(KeyboardShortcut.TOGGLE_FULLSCREEN):
+            toggle_fullscreen(game_data=game_data)
+        if snapshot.shortcut_pressed(KeyboardShortcut.RETRY) and stage is not None:
+            return _activate_option("retry")
         if snapshot.pressed(CommonAction.UP):
             selected = (selected - 1) % len(options)
         if snapshot.pressed(CommonAction.DOWN):

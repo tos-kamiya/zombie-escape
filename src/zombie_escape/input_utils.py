@@ -40,6 +40,13 @@ class CommonAction(Enum):
     ACCEL = auto()
 
 
+class KeyboardShortcut(Enum):
+    RETRY = auto()
+    WINDOW_SCALE_DOWN = auto()
+    WINDOW_SCALE_UP = auto()
+    TOGGLE_FULLSCREEN = auto()
+
+
 @dataclass(frozen=True)
 class ActionState:
     pressed: bool = False
@@ -54,6 +61,7 @@ class InputSnapshot:
     move_vector: tuple[float, float]
     text_input: str
     keyboard_pressed_keys: set[int]
+    shortcuts_pressed: set[KeyboardShortcut]
 
     def pressed(self, action: CommonAction) -> bool:
         state = self.actions.get(action)
@@ -66,6 +74,9 @@ class InputSnapshot:
     def held(self, action: CommonAction) -> bool:
         state = self.actions.get(action)
         return bool(state and state.held)
+
+    def shortcut_pressed(self, shortcut: KeyboardShortcut) -> bool:
+        return shortcut in self.shortcuts_pressed
 
 
 @dataclass(frozen=True)
@@ -125,6 +136,12 @@ class InputHelper:
         CommonAction.LEFT: (pygame.K_LEFT, pygame.K_a),
         CommonAction.RIGHT: (pygame.K_RIGHT, pygame.K_d),
     }
+    _KEYBOARD_SHORTCUT_KEYS: dict[KeyboardShortcut, tuple[int, ...]] = {
+        KeyboardShortcut.RETRY: (pygame.K_r,),
+        KeyboardShortcut.WINDOW_SCALE_DOWN: (pygame.K_LEFTBRACKET,),
+        KeyboardShortcut.WINDOW_SCALE_UP: (pygame.K_RIGHTBRACKET,),
+        KeyboardShortcut.TOGGLE_FULLSCREEN: (pygame.K_f,),
+    }
 
     def __init__(self) -> None:
         self.controller = init_first_controller()
@@ -161,12 +178,14 @@ class InputHelper:
         pressed: dict[CommonAction, bool] = {action: False for action in CommonAction}
         released: dict[CommonAction, bool] = {action: False for action in CommonAction}
         keyboard_pressed_keys: set[int] = set()
+        shortcuts_pressed: set[KeyboardShortcut] = set()
         text_parts: list[str] = []
 
         for event in events:
             if event.type == pygame.KEYDOWN:
                 key = int(event.key)
                 keyboard_pressed_keys.add(key)
+                self._mark_keyboard_shortcut(shortcuts_pressed, key)
                 if include_text and event.unicode:
                     text_parts.append(event.unicode)
                 self._mark_keyboard_action(pressed, key)
@@ -204,6 +223,7 @@ class InputHelper:
             move_vector=read_gamepad_move(self.controller, self.joystick),
             text_input=("".join(text_parts) if include_text else ""),
             keyboard_pressed_keys=keyboard_pressed_keys,
+            shortcuts_pressed=shortcuts_pressed,
         )
 
     def read_analog_vector(self, *, deadzone: float = DEADZONE) -> tuple[float, float]:
@@ -236,6 +256,13 @@ class InputHelper:
         for action, action_keys in self._KEYBOARD_ACTION_KEYS.items():
             if key in action_keys:
                 target[action] = True
+
+    def _mark_keyboard_shortcut(
+        self, target: set[KeyboardShortcut], key: int
+    ) -> None:
+        for shortcut, shortcut_keys in self._KEYBOARD_SHORTCUT_KEYS.items():
+            if key in shortcut_keys:
+                target.add(shortcut)
 
     def _mark_button_action(
         self, target: dict[CommonAction, bool], event: pygame.event.Event

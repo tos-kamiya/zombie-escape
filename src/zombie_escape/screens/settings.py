@@ -15,6 +15,7 @@ from ..input_utils import (
     ClickableMap,
     CommonAction,
     InputHelper,
+    KeyboardShortcut,
     MouseUiGuard,
 )
 from ..localization import (
@@ -251,6 +252,14 @@ class SettingsScreenRunner:
     def _activate_action(self, _row: dict[str, Any]) -> dict[str, Any] | None:
         return self._exit_settings()
 
+    def _reset_to_defaults(self) -> None:
+        self.working = copy.deepcopy(DEFAULT_CONFIG)
+        set_language(self.working.get("language"))
+        self.sections, self.rows, self.row_sections = self._rebuild_rows()
+        self.row_count = len(self.rows)
+        self.selected %= self.row_count
+        self.last_language = get_language()
+
     def _handle_event(
         self,
         event: pygame.event.Event,
@@ -302,29 +311,21 @@ class SettingsScreenRunner:
 
         self.input_helper.handle_device_event(event)
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFTBRACKET:
-                nudge_menu_window_scale(0.5)
-                return None
-            if event.key == pygame.K_RIGHTBRACKET:
-                nudge_menu_window_scale(2.0)
-                return None
-            if event.key == pygame.K_f:
-                toggle_fullscreen()
-                adjust_menu_logical_size()
-                return None
-            if event.key in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+            if event.key == pygame.K_BACKSPACE:
                 return self._exit_settings()
-            if event.key == pygame.K_r:
-                self.working = copy.deepcopy(DEFAULT_CONFIG)
-                set_language(self.working.get("language"))
-                self.sections, self.rows, self.row_sections = self._rebuild_rows()
-                self.row_count = len(self.rows)
-                self.selected %= self.row_count
-                self.last_language = get_language()
-                return None
         return None
 
     def _handle_snapshot(self, snapshot: Any) -> dict[str, Any] | None:
+        if snapshot.shortcut_pressed(KeyboardShortcut.WINDOW_SCALE_DOWN):
+            nudge_menu_window_scale(0.5)
+        if snapshot.shortcut_pressed(KeyboardShortcut.WINDOW_SCALE_UP):
+            nudge_menu_window_scale(2.0)
+        if snapshot.shortcut_pressed(KeyboardShortcut.TOGGLE_FULLSCREEN):
+            toggle_fullscreen()
+            adjust_menu_logical_size()
+        if snapshot.shortcut_pressed(KeyboardShortcut.RETRY):
+            self._reset_to_defaults()
+            return None
         if snapshot.pressed(CommonAction.BACK):
             return self._exit_settings()
         if snapshot.pressed(CommonAction.UP):

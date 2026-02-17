@@ -24,6 +24,7 @@ from ..input_utils import (
     ClickableMap,
     CommonAction,
     InputHelper,
+    KeyboardShortcut,
     MouseUiGuard,
 )
 from ..screens import (
@@ -883,19 +884,16 @@ class TitleScreenController:
                 if len(self.current_seed_text) < MAX_SEED_DIGITS:
                     self.current_seed_text += event.unicode
                 return None
-            if event.key == pygame.K_LEFTBRACKET:
-                nudge_menu_window_scale(0.5)
-                return None
-            if event.key == pygame.K_RIGHTBRACKET:
-                nudge_menu_window_scale(2.0)
-                return None
-            if event.key == pygame.K_f:
-                toggle_fullscreen()
-                adjust_menu_logical_size()
-                return None
         return None
 
     def _handle_snapshot(self, snapshot: Any) -> ScreenTransition | None:
+        if snapshot.shortcut_pressed(KeyboardShortcut.WINDOW_SCALE_DOWN):
+            nudge_menu_window_scale(0.5)
+        if snapshot.shortcut_pressed(KeyboardShortcut.WINDOW_SCALE_UP):
+            nudge_menu_window_scale(2.0)
+        if snapshot.shortcut_pressed(KeyboardShortcut.TOGGLE_FULLSCREEN):
+            toggle_fullscreen()
+            adjust_menu_logical_size()
         if snapshot.pressed(CommonAction.LEFT):
             if self._current_option_is_fullscreen():
                 nudge_menu_window_scale(0.5)
