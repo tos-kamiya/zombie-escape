@@ -29,6 +29,7 @@ Supporting modules:
 
 - Status bar shows settings flags, stage index, and seed.
 - Debug lineformer display includes real-entity and marker totals.
+- Lineformer train markers use cached directional sprites and are blitted per marker (instead of rebuilding arm lines every frame).
 - Timed messages support alignment mode and stay readable during fade transitions.
 
 ## Overviews (`render/overview.py`)
