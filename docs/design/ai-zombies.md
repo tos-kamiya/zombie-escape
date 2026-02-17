@@ -73,3 +73,35 @@ To avoid over-stacking on the same footprint lane:
 
 - Zombies can fall and be removed when entering pitfall cells.
 - Wander logic attempts pitfall avoidance; chase paths may still fall.
+
+## [INPROGRESS] Loner Zombie Design
+
+This section describes a planned zombie variant, `loner`. It is design-only and not yet implemented.
+
+### Behavior Spec
+
+- Baseline behavior: stay still.
+- Evaluation cadence: every 10 frames.
+- Observation area: 5x5 neighborhood centered on self.
+  - Directional counting excludes diagonal-equal offsets (`|dx| == |dy|`), which effectively drops the 4 corner tiles.
+  - Resulting counted set size is 16 tiles (from the 21-tile 5x5-minus-corners set).
+- Count target set: standard zombie entities only.
+  - Excludes lineformer markers for performance and behavior simplicity.
+  - Excludes self.
+- Direction choice:
+  - Count zombies in `up/down/left/right`.
+  - Move 1 tile toward the direction(s) with the smallest count.
+  - If tied, pick randomly.
+- Last-direction suppression:
+  - Keep `last_move_dir`.
+  - When multiple minimum-count candidates exist, remove `last_move_dir` from the candidate set once.
+  - If removal would make the set empty, restore the original candidates and pick randomly.
+- Blocked move:
+  - If chosen direction is not passable, do not move this cycle.
+
+### Integration Plan
+
+- Add a new zombie kind: `LONER`.
+- Add a dedicated movement strategy function (do not merge into existing normal/tracker/wall-hugger logic).
+- Keep directional counting as a small pure helper to simplify unit testing and tuning.
+- Add stage ratio support for loner spawn selection (name to be finalized at implementation time).
