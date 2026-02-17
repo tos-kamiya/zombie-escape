@@ -25,6 +25,7 @@
 | 行列ゾンビ | <img src="../imgs/exports/zombie-lineformer.png" width="80"> | ステージ27 | 列を作りたがるゾンビ。 |
 | 水たまり | <img src="../imgs/exports/puddle.png" width="80"> | ステージ28 | 水たまりセル上にいる間、移動速度が低下する。 |
 | トゲトゲの観葉植物 | <img src="../imgs/exports/houseplant.png" width="80"> | ステージ28 | 通常状態だと人間は移動速度が遅くなる。ゾンビは引っかかる。ゾンビが3体以上引っかかると枯れてしまい、そのセルの床がゾンビ感染源になる。 |
+| ちょこまかゾンビ犬 | <img src="../imgs/exports/zombie-dog-nimble.png" width="80"> | ステージ31 | ちょこまか動くゾンビ犬。 |
 
 ## 燃料ルールの違い（空の燃料缶が出るステージ）
 
