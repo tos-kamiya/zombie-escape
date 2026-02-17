@@ -500,32 +500,58 @@ def draw_lineformer_direction_arm(
     angle_rad: float,
     color: tuple[int, int, int],
 ) -> None:
-    center_x, center_y = surface.get_rect().center
-    scale = 1.0
-    offset = int(round(radius * 0.3 * scale))
-    side_offset = int(round(radius * 0.7 * scale))
-    arm_len = int(round(radius * 0.9 * scale))
-    arm2_len = int(round(radius * 0.6 * scale))
+    draw_lineformer_direction_arm_at(
+        surface,
+        center=surface.get_rect().center,
+        radius=radius,
+        angle_rad=angle_rad,
+        color=color,
+    )
+
+
+def draw_lineformer_direction_arm_at(
+    surface: pygame.Surface,
+    *,
+    center: tuple[int, int],
+    radius: int,
+    angle_rad: float,
+    color: tuple[int, int, int],
+    width: int = 2,
+) -> None:
+    center_x, center_y = center
     forward_x = math.cos(angle_rad)
     forward_y = math.sin(angle_rad)
     right_x = -forward_y
     right_y = forward_x
-    elbow_x = center_x + forward_x * offset + right_x * side_offset
-    elbow_y = center_y + forward_y * offset + right_y * side_offset
-    hand_x = elbow_x + right_x * (arm_len * 0.7) + forward_x * (arm_len * 0.7)
-    hand_y = elbow_y + right_y * (arm_len * 0.7) + forward_y * (arm_len * 0.7)
-    tip_x = hand_x - right_x * (arm2_len * 0.7) + forward_x * (arm2_len * 0.7)
-    tip_y = hand_y - right_y * (arm2_len * 0.7) + forward_y * (arm2_len * 0.7)
+    # Place the curved arm on the zombie's right side (relative to facing),
+    # keep the inner edge near the body, and bias it slightly forward.
+    arc_center_offset = radius * 0.45
+    arc_radius_right = max(2.0, radius * 0.8)
+    arc_radius_forward = max(2.0, radius * 0.5)
+    arc_forward_offset = radius * 0.8
+    sweep_rad = math.radians(65)
+    points: list[tuple[int, int]] = []
+    for step in range(9):
+        t = -sweep_rad + (2.0 * sweep_rad * step / 9.0)
+        local_right = arc_radius_right * math.cos(t)
+        local_forward = arc_radius_forward * math.sin(t)
+        px = (
+            center_x
+            + right_x * (arc_center_offset + local_right)
+            + forward_x * (arc_forward_offset + local_forward)
+        )
+        py = (
+            center_y
+            + right_y * (arc_center_offset + local_right)
+            + forward_y * (arc_forward_offset + local_forward)
+        )
+        points.append((int(round(px)), int(round(py))))
     pygame.draw.lines(
         surface,
         color,
         False,
-        [
-            (int(elbow_x), int(elbow_y)),
-            (int(hand_x), int(hand_y)),
-            (int(tip_x), int(tip_y)),
-        ],
-        width=2,
+        points,
+        width=width,
     )
 
 
@@ -583,9 +609,9 @@ def build_zombie_directional_surfaces(
     cache_key = (radius, draw_hands, bins, is_trapped)
     if cache_key in _ZOMBIE_DIRECTIONAL_CACHE:
         return _ZOMBIE_DIRECTIONAL_CACHE[cache_key]
-    
+
     outline_color = TRAPPED_OUTLINE_COLOR if is_trapped else ZOMBIE_OUTLINE_COLOR
-    
+
     surfaces = _build_humanoid_directional_surfaces(
         radius,
         base_color=ZOMBIE_BODY_COLOR,
@@ -628,13 +654,13 @@ def build_zombie_dog_directional_surfaces(
         return _ZOMBIE_DOG_DIRECTIONAL_CACHE[cache_key]
 
 
-    
+
 
 
     outline_color = TRAPPED_OUTLINE_COLOR if is_trapped else ZOMBIE_OUTLINE_COLOR
 
 
-    
+
 
 
     half_long = long_axis * 0.5
@@ -1488,6 +1514,7 @@ __all__ = [
     "draw_humanoid_hand",
     "draw_humanoid_nose",
     "draw_lineformer_direction_arm",
+    "draw_lineformer_direction_arm_at",
     "draw_lightning_marker",
     "build_survivor_directional_surfaces",
     "build_zombie_directional_surfaces",

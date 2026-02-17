@@ -40,7 +40,10 @@ from ..models import (
     GameData,
     Stage,
 )
-from ..render_assets import RenderAssets
+from ..render_assets import (
+    RenderAssets,
+    draw_lineformer_direction_arm_at,
+)
 from ..render_constants import (
     ENTITY_SHADOW_ALPHA,
     ENTITY_SHADOW_EDGE_SOFTNESS,
@@ -1139,30 +1142,12 @@ def _draw_lineformer_train_markers(
             marker_radius,
             width=1,
         )
-        offset = int(round(marker_radius * 0.3))
-        side_offset = int(round(marker_radius * 0.5))
-        arm_len = int(round(marker_radius * 0.9))
-        arm2_len = int(round(marker_radius * 0.6))
-        forward_x = math.cos(angle_rad)
-        forward_y = math.sin(angle_rad)
-        right_x = -forward_y
-        right_y = forward_x
-        elbow_x = center_x + forward_x * offset + right_x * side_offset
-        elbow_y = center_y + forward_y * offset + right_y * side_offset
-        hand_x = elbow_x + right_x * arm_len
-        hand_y = elbow_y + right_y * arm_len
-        tip_x = hand_x - right_x * (arm2_len * 0.61) + forward_x * (arm2_len * 0.95)
-        tip_y = hand_y - right_y * (arm2_len * 0.61) + forward_y * (arm2_len * 0.95)
-        pygame.draw.lines(
+        draw_lineformer_direction_arm_at(
             screen,
-            ZOMBIE_OUTLINE_COLOR,
-            False,
-            [
-                (int(elbow_x), int(elbow_y)),
-                (int(hand_x), int(hand_y)),
-                (int(tip_x), int(tip_y)),
-            ],
-            width=2,
+            center=(center_x, center_y),
+            radius=marker_radius,
+            angle_rad=angle_rad,
+            color=ZOMBIE_OUTLINE_COLOR,
         )
 
 
