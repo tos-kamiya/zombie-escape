@@ -210,6 +210,10 @@
       "stage32": {
         "name": "#32 トゲトゲ観葉植物",
         "description": "トゲトゲ観葉植物を利用してゾンビを足止めしよう。"
+      },
+      "stage33": {
+        "name": "#33 Lineformerデバッグ",
+        "description": "デバッグ用: プレイヤーとLineformer 1体のみ。"
       }
     },
     "status": {

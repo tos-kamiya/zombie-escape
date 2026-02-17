@@ -181,7 +181,7 @@ def test_train_avoids_target_already_reserved_by_other_train() -> None:
 
     claimed_target = Zombie(100, 100, kind=ZombieKind.NORMAL)
     free_target = Zombie(140, 100, kind=ZombieKind.NORMAL)
-    head_a = Zombie(96, 100, kind=ZombieKind.LINEFORMER)
+    head_a = Zombie(200, 100, kind=ZombieKind.LINEFORMER)
     head_b = Zombie(94, 100, kind=ZombieKind.LINEFORMER)
     zombie_group.add(claimed_target, free_target, head_a, head_b)
 
@@ -225,3 +225,138 @@ def test_lineformer_head_base_speed_stays_constant_in_pre_update() -> None:
     target.kill()
     manager.pre_update(game_data, config={}, now_ms=200)
     assert head.initial_speed == idle_speed
+
+
+def test_train_can_target_lineformer_head() -> None:
+    game_data = _make_game_data()
+    manager = game_data.lineformer_trains
+    zombie_group = game_data.groups.zombie_group
+
+    normal_target = Zombie(160, 100, kind=ZombieKind.NORMAL)
+    owner_head = Zombie(100, 100, kind=ZombieKind.LINEFORMER)
+    follower_head = Zombie(96, 100, kind=ZombieKind.LINEFORMER)
+    zombie_group.add(normal_target, owner_head, follower_head)
+
+    manager.create_train_for_head(
+        owner_head,
+        target_id=normal_target.lineformer_id,
+        now_ms=0,
+    )
+    manager.create_train_for_head(
+        follower_head,
+        target_id=None,
+        now_ms=0,
+    )
+
+    manager.pre_update(game_data, config={}, now_ms=100)
+
+    assert follower_head.lineformer_follow_target_id == owner_head.lineformer_id
+
+
+def test_lineformer_target_train_absorbs_source_train_on_tail_contact() -> None:
+    game_data = _make_game_data()
+    manager = game_data.lineformer_trains
+    zombie_group = game_data.groups.zombie_group
+
+    normal_target = Zombie(160, 100, kind=ZombieKind.NORMAL)
+    head_o = Zombie(100, 100, kind=ZombieKind.LINEFORMER)
+    head_l = Zombie(96, 100, kind=ZombieKind.LINEFORMER)
+    zombie_group.add(normal_target, head_o, head_l)
+
+    train_o = manager.create_train_for_head(
+        head_o,
+        target_id=normal_target.lineformer_id,
+        now_ms=0,
+    )
+    manager.append_marker(train_o, (96.0, 100.0))
+
+    train_l = manager.create_train_for_head(
+        head_l,
+        target_id=head_o.lineformer_id,
+        now_ms=0,
+    )
+    manager.append_marker(train_l, (90.0, 100.0))
+    manager.append_marker(train_l, (84.0, 100.0))
+    dst_before = len(manager.trains[train_o].marker_positions)
+
+    manager.pre_update(game_data, config={}, now_ms=100)
+
+    assert train_l not in manager.trains
+    assert train_o in manager.trains
+    assert not head_l.alive()
+    # Entire source train is absorbed: head + 2 markers
+    assert len(manager.trains[train_o].marker_positions) == dst_before + 3
+
+
+def test_train_prefers_non_lineformer_target_when_both_available() -> None:
+    game_data = _make_game_data()
+    manager = game_data.lineformer_trains
+    zombie_group = game_data.groups.zombie_group
+
+    normal_target = Zombie(100, 100, kind=ZombieKind.NORMAL)
+    lineformer_target = Zombie(98, 100, kind=ZombieKind.LINEFORMER)
+    follower_head = Zombie(96, 100, kind=ZombieKind.LINEFORMER)
+    zombie_group.add(normal_target, lineformer_target, follower_head)
+
+    manager.create_train_for_head(
+        lineformer_target,
+        target_id=normal_target.lineformer_id,
+        now_ms=0,
+    )
+    manager.create_train_for_head(
+        follower_head,
+        target_id=None,
+        now_ms=0,
+    )
+
+    manager.pre_update(game_data, config={}, now_ms=100)
+
+    assert follower_head.lineformer_follow_target_id == normal_target.lineformer_id
+
+
+def test_lone_train_does_not_target_itself_when_no_other_target_exists() -> None:
+    game_data = _make_game_data()
+    manager = game_data.lineformer_trains
+    zombie_group = game_data.groups.zombie_group
+
+    head = Zombie(100, 100, kind=ZombieKind.LINEFORMER)
+    zombie_group.add(head)
+    manager.create_train_for_head(
+        head,
+        target_id=None,
+        now_ms=0,
+    )
+
+    manager.pre_update(game_data, config={}, now_ms=100)
+
+    assert head.lineformer_follow_target_id is None
+    assert head.lineformer_target_pos is None
+
+
+def test_mutual_lineformer_follow_is_broken_deterministically() -> None:
+    game_data = _make_game_data()
+    manager = game_data.lineformer_trains
+    zombie_group = game_data.groups.zombie_group
+
+    head_a = Zombie(100, 100, kind=ZombieKind.LINEFORMER)
+    head_b = Zombie(110, 100, kind=ZombieKind.LINEFORMER)
+    zombie_group.add(head_a, head_b)
+
+    train_a = manager.create_train_for_head(
+        head_a,
+        target_id=head_b.lineformer_id,
+        now_ms=0,
+    )
+    train_b = manager.create_train_for_head(
+        head_b,
+        target_id=head_a.lineformer_id,
+        now_ms=0,
+    )
+
+    manager.pre_update(game_data, config={}, now_ms=100)
+
+    assert train_a in manager.trains
+    assert train_b in manager.trains
+    assert head_a.lineformer_follow_target_id == head_b.lineformer_id
+    assert head_b.lineformer_follow_target_id is None
+    assert head_b.lineformer_target_pos is None
