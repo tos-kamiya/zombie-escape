@@ -48,6 +48,7 @@ Per-stage tunables and feature toggles.
   - wall algorithm, rubble ratio, pitfall/houseplant/puddle settings
   - moving-floor and fall-spawn zone controls
   - reinforced inner wall controls (`reinforced_wall_density`, `reinforced_wall_zones`)
+  - exit-side control via `exit_sides` (`top`, `bottom`, `left`, `right`)
 - Progression controls:
   - waiting car target count, intro line key, availability
 - Grid scale:

@@ -25,11 +25,20 @@
 
 1. Outside ring
 2. Exit
-3. Reserved spawn/item candidates
-4. Terrain hazards/features
-5. Walls / reinforcement candidates
+3. Corner outer-wall patch for closed exit sides
+4. Reserved spawn/item candidates
+5. Terrain hazards/features
+6. Walls / reinforcement candidates
 
 Reserved cells are protected from incompatible terrain placement.
+
+## Exit Side Rule
+
+- `Stage.exit_sides` selects which sides (`top`, `bottom`, `left`, `right`) can have exits.
+- If a side is not included in `exit_sides`, the two corners on that side are forced to `B`
+  (outer wall) even though edge cells are normally `O`.
+- Example: when `exit_sides=["top","bottom"]`, both left-side and right-side corners
+  are `B`: `(0,0)`, `(0,max_y)`, `(max_x,0)`, `(max_x,max_y)`.
 
 ## Wall Algorithms
 
