@@ -216,8 +216,8 @@
         "description": "Watch for dogs cutting across your path."
       },
       "stage34": {
-        "name": "#34 Solitary Test",
-        "description": "Only solitaries spawn in this stage."
+        "name": "#34 ChaoticC Repulsion",
+        "description": "A distance-seeking zombie appears."
       }
     },
     "status": {
