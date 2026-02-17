@@ -71,6 +71,7 @@ class LevelLayout:
     walkable_cells: list[tuple[int, int]]
     outer_wall_cells: set[tuple[int, int]]
     wall_cells: set[tuple[int, int]]
+    steel_beam_cells: set[tuple[int, int]]
     pitfall_cells: set[tuple[int, int]]
     car_walkable_cells: set[tuple[int, int]]
     car_spawn_cells: list[tuple[int, int]]

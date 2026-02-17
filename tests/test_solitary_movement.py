@@ -21,6 +21,7 @@ def _make_layout() -> LevelLayout:
         walkable_cells=[],
         outer_wall_cells=set(),
         wall_cells=set(),
+        steel_beam_cells=set(),
         pitfall_cells=set(),
         car_walkable_cells=set(),
         car_spawn_cells=[],

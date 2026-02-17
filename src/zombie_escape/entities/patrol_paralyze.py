@@ -4,9 +4,6 @@ from typing import Callable, Iterable
 
 import pygame
 
-from ..render_assets import draw_lightning_marker
-
-
 def update_paralyze_from_patrol_contact(
     *,
     entity_center: tuple[float, float],
@@ -46,31 +43,3 @@ def update_paralyze_from_patrol_contact(
         if damage_counter == 0:
             apply_damage(damage_amount)
     return True, paralyze_until_ms, damage_counter
-
-
-def draw_paralyze_marker(
-    *,
-    surface: pygame.Surface,
-    now_ms: int,
-    blink_ms: int,
-    center: tuple[int, int],
-    size: int,
-    color: tuple[int, int, int],
-    offset: int,
-    width: int = 2,
-) -> None:
-    """Draw a lightning marker that alternates position by blink_ms."""
-    if blink_ms <= 0:
-        return
-    blink_on = (now_ms // blink_ms) % 2 == 0
-    if blink_on:
-        pos = (center[0] - offset, center[1] - offset)
-    else:
-        pos = (center[0] + offset, center[1] + offset)
-    draw_lightning_marker(
-        surface,
-        center=pos,
-        size=size,
-        color=color,
-        width=width,
-    )

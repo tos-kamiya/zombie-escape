@@ -19,11 +19,10 @@ from ..input_utils import (
 from ..localization import get_font_settings
 from ..localization import translate as tr
 from ..models import GameData, Stage
+from ..overview import compute_floor_cells, draw_level_overview
 from ..render import (
     RenderAssets,
     _draw_status_bar,
-    compute_floor_cells,
-    draw_level_overview,
 )
 from ..screens import ScreenID, ScreenTransition
 from ..windowing import nudge_window_scale, present, sync_window_size, toggle_fullscreen

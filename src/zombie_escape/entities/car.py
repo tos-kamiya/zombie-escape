@@ -48,6 +48,8 @@ class Car(pygame.sprite.Sprite):
         self.health = CAR_HEALTH
         self.max_health = CAR_HEALTH
         self.collision_radius = float(CAR_WIDTH) / 2.0
+        self.shadow_radius = max(1, int(self.collision_radius * 1.2))
+        self.shadow_offset_scale = 1.0
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
         self.last_safe_pos: tuple[float, float] = (self.x, self.y)

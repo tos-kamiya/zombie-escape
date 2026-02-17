@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import sprite, surface
 
-from ..colors import (
+from .colors import (
     BLACK,
     BLUE,
     FOOTPRINT_COLOR,
@@ -15,7 +15,7 @@ from ..colors import (
     WHITE,
     get_environment_palette,
 )
-from ..entities import (
+from .entities import (
     Car,
     EmptyFuelCan,
     Flashlight,
@@ -32,21 +32,21 @@ from ..entities import (
     Zombie,
     ZombieDog,
 )
-from ..font_utils import load_font, render_text_surface
-from ..localization import get_font_settings
-from ..models import Footprint, GameData
-from ..render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
-from ..render_constants import (
+from .font_utils import load_font, render_text_surface
+from .localization import get_font_settings
+from .models import Footprint, GameData
+from .render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
+from .render_constants import (
     LINEFORMER_MARKER_OVERVIEW_COLOR,
     MOVING_FLOOR_OVERVIEW_COLOR,
     TRAPPED_ZOMBIE_OVERVIEW_COLOR,
 )
-from ..entities_constants import PATROL_BOT_COLLISION_RADIUS
-from .hud import _get_fog_scale, build_zombie_debug_counts_text
-from .puddle import draw_puddle_rings, get_puddle_wave_color
+from .entities_constants import PATROL_BOT_COLLISION_RADIUS
+from .render.hud import _get_fog_scale, build_zombie_debug_counts_text
+from .render.puddle import draw_puddle_rings, get_puddle_wave_color
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
-    from ..gameplay.lineformer_trains import LineformerTrainManager
+    from .gameplay.lineformer_trains import LineformerTrainManager
 
 
 def compute_floor_cells(

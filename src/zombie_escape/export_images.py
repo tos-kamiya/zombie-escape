@@ -152,7 +152,13 @@ def _render_studio_snapshot(
     screen.fill(palette.outside)
     _draw_play_area(
         screen,
-        game_data.camera,
+        game_data.camera.apply_rect,
+        pygame.Rect(
+            -game_data.camera.camera.x,
+            -game_data.camera.camera.y,
+            assets.screen_width,
+            assets.screen_height,
+        ),
         assets,
         palette,
         layout.field_rect,
@@ -190,7 +196,7 @@ def _render_studio_snapshot(
                 offset_scale = 1.0
             drew_shadow |= draw_single_entity_shadow_by_mode(
                 shadow_layer,
-                game_data.camera,
+                game_data.camera.apply_rect,
                 entity=sprite,
                 dawn_shadow_mode=False,
                 light_source_pos=light_source_pos,
@@ -207,7 +213,7 @@ def _render_studio_snapshot(
         game_data.state.falling_zombies = falling_zombies
         _draw_falling_fx(
             screen,
-            game_data.camera,
+            game_data.camera.apply_rect,
             game_data.state.falling_zombies,
             game_data.state.flashlight_count,
             game_data.state.dust_rings,
@@ -215,8 +221,10 @@ def _render_studio_snapshot(
         )
     _draw_entities(
         screen,
-        game_data.camera,
-        game_data.groups.all_sprites,
+        [
+            (entity, game_data.camera.apply_rect(entity.rect))
+            for entity in game_data.groups.all_sprites
+        ],
         player,
         has_fuel=(game_data.state.fuel_progress == FuelProgress.FULL_CAN),
         has_empty_fuel_can=(game_data.state.fuel_progress == FuelProgress.EMPTY_CAN),

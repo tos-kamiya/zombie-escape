@@ -345,6 +345,7 @@ class SteelBeam(pygame.sprite.Sprite):
         *,
         health: int = STEEL_BEAM_HEALTH,
         palette: EnvironmentPalette | None = None,
+        on_destroy: Callable[[Self], None] | None = None,
     ) -> None:
         super().__init__()
         # Slightly inset from the cell size so it reads as a separate object.
@@ -355,6 +356,7 @@ class SteelBeam(pygame.sprite.Sprite):
         self.health = health
         self.max_health = max(1, health)
         self.palette = palette
+        self.on_destroy = on_destroy
         self._update_color()
         self.rect = self.image.get_rect(center=(x + size // 2, y + size // 2))
 
@@ -363,6 +365,8 @@ class SteelBeam(pygame.sprite.Sprite):
             self.health -= amount
             self._update_color()
             if self.health <= 0:
+                if self.on_destroy is not None:
+                    self.on_destroy(self)
                 _mark_wall_index_dirty()
                 self.kill()
 

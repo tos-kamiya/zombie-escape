@@ -59,9 +59,9 @@ from ..world_grid import build_wall_index
 from ..entities.walls import consume_wall_index_dirty
 from ..localization import get_font_settings, translate as tr
 from ..models import FuelMode, FuelProgress, Stage
+from ..overview import draw_debug_overview
 from ..render import (
     draw,
-    draw_debug_overview,
     draw_pause_overlay,
     prewarm_fog_overlays,
     blit_message_wrapped,

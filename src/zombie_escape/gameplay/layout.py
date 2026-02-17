@@ -199,6 +199,7 @@ def generate_level_from_blueprint(
         for x, ch in enumerate(row)
         if ch in {"B", "1", "R"}
     }
+    steel_beam_cells: set[tuple[int, int]] = set()
 
     def _has_wall(nx: int, ny: int) -> bool:
         if nx < 0 or ny < 0 or nx >= stage.grid_cols or ny >= stage.grid_rows:
@@ -225,11 +226,23 @@ def generate_level_from_blueprint(
     palette = get_environment_palette(ambient_palette_key)
     rubble_ratio = max(0.0, min(1.0, stage.wall_rubble_ratio))
 
-    def add_beam_to_groups(beam: SteelBeam) -> None:
+    def remove_steel_beam_cell(cell: tuple[int, int]) -> None:
+        if cell in steel_beam_cells:
+            steel_beam_cells.discard(cell)
+        if (
+            cell not in wall_cells
+            and cell not in outer_wall_cells
+            and cell not in pitfall_cells
+            and cell not in walkable_cells
+        ):
+            walkable_cells.append(cell)
+
+    def add_beam_to_groups(beam: SteelBeam, *, cell: tuple[int, int]) -> None:
         if beam._added_to_groups:
             return
         wall_group.add(beam)
         all_sprites.add(beam, layer=LAYER_WALLS)
+        steel_beam_cells.add(cell)
         beam._added_to_groups = True
 
     def remove_wall_cell(cell: tuple[int, int], *, allow_walkable: bool = True) -> None:
@@ -327,6 +340,7 @@ def generate_level_from_blueprint(
                         cell_rect.width,
                         health=STEEL_BEAM_HEALTH,
                         palette=palette,
+                        on_destroy=(lambda _b, cell=(x, y): remove_steel_beam_cell(cell)),
                     )
                 draw_bottom_side = not _has_wall(x, y + 1)
                 bevel_mask = (
@@ -367,7 +381,7 @@ def generate_level_from_blueprint(
                             (
                                 lambda _w, b=beam, cell=wall_cell: (
                                     remove_wall_cell(cell, allow_walkable=False),
-                                    add_beam_to_groups(b),
+                                    add_beam_to_groups(b, cell=cell),
                                 )
                             )
                             if beam
@@ -389,7 +403,7 @@ def generate_level_from_blueprint(
                             (
                                 lambda _w, b=beam, cell=wall_cell: (
                                     remove_wall_cell(cell, allow_walkable=False),
-                                    add_beam_to_groups(b),
+                                    add_beam_to_groups(b, cell=cell),
                                 )
                             )
                             if beam
@@ -433,8 +447,9 @@ def generate_level_from_blueprint(
                     cell_rect.width,
                     health=STEEL_BEAM_HEALTH,
                     palette=palette,
+                    on_destroy=(lambda _b, cell=(x, y): remove_steel_beam_cell(cell)),
                 )
-                add_beam_to_groups(beam)
+                add_beam_to_groups(beam, cell=(x, y))
 
     layout = LevelLayout(
         field_rect=pygame.Rect(
@@ -449,6 +464,7 @@ def generate_level_from_blueprint(
         walkable_cells=[],
         outer_wall_cells=outer_wall_cells,
         wall_cells=wall_cells,
+        steel_beam_cells=steel_beam_cells,
         pitfall_cells=pitfall_cells,
         car_walkable_cells=car_reachable_cells,
         car_spawn_cells=[],
@@ -469,6 +485,7 @@ def generate_level_from_blueprint(
     layout.walkable_cells = walkable_cells
     layout.outer_wall_cells = outer_wall_cells
     layout.wall_cells = wall_cells
+    layout.steel_beam_cells = steel_beam_cells
     layout.pitfall_cells = pitfall_cells
     layout.car_walkable_cells = car_reachable_cells
     layout.moving_floor_cells = moving_floor_cells

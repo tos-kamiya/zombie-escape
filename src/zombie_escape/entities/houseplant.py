@@ -15,6 +15,8 @@ class SpikyHouseplant(pygame.sprite.Sprite):
         super().__init__()
         self.radius = HOUSEPLANT_RADIUS
         self.collision_radius = HOUSEPLANT_COLLISION_RADIUS
+        self.shadow_radius = max(1, int(self.collision_radius * 1.8))
+        self.shadow_offset_scale = 1.0
         self.health = HOUSEPLANT_HEALTH
         self.max_health = HOUSEPLANT_HEALTH
         

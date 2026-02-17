@@ -41,6 +41,8 @@ class PatrolBot(pygame.sprite.Sprite):
         self.radius = float(PATROL_BOT_COLLISION_RADIUS)
         self.facing_bin = 0
         self.collision_radius = float(self.radius)
+        self.shadow_radius = max(1, int(self.collision_radius * 1.2))
+        self.shadow_offset_scale = 1.0 / 3.0
         self.direction_command_radius = float(PATROL_BOT_DIRECTION_COMMAND_RADIUS)
         assert self.direction_command_radius < self.collision_radius
         self.directional_images_player = build_patrol_bot_directional_surfaces(

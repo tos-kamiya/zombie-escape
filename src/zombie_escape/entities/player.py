@@ -68,6 +68,8 @@ class Player(pygame.sprite.Sprite):
         self.jump_duration = JUMP_DURATION_MS
         self.is_jumping = False
         self.collision_radius = float(self.radius)
+        self.shadow_radius = max(1, int(self.collision_radius * 1.6))
+        self.shadow_offset_scale = 1.0
         self.is_zombified_visual = False
 
     def move(

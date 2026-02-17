@@ -35,20 +35,19 @@ from ..entities_constants import (
     PATROL_BOT_PARALYZE_MARKER_COLOR,
 )
 from ..models import Footprint, LevelLayout
+from ..render.entity_overlays import (
+    apply_zombie_kind_overlay,
+    draw_paralyze_marker_overlay,
+)
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_directional_surfaces,
     build_zombie_dog_directional_surfaces,
-    draw_lineformer_direction_arm,
-    draw_humanoid_hand,
-    draw_humanoid_nose,
 )
-from ..render_constants import ANGLE_BINS, ZOMBIE_NOSE_COLOR, ZOMBIE_OUTLINE_COLOR
 from ..rng import get_rng
 from ..surface_effects import is_in_contaminated_cell, is_in_puddle_cell
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from ..world_grid import apply_cell_edge_nudge
-from .patrol_paralyze import draw_paralyze_marker
 from .movement import _circle_wall_collision
 from .zombie_movement import (
     _zombie_lineformer_train_head_movement,
@@ -166,6 +165,8 @@ class Zombie(pygame.sprite.Sprite):
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
         self.collision_radius = float(self.radius)
+        self.shadow_radius = max(1, int(self.collision_radius * 1.8))
+        self.shadow_offset_scale = 1.0
         self.solitary_eval_frame_counter = 0
         self.solitary_committed_move: tuple[int, int] | None = None
         self.solitary_previous_move: tuple[int, int] | None = None
@@ -361,91 +362,24 @@ class Zombie(pygame.sprite.Sprite):
 
     def _apply_render_overlays(self: Self) -> None:
         base_surface = self.directional_images[self.facing_bin]
-        needs_overlay = self.kind == ZombieKind.TRACKER or (
-            self.kind == ZombieKind.WALL_HUGGER
-            and self.wall_hug_side != 0
-            and self.wall_hug_last_side_has_wall
-        ) or self.kind == ZombieKind.LINEFORMER or self.kind == ZombieKind.SOLITARY
-        if not needs_overlay:
-            self.image = base_surface
-            return
-        self.image = base_surface.copy()
-        angle_rad = (self.facing_bin % ANGLE_BINS) * (math.tau / ANGLE_BINS)
-        if self.kind == ZombieKind.TRACKER:
-            draw_humanoid_nose(
-                self.image,
-                radius=self.collision_radius,
-                angle_rad=angle_rad,
-                color=ZOMBIE_NOSE_COLOR,
-            )
-        if (
-            self.kind == ZombieKind.WALL_HUGGER
-            and self.wall_hug_side != 0
-            and self.wall_hug_last_side_has_wall
-        ):
-            side_sign = 1.0 if self.wall_hug_side > 0 else -1.0
-            hand_angle = angle_rad + side_sign * (math.pi / 2.0)
-            draw_humanoid_hand(
-                self.image,
-                radius=self.collision_radius,
-                angle_rad=hand_angle,
-                color=ZOMBIE_NOSE_COLOR,
-            )
-        if self.kind == ZombieKind.LINEFORMER:
-            target_angle = angle_rad
-            if self.lineformer_target_pos is not None:
-                target_dx = self.lineformer_target_pos[0] - self.x
-                target_dy = self.lineformer_target_pos[1] - self.y
-                target_angle = math.atan2(target_dy, target_dx)
-            draw_lineformer_direction_arm(
-                self.image,
-                radius=int(self.collision_radius),
-                angle_rad=target_angle,
-                color=ZOMBIE_OUTLINE_COLOR,
-            )
-        if self.kind == ZombieKind.SOLITARY:
-            center_x, center_y = self.image.get_rect().center
-            ring_radius = max(2, int(self.collision_radius * 1.4))
-            diamond_points: list[tuple[float, float]] = [
-                (center_x, center_y - ring_radius),
-                (center_x + ring_radius, center_y),
-                (center_x, center_y + ring_radius),
-                (center_x - ring_radius, center_y),
-            ]
-            corner_ratio = 0.15
-            for idx, vertex in enumerate(diamond_points):
-                prev_vertex = diamond_points[(idx - 1) % 4]
-                next_vertex = diamond_points[(idx + 1) % 4]
-                prev_point = (
-                    vertex[0] + (prev_vertex[0] - vertex[0]) * corner_ratio,
-                    vertex[1] + (prev_vertex[1] - vertex[1]) * corner_ratio,
-                )
-                next_point = (
-                    vertex[0] + (next_vertex[0] - vertex[0]) * corner_ratio,
-                    vertex[1] + (next_vertex[1] - vertex[1]) * corner_ratio,
-                )
-                pygame.draw.line(
-                    self.image,
-                    ZOMBIE_OUTLINE_COLOR,
-                    (int(round(vertex[0])), int(round(vertex[1]))),
-                    (int(round(prev_point[0])), int(round(prev_point[1]))),
-                    width=1,
-                )
-                pygame.draw.line(
-                    self.image,
-                    ZOMBIE_OUTLINE_COLOR,
-                    (int(round(vertex[0])), int(round(vertex[1]))),
-                    (int(round(next_point[0])), int(round(next_point[1]))),
-                    width=1,
-                )
+        self.image = apply_zombie_kind_overlay(
+            base_surface=base_surface,
+            kind=self.kind,
+            facing_bin=self.facing_bin,
+            collision_radius=self.collision_radius,
+            wall_hug_side=self.wall_hug_side,
+            wall_hug_last_side_has_wall=self.wall_hug_last_side_has_wall,
+            lineformer_target_pos=self.lineformer_target_pos,
+            zombie_pos=(self.x, self.y),
+        )
 
     def _apply_paralyze_overlay(self: Self, now_ms: int) -> None:
         self._apply_render_overlays()
         self.image = self.image.copy()
         center = self.image.get_rect().center
         marker_size = max(6, int(self.radius * 0.8))
-        draw_paralyze_marker(
-            surface=self.image,
+        draw_paralyze_marker_overlay(
+            surface_out=self.image,
             now_ms=now_ms,
             blink_ms=PATROL_BOT_PARALYZE_BLINK_MS,
             center=center,
@@ -649,6 +583,8 @@ class TrappedZombie(pygame.sprite.Sprite):
         self.facing_bin = facing_bin
         self.radius = radius
         self.collision_radius = collision_radius
+        self.shadow_radius = max(1, int(self.collision_radius * 1.8))
+        self.shadow_offset_scale = 1.0
         self.is_trapped = True
 
         if self.kind == ZombieKind.DOG:

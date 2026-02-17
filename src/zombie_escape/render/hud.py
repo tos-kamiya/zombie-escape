@@ -7,7 +7,6 @@ import pygame
 from pygame import sprite, surface
 
 from ..colors import LIGHT_GRAY, ORANGE, YELLOW
-from ..entities import Camera, Car, Player, TrappedZombie
 from ..entities_constants import (
     CAR_HEIGHT,
     CAR_WIDTH,
@@ -120,7 +119,7 @@ def build_zombie_debug_counts_text(
     marker_count = max(0, int(lineformer_marker_count or 0))
     lineformer_total = lineformer + marker_count
     dog_count = sum(1 for kind in kinds if kind == ZombieKind.DOG)
-    trapped_count = sum(1 for z in zombies if isinstance(z, TrappedZombie))
+    trapped_count = sum(1 for z in zombies if z.__class__.__name__ == "TrappedZombie")
     normal = max(0, total - tracker - wall - lineformer - dog_count - trapped_count)
     debug_counts = (
         f"Z:{total} N:{normal} T:{tracker} W:{wall} "
@@ -534,8 +533,8 @@ def _build_objective_lines(
     *,
     stage: Stage | None,
     state: Any,
-    player: Player,
-    active_car: Car | None,
+    player: Any,
+    active_car: Any | None,
     fuel_progress: FuelProgress,
     buddy_merged_count: int,
     buddy_required: int,
@@ -651,9 +650,9 @@ def _get_fog_scale(
 
 def _draw_hint_arrow(
     screen: surface.Surface,
-    camera: Camera,
+    camera: Any,
     assets: RenderAssets,
-    player: Player,
+    player: Any,
     target_pos: tuple[int, int],
     *,
     color: tuple[int, int, int] | None = None,
@@ -694,9 +693,9 @@ def _draw_hint_arrow(
 
 def _draw_hint_indicator(
     screen: surface.Surface,
-    camera: Camera,
+    camera: Any,
     assets: RenderAssets,
-    player: Player,
+    player: Any,
     hint_target: tuple[int, int] | None,
     *,
     hint_color: tuple[int, int, int],

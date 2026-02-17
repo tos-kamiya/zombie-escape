@@ -43,12 +43,12 @@ from ..entities_constants import (
 )
 from ..rng import get_rng
 from ..surface_effects import is_in_contaminated_cell, is_in_puddle_cell
+from ..render.entity_overlays import draw_paralyze_marker_overlay
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_dog_directional_surfaces,
 )
 from ..world_grid import apply_cell_edge_nudge
-from .patrol_paralyze import draw_paralyze_marker
 from .zombie import Zombie
 from .movement import _circle_wall_collision
 from .walls import Wall
@@ -268,6 +268,8 @@ class ZombieDog(pygame.sprite.Sprite):
             on_carbonize=self._apply_carbonize_visuals,
         )
         self.collision_radius = float(self.radius)
+        self.shadow_radius = max(1, int(self.collision_radius * 1.8))
+        self.shadow_offset_scale = 1.0
 
     def _build_nimble_directional_images(
         self: Self, base_images: list[pygame.Surface]
@@ -476,8 +478,8 @@ class ZombieDog(pygame.sprite.Sprite):
         image = base_surface.copy()
         center = image.get_rect().center
         marker_size = max(6, int(self.short_axis * 0.8))
-        draw_paralyze_marker(
-            surface=image,
+        draw_paralyze_marker_overlay(
+            surface_out=image,
             now_ms=now_ms,
             blink_ms=PATROL_BOT_PARALYZE_BLINK_MS,
             center=center,

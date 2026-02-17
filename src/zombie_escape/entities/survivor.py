@@ -75,6 +75,8 @@ class Survivor(pygame.sprite.Sprite):
         self.jump_duration = JUMP_DURATION_MS
         self.is_jumping = False
         self.collision_radius = float(self.radius)
+        self.shadow_radius = max(1, int(self.collision_radius * 1.8))
+        self.shadow_offset_scale = 1.0
 
     def set_following(self: Self) -> None:
         if self.is_buddy and not self.rescued:
