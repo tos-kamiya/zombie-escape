@@ -15,7 +15,7 @@
     },
     "menu": {
       "settings": "設定",
-      "fullscreen_toggle": "フルスクリーン切替",
+      "display_mode_window_size": "表示モード/画面サイズ",
       "quit": "終了",
       "locked_suffix": "[Locked]",
       "window_hint": "[キーで1段階縮小（400x300）、]キーで1段階拡大。\nF: フルスクリーン切替。",
@@ -39,7 +39,7 @@
       },
       "option_help": {
         "settings": "設定画面を開いて言語や補助オプションを変更します。",
-        "fullscreen_toggle": "フルスクリーンとウィンドウ表示を切り替えます。",
+        "display_mode_window_size": "フルスクリーンとウィンドウ表示を切り替えます。",
         "quit": "ゲームを終了します。",
         "readme": "GitHub の README ページをブラウザで開きます。ライセンス情報もここから確認できます",
         "readme_stage6": "ステージ6以降の説明ページをブラウザで開きます。"

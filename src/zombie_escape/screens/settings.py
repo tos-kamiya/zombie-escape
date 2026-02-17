@@ -157,11 +157,6 @@ class SettingsScreenRunner:
                         "type": "action",
                         "label": tr("settings.rows.return_to_title"),
                         "action": "exit_settings",
-                    },
-                    {
-                        "type": "action",
-                        "label": tr("menu.fullscreen_toggle"),
-                        "action": "toggle_fullscreen",
                     }
                 ],
             },
@@ -253,12 +248,7 @@ class SettingsScreenRunner:
         save_config(self.working, self.config_path)
         return self.working
 
-    def _activate_action(self, row: dict[str, Any]) -> dict[str, Any] | None:
-        action = row.get("action", "exit_settings")
-        if action == "toggle_fullscreen":
-            toggle_fullscreen()
-            adjust_menu_logical_size()
-            return None
+    def _activate_action(self, _row: dict[str, Any]) -> dict[str, Any] | None:
         return self._exit_settings()
 
     def _handle_event(
@@ -351,12 +341,12 @@ class SettingsScreenRunner:
                 self._toggle_row(current_row)
             elif row_type == "choice":
                 self._cycle_choice(current_row, 1)
-        if snapshot.pressed(CommonAction.LEFT) and row_type != "action":
+        if snapshot.pressed(CommonAction.LEFT):
             if row_type == "toggle":
                 self._set_easy_value(current_row, True)
             elif row_type == "choice":
                 self._cycle_choice(current_row, -1)
-        if snapshot.pressed(CommonAction.RIGHT) and row_type != "action":
+        if snapshot.pressed(CommonAction.RIGHT):
             if row_type == "toggle":
                 self._set_easy_value(current_row, False)
             elif row_type == "choice":

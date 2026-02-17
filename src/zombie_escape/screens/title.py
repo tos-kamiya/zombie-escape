@@ -339,8 +339,7 @@ class TitleScreenController:
 
     def _build_resource_options(self, page_index: int) -> list[dict[str, Any]]:
         options = list(self.resource_base_options)
-        if page_index == 0:
-            options.insert(1, {"type": "fullscreen"})
+        options.insert(0, {"type": "fullscreen"})
         return options
 
     def _switch_page(self, delta: int) -> None:
@@ -389,6 +388,9 @@ class TitleScreenController:
                 seed_is_auto=self.current_seed_auto,
             )
         return None
+
+    def _current_option_is_fullscreen(self) -> bool:
+        return self.options[self.selected].get("type") == "fullscreen"
 
     def _render_frame(self) -> None:
         self.screen.fill(BLACK)
@@ -527,7 +529,7 @@ class TitleScreenController:
             )
             action_header_pos = (
                 list_column_x,
-                stage_rows_start + fixed_stage_block_height + 14 + resource_offset,
+                stage_rows_start + fixed_stage_block_height + resource_offset,
             )
             action_header_text = tr("menu.sections.resources")
             action_width, action_height, _ = _measure_text(
@@ -625,7 +627,7 @@ class TitleScreenController:
                 if option["type"] == "settings":
                     label = tr("menu.settings")
                 elif option["type"] == "fullscreen":
-                    label = tr("menu.fullscreen_toggle")
+                    label = tr("menu.display_mode_window_size")
                 elif option["type"] == "readme":
                     label_key = (
                         "menu.readme_stage6" if self.current_page > 0 else "menu.readme"
@@ -690,7 +692,7 @@ class TitleScreenController:
             if current["type"] == "settings":
                 help_text = tr("menu.option_help.settings")
             elif current["type"] == "fullscreen":
-                help_text = tr("menu.option_help.fullscreen_toggle")
+                help_text = tr("menu.option_help.display_mode_window_size")
             elif current["type"] == "quit":
                 help_text = tr("menu.option_help.quit")
             elif current["type"] == "readme":
@@ -895,9 +897,15 @@ class TitleScreenController:
 
     def _handle_snapshot(self, snapshot: Any) -> ScreenTransition | None:
         if snapshot.pressed(CommonAction.LEFT):
-            self._switch_page(-1)
+            if self._current_option_is_fullscreen():
+                nudge_menu_window_scale(0.5)
+            else:
+                self._switch_page(-1)
         if snapshot.pressed(CommonAction.RIGHT):
-            self._switch_page(1)
+            if self._current_option_is_fullscreen():
+                nudge_menu_window_scale(2.0)
+            else:
+                self._switch_page(1)
         if snapshot.pressed(CommonAction.UP):
             self.selected = (self.selected - 1) % len(self.options)
         if snapshot.pressed(CommonAction.DOWN):
