@@ -7,8 +7,8 @@ import pygame
 
 from ..entities_constants import (
     ZombieKind,
-    ZOMBIE_LONER_EVAL_INTERVAL_FRAMES,
-    ZOMBIE_LONER_SIGHT_RANGE,
+    ZOMBIE_SOLITARY_EVAL_INTERVAL_FRAMES,
+    ZOMBIE_SOLITARY_SIGHT_RANGE,
     ZOMBIE_LINEFORMER_FOLLOW_DISTANCE,
     ZOMBIE_LINEFORMER_FOLLOW_TOLERANCE,
     ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
@@ -362,7 +362,7 @@ def _zombie_normal_movement(
     return _zombie_move_toward(zombie, player_center)
 
 
-def _zombie_loner_movement(
+def _zombie_solitary_movement(
     zombie: "Zombie",
     _walls: list["Wall"],
     cell_size: int,
@@ -376,11 +376,11 @@ def _zombie_loner_movement(
     del now_ms
     if cell_size <= 0:
         return 0.0, 0.0
-    is_in_sight = zombie._update_mode(_player_center, ZOMBIE_LONER_SIGHT_RANGE)
+    is_in_sight = zombie._update_mode(_player_center, ZOMBIE_SOLITARY_SIGHT_RANGE)
     if is_in_sight:
         return _zombie_move_toward(zombie, _player_center)
-    if zombie.loner_eval_frame_counter <= 0:
-        zombie.loner_eval_frame_counter = ZOMBIE_LONER_EVAL_INTERVAL_FRAMES
+    if zombie.solitary_eval_frame_counter <= 0:
+        zombie.solitary_eval_frame_counter = ZOMBIE_SOLITARY_EVAL_INTERVAL_FRAMES
 
         self_cell_x = int(zombie.x // cell_size)
         self_cell_y = int(zombie.y // cell_size)
@@ -427,23 +427,23 @@ def _zombie_loner_movement(
             proposed_move = None
         else:
             proposed_move = (dir_x, dir_y)
-        prev_move = zombie.loner_previous_move
+        prev_move = zombie.solitary_previous_move
         if (
             proposed_move is not None
             and prev_move is not None
             and proposed_move == (-prev_move[0], -prev_move[1])
         ):
             proposed_move = None
-        zombie.loner_committed_move = proposed_move
+        zombie.solitary_committed_move = proposed_move
         if proposed_move is not None:
-            zombie.loner_previous_move = proposed_move
+            zombie.solitary_previous_move = proposed_move
 
-    zombie.loner_eval_frame_counter -= 1
-    if zombie.loner_committed_move is None:
+    zombie.solitary_eval_frame_counter -= 1
+    if zombie.solitary_committed_move is None:
         return 0.0, 0.0
     step_speed = zombie.speed * 2.0
-    move_x = float(zombie.loner_committed_move[0]) * step_speed
-    move_y = float(zombie.loner_committed_move[1]) * step_speed
+    move_x = float(zombie.solitary_committed_move[0]) * step_speed
+    move_y = float(zombie.solitary_committed_move[1]) * step_speed
     if move_x != 0.0 and move_y != 0.0:
         norm = math.sqrt(2.0)
         move_x /= norm

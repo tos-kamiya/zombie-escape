@@ -52,7 +52,7 @@ from .patrol_paralyze import draw_paralyze_marker
 from .movement import _circle_wall_collision
 from .zombie_movement import (
     _zombie_lineformer_train_head_movement,
-    _zombie_loner_movement,
+    _zombie_solitary_movement,
     _zombie_normal_movement,
     _zombie_tracker_movement,
     _zombie_wall_hug_movement,
@@ -128,8 +128,8 @@ class Zombie(pygame.sprite.Sprite):
                 movement_strategy = _zombie_wall_hug_movement
             elif self.kind == ZombieKind.LINEFORMER:
                 movement_strategy = _zombie_lineformer_train_head_movement
-            elif self.kind == ZombieKind.LONER:
-                movement_strategy = _zombie_loner_movement
+            elif self.kind == ZombieKind.SOLITARY:
+                movement_strategy = _zombie_solitary_movement
             else:
                 movement_strategy = _zombie_normal_movement
         self.movement_strategy = movement_strategy
@@ -166,9 +166,9 @@ class Zombie(pygame.sprite.Sprite):
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
         self.collision_radius = float(self.radius)
-        self.loner_eval_frame_counter = 0
-        self.loner_committed_move: tuple[int, int] | None = None
-        self.loner_previous_move: tuple[int, int] | None = None
+        self.solitary_eval_frame_counter = 0
+        self.solitary_committed_move: tuple[int, int] | None = None
+        self.solitary_previous_move: tuple[int, int] | None = None
 
     @property
     def max_health(self: Self) -> int:
@@ -365,7 +365,7 @@ class Zombie(pygame.sprite.Sprite):
             self.kind == ZombieKind.WALL_HUGGER
             and self.wall_hug_side != 0
             and self.wall_hug_last_side_has_wall
-        ) or self.kind == ZombieKind.LINEFORMER or self.kind == ZombieKind.LONER
+        ) or self.kind == ZombieKind.LINEFORMER or self.kind == ZombieKind.SOLITARY
         if not needs_overlay:
             self.image = base_surface
             return
@@ -403,7 +403,7 @@ class Zombie(pygame.sprite.Sprite):
                 angle_rad=target_angle,
                 color=ZOMBIE_OUTLINE_COLOR,
             )
-        if self.kind == ZombieKind.LONER:
+        if self.kind == ZombieKind.SOLITARY:
             center_x, center_y = self.image.get_rect().center
             ring_radius = max(2, int(self.collision_radius * 1.4))
             diamond_points: list[tuple[float, float]] = [

@@ -16,7 +16,7 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
 - Lineformer
   - Managed as train units (`LineformerTrainManager`).
   - Only head is a real zombie entity; followers are marker positions.
-- Solitary (`zombie_loner_movement`, internal key: `loner`)
+- Solitary (`zombie_solitary_movement`, internal key: `solitary`)
   - Uses a 10-frame commit cycle.
   - Compares local zombie counts in 3-cell side bands (up/down/left/right) around its tile and moves toward lower-density sides.
   - Can move in 8 directions when both axes have a lower-density side.
@@ -62,7 +62,7 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
   - `zombie_tracker_ratio`
   - `zombie_wall_hugging_ratio`
   - `zombie_lineformer_ratio`
-  - `zombie_loner_ratio` (solitary)
+  - `zombie_solitary_ratio` (solitary)
   - `zombie_dog_ratio`
 - Nimble dog spawn share is controlled by `zombie_nimble_dog_ratio` (applied only when dog variant is chosen).
 

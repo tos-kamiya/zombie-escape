@@ -536,7 +536,7 @@ def update_entities(
             search_radius = max(ZOMBIE_LINEFORMER_JOIN_RADIUS, base_radius)
         else:
             search_radius = base_radius
-        if zombie.kind == ZombieKind.LONER and game_data.cell_size > 0:
+        if zombie.kind == ZombieKind.SOLITARY and game_data.cell_size > 0:
             tile_x = int(zombie.x // game_data.cell_size)
             tile_y = int(zombie.y // game_data.cell_size)
             min_world_x = (tile_x - 1) * game_data.cell_size

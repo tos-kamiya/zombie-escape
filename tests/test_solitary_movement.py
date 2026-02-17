@@ -1,7 +1,7 @@
 import pygame
 
 from zombie_escape.entities import Zombie
-from zombie_escape.entities.zombie_movement import _zombie_loner_movement
+from zombie_escape.entities.zombie_movement import _zombie_solitary_movement
 from zombie_escape.entities_constants import ZombieKind
 from zombie_escape.level_constants import DEFAULT_CELL_SIZE, DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from zombie_escape.models import LevelLayout
@@ -32,12 +32,12 @@ def _make_layout() -> LevelLayout:
     )
 
 
-def test_loner_chases_target_when_within_short_range() -> None:
-    loner = Zombie(100, 100, kind=ZombieKind.LONER)
+def test_solitary_chases_target_when_within_short_range() -> None:
+    solitary = Zombie(100, 100, kind=ZombieKind.SOLITARY)
     layout = _make_layout()
 
-    move_x, move_y = _zombie_loner_movement(
-        loner,
+    move_x, move_y = _zombie_solitary_movement(
+        solitary,
         [],
         DEFAULT_CELL_SIZE,
         layout,

@@ -216,8 +216,8 @@
         "description": "横切るゾンビ犬に注意。"
       },
       "stage34": {
-        "name": "#34 lonerテスト",
-        "description": "このステージではlonerのみ出現する。"
+        "name": "#34 solitaryテスト",
+        "description": "このステージではsolitaryのみ出現する。"
       }
     },
     "status": {

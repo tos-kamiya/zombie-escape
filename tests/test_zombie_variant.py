@@ -37,13 +37,13 @@ def test_zombie_lineformer_ratio_controls_lineformer() -> None:
     assert zombie.kind == ZombieKind.LINEFORMER
 
 
-def test_zombie_loner_ratio_controls_loner() -> None:
+def test_zombie_solitary_ratio_controls_solitary() -> None:
     config = {"fast_zombies": {"enabled": False}}
     stage_on = Stage(
-        id="stage_test_loner_on",
+        id="stage_test_solitary_on",
         name_key="stages.stage1.name",
         description_key="stages.stage1.description",
-        zombie_loner_ratio=1.0,
+        zombie_solitary_ratio=1.0,
     )
     zombie = _create_zombie(config, stage=stage_on)
-    assert zombie.kind == ZombieKind.LONER
+    assert zombie.kind == ZombieKind.SOLITARY

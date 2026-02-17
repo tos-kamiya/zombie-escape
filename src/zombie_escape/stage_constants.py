@@ -1112,6 +1112,27 @@ STAGES: list[Stage] = [
         ],
         exit_sides=["top", "bottom"],
     ),
+    Stage(
+        id="stage34",
+        name_key="stages.stage34.name",
+        description_key="stages.stage34.description",
+        available=True,
+        cell_size=50,
+        grid_cols=25,
+        grid_rows=25,
+        wall_algorithm="sparse_moore.10%",
+        initial_interior_spawn_rate=0.1,
+        exterior_spawn_weight=0.1,
+        interior_spawn_weight=0.9,
+        zombie_normal_ratio=0.3,
+        zombie_tracker_ratio=0.0,
+        zombie_wall_hugging_ratio=0.0,
+        zombie_lineformer_ratio=0.0,
+        zombie_solitary_ratio=0.7,
+        zombie_dog_ratio=0.0,
+        zombie_nimble_dog_ratio=0.0,
+        zombie_spawn_count_per_interval=2,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 

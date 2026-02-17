@@ -22,14 +22,14 @@ def test_stage_requires_any_zombie_ratio() -> None:
         )
 
 
-def test_stage_accepts_loner_only_ratio() -> None:
+def test_stage_accepts_solitary_only_ratio() -> None:
     stage = Stage(
-        id="stage_test_loner_ratio",
+        id="stage_test_solitary_ratio",
         name_key="stages.stage1.name",
         description_key="stages.stage1.description",
-        zombie_loner_ratio=1.0,
+        zombie_solitary_ratio=1.0,
     )
-    assert stage.zombie_loner_ratio == 1.0
+    assert stage.zombie_solitary_ratio == 1.0
 
 
 def test_stage_refuel_chain_requires_distinct_item_counts() -> None:
