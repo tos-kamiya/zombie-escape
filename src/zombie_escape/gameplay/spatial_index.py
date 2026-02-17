@@ -146,3 +146,33 @@ class SpatialIndex:
                         results.append(entity)
                         seen.add(ent_id)
         return results
+
+    def query_cells(
+        self,
+        *,
+        min_cell_x: int,
+        max_cell_x: int,
+        min_cell_y: int,
+        max_cell_y: int,
+        kinds: SpatialKind = SpatialKind.ALL,
+    ) -> list[pygame.sprite.Sprite]:
+        if kinds == SpatialKind.NONE:
+            return []
+        if min_cell_x > max_cell_x or min_cell_y > max_cell_y:
+            return []
+        results: list[pygame.sprite.Sprite] = []
+        seen: set[int] = set()
+        for cell_y in range(min_cell_y, max_cell_y + 1):
+            for cell_x in range(min_cell_x, max_cell_x + 1):
+                bucket = self._cells.get((cell_x, cell_y))
+                if not bucket:
+                    continue
+                for entity, kind in bucket:
+                    if kind & kinds == 0:
+                        continue
+                    ent_id = id(entity)
+                    if ent_id in seen:
+                        continue
+                    results.append(entity)
+                    seen.add(ent_id)
+        return results

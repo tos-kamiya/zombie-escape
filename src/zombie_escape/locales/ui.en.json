@@ -214,6 +214,10 @@
       "stage33": {
         "name": "#33 Crosscurrent",
         "description": "Watch for dogs cutting across your path."
+      },
+      "stage34": {
+        "name": "#34 Loner Test",
+        "description": "Only loners spawn in this stage."
       }
     },
     "status": {

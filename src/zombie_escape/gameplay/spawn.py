@@ -20,7 +20,10 @@ from ..entities import (
     random_position_outside_building,
     spritecollideany_walls,
 )
-from ..entities.zombie_movement import _zombie_lineformer_train_head_movement
+from ..entities.zombie_movement import (
+    _zombie_lineformer_train_head_movement,
+    _zombie_loner_movement,
+)
 from ..entities_constants import (
     FAST_ZOMBIE_BASE_SPEED,
     PLAYER_SPEED,
@@ -97,18 +100,25 @@ def _pick_zombie_variant(stage: Stage | None) -> ZombieKind:
     tracker_ratio = 0.0
     wall_hugging_ratio = 0.0
     lineformer_ratio = 0.0
+    loner_ratio = 0.0
     dog_ratio = 0.0
     if stage is not None:
         normal_ratio = max(0.0, float(stage.zombie_normal_ratio))
         tracker_ratio = max(0.0, float(stage.zombie_tracker_ratio))
         wall_hugging_ratio = max(0.0, float(stage.zombie_wall_hugging_ratio))
         lineformer_ratio = max(0.0, float(stage.zombie_lineformer_ratio))
+        loner_ratio = max(0.0, float(stage.zombie_loner_ratio))
         # Nimble dogs are a dog sub-variant; include them in the dog weight so
         # total zombie-type weights can always be normalized.
         nimble_ratio = max(0.0, float(stage.zombie_nimble_dog_ratio))
         dog_ratio = max(0.0, float(stage.zombie_dog_ratio)) + nimble_ratio
     total_ratio = (
-        normal_ratio + tracker_ratio + wall_hugging_ratio + lineformer_ratio + dog_ratio
+        normal_ratio
+        + tracker_ratio
+        + wall_hugging_ratio
+        + lineformer_ratio
+        + loner_ratio
+        + dog_ratio
     )
     if total_ratio <= 0:
         return ZombieKind.NORMAL
@@ -121,6 +131,10 @@ def _pick_zombie_variant(stage: Stage | None) -> ZombieKind:
         return ZombieKind.WALL_HUGGER
     if pick < normal_ratio + tracker_ratio + wall_hugging_ratio + lineformer_ratio:
         return ZombieKind.LINEFORMER
+    if pick < (
+        normal_ratio + tracker_ratio + wall_hugging_ratio + lineformer_ratio + loner_ratio
+    ):
+        return ZombieKind.LONER
     return ZombieKind.DOG
 
 
@@ -354,6 +368,8 @@ def _create_zombie(
     movement_strategy = None
     if kind == ZombieKind.LINEFORMER:
         movement_strategy = _zombie_lineformer_train_head_movement
+    elif kind == ZombieKind.LONER:
+        movement_strategy = _zombie_loner_movement
     return Zombie(
         x=float(start_pos[0]),
         y=float(start_pos[1]),

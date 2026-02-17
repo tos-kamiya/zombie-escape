@@ -52,6 +52,7 @@ from .patrol_paralyze import draw_paralyze_marker
 from .movement import _circle_wall_collision
 from .zombie_movement import (
     _zombie_lineformer_train_head_movement,
+    _zombie_loner_movement,
     _zombie_normal_movement,
     _zombie_tracker_movement,
     _zombie_wall_hug_movement,
@@ -127,6 +128,8 @@ class Zombie(pygame.sprite.Sprite):
                 movement_strategy = _zombie_wall_hug_movement
             elif self.kind == ZombieKind.LINEFORMER:
                 movement_strategy = _zombie_lineformer_train_head_movement
+            elif self.kind == ZombieKind.LONER:
+                movement_strategy = _zombie_loner_movement
             else:
                 movement_strategy = _zombie_normal_movement
         self.movement_strategy = movement_strategy
@@ -163,6 +166,9 @@ class Zombie(pygame.sprite.Sprite):
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
         self.collision_radius = float(self.radius)
+        self.loner_eval_frame_counter = 0
+        self.loner_committed_move: tuple[int, int] | None = None
+        self.loner_previous_move: tuple[int, int] | None = None
 
     @property
     def max_health(self: Self) -> int:
@@ -263,13 +269,13 @@ class Zombie(pygame.sprite.Sprite):
         for other in zombies:
             if other is self or not other.alive():
                 continue
-            
+
             # Lineformer logic: non-lineformers ignore lineformers
             other_kind = other.kind  # type: ignore[attr-defined]
             if self.kind != ZombieKind.LINEFORMER and other_kind == ZombieKind.LINEFORMER:
                 continue
-            
-            # Type ignore because spatial index might contain other sprites, 
+
+            # Type ignore because spatial index might contain other sprites,
             # but we only query ZOMBIE | ZOMBIE_DOG | TRAPPED_ZOMBIE
             ox = other.x  # type: ignore[attr-defined]
             oy = other.y  # type: ignore[attr-defined]
@@ -359,7 +365,7 @@ class Zombie(pygame.sprite.Sprite):
             self.kind == ZombieKind.WALL_HUGGER
             and self.wall_hug_side != 0
             and self.wall_hug_last_side_has_wall
-        ) or self.kind == ZombieKind.LINEFORMER
+        ) or self.kind == ZombieKind.LINEFORMER or self.kind == ZombieKind.LONER
         if not needs_overlay:
             self.image = base_surface
             return
@@ -397,6 +403,41 @@ class Zombie(pygame.sprite.Sprite):
                 angle_rad=target_angle,
                 color=ZOMBIE_OUTLINE_COLOR,
             )
+        if self.kind == ZombieKind.LONER:
+            center_x, center_y = self.image.get_rect().center
+            ring_radius = max(2, int(self.collision_radius * 1.4))
+            diamond_points: list[tuple[float, float]] = [
+                (center_x, center_y - ring_radius),
+                (center_x + ring_radius, center_y),
+                (center_x, center_y + ring_radius),
+                (center_x - ring_radius, center_y),
+            ]
+            corner_ratio = 0.15
+            for idx, vertex in enumerate(diamond_points):
+                prev_vertex = diamond_points[(idx - 1) % 4]
+                next_vertex = diamond_points[(idx + 1) % 4]
+                prev_point = (
+                    vertex[0] + (prev_vertex[0] - vertex[0]) * corner_ratio,
+                    vertex[1] + (prev_vertex[1] - vertex[1]) * corner_ratio,
+                )
+                next_point = (
+                    vertex[0] + (next_vertex[0] - vertex[0]) * corner_ratio,
+                    vertex[1] + (next_vertex[1] - vertex[1]) * corner_ratio,
+                )
+                pygame.draw.line(
+                    self.image,
+                    ZOMBIE_OUTLINE_COLOR,
+                    (int(round(vertex[0])), int(round(vertex[1]))),
+                    (int(round(prev_point[0])), int(round(prev_point[1]))),
+                    width=1,
+                )
+                pygame.draw.line(
+                    self.image,
+                    ZOMBIE_OUTLINE_COLOR,
+                    (int(round(vertex[0])), int(round(vertex[1]))),
+                    (int(round(next_point[0])), int(round(next_point[1]))),
+                    width=1,
+                )
 
     def _apply_paralyze_overlay(self: Self, now_ms: int) -> None:
         self._apply_render_overlays()
@@ -508,7 +549,7 @@ class Zombie(pygame.sprite.Sprite):
         )
         move_x += drift_x
         move_y += drift_y
-        
+
         # Puddle slow-down
         if is_in_puddle_cell(
             self.x,

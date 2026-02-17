@@ -296,6 +296,7 @@ class Stage:
     zombie_tracker_ratio: float = 0.0
     zombie_wall_hugging_ratio: float = 0.0
     zombie_lineformer_ratio: float = 0.0
+    zombie_loner_ratio: float = 0.0
     zombie_normal_ratio: float = 0.0
     zombie_dog_ratio: float = 0.0
     zombie_nimble_dog_ratio: float = 0.0
@@ -332,6 +333,7 @@ class Stage:
             + float(self.zombie_tracker_ratio)
             + float(self.zombie_wall_hugging_ratio)
             + float(self.zombie_lineformer_ratio)
+            + float(self.zombie_loner_ratio)
             + float(self.zombie_dog_ratio)
             + float(self.zombie_nimble_dog_ratio)
         )

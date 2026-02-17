@@ -214,6 +214,10 @@
       "stage33": {
         "name": "#33 交差流",
         "description": "横切るゾンビ犬に注意。"
+      },
+      "stage34": {
+        "name": "#34 lonerテスト",
+        "description": "このステージではlonerのみ出現する。"
       }
     },
     "status": {

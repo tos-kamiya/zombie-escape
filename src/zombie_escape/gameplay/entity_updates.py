@@ -536,11 +536,27 @@ def update_entities(
             search_radius = max(ZOMBIE_LINEFORMER_JOIN_RADIUS, base_radius)
         else:
             search_radius = base_radius
-        nearby_candidates = spatial_index.query_radius(
-            (zombie.x, zombie.y),
-            search_radius,
-            kinds=zombie_kinds,
-        )
+        if zombie.kind == ZombieKind.LONER and game_data.cell_size > 0:
+            tile_x = int(zombie.x // game_data.cell_size)
+            tile_y = int(zombie.y // game_data.cell_size)
+            min_world_x = (tile_x - 1) * game_data.cell_size
+            max_world_x = (tile_x + 2) * game_data.cell_size - 1
+            min_world_y = (tile_y - 1) * game_data.cell_size
+            max_world_y = (tile_y + 2) * game_data.cell_size - 1
+            index_cell_size = max(1, int(spatial_index.cell_size))
+            nearby_candidates = spatial_index.query_cells(
+                min_cell_x=int(min_world_x // index_cell_size),
+                max_cell_x=int(max_world_x // index_cell_size),
+                min_cell_y=int(min_world_y // index_cell_size),
+                max_cell_y=int(max_world_y // index_cell_size),
+                kinds=zombie_kinds,
+            )
+        else:
+            nearby_candidates = spatial_index.query_radius(
+                (zombie.x, zombie.y),
+                search_radius,
+                kinds=zombie_kinds,
+            )
         zombie_search_radius = (
             ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.collision_radius + 120
         )
