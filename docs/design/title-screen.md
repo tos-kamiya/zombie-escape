@@ -49,7 +49,18 @@ Icon order is fixed by category:
 ## Stage List Paging
 
 - Stage pages can be switched by keyboard/gamepad left-right input.
+- Exception: when the selected resource row is `Display Mode/Window Size`,
+  left-right input changes window scale instead of switching stage pages.
 - The `STAGES` header also shows mouse-clickable left/right triangle buttons when paging in that direction is possible.
 - Mouse wheel input over the stage-list pane also switches stage pages:
   - wheel up: previous page
   - wheel down: next page
+
+## Resource Menu Rows
+
+- Resource rows are shown on every title page (stages 1-5 and stage 6+ pages).
+- Row order is fixed as:
+  1. `Display Mode/Window Size`
+  2. `Settings`
+  3. `README/LICENSE` (or stage 6+ guide row on later pages)
+  4. `Quit`

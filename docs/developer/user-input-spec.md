@@ -35,7 +35,9 @@ actions.
 Examples:
 
 - Seed text entry on title screen.
-- Window operations: `[` / `]` / `F`.
+- Window operations: `[` / `]` / `F` (title/settings/gameplay).
+- Title-screen `Display Mode/Window Size` row uses `LEFT`/`RIGHT` to resize
+  window scale.
 - Screen-local utility keys such as settings reset.
 
 ### 2.2 Analog Vector
@@ -128,7 +130,8 @@ Notes:
 ### 5.3 Keyboard-Only Operations
 
 - Title seed text entry and edit behavior.
-- Gameplay window operations (`[` / `]` / `F`).
+- Window operations (`[` / `]` / `F`) on title/settings/gameplay.
+- Title-screen `Display Mode/Window Size` row left-right resize behavior.
 - Screen-specific utility keys (for example, settings reset).
 
 ## 6. Gameplay Pause and Window Policy
