@@ -212,8 +212,8 @@
         "description": "トゲトゲ観葉植物を利用してゾンビを足止めしよう。"
       },
       "stage33": {
-        "name": "#33 Lineformerデバッグ",
-        "description": "デバッグ用: プレイヤーとLineformer 1体のみ。"
+        "name": "#33 交差流",
+        "description": "横切るゾンビ犬に注意。"
       }
     },
     "status": {
