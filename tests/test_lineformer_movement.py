@@ -100,3 +100,25 @@ def test_lineformer_train_head_boosts_movement_only_while_tracking() -> None:
     assert abs(chase_x) == head.speed * ZOMBIE_LINEFORMER_SPEED_MULTIPLIER
     assert abs(wander_x) <= head.speed
     assert abs(wander_y) <= head.speed
+
+
+def test_lineformer_repels_when_touching_target() -> None:
+    head = Zombie(100, 100, kind=ZombieKind.LINEFORMER)
+    target = Zombie(106, 100, kind=ZombieKind.NORMAL)
+    layout = _make_layout()
+
+    head.lineformer_follow_target_id = target.lineformer_id
+    head.lineformer_target_pos = (target.x, target.y)
+    move_x, move_y = _zombie_lineformer_train_head_movement(
+        head,
+        [],
+        DEFAULT_CELL_SIZE,
+        layout,
+        (0, 0),
+        [target],
+        [],
+        now_ms=1,
+    )
+
+    assert move_x < 0
+    assert move_y == 0

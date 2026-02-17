@@ -40,7 +40,7 @@ def _zombie_lineformer_train_head_movement(
     cell_size: int,
     layout: "LevelLayout",
     _player_center: tuple[float, float],
-    _nearby_zombies: Iterable["Zombie"],
+    nearby_zombies: Iterable["Zombie"],
     _footprints: list["Footprint"],
     *,
     now_ms: int,
@@ -57,6 +57,38 @@ def _zombie_lineformer_train_head_movement(
     dx = target_pos[0] - zombie.x
     dy = target_pos[1] - zombie.y
     distance_sq = dx * dx + dy * dy
+    target_id = zombie.lineformer_follow_target_id
+    if target_id is not None:
+        target_entity = next(
+            (
+                other
+                for other in nearby_zombies
+                if getattr(other, "lineformer_id", None) == target_id
+            ),
+            None,
+        )
+        if target_entity is not None:
+            target_radius = float(
+                getattr(
+                    target_entity,
+                    "collision_radius",
+                    getattr(target_entity, "radius", zombie.collision_radius),
+                )
+            )
+            min_distance = zombie.collision_radius + target_radius
+            if distance_sq <= min_distance * min_distance:
+                away_dx = zombie.x - float(getattr(target_entity, "x", target_pos[0]))
+                away_dy = zombie.y - float(getattr(target_entity, "y", target_pos[1]))
+                away_dist = math.hypot(away_dx, away_dy)
+                if away_dist <= 1e-6:
+                    angle = RNG.uniform(0.0, math.tau)
+                    away_dx, away_dy = math.cos(angle), math.sin(angle)
+                    away_dist = 1.0
+                repel_speed = zombie.speed * ZOMBIE_LINEFORMER_SPEED_MULTIPLIER
+                return (
+                    (away_dx / away_dist) * repel_speed,
+                    (away_dy / away_dist) * repel_speed,
+                )
     follow_max = ZOMBIE_LINEFORMER_FOLLOW_DISTANCE + ZOMBIE_LINEFORMER_FOLLOW_TOLERANCE
     if distance_sq <= follow_max * follow_max:
         return 0.0, 0.0
