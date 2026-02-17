@@ -280,7 +280,7 @@ def game_over_screen(
                 if event.key == pygame.K_f:
                     toggle_fullscreen(game_data=game_data)
                     continue
-                if event.key in (pygame.K_ESCAPE, pygame.K_SPACE):
+                if event.key == pygame.K_ESCAPE:
                     return ScreenTransition(ScreenID.TITLE)
                 if event.key == pygame.K_r and stage is not None:
                     return _activate_option("retry")

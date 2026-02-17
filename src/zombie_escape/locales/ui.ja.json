@@ -31,7 +31,7 @@
       "hints": {
         "navigate": "上下: 項目選択",
         "page_switch": "左右: ステージ群切替",
-        "confirm": "Enter/Space/South: 決定または実行"
+        "confirm": "Enter/South: 決定または実行"
       },
       "startup": {
         "release_confirm": "SOUTHボタンを離してください",
@@ -39,7 +39,7 @@
       },
       "option_help": {
         "settings": "設定画面を開いて言語や補助オプションを変更します。",
-        "display_mode_window_size": "フルスクリーンとウィンドウ表示を切り替えます。",
+        "display_mode_window_size": "左右でウィンドウサイズ変更、Enter/Southでフルスクリーン切り替え。",
         "quit": "ゲームを終了します。",
         "readme": "GitHub の README ページをブラウザで開きます。ライセンス情報もここから確認できます",
         "readme_stage6": "ステージ6以降の説明ページをブラウザで開きます。"
@@ -279,7 +279,7 @@
       "hints": {
         "navigate": "上下: 項目選択",
         "adjust": "左右: 値の設定",
-        "toggle": "Space/Enter/South: 値のトグル",
+        "toggle": "Enter/South: 値のトグル",
         "reset": "R: デフォルト設定に戻す",
         "exit": "Esc/BS/Select: セーブして戻る"
       },
@@ -295,7 +295,6 @@
       "lose": "ゲームオーバー",
       "menu_title": "タイトルへ戻る (ESC/SOUTH)",
       "menu_retry": "再挑戦 (R/START)",
-      "prompt": "ESC/Space/Select/South: タイトルへ  R/Start: 再挑戦",
       "scream": "ぎゃあーーー!!",
       "survivors_summary": "救出人数: %{count}",
       "endurance_duration": "逃げ延びた時間 %{time}"
