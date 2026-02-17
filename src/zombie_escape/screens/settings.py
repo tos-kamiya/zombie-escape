@@ -373,7 +373,7 @@ class SettingsScreenRunner:
         self.screen.fill(BLACK)
         try:
             font_settings = get_font_settings()
-            highlight_color = (70, 70, 70)
+            highlight_color = (65, 65, 65)
             title_text = tr("settings.title")
             title_font = load_font(font_settings.resource, font_settings.scaled_size(33))
             title_lines = wrap_text(title_text, title_font, self.screen_width)

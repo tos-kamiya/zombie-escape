@@ -432,7 +432,7 @@ class TitleScreenController:
             info_column_x = self.width // 2 + 12
             info_column_width = self.width - info_column_x - 24
             section_top = TITLE_SECTION_TOP
-            highlight_color = (70, 70, 70)
+            highlight_color = (65, 65, 65)
 
             stage_count = len(self.stage_options)
             stage_header_text = tr("menu.sections.stage_select")
@@ -588,12 +588,25 @@ class TitleScreenController:
                     icons = self._get_stage_icons(option["stage"])
                     icon_x = list_column_x + 8 + label_width + 6
                     icon_y_center = row_top + row_height // 2
+                    icon_bounds: pygame.Rect | None = None
                     for icon_surf in icons:
                         icon_rect = icon_surf.get_rect(
                             center=(icon_x + icon_surf.get_width() // 2, icon_y_center)
                         )
                         self.screen.blit(icon_surf, icon_rect)
+                        icon_bounds = (
+                            icon_rect.copy()
+                            if icon_bounds is None
+                            else icon_bounds.union(icon_rect)
+                        )
                         icon_x += icon_surf.get_width() + 2
+                    if icon_bounds is not None and not is_selected:
+                        icon_overlay = pygame.Surface(
+                            (max(1, icon_bounds.width), max(1, icon_bounds.height)),
+                            pygame.SRCALPHA,
+                        )
+                        icon_overlay.fill((0, 0, 0, 80))
+                        self.screen.blit(icon_overlay, icon_bounds.topleft)
                 row_top += row_height
 
             resource_option_size = font_settings.scaled_size(11)
