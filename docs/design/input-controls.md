@@ -111,6 +111,32 @@ This chapter tracks player input behavior across keyboard, gamepad, and mouse.
 - Consolidate repeated menu mouse-input code via shared input utilities.
 - Add focused tests for input priority and focus-gated mouse interactions.
 
+## Keyboard Shortcut Abstraction (Planned)
+
+### Motivation
+
+- `ESC`/`R`/`[`/`]`/`F` handling is currently implemented with repeated per-screen
+  `KEYDOWN` branches.
+- `CommonAction` already normalizes confirm/back/navigation actions, but
+  keyboard-only utility shortcuts are still fragmented.
+
+### Planned Model
+
+- Keep `CommonAction` as the cross-device layer.
+- Add a keyboard-only normalized shortcut layer (`KeyboardShortcut`) for:
+  - `RETRY` (`R`)
+  - `WINDOW_SCALE_DOWN` (`[`)
+  - `WINDOW_SCALE_UP` (`]`)
+  - `TOGGLE_FULLSCREEN` (`F`)
+- Keep `ESC` in `CommonAction.BACK` (not `KeyboardShortcut`) to preserve
+  keyboard/gamepad parity.
+
+### Expected Effect
+
+- Fewer screen-local `KEYDOWN` branches.
+- More consistent shortcut behavior across title/settings/gameplay/game-over.
+- UI hint text can remain screen-specific without changing input mapping.
+
 ## Settings Screen Layout
 
 ### Motivation

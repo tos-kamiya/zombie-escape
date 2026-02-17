@@ -40,6 +40,21 @@ Examples:
   window scale.
 - Screen-local utility keys such as settings reset.
 
+### 2.1.1 Planned Refactor: Keyboard Shortcut Abstraction
+
+To reduce repeated `KEYDOWN` branching in screens, keyboard-only utility keys
+should be normalized as `KeyboardShortcut` values in `InputSnapshot`.
+
+Planned shortcut set:
+
+- `RETRY` (`R`)
+- `WINDOW_SCALE_DOWN` (`[`)
+- `WINDOW_SCALE_UP` (`]`)
+- `TOGGLE_FULLSCREEN` (`F`)
+
+`Escape` is not part of this set because it is already represented by
+`CommonAction.BACK` (keyboard `Esc` / gamepad `Select/Back`).
+
 ### 2.2 Analog Vector
 
 Continuous movement vectors from analog input sources.
@@ -82,6 +97,12 @@ Those remain screen responsibilities.
 Current target model:
 
 ```python
+class KeyboardShortcut(Enum):
+    RETRY = auto()
+    WINDOW_SCALE_DOWN = auto()
+    WINDOW_SCALE_UP = auto()
+    TOGGLE_FULLSCREEN = auto()
+
 @dataclass(frozen=True)
 class ActionState:
     pressed: bool = False
@@ -95,12 +116,14 @@ class InputSnapshot:
     move_vector: tuple[float, float]
     text_input: str
     keyboard_pressed_keys: set[int]
+    shortcuts_pressed: set[KeyboardShortcut]
 ```
 
 Notes:
 
 - `text_input` is populated only when `include_text=True`.
 - `keyboard_pressed_keys` stores this-frame key presses for keyboard-only logic.
+- `shortcuts_pressed` stores normalized keyboard utility shortcuts.
 
 ## 5. Default Mappings
 
@@ -134,6 +157,13 @@ Notes:
 - Title-screen `Display Mode/Window Size` row left-right resize behavior.
 - Screen-specific utility keys (for example, settings reset).
 
+### 5.4 Planned KeyboardShortcut Mapping
+
+- `RETRY` -> `R`
+- `WINDOW_SCALE_DOWN` -> `[`
+- `WINDOW_SCALE_UP` -> `]`
+- `TOGGLE_FULLSCREEN` -> `F`
+
 ## 6. Gameplay Pause and Window Policy
 
 To keep input/focus transitions explicit and safe in gameplay:
@@ -159,9 +189,10 @@ Each `screens/*.py` should process input in this order:
 1. Read events.
 2. Handle screen-level window/runtime events.
 3. Build `snapshot = input_helper.snapshot(events, keys, ...)`.
-4. Process Keyboard-Only input.
-5. Process Common Actions.
-6. For gameplay movement, use `snapshot.move_vector` plus keyboard/mouse policy.
+4. Process keyboard text input / keyboard-only edits.
+5. Process `snapshot.shortcuts_pressed` for utility shortcuts.
+6. Process Common Actions.
+7. For gameplay movement, use `snapshot.move_vector` plus keyboard/mouse policy.
 
 Avoid:
 
