@@ -49,7 +49,10 @@ class PatrolBot(pygame.sprite.Sprite):
         self.directional_images_auto = build_patrol_bot_directional_surfaces(
             self.size, arrow_scale=2.0 / 3.0
         )
-        self.using_player_arrow = False
+        self.directional_images_waiting = build_patrol_bot_directional_surfaces(
+            self.size, arrow_scale=1.0, marker_mode="diamond"
+        )
+        self.indicator_mode = "auto"
         self.directional_images = self.directional_images_auto
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(int(x), int(y)))
@@ -81,16 +84,19 @@ class PatrolBot(pygame.sprite.Sprite):
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=center)
 
-    def _set_arrow_source(self: Self, from_player: bool) -> None:
-        if from_player == self.using_player_arrow:
+    def _set_indicator_mode(self: Self, mode: str) -> None:
+        if mode == self.indicator_mode:
             return
-        self.using_player_arrow = from_player
+        if mode not in ("auto", "player", "waiting"):
+            mode = "auto"
+        self.indicator_mode = mode
         center = self.rect.center
-        self.directional_images = (
-            self.directional_images_player
-            if self.using_player_arrow
-            else self.directional_images_auto
-        )
+        if mode == "player":
+            self.directional_images = self.directional_images_player
+        elif mode == "waiting":
+            self.directional_images = self.directional_images_waiting
+        else:
+            self.directional_images = self.directional_images_auto
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=center)
 
@@ -106,7 +112,7 @@ class PatrolBot(pygame.sprite.Sprite):
             self.direction = (dy, -dx)
         else:
             self.direction = (-dy, dx)
-        self._set_arrow_source(False)
+        self._set_indicator_mode("auto")
 
     def _set_direction_from_player(
         self: Self, player: pygame.sprite.Sprite, *, now_ms: int
@@ -123,7 +129,7 @@ class PatrolBot(pygame.sprite.Sprite):
             self.direction = (0, 1) if dy >= 0 else (0, -1)
         self.direction_command_hold_until_ms = now_ms + PATROL_BOT_DIRECTION_COMMAND_HOLD_MS
         self._update_facing_from_movement(*self.direction)
-        self._set_arrow_source(True)
+        self._set_indicator_mode("player")
 
     def _handle_axis_collision(
         self: Self,
@@ -234,13 +240,18 @@ class PatrolBot(pygame.sprite.Sprite):
                     input_active = bool(getattr(player, "input_active", False))
                     if not input_active:
                         self.awaiting_player_direction_input = True
+                        self._set_indicator_mode("waiting")
                     elif self.awaiting_player_direction_input:
                         self._set_direction_from_player(player, now_ms=now)
                         self.awaiting_player_direction_input = False
+                    else:
+                        self._set_indicator_mode("auto")
                 else:
                     self.awaiting_player_direction_input = False
+                    self._set_indicator_mode("auto")
             else:
                 self.awaiting_player_direction_input = False
+                self._set_indicator_mode("auto")
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0
             return
@@ -260,7 +271,7 @@ class PatrolBot(pygame.sprite.Sprite):
                 self.direction = (1, 0) if drift_x > 0 else (-1, 0)
             elif abs(drift_y) > 0.0:
                 self.direction = (0, 1) if drift_y > 0 else (0, -1)
-            self._set_arrow_source(False)
+            self._set_indicator_mode("auto")
 
         move_x = float(self.direction[0]) * self.speed + drift_x
         move_y = float(self.direction[1]) * self.speed + drift_y
@@ -467,7 +478,7 @@ class PatrolBot(pygame.sprite.Sprite):
                 # If we hit the outer boundary, reverse direction.
                 if hit_outer:
                     self.direction = (-self.direction[0], -self.direction[1])
-                    self._set_arrow_source(False)
+                    self._set_indicator_mode("auto")
                 else:
                     pattern = self.turn_patterns[self.turn_pattern_idx]
                     preferred_turn = pattern[self.turn_step_idx]
@@ -484,7 +495,7 @@ class PatrolBot(pygame.sprite.Sprite):
         level_height = layout.field_rect.height
         if final_x <= 0 or final_y <= 0 or final_x >= level_width or final_y >= level_height:
             self.direction = (-self.direction[0], -self.direction[1])
-            self._set_arrow_source(False)
+            self._set_indicator_mode("auto")
             final_x = min(level_width - 1, max(1.0, final_x))
             final_y = min(level_height - 1, max(1.0, final_y))
 

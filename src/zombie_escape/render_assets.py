@@ -812,9 +812,10 @@ def build_patrol_bot_directional_surfaces(
     size: int,
     *,
     arrow_scale: float = 1.0,
+    marker_mode: str = "single",
     bins: int = ANGLE_BINS,
 ) -> list[pygame.Surface]:
-    cache_key = (int(size), round(float(arrow_scale), 3), bins)
+    cache_key = (int(size), round(float(arrow_scale), 3), marker_mode, bins)
     if cache_key in _PATROL_BOT_DIRECTIONAL_CACHE:
         return _PATROL_BOT_DIRECTIONAL_CACHE[cache_key]
     base_surface = pygame.Surface((size, size), pygame.SRCALPHA)
@@ -824,33 +825,62 @@ def build_patrol_bot_directional_surfaces(
     pygame.draw.circle(
         base_surface, PATROL_BOT_OUTLINE_COLOR, center, radius, width=2
     )
-    marker = _build_patrol_bot_marker_surface(size, arrow_scale)
+    if marker_mode == "diamond":
+        marker_color = tuple(
+            min(255, int(c * 0.7 + 255 * 0.3)) for c in PATROL_BOT_ARROW_COLOR
+        )
+    else:
+        marker_color = PATROL_BOT_ARROW_COLOR
+    marker = _build_patrol_bot_marker_surface(
+        size,
+        arrow_scale,
+        marker_mode=marker_mode,
+        marker_color=marker_color,
+    )
     surfaces: list[pygame.Surface] = []
     for idx in range(bins):
         framed = base_surface.copy()
-        angle_rad = idx * ANGLE_STEP
-        offset_radius = max(1.0, (size * 0.3) - (size * 0.22 * arrow_scale))
-        eye_x = int(round(center[0] + math.cos(angle_rad) * offset_radius))
-        eye_y = int(round(center[1] + math.sin(angle_rad) * offset_radius))
-        rotated_marker = pygame.transform.rotozoom(
-            marker, -math.degrees(angle_rad), 1.0
-        )
-        framed.blit(rotated_marker, rotated_marker.get_rect(center=(eye_x, eye_y)))
+        if marker_mode == "diamond":
+            framed.blit(marker, marker.get_rect(center=center))
+        else:
+            angle_rad = idx * ANGLE_STEP
+            offset_radius = max(1.0, (size * 0.3) - (size * 0.22 * arrow_scale))
+            eye_x = int(round(center[0] + math.cos(angle_rad) * offset_radius))
+            eye_y = int(round(center[1] + math.sin(angle_rad) * offset_radius))
+            rotated_marker = pygame.transform.rotozoom(
+                marker, -math.degrees(angle_rad), 1.0
+            )
+            framed.blit(rotated_marker, rotated_marker.get_rect(center=(eye_x, eye_y)))
         surfaces.append(framed)
     _PATROL_BOT_DIRECTIONAL_CACHE[cache_key] = surfaces
     return surfaces
 
 
-def _build_patrol_bot_marker_surface(size: int, marker_scale: float) -> pygame.Surface:
+def _build_patrol_bot_marker_surface(
+    size: int,
+    marker_scale: float,
+    *,
+    marker_mode: str = "single",
+    marker_color: tuple[int, int, int] = PATROL_BOT_ARROW_COLOR,
+) -> pygame.Surface:
     surface = pygame.Surface((size, size), pygame.SRCALPHA)
     center = surface.get_rect().center
     marker_size = max(4, int(size * 0.2 * marker_scale))
-    points = [
-        (center[0] + marker_size, center[1]),
-        (center[0], center[1] + marker_size),
-        (center[0], center[1] - marker_size),
-    ]
-    pygame.draw.polygon(surface, PATROL_BOT_ARROW_COLOR, points)
+    if marker_mode == "diamond":
+        points = [
+            (center[0], center[1] - marker_size),
+            (center[0] + marker_size, center[1]),
+            (center[0], center[1] + marker_size),
+            (center[0] - marker_size, center[1]),
+        ]
+        pygame.draw.polygon(surface, marker_color, points)
+    else:
+        points = [
+            (center[0] + marker_size, center[1]),
+            (center[0], center[1] + marker_size),
+            (center[0], center[1] - marker_size),
+        ]
+        pygame.draw.polygon(surface, marker_color, points)
     return surface
 
 

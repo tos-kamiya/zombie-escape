@@ -60,6 +60,7 @@ def test_patrol_bot_ignores_held_input_without_neutral_frame() -> None:
     _update_paused_bot(bot, player, now_ms=100)
 
     assert bot.direction == (0, 1)
+    assert bot.indicator_mode == "auto"
 
 
 def test_patrol_bot_accepts_direction_after_neutral_then_input() -> None:
@@ -73,7 +74,9 @@ def test_patrol_bot_accepts_direction_after_neutral_then_input() -> None:
     player.update_facing_from_input(0.0, 0.0)
     _update_paused_bot(bot, player, now_ms=100)
     assert bot.direction == (0, 1)
+    assert bot.indicator_mode == "waiting"
 
     player.update_facing_from_input(-1.0, 0.0)
     _update_paused_bot(bot, player, now_ms=120)
     assert bot.direction == (-1, 0)
+    assert bot.indicator_mode == "player"
