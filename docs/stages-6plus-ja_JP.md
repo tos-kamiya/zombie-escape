@@ -18,7 +18,7 @@
 | 落とし穴 | <img src="../imgs/exports/pitfall.png" width="80"> | ステージ16 | ゾンビは落下する。人間はコーナーの短い距離なら飛び越えられるが、飛び越え損なうと落下する。 |
 | 強化壁 | <img src="../imgs/exports/wall-reinforced.png" width="80"> | ステージ18 | 外周壁と同じ硬さの壊せない内部壁。 |
 | ゾンビ犬 | <img src="../imgs/exports/zombie-dog.png" width="80"> | ステージ21 | 突進する個体。近くのゾンビを追う性質もある。 |
-| 巡回ロボット | <img src="../imgs/exports/patrol-bot.png" width="80"> | ステージ22 | 不審者を見分ける機能がある頼もしいロボット。ゾンビには麻痺とダメージを与える。中央に乗ると向きを指示できる。 |
+| 巡回ロボット | <img src="../imgs/exports/patrol-bot.png" width="80"> | ステージ22 | 不審者を見分ける機能がある頼もしいロボット。ゾンビには麻痺とダメージを与える。停止中のロボットに重なった状態で、いったん方向入力を離し、その後に方向入力すると向きを指示できる。 |
 | 動く床 | <img src="../imgs/exports/moving-floor.png" width="80"> | ステージ24 | 乗ると高速に移動できる床。 |
 | 空の燃料缶 | <img src="../imgs/exports/empty-fuel-can.png" width="80"> | ステージ26 | 空の燃料缶が出現するステージで使う取得アイテム。 |
 | 給油所 | <img src="../imgs/exports/fuel-station.png" width="80"> | ステージ26 | 空の燃料缶が出現するステージで空缶を満タンにする地点。 |

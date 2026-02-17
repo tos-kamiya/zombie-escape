@@ -36,7 +36,8 @@
 - Changes direction on wall/pitfall/bot/car collision.
 - Reverses at outside area boundaries.
 - Can stun/slow interactions via electrified-cell updates.
-- Player can set direction when the bot is stopped and near center.
+- While the bot is stopped due to overlap with player/humanoids, the player can set
+  its direction only after a neutral-input frame and then a directional input.
 - Turn pattern cycles through right/left blocks (`TF`, `TTFF`, ...).
 
 ## Moving Floor

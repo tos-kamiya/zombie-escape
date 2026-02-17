@@ -70,6 +70,7 @@ class PatrolBot(pygame.sprite.Sprite):
         self.last_move_dy = 0.0
         self.pause_until_ms = 0
         self.direction_command_hold_until_ms = 0
+        self.awaiting_player_direction_input = False
         self._on_moving_floor_last = False
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
@@ -230,12 +231,21 @@ class PatrolBot(pygame.sprite.Sprite):
                     hr
                 )
                 if dx * dx + dy * dy <= hit_range * hit_range:
-                    center_threshold = self.direction_command_radius
-                    if dx * dx + dy * dy <= center_threshold * center_threshold:
+                    input_active = bool(getattr(player, "input_active", False))
+                    if not input_active:
+                        self.awaiting_player_direction_input = True
+                    elif self.awaiting_player_direction_input:
                         self._set_direction_from_player(player, now_ms=now)
+                        self.awaiting_player_direction_input = False
+                else:
+                    self.awaiting_player_direction_input = False
+            else:
+                self.awaiting_player_direction_input = False
             self.last_move_dx = 0.0
             self.last_move_dy = 0.0
             return
+
+        self.awaiting_player_direction_input = False
 
         cell_x = None
         cell_y = None

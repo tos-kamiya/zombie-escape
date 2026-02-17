@@ -18,7 +18,7 @@ From Stage 21 onward (when zombie dogs appear), a gamepad or mouse is recommende
 | Pitfall | <img src="../imgs/exports/pitfall.png" width="80"> | Stage 16 | Zombies fall in. Humans can hop short corner gaps, but a missed jump also means falling in. |
 | Reinforced Wall | <img src="../imgs/exports/wall-reinforced.png" width="80"> | Stage 18 | An unbreakable inner wall with the same toughness as the outer wall. |
 | Zombie Dog | <img src="../imgs/exports/zombie-dog.png" width="80"> | Stage 21 | Fast charging zombie that also chases nearby zombies. |
-| Patrol Bot | <img src="../imgs/exports/patrol-bot.png" width="80"> | Stage 22 | A dependable robot that can spot suspicious individuals; it paralyzes and damages zombies. Standing on the center lets you direct its facing. |
+| Patrol Bot | <img src="../imgs/exports/patrol-bot.png" width="80"> | Stage 22 | A dependable robot that can spot suspicious individuals; it paralyzes and damages zombies. While overlapping a stopped bot, release direction input once, then input a direction to command it. |
 | Moving Floor | <img src="../imgs/exports/moving-floor.png" width="80"> | Stage 24 | A floor you can ride to move quickly in its direction. |
 | Empty Fuel Can | <img src="../imgs/exports/empty-fuel-can.png" width="80"> | Stage 26 | Pickup item used in stages where the empty fuel can appears. |
 | Fuel Station | <img src="../imgs/exports/fuel-station.png" width="80"> | Stage 26 | Refills the empty fuel can in stages where the empty fuel can appears. |

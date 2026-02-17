@@ -51,6 +51,7 @@ class Player(pygame.sprite.Sprite):
         self.radius = PLAYER_RADIUS
         self.facing_bin = 0
         self.input_facing_bin = 0
+        self.input_active = False
         self.wall_bump_counter = 0
         self.wall_bump_flip = 1
         self.wall_bump_hold = 0
@@ -205,7 +206,9 @@ class Player(pygame.sprite.Sprite):
             return
         new_bin = angle_bin_from_vector(dx, dy)
         if new_bin is None:
+            self.input_active = False
             return
+        self.input_active = True
         self.input_facing_bin = new_bin
 
     def _update_facing_for_bump(self: Self, inner_wall_hit: bool) -> None:
