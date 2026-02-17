@@ -59,7 +59,7 @@ Per-stage tunables and feature toggles.
 Generated map surface and cell sets.
 
 - `field_rect`
-- `outside_cells`, `walkable_cells`, `wall_cells`, `outer_wall_cells`
+- `outside_cells`, `walkable_cells`, `wall_cells`, `outer_wall_cells`, `steel_beam_cells`
 - `pitfall_cells`, `fall_spawn_cells`
 - `houseplant_cells`, `puddle_cells`
 - `bevel_corners`

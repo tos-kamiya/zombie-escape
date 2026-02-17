@@ -19,6 +19,15 @@ Supporting modules:
 9. Draw fog (`hard` mask + `soft` hatch overlay).
 10. Draw HUD/status/objective text.
 
+`core.py` delegates concrete rendering work to split modules:
+- `render/world_tiles.py`
+- `render/entity_layer.py`
+- `render/fog.py`
+- `render/fx.py`
+- `render/text_overlay.py`
+- `render/shadows.py`
+- `render/hud.py`
+
 ## Layering
 
 - Sprite layering is driven by `LAYER_*` constants.
@@ -32,7 +41,7 @@ Supporting modules:
 - Lineformer train markers use cached directional sprites and are blitted per marker (instead of rebuilding arm lines every frame).
 - Timed messages support alignment mode and stay readable during fade transitions.
 
-## Overviews (`render/overview.py`)
+## Overviews (`overview.py`)
 
 - `draw_level_overview()`: game-over map overview cache.
 - `draw_debug_overview()`: full-map debug visualization with camera frame.

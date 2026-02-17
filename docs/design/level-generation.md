@@ -64,6 +64,13 @@ Reserved cells are protected from incompatible terrain placement.
   - Base tone close to outer walls, but with a clearly distinguishable appearance.
   - Final art details are deferred.
 
+## Steel Beam Cell Tracking
+
+- Steel beams are tracked as `LevelLayout.steel_beam_cells` (separate from `wall_cells`).
+- If a steel beam is spawned from a destructible interior wall, the wall cell is removed
+  from `wall_cells` and the beam cell is tracked in `steel_beam_cells`.
+- When a steel beam is destroyed, its cell is removed from `steel_beam_cells`.
+
 ## Fuel/Item Candidate Guarantees
 
 - `FUEL_CAN`: reserves `f` candidates.

@@ -25,9 +25,15 @@
 - `src/zombie_escape/render/`
   - Rendering pipeline modules:
   - `core.py`: world + entities + fog + HUD orchestration.
+  - `world_tiles.py`: playfield and footprint rendering.
+  - `entity_layer.py`: sprite and lineformer marker rendering.
+  - `fog.py`: fog cache and fog compositing.
+  - `fx.py`: falling/decay/fade visual effects.
+  - `text_overlay.py`: wrapped text and pause overlay rendering.
   - `hud.py`: objective and status overlays.
   - `shadows.py`: shadow generation.
-  - `overview.py`: game-over/debug overviews.
+- `src/zombie_escape/overview.py`
+  - Game-over/debug overviews.
 - `src/zombie_escape/level_blueprints.py`
   - Random blueprint generation and constraints.
 - `src/zombie_escape/stage_constants.py`
