@@ -313,6 +313,17 @@ def export_images(
     _save_surface(zombie_dog_surface, zombie_dog_path, scale=output_scale)
     saved.append(zombie_dog_path)
 
+    zombie_dog_nimble = ZombieDog(center_x, center_y, variant="nimble")
+    zombie_dog_nimble_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=zombie_dog_nimble.rect,
+        sprites=[zombie_dog_nimble],
+        enable_shadows=True,
+    )
+    zombie_dog_nimble_path = out / "zombie-dog-nimble.png"
+    _save_surface(zombie_dog_nimble_surface, zombie_dog_nimble_path, scale=output_scale)
+    saved.append(zombie_dog_nimble_path)
+
     buddy = Survivor(center_x, center_y, is_buddy=True)
     buddy_surface = _render_studio_snapshot(
         cell_size=cell_size,

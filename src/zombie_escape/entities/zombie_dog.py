@@ -231,6 +231,7 @@ class ZombieDog(pygame.sprite.Sprite):
         self.variant = (
             variant if isinstance(variant, ZombieDogVariant) else ZombieDogVariant(str(variant))
         )
+        self.nimble_tail_side = RNG.choice([-1.0, 1.0])
         if self.variant == ZombieDogVariant.NIMBLE:
             self.charge_offset_min = ZOMBIE_DOG_CHARGE_OFFSET_MIN_NIMBLE
             self.charge_offset_max = ZOMBIE_DOG_CHARGE_OFFSET_MAX_NIMBLE
@@ -247,6 +248,10 @@ class ZombieDog(pygame.sprite.Sprite):
             self.long_axis,
             self.short_axis,
         )
+        if self.variant == ZombieDogVariant.NIMBLE:
+            self.directional_images = self._build_nimble_directional_images(
+                self.directional_images
+            )
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(x, y))
         self.x = float(self.rect.centerx)
@@ -263,6 +268,34 @@ class ZombieDog(pygame.sprite.Sprite):
             on_carbonize=self._apply_carbonize_visuals,
         )
         self.collision_radius = float(self.radius)
+
+    def _build_nimble_directional_images(
+        self: Self, base_images: list[pygame.Surface]
+    ) -> list[pygame.Surface]:
+        if not base_images:
+            return base_images
+        bins = max(1, len(base_images))
+        tail_fill = (230, 40, 40)
+        tail_radius = max(1, int(round(self.short_axis / 3.0)))
+        rear_offset = max(1, int(round(self.long_axis * 0.35)))
+        side_offset = max(1, int(round(tail_radius * 0.9)))
+        side_sign = self.nimble_tail_side
+        nimble_images: list[pygame.Surface] = []
+        for idx, image in enumerate(base_images):
+            surf = image.copy()
+            center = pygame.Vector2(surf.get_rect().center)
+            angle = (idx % bins) * (math.tau / bins)
+            forward = pygame.Vector2(math.cos(angle), math.sin(angle))
+            right = pygame.Vector2(-forward.y, forward.x)
+            tail_center = (
+                center
+                - (forward * rear_offset)
+                + (right * side_sign * side_offset)
+            )
+            tail_pos = (int(round(tail_center.x)), int(round(tail_center.y)))
+            pygame.draw.circle(surf, tail_fill, tail_pos, tail_radius)
+            nimble_images.append(surf)
+        return nimble_images
 
     @property
     def max_health(self: Self) -> int:
