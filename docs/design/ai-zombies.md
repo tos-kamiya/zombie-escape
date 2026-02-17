@@ -16,7 +16,7 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
 - Lineformer
   - Managed as train units (`LineformerTrainManager`).
   - Only head is a real zombie entity; followers are marker positions.
-- Loner (`zombie_loner_movement`)
+- Solitary (`zombie_loner_movement`, internal key: `loner`)
   - Uses a 10-frame commit cycle.
   - Compares local zombie counts in 3-cell side bands (up/down/left/right) around its tile and moves toward lower-density sides.
   - Can move in 8 directions when both axes have a lower-density side.
@@ -62,7 +62,7 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
   - `zombie_tracker_ratio`
   - `zombie_wall_hugging_ratio`
   - `zombie_lineformer_ratio`
-  - `zombie_loner_ratio`
+  - `zombie_loner_ratio` (solitary)
   - `zombie_dog_ratio`
 - Nimble dog spawn share is controlled by `zombie_nimble_dog_ratio` (applied only when dog variant is chosen).
 
@@ -81,10 +81,10 @@ To avoid over-stacking on the same footprint lane:
 - Zombies can fall and be removed when entering pitfall cells.
 - Wander logic attempts pitfall avoidance; chase paths may still fall.
 
-## Loner Notes
+## Solitary Notes
 
 - Decision cadence is fixed at 10 frames; the chosen move vector is committed for that window.
-- Local counting is based on a tile window around the loner and currently uses:
+- Local counting is based on a tile window around the solitary zombie and currently uses:
   - up-side cells: immediate upper row (`y-1`, `x-1..x+1`)
   - down-side cells: immediate lower row (`y+1`, `x-1..x+1`)
   - left-side cells: immediate left column (`x-1`, `y-1..y+1`)
@@ -97,4 +97,4 @@ To avoid over-stacking on the same footprint lane:
 - Anti-oscillation:
   - Immediate full reversal of the last committed move is suppressed.
 - Spatial lookup:
-  - Loner uses spatial-index cell-window querying (`query_cells`) instead of radius querying.
+  - Solitary uses spatial-index cell-window querying (`query_cells`) instead of radius querying.
