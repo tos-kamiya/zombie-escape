@@ -30,9 +30,9 @@ from ..render_assets import (
     build_zombie_directional_surfaces,
 )
 from ..render_constants import ANGLE_BINS, PLAYER_SHADOW_RADIUS_MULT
-from ..world_grid import WallIndex
+from ..world_grid import WallIndex, walls_for_radius
 from .collisions import collide_circle_custom, spritecollideany_walls
-from .movement import _can_humanoid_jump, _get_jump_scale
+from .movement import _can_humanoid_jump, _circle_wall_collision, _get_jump_scale
 from .movement_helpers import (
     move_axis_with_pitfall,
     set_facing_bin,
@@ -133,14 +133,44 @@ class Player(pygame.sprite.Sprite):
             if hit_wall is None or not hasattr(hit_wall, "_take_damage"):
                 return
             damage = max(1, PLAYER_WALL_DAMAGE)
-            if hit_wall.alive():
-                hit_wall._take_damage(amount=damage)
-            if _is_inner_wall(hit_wall):
+            radius = float(getattr(self, "collision_radius", self.radius))
+            center = (self.x, self.y)
+            if wall_index is None:
+                wall_candidates = [wall for wall in walls if wall.alive()]
+            else:
+                if cell_size is None:
+                    wall_candidates = []
+                else:
+                    wall_candidates = walls_for_radius(
+                        wall_index,
+                        center,
+                        radius,
+                        cell_size=cell_size,
+                        grid_cols=level_width // cell_size,
+                        grid_rows=level_height // cell_size,
+                    )
+            collided_walls = [
+                wall
+                for wall in wall_candidates
+                if wall.alive() and _circle_wall_collision(center, radius, wall)
+            ]
+            targets = collided_walls or [hit_wall]
+            split_count = len(targets)
+            if split_count <= 0:
+                return
+            base_damage = damage // split_count
+            remainder = damage % split_count
+            for idx, wall in enumerate(targets):
+                wall_damage = base_damage + (1 if idx < remainder else 0)
+                if wall_damage > 0 and wall.alive():
+                    wall._take_damage(amount=wall_damage)
+            inner_wall = next((wall for wall in targets if _is_inner_wall(wall)), None)
+            if inner_wall is not None:
                 inner_wall_hit = True
                 if inner_wall_cell is None and cell_size:
                     inner_wall_cell = (
-                        int(hit_wall.rect.centerx // cell_size),
-                        int(hit_wall.rect.centery // cell_size),
+                        int(inner_wall.rect.centerx // cell_size),
+                        int(inner_wall.rect.centery // cell_size),
                     )
 
         def _collide_player() -> Wall | None:
