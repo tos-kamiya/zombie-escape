@@ -3,7 +3,11 @@ import pygame
 from zombie_escape.entities import Zombie
 from zombie_escape.entities.zombie_movement import _zombie_solitary_movement
 from zombie_escape.entities_constants import ZombieKind
-from zombie_escape.level_constants import DEFAULT_CELL_SIZE, DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
+from zombie_escape.level_constants import (
+    DEFAULT_CELL_SIZE,
+    DEFAULT_GRID_COLS,
+    DEFAULT_GRID_ROWS,
+)
 from zombie_escape.models import LevelLayout
 
 

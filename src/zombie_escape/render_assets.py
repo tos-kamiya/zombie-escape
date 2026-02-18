@@ -55,9 +55,7 @@ _SURVIVOR_DIRECTIONAL_CACHE: dict[
     tuple[int, bool, bool, int], list[pygame.Surface]
 ] = {}
 _ZOMBIE_DIRECTIONAL_CACHE: dict[tuple[int, bool, int], list[pygame.Surface]] = {}
-_ZOMBIE_DOG_DIRECTIONAL_CACHE: dict[
-    tuple[float, float, int], list[pygame.Surface]
-] = {}
+_ZOMBIE_DOG_DIRECTIONAL_CACHE: dict[tuple[float, float, int], list[pygame.Surface]] = {}
 _PATROL_BOT_DIRECTIONAL_CACHE: dict[tuple[int, int], list[pygame.Surface]] = {}
 _RUBBLE_SURFACE_CACHE: dict[tuple, pygame.Surface] = {}
 _HUMANOID_SURFACE_EXTENT_RATIO = 2.0
@@ -607,213 +605,102 @@ def build_zombie_directional_surfaces(
 
 
 def build_zombie_dog_directional_surfaces(
-
-
     long_axis: float,
-
-
     short_axis: float,
-
-
     *,
-
-
     bins: int = ANGLE_BINS,
-
-
     is_trapped: bool = False,
-
-
 ) -> list[pygame.Surface]:
-
 
     cache_key = (float(long_axis), float(short_axis), bins, is_trapped)
 
-
     if cache_key in _ZOMBIE_DOG_DIRECTIONAL_CACHE:
-
-
         return _ZOMBIE_DOG_DIRECTIONAL_CACHE[cache_key]
-
-
-
-
 
     outline_color = TRAPPED_OUTLINE_COLOR if is_trapped else ZOMBIE_OUTLINE_COLOR
 
-
-
-
-
     half_long = long_axis * 0.5
-
 
     half_short = short_axis * 0.5
 
-
     width = int(math.ceil(long_axis + HUMANOID_OUTLINE_WIDTH * 2))
-
 
     height = int(math.ceil(long_axis + HUMANOID_OUTLINE_WIDTH * 2))
 
-
     center = (width / 2.0, height / 2.0)
-
-
-
-
 
     def _lemon_points(angle_rad: float) -> list[tuple[int, int]]:
 
-
         taper = 0.4
-
 
         waist = 0.9
 
-
         local_points = [
-
-
             (half_long, 0.0),
-
-
             (half_long * taper, half_short),
-
-
             (-half_long * taper, half_short * waist),
-
-
             (-half_long, 0.0),
-
-
             (-half_long * taper, -half_short * waist),
-
-
             (half_long * taper, -half_short),
-
-
         ]
-
 
         cos_a = math.cos(angle_rad)
 
-
         sin_a = math.sin(angle_rad)
-
 
         points = []
 
-
         for px, py in local_points:
-
-
             rx = px * cos_a - py * sin_a + center[0]
-
 
             ry = px * sin_a + py * cos_a + center[1]
 
-
             points.append((int(round(rx)), int(round(ry))))
-
 
         return points
 
-
-
-
-
     surfaces: list[pygame.Surface] = []
 
-
     for bin_idx in range(bins):
-
-
         angle_rad = bin_idx * ANGLE_STEP
-
 
         surface = pygame.Surface((width, height), pygame.SRCALPHA)
 
-
         points = _lemon_points(angle_rad)
-
 
         pygame.draw.polygon(surface, ZOMBIE_BODY_COLOR, points)
 
-
         center_x, center_y = center
-
 
         highlight_dir = (math.cos(angle_rad) * 0.25, math.sin(angle_rad) * 0.25)
 
-
         highlight_points = [
-
-
             (
-
-
                 int(round((px - center_x) * 0.82 + center_x + highlight_dir[0])),
-
-
                 int(round((py - center_y) * 0.82 + center_y + highlight_dir[1])),
-
-
             )
-
-
             for px, py in points
-
-
         ]
 
-
         pygame.draw.polygon(
-
-
             surface,
-
-
             _brighten_color(ZOMBIE_BODY_COLOR),
-
-
             highlight_points,
-
-
         )
 
-
         if HUMANOID_OUTLINE_WIDTH > 0:
-
-
             pygame.draw.polygon(
-
-
                 surface,
-
-
                 outline_color,
-
-
                 points,
-
-
                 width=HUMANOID_OUTLINE_WIDTH,
-
-
             )
-
 
         surfaces.append(surface)
 
-
     _ZOMBIE_DOG_DIRECTIONAL_CACHE[cache_key] = surfaces
 
-
     return surfaces
-
-
-
 
 
 def build_patrol_bot_directional_surfaces(
@@ -830,9 +717,7 @@ def build_patrol_bot_directional_surfaces(
     center = (size // 2, size // 2)
     radius = max(1, size // 2)
     pygame.draw.circle(base_surface, PATROL_BOT_BODY_COLOR, center, radius)
-    pygame.draw.circle(
-        base_surface, PATROL_BOT_OUTLINE_COLOR, center, radius, width=2
-    )
+    pygame.draw.circle(base_surface, PATROL_BOT_OUTLINE_COLOR, center, radius, width=2)
     if marker_mode == "diamond":
         marker_color = tuple(
             min(255, int(c * 0.7 + 255 * 0.3)) for c in PATROL_BOT_ARROW_COLOR
@@ -1370,14 +1255,20 @@ def get_character_icon(kind: str, size: int) -> pygame.Surface:
     if kind == "player":
         return build_player_directional_surfaces(size)[0]
     elif kind == "buddy":
-        return build_survivor_directional_surfaces(size, is_buddy=True, draw_hands=True)[0]
+        return build_survivor_directional_surfaces(
+            size, is_buddy=True, draw_hands=True
+        )[0]
     elif kind == "survivor":
-        return build_survivor_directional_surfaces(size, is_buddy=False, draw_hands=False)[0]
+        return build_survivor_directional_surfaces(
+            size, is_buddy=False, draw_hands=False
+        )[0]
     elif kind == "zombie":
         return build_zombie_directional_surfaces(size, draw_hands=False)[0]
     elif kind == "zombie_dog":
         # Dog uses size*2 as long axis, and a slightly thinner short axis.
-        return build_zombie_dog_directional_surfaces(float(size * 2.4), float(size * 1.6))[0]
+        return build_zombie_dog_directional_surfaces(
+            float(size * 2.4), float(size * 1.6)
+        )[0]
     elif kind == "patrol_bot":
         # Patrol bot size in build_patrol_bot_directional_surfaces is total diameter.
         # Humanoids use 'size' as radius, so their diameter is ~2*size.

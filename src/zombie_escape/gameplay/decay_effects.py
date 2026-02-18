@@ -112,16 +112,18 @@ class DecayingEntityEffect:
     def _apply_grayscale(self) -> None:
         rgb = pygame.surfarray.pixels3d(self.surface)
         alpha = pygame.surfarray.pixels_alpha(self.surface)
-        gray = (0.299 * rgb[:, :, 0] + 0.587 * rgb[:, :, 1] + 0.114 * rgb[:, :, 2]).astype(
-            np.uint8
-        )
+        gray = (
+            0.299 * rgb[:, :, 0] + 0.587 * rgb[:, :, 1] + 0.114 * rgb[:, :, 2]
+        ).astype(np.uint8)
         rgb[:, :, 0] = gray
         rgb[:, :, 1] = gray
         rgb[:, :, 2] = gray
         del rgb, alpha
 
 
-def update_decay_effects(effects: list[DecayingEntityEffect], *, frames: int = 1) -> None:
+def update_decay_effects(
+    effects: list[DecayingEntityEffect], *, frames: int = 1
+) -> None:
     if not effects:
         return
     alive: list[DecayingEntityEffect] = []
@@ -131,5 +133,7 @@ def update_decay_effects(effects: list[DecayingEntityEffect], *, frames: int = 1
     effects[:] = alive
 
 
-def iter_decay_effects(effects: Iterable[DecayingEntityEffect]) -> Iterable[DecayingEntityEffect]:
+def iter_decay_effects(
+    effects: Iterable[DecayingEntityEffect],
+) -> Iterable[DecayingEntityEffect]:
     return effects

@@ -129,9 +129,7 @@ def blit_message_wrapped(
         if not lines:
             return
         rendered = [
-            render_text_surface(
-                font, line, color, line_height_scale=line_height_scale
-            )
+            render_text_surface(font, line, color, line_height_scale=line_height_scale)
             for line in lines
         ]
         max_line_width = max(text_surface.get_width() for text_surface in rendered)

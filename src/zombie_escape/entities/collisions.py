@@ -90,7 +90,9 @@ def spritecollideany_walls(
             ),
         )
     if cell_size is None or grid_cols is None or grid_rows is None:
-        raise ValueError("cell_size/grid_cols/grid_rows are required when using wall_index")
+        raise ValueError(
+            "cell_size/grid_cols/grid_rows are required when using wall_index"
+        )
     for wall in _walls_for_sprite(
         sprite,
         wall_index,

@@ -14,6 +14,7 @@ from ..render_constants import (
     HOUSEPLANT_SPIKE_COLOR,
 )
 
+
 class SpikyHouseplant(pygame.sprite.Sprite):
     def __init__(self, x: int, y: int):
         super().__init__()
@@ -25,7 +26,7 @@ class SpikyHouseplant(pygame.sprite.Sprite):
         self.shadow_offset_scale = 1.0
         self.health = HOUSEPLANT_HEALTH
         self.max_health = HOUSEPLANT_HEALTH
-        
+
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
         # Main body
         pygame.draw.circle(
@@ -41,11 +42,11 @@ class SpikyHouseplant(pygame.sprite.Sprite):
             end_dist = self.radius
             start_p = (
                 self.radius + math.cos(angle) * start_dist,
-                self.radius + math.sin(angle) * start_dist
+                self.radius + math.sin(angle) * start_dist,
             )
             end_p = (
                 self.radius + math.cos(angle) * end_dist,
-                self.radius + math.sin(angle) * end_dist
+                self.radius + math.sin(angle) * end_dist,
             )
             pygame.draw.line(self.image, HOUSEPLANT_SPIKE_COLOR, start_p, end_p, 2)
 

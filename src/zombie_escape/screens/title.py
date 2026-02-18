@@ -130,7 +130,9 @@ class TitleScreenController:
                 len(self.stage_options_all),
                 self.other_page_size,
             ):
-                self.stage_pages.append(self.stage_options_all[i : i + self.other_page_size])
+                self.stage_pages.append(
+                    self.stage_options_all[i : i + self.other_page_size]
+                )
         self.resource_base_options: list[dict[str, Any]] = [
             {"type": "settings"},
             {"type": "readme"},
@@ -264,7 +266,9 @@ class TitleScreenController:
             "houseplant": get_tile_icon("houseplant", self.icon_radius),
         }
         self.icon_surfaces = icon_surfaces
-        icon_surfaces["car_forbidden"] = self._build_forbidden_icon(icon_surfaces["car"])
+        icon_surfaces["car_forbidden"] = self._build_forbidden_icon(
+            icon_surfaces["car"]
+        )
         icon_surfaces["flashlight_forbidden"] = self._build_forbidden_icon(
             icon_surfaces["flashlight"]
         )
@@ -449,7 +453,10 @@ class TitleScreenController:
             )
             selected_row_height = (
                 int(
-                    round(_get_font(selected_stage_size).get_linesize() * line_height_scale)
+                    round(
+                        _get_font(selected_stage_size).get_linesize()
+                        * line_height_scale
+                    )
                 )
                 + 2
             )
@@ -463,10 +470,9 @@ class TitleScreenController:
             stage_count = len(self.stage_options)
             stage_header_text = tr("menu.sections.stage_select")
             can_go_left = self.current_page > 0
-            can_go_right = (
-                self.current_page < len(self.stage_pages) - 1
-                and self._page_available(self.current_page + 1)
-            )
+            can_go_right = self.current_page < len(
+                self.stage_pages
+            ) - 1 and self._page_available(self.current_page + 1)
             show_page_arrows = len(self.stage_pages) > 1 and (
                 can_go_left or can_go_right
             )
@@ -599,10 +605,15 @@ class TitleScreenController:
                     locked_suffix = tr("menu.locked_suffix")
                     label = f"{label} {locked_suffix}"
                     color = GRAY
-                stage_option_size = selected_stage_size if is_selected else base_stage_size
+                stage_option_size = (
+                    selected_stage_size if is_selected else base_stage_size
+                )
                 stage_option_font = _get_font(stage_option_size)
                 text_height = int(
-                    round(stage_option_font.get_linesize() * font_settings.line_height_scale)
+                    round(
+                        stage_option_font.get_linesize()
+                        * font_settings.line_height_scale
+                    )
                 )
                 blit_text_wrapped(
                     self.screen,
@@ -667,7 +678,8 @@ class TitleScreenController:
                     label = tr("menu.quit")
                 text_height = int(
                     round(
-                        resource_option_font.get_linesize() * font_settings.line_height_scale
+                        resource_option_font.get_linesize()
+                        * font_settings.line_height_scale
                     )
                 )
                 blit_text_wrapped(
@@ -675,7 +687,10 @@ class TitleScreenController:
                     label,
                     resource_option_font,
                     WHITE,
-                    (list_column_x + 8, row_top + (resource_row_height - text_height) // 2),
+                    (
+                        list_column_x + 8,
+                        row_top + (resource_row_height - text_height) // 2,
+                    ),
                     list_column_width - 12,
                     line_height_scale=font_settings.line_height_scale,
                 )
@@ -686,13 +701,17 @@ class TitleScreenController:
                 desc_size = font_settings.scaled_size(11)
                 desc_font = _get_font(desc_size)
                 desc_color = WHITE if current.get("available") else GRAY
-                desc_lines = wrap_text(current["stage"].description, desc_font, info_column_width)
+                desc_lines = wrap_text(
+                    current["stage"].description, desc_font, info_column_width
+                )
                 _, _, desc_line_height = _measure_text(
                     current["stage"].description, desc_font, info_column_width
                 )
                 desc_height = max(1, len(desc_lines)) * desc_line_height
                 if self.selected < stage_count // 2:
-                    desc_area_top = (stage_rows_start + fixed_stage_block_height) - desc_height
+                    desc_area_top = (
+                        stage_rows_start + fixed_stage_block_height
+                    ) - desc_height
                 else:
                     desc_area_top = section_top
                 desc_panel_padding = 6
@@ -769,7 +788,9 @@ class TitleScreenController:
                     )
 
             seed_value_display = (
-                self.current_seed_text if self.current_seed_text else tr("menu.seed_empty")
+                self.current_seed_text
+                if self.current_seed_text
+                else tr("menu.seed_empty")
             )
             seed_label = tr("menu.seed_label", value=seed_value_display)
             seed_offset_y = hint_step
@@ -787,7 +808,10 @@ class TitleScreenController:
                 line_height_scale=font_settings.line_height_scale,
             )
             seed_rect = pygame.Rect(
-                info_column_x, seed_bottom - seed_height, max(seed_width, 1), seed_height
+                info_column_x,
+                seed_bottom - seed_height,
+                max(seed_width, 1),
+                seed_height,
             )
 
             if self.current_page == 0:
@@ -807,7 +831,9 @@ class TitleScreenController:
 
             title_text = tr("game.title")
             title_font = _get_font(font_settings.scaled_size(33))
-            title_width, title_height, _ = _measure_text(title_text, title_font, self.width)
+            title_width, title_height, _ = _measure_text(
+                title_text, title_font, self.width
+            )
             title_topleft = (
                 self.width // 2 - title_width // 2,
                 TITLE_HEADER_Y - title_height // 2,
@@ -861,10 +887,7 @@ class TitleScreenController:
         if event.type == pygame.WINDOWFOCUSGAINED:
             self.mouse_ui_guard.handle_focus_event(event)
             return None
-        if (
-            event.type == pygame.MOUSEMOTION
-            and self.mouse_ui_guard.can_process_mouse()
-        ):
+        if event.type == pygame.MOUSEMOTION and self.mouse_ui_guard.can_process_mouse():
             target = self.option_click_map.pick_hover(event.pos)
             if isinstance(target, int):
                 self.selected = target
@@ -887,10 +910,7 @@ class TitleScreenController:
                 self.selected = target
                 return self._activate_current_selection()
             return None
-        if (
-            event.type == pygame.MOUSEWHEEL
-            and self.mouse_ui_guard.can_process_mouse()
-        ):
+        if event.type == pygame.MOUSEWHEEL and self.mouse_ui_guard.can_process_mouse():
             if self.stage_pane_rect.collidepoint(pygame.mouse.get_pos()):
                 wheel_y = int(getattr(event, "y", 0))
                 if getattr(event, "flipped", False):

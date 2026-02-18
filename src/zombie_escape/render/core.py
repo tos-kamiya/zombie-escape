@@ -104,7 +104,9 @@ def draw(
     if shadows_enabled:
         dawn_shadow_mode = bool(stage and stage.endurance_stage and state.dawn_ready)
         lsp = (
-            None if dawn_shadow_mode else (fov_target.rect.center if fov_target else None)
+            None
+            if dawn_shadow_mode
+            else (fov_target.rect.center if fov_target else None)
         )
         light_source_pos: tuple[float, float] | None = (
             (float(lsp[0]), float(lsp[1])) if lsp is not None else None
@@ -142,17 +144,18 @@ def draw(
     )
     _draw_entities(
         screen,
-        [
-            (entity, camera.apply_rect(entity.rect))
-            for entity in all_sprites
-        ],
+        [(entity, camera.apply_rect(entity.rect)) for entity in all_sprites],
         player,
         has_fuel=has_fuel,
         has_empty_fuel_can=has_empty_fuel_can,
         show_fuel_indicator=not (stage and stage.endurance_stage),
     )
     marker_draw_data_screen = []
-    for world_x, world_y, angle_rad in game_data.lineformer_trains.iter_marker_draw_data(
+    for (
+        world_x,
+        world_y,
+        angle_rad,
+    ) in game_data.lineformer_trains.iter_marker_draw_data(
         game_data.groups.zombie_group
     ):
         world_center = pygame.Rect(

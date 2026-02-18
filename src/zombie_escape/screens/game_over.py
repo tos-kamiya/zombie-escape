@@ -48,7 +48,9 @@ def game_over_screen(
     footprints_enabled = config.get("footprints", {}).get("enabled", True)
     input_helper = InputHelper()
     pygame.mouse.set_visible(True)
-    options: list[dict[str, str]] = [{"id": "title", "label": tr("game_over.menu_title")}]
+    options: list[dict[str, str]] = [
+        {"id": "title", "label": tr("game_over.menu_title")}
+    ]
     if stage is not None:
         options.append({"id": "retry", "label": tr("game_over.menu_retry")})
     selected = 0
@@ -85,7 +87,9 @@ def game_over_screen(
         max_width = max(s.get_width() for s in rendered)
         total_height = line_height * len(rendered) + line_spacing * (len(rendered) - 1)
         bg_padding = 15
-        bg_rect = pygame.Rect(0, 0, max_width + bg_padding * 2, total_height + bg_padding * 2)
+        bg_rect = pygame.Rect(
+            0, 0, max_width + bg_padding * 2, total_height + bg_padding * 2
+        )
         bg_rect.center = center
         bg_surface = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
         bg_surface.fill((0, 0, 0, 180))
@@ -204,7 +208,9 @@ def game_over_screen(
 
         font_settings = get_font_settings()
         menu_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-        line_height = int(round(menu_font.get_linesize() * font_settings.line_height_scale))
+        line_height = int(
+            round(menu_font.get_linesize() * font_settings.line_height_scale)
+        )
         row_height = line_height + 6
         menu_center_x = screen_width // 2
         menu_top = screen_height // 2 + 18
@@ -251,10 +257,7 @@ def game_over_screen(
             if event.type == pygame.WINDOWFOCUSGAINED:
                 mouse_ui_guard.handle_focus_event(event)
                 continue
-            if (
-                event.type == pygame.MOUSEMOTION
-                and mouse_ui_guard.can_process_mouse()
-            ):
+            if event.type == pygame.MOUSEMOTION and mouse_ui_guard.can_process_mouse():
                 hover_target = option_click_map.pick_hover(event.pos)
                 if isinstance(hover_target, int):
                     selected = hover_target

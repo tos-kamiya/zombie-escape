@@ -6,7 +6,9 @@ from pygame import surface
 from ..render_constants import PUDDLE_TILE_COLOR
 
 
-def get_puddle_wave_color(*, alpha: int | None = 140) -> tuple[int, int, int] | tuple[int, int, int, int]:
+def get_puddle_wave_color(
+    *, alpha: int | None = 140
+) -> tuple[int, int, int] | tuple[int, int, int, int]:
     base_color = (
         min(255, PUDDLE_TILE_COLOR[0] + 40),
         min(255, PUDDLE_TILE_COLOR[1] + 40),

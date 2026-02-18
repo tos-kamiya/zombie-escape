@@ -22,6 +22,7 @@ class MovingFloorDirection(str, Enum):
     LEFT = "L"
     RIGHT = "R"
 
+
 # --- Player and buddy settings ---
 HUMANOID_RADIUS = 6
 PLAYER_RADIUS = HUMANOID_RADIUS

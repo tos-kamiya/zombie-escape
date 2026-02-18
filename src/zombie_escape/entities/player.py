@@ -68,7 +68,9 @@ class Player(pygame.sprite.Sprite):
         self.jump_duration = JUMP_DURATION_MS
         self.is_jumping = False
         self.collision_radius = float(self.radius)
-        self.shadow_radius = max(1, int(self.collision_radius * PLAYER_SHADOW_RADIUS_MULT))
+        self.shadow_radius = max(
+            1, int(self.collision_radius * PLAYER_SHADOW_RADIUS_MULT)
+        )
         self.shadow_offset_scale = 1.0
         self.is_zombified_visual = False
 
@@ -189,12 +191,10 @@ class Player(pygame.sprite.Sprite):
         self.inner_wall_cell = inner_wall_cell
         self._update_facing_for_bump(inner_wall_hit)
         if not self.is_jumping:
-            overlap_bot = (
-                bool(
-                    patrol_bot_group
-                    and pygame.sprite.spritecollideany(
-                        self, patrol_bot_group, collided=collide_circle_custom
-                    )
+            overlap_bot = bool(
+                patrol_bot_group
+                and pygame.sprite.spritecollideany(
+                    self, patrol_bot_group, collided=collide_circle_custom
                 )
             )
             self._update_image_scale(1.08 if overlap_bot else 1.0)

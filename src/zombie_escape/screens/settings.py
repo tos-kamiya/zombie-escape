@@ -226,7 +226,9 @@ class SettingsScreenRunner:
             },
         ]
 
-    def _rebuild_rows(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    def _rebuild_rows(
+        self,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
         current_sections = self._build_sections()
         flat_rows: list[dict[str, Any]] = []
         flat_sections: list[str] = []
@@ -366,7 +368,9 @@ class SettingsScreenRunner:
             font_settings = get_font_settings()
             highlight_color = (65, 65, 65)
             title_text = tr("settings.title")
-            title_font = load_font(font_settings.resource, font_settings.scaled_size(33))
+            title_font = load_font(
+                font_settings.resource, font_settings.scaled_size(33)
+            )
             title_lines = wrap_text(title_text, title_font, self.screen_width)
             title_line_height = int(
                 round(title_font.get_linesize() * font_settings.line_height_scale)
@@ -415,7 +419,9 @@ class SettingsScreenRunner:
 
             section_states: dict[str, dict[str, Any]] = {}
             y_cursor = start_y
-            header_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+            header_font = load_font(
+                font_settings.resource, font_settings.scaled_size(11)
+            )
             for section in self.sections:
                 header_lines = wrap_text(section["label"], header_font, column_width)
                 header_line_height = int(
@@ -445,8 +451,12 @@ class SettingsScreenRunner:
                     line_height_scale=font_settings.line_height_scale,
                 )
 
-            label_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-            value_font = load_font(font_settings.resource, font_settings.scaled_size(11))
+            label_font = load_font(
+                font_settings.resource, font_settings.scaled_size(11)
+            )
+            value_font = load_font(
+                font_settings.resource, font_settings.scaled_size(11)
+            )
             for idx, row in enumerate(self.rows):
                 section_label = self.row_sections[idx]
                 state = section_states[section_label]

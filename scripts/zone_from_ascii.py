@@ -41,7 +41,9 @@ def _normalize_line(line: str) -> str:
     return "".join("." if ch in {" ", "\t"} else ch for ch in line)
 
 
-def _compress_rectangles(grid: list[str], target: str) -> list[tuple[int, int, int, int]]:
+def _compress_rectangles(
+    grid: list[str], target: str
+) -> list[tuple[int, int, int, int]]:
     rows = len(grid)
     cols = len(grid[0]) if rows else 0
     seen: set[tuple[int, int]] = set()
@@ -51,7 +53,11 @@ def _compress_rectangles(grid: list[str], target: str) -> list[tuple[int, int, i
             if (x, y) in seen or grid[y][x] != target:
                 continue
             width = 0
-            while x + width < cols and grid[y][x + width] == target and (x + width, y) not in seen:
+            while (
+                x + width < cols
+                and grid[y][x + width] == target
+                and (x + width, y) not in seen
+            ):
                 width += 1
             height = 1
             while y + height < rows:
@@ -113,9 +119,7 @@ def generate_zone_data(lines: list[str]) -> dict[str, object]:
     }
     output["moving_floor_zones"] = moving_floor_zones
     output["pitfall_zones"] = _compress_rectangles(grid, PITFALL_CHAR)
-    output["reinforced_wall_zones"] = _compress_rectangles(
-        grid, REINFORCED_WALL_CHAR
-    )
+    output["reinforced_wall_zones"] = _compress_rectangles(grid, REINFORCED_WALL_CHAR)
     output["fall_spawn_zones"] = _compress_rectangles(grid, FALL_SPAWN_CHAR)
     output["houseplant_zones"] = _compress_rectangles(grid, HOUSEPLANT_CHAR)
     output["puddle_zones"] = _compress_rectangles(grid, PUDDLE_CHAR)

@@ -300,7 +300,12 @@ class ReinforcedWall(Wall):
 
         frame_overlay = pygame.Surface((w, h), pygame.SRCALPHA)
         base_step = max(5, frame_width)
-        rhythm = [base_step, max(3, base_step - 2), base_step + 2, max(4, base_step - 1)]
+        rhythm = [
+            base_step,
+            max(3, base_step - 2),
+            base_step + 2,
+            max(4, base_step - 1),
+        ]
         thick_width = max(1, frame_width // 3)
         sx = frame_rect.left - frame_rect.height
         i = 0

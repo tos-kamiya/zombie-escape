@@ -132,13 +132,19 @@ def _pick_zombie_variant(stage: Stage | None) -> ZombieKind:
     if pick < normal_ratio + tracker_ratio + wall_hugging_ratio + lineformer_ratio:
         return ZombieKind.LINEFORMER
     if pick < (
-        normal_ratio + tracker_ratio + wall_hugging_ratio + lineformer_ratio + solitary_ratio
+        normal_ratio
+        + tracker_ratio
+        + wall_hugging_ratio
+        + lineformer_ratio
+        + solitary_ratio
     ):
         return ZombieKind.SOLITARY
     return ZombieKind.DOG
 
 
-def _build_initial_zombie_kind_plan(stage: Stage | None, total: int) -> list[ZombieKind]:
+def _build_initial_zombie_kind_plan(
+    stage: Stage | None, total: int
+) -> list[ZombieKind]:
     if total <= 0:
         return []
     normal_ratio = 1.0
@@ -889,7 +895,11 @@ def setup_player_and_cars(
         or walkable_cells
     )
     houseplant_set = set(layout_data.get("houseplant_cells", []))
-    car_candidates = [c for c in (layout_data["car_cells"] or car_spawn_cells) if c not in houseplant_set]
+    car_candidates = [
+        c
+        for c in (layout_data["car_cells"] or car_spawn_cells)
+        if c not in houseplant_set
+    ]
     waiting_cars: list[Car] = []
     car_appearance = _car_appearance_for_stage(game_data.stage)
 
@@ -957,9 +967,7 @@ def spawn_initial_zombies(
         if damage <= 0:
             return
         if isinstance(zombie, Zombie):
-            zombie.take_damage(
-                damage, source="initial_spawn_gradient", now_ms=now_ms
-            )
+            zombie.take_damage(damage, source="initial_spawn_gradient", now_ms=now_ms)
         else:
             zombie.take_damage(damage, now_ms=now_ms)
 
@@ -974,8 +982,10 @@ def spawn_initial_zombies(
     kind_plan = _build_initial_zombie_kind_plan(game_data.stage, len(positions))
 
     for spawn_index, pos in enumerate(positions):
-        kind = kind_plan[spawn_index] if spawn_index < len(kind_plan) else _pick_zombie_variant(
-            game_data.stage
+        kind = (
+            kind_plan[spawn_index]
+            if spawn_index < len(kind_plan)
+            else _pick_zombie_variant(game_data.stage)
         )
         if kind == ZombieKind.LINEFORMER:
             _spawn_lineformer_request(
@@ -1003,9 +1013,7 @@ def spawn_initial_zombies(
         all_sprites.add(tentative, layer=LAYER_ZOMBIES)
 
     interval = max(1, game_data.stage.spawn_interval_ms)
-    game_data.state.last_zombie_spawn_time = (
-        game_data.state.clock.elapsed_ms - interval
-    )
+    game_data.state.last_zombie_spawn_time = game_data.state.clock.elapsed_ms - interval
 
 
 def spawn_initial_patrol_bots(
@@ -1054,7 +1062,9 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
         walkable_cells = car_spawn_cells
     else:
         car_walkable = list(game_data.layout.car_walkable_cells)
-        walkable_cells = car_walkable if car_walkable else game_data.layout.walkable_cells
+        walkable_cells = (
+            car_walkable if car_walkable else game_data.layout.walkable_cells
+        )
     if not walkable_cells:
         return None
     wall_group = game_data.groups.wall_group

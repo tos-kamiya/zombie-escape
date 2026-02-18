@@ -26,9 +26,16 @@ def apply_zombie_kind_overlay(
     lineformer_target_pos: tuple[float, float] | None,
     zombie_pos: tuple[float, float],
 ) -> surface.Surface:
-    needs_overlay = kind == ZombieKind.TRACKER or (
-        kind == ZombieKind.WALL_HUGGER and wall_hug_side != 0 and wall_hug_last_side_has_wall
-    ) or kind == ZombieKind.LINEFORMER or kind == ZombieKind.SOLITARY
+    needs_overlay = (
+        kind == ZombieKind.TRACKER
+        or (
+            kind == ZombieKind.WALL_HUGGER
+            and wall_hug_side != 0
+            and wall_hug_last_side_has_wall
+        )
+        or kind == ZombieKind.LINEFORMER
+        or kind == ZombieKind.SOLITARY
+    )
     if not needs_overlay:
         return base_surface
 
@@ -41,7 +48,11 @@ def apply_zombie_kind_overlay(
             angle_rad=angle_rad,
             color=ZOMBIE_NOSE_COLOR,
         )
-    if kind == ZombieKind.WALL_HUGGER and wall_hug_side != 0 and wall_hug_last_side_has_wall:
+    if (
+        kind == ZombieKind.WALL_HUGGER
+        and wall_hug_side != 0
+        and wall_hug_last_side_has_wall
+    ):
         side_sign = 1.0 if wall_hug_side > 0 else -1.0
         hand_angle = angle_rad + side_sign * (math.pi / 2.0)
         draw_humanoid_hand(

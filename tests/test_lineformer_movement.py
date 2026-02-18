@@ -8,7 +8,11 @@ from zombie_escape.entities_constants import (
 from zombie_escape.entities.zombie_movement import (
     _zombie_lineformer_train_head_movement,
 )
-from zombie_escape.level_constants import DEFAULT_CELL_SIZE, DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
+from zombie_escape.level_constants import (
+    DEFAULT_CELL_SIZE,
+    DEFAULT_GRID_COLS,
+    DEFAULT_GRID_ROWS,
+)
 from zombie_escape.models import LevelLayout
 
 

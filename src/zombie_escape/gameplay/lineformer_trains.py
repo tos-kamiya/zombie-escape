@@ -37,7 +37,9 @@ class LineformerTrain:
     target_id: int | None = None
     marker_positions: list[tuple[float, float]] = field(default_factory=list)
     marker_angles: list[float] = field(default_factory=list)
-    history: deque[tuple[float, float]] = field(default_factory=lambda: deque(maxlen=128))
+    history: deque[tuple[float, float]] = field(
+        default_factory=lambda: deque(maxlen=128)
+    )
     state: str = "active"  # active | dissolving
     next_dissolve_ms: int = 0
 
@@ -55,8 +57,7 @@ class LineformerTrainManager:
         return [
             zombie
             for zombie in zombie_group
-            if isinstance(zombie, Zombie)
-            and zombie.alive()
+            if isinstance(zombie, Zombie) and zombie.alive()
         ]
 
     def _find_nearest_target(
@@ -345,7 +346,9 @@ class LineformerTrainManager:
                 return True
         return False
 
-    def _build_pre_update_context(self, zombie_group) -> tuple[list[Zombie], dict[int, Zombie], dict[int, Zombie]]:
+    def _build_pre_update_context(
+        self, zombie_group
+    ) -> tuple[list[Zombie], dict[int, Zombie], dict[int, Zombie]]:
         targets = self._iter_lineformer_targets(zombie_group)
         target_by_id = {z.lineformer_id: z for z in targets}
         heads = {
@@ -378,7 +381,9 @@ class LineformerTrainManager:
             return False
 
         is_sole_train = self._train_length(train) == 1
-        target = target_by_id.get(train.target_id) if train.target_id is not None else None
+        target = (
+            target_by_id.get(train.target_id) if train.target_id is not None else None
+        )
         if target is None:
             reserved_targets = {
                 target_id
@@ -391,8 +396,8 @@ class LineformerTrainManager:
                     (head.x, head.y),
                     [
                         candidate
-                            for candidate in targets
-                            if candidate.kind != ZombieKind.LINEFORMER
+                        for candidate in targets
+                        if candidate.kind != ZombieKind.LINEFORMER
                     ],
                     source_id=head.lineformer_id,
                     excluded_target_ids=reserved_targets,
@@ -451,7 +456,10 @@ class LineformerTrainManager:
             ):
                 # Break two-train deadlocks (A targets B and B targets A) deterministically.
                 # Keep the lower train_id as the follower and force the other train to roam.
-                if dst_train.target_id == head.lineformer_id and train.train_id > dst_train.train_id:
+                if (
+                    dst_train.target_id == head.lineformer_id
+                    and train.train_id > dst_train.train_id
+                ):
                     train.target_id = None
                     head.lineformer_follow_target_id = None
                     head.lineformer_target_pos = None
@@ -463,8 +471,7 @@ class LineformerTrainManager:
                     else None
                 )
                 dst_targets_non_lineformer = (
-                    dst_target is not None
-                    and dst_target.kind != ZombieKind.LINEFORMER
+                    dst_target is not None and dst_target.kind != ZombieKind.LINEFORMER
                 )
                 tail_pos = self._train_tail_position(dst_train, heads=heads)
                 if (
@@ -494,19 +501,12 @@ class LineformerTrainManager:
             return False
 
         dst_train = self.trains.get(owner_train_id)
-        if (
-            dst_train is not None
-            and dst_train.state == "active"
-            and is_sole_train
-        ):
+        if dst_train is not None and dst_train.state == "active" and is_sole_train:
             tail_pos = self._train_tail_position(dst_train, heads=heads)
-            if (
-                tail_pos is not None
-                and self._within_distance_sq(
-                    (head.x, head.y),
-                    tail_pos,
-                    distance=_MERGE_APPROACH_DISTANCE,
-                )
+            if tail_pos is not None and self._within_distance_sq(
+                (head.x, head.y),
+                tail_pos,
+                distance=_MERGE_APPROACH_DISTANCE,
             ):
                 if not self._is_close_to_any_trail_point((head.x, head.y), dst_train):
                     return True
@@ -539,7 +539,9 @@ class LineformerTrainManager:
             ):
                 continue
             if train.state == "dissolving" and now_ms >= train.next_dissolve_ms:
-                self._promote_one_marker(train, game_data=game_data, config=config, now_ms=now_ms)
+                self._promote_one_marker(
+                    train, game_data=game_data, config=config, now_ms=now_ms
+                )
         self._rebuild_target_index()
 
     def post_update(self, zombie_group) -> None:
@@ -565,7 +567,10 @@ class LineformerTrainManager:
                 dx = current_pos[0] - last_x
                 dy = current_pos[1] - last_y
                 dist_sq = dx * dx + dy * dy
-                if dist_sq >= _MARKER_HISTORY_RECORD_DISTANCE * _MARKER_HISTORY_RECORD_DISTANCE:
+                if (
+                    dist_sq
+                    >= _MARKER_HISTORY_RECORD_DISTANCE * _MARKER_HISTORY_RECORD_DISTANCE
+                ):
                     train.history.append(current_pos)
             self._ensure_history_capacity(train)
             if not train.marker_positions:
@@ -574,17 +579,22 @@ class LineformerTrainManager:
             trail_points = [current_pos]
             if history_from_newest:
                 newest_record = history_from_newest[0]
-                if abs(newest_record[0] - current_pos[0]) > 1e-6 or abs(
-                    newest_record[1] - current_pos[1]
-                ) > 1e-6:
+                if (
+                    abs(newest_record[0] - current_pos[0]) > 1e-6
+                    or abs(newest_record[1] - current_pos[1]) > 1e-6
+                ):
                     trail_points.extend(history_from_newest)
                 else:
                     trail_points.extend(history_from_newest[1:])
             for idx in range(len(train.marker_positions)):
                 follow_distance = (idx + 1) * _MARKER_TRAIL_SPACING
-                marker_pos = self._sample_polyline_at_distance(trail_points, follow_distance)
+                marker_pos = self._sample_polyline_at_distance(
+                    trail_points, follow_distance
+                )
                 train.marker_positions[idx] = marker_pos
-                lead_pos = (head.x, head.y) if idx == 0 else train.marker_positions[idx - 1]
+                lead_pos = (
+                    (head.x, head.y) if idx == 0 else train.marker_positions[idx - 1]
+                )
                 dx = lead_pos[0] - marker_pos[0]
                 dy = lead_pos[1] - marker_pos[1]
                 if dx == 0 and dy == 0:
@@ -601,7 +611,9 @@ class LineformerTrainManager:
         _ = zombie_group
         for train in self.trains.values():
             for idx, marker_pos in enumerate(train.marker_positions):
-                angle = train.marker_angles[idx] if idx < len(train.marker_angles) else 0.0
+                angle = (
+                    train.marker_angles[idx] if idx < len(train.marker_angles) else 0.0
+                )
                 draw_data.append((marker_pos[0], marker_pos[1], angle))
         return draw_data
 
@@ -645,7 +657,9 @@ class LineformerTrainManager:
                     removed += 1
                     continue
                 survivors_pos.append((mx, my))
-                angle = train.marker_angles[idx] if idx < len(train.marker_angles) else 0.0
+                angle = (
+                    train.marker_angles[idx] if idx < len(train.marker_angles) else 0.0
+                )
                 survivors_angles.append(angle)
             train.marker_positions = survivors_pos
             train.marker_angles = survivors_angles

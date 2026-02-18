@@ -35,7 +35,15 @@ def _entity_center(entity: pygame.sprite.Sprite) -> tuple[float, float]:
 
 
 def kind_for_entity(entity: pygame.sprite.Sprite) -> SpatialKind:
-    from ..entities import Car, PatrolBot, Player, Survivor, Zombie, ZombieDog, TrappedZombie
+    from ..entities import (
+        Car,
+        PatrolBot,
+        Player,
+        Survivor,
+        Zombie,
+        ZombieDog,
+        TrappedZombie,
+    )
 
     if isinstance(entity, Player):
         return SpatialKind.PLAYER
@@ -57,7 +65,9 @@ def kind_for_entity(entity: pygame.sprite.Sprite) -> SpatialKind:
 class SpatialIndex:
     def __init__(self, cell_size: int = SPATIAL_INDEX_CELL_SIZE) -> None:
         self.cell_size = max(1, int(cell_size))
-        self._cells: dict[tuple[int, int], list[tuple[pygame.sprite.Sprite, SpatialKind]]] = {}
+        self._cells: dict[
+            tuple[int, int], list[tuple[pygame.sprite.Sprite, SpatialKind]]
+        ] = {}
 
     def clear(self) -> None:
         self._cells.clear()

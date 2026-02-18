@@ -29,7 +29,6 @@ def get_floor_overlap_rect(entity: _MovingFloorEntity) -> pygame.Rect:
     return rect
 
 
-
 def get_overlapping_moving_floor_direction(
     rect: pygame.Rect,
     layout: LevelLayout,

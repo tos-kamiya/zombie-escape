@@ -515,7 +515,6 @@ class Survivor(pygame.sprite.Sprite):
             on_wall_hit=on_wall_hit,
         )
 
-
     def _update_image_scale(self: Self, scale: float) -> None:
         """Apply scaling to the current directional image."""
         update_directional_image_scale(self, scale)

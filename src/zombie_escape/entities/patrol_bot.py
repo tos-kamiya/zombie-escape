@@ -129,7 +129,9 @@ class PatrolBot(pygame.sprite.Sprite):
             self.direction = (1, 0) if dx >= 0 else (-1, 0)
         else:
             self.direction = (0, 1) if dy >= 0 else (0, -1)
-        self.direction_command_hold_until_ms = now_ms + PATROL_BOT_DIRECTION_COMMAND_HOLD_MS
+        self.direction_command_hold_until_ms = (
+            now_ms + PATROL_BOT_DIRECTION_COMMAND_HOLD_MS
+        )
         self._update_facing_from_movement(*self.direction)
         self._set_indicator_mode("player")
 
@@ -235,9 +237,9 @@ class PatrolBot(pygame.sprite.Sprite):
                     hr = max(player.rect.width, player.rect.height) / 2
                 dx = self.x - hx
                 dy = self.y - hy
-                hit_range = (self.collision_radius + PATROL_BOT_COLLISION_MARGIN) + float(
-                    hr
-                )
+                hit_range = (
+                    self.collision_radius + PATROL_BOT_COLLISION_MARGIN
+                ) + float(hr)
                 if dx * dx + dy * dy <= hit_range * hit_range:
                     input_active = bool(getattr(player, "input_active", False))
                     if not input_active:
@@ -397,9 +399,10 @@ class PatrolBot(pygame.sprite.Sprite):
                 ]
             )
         if player is not None and getattr(player, "alive", lambda: True)():
-            if abs(player.rect.centerx - self.x) < 120 and abs(
-                player.rect.centery - self.y
-            ) < 120:
+            if (
+                abs(player.rect.centerx - self.x) < 120
+                and abs(player.rect.centery - self.y) < 120
+            ):
                 possible_humans.append(player)
 
         def _humanoid_collision(check_x: float, check_y: float) -> bool:
@@ -430,21 +433,26 @@ class PatrolBot(pygame.sprite.Sprite):
         if cell_size > 0:
             cell_x = int(final_x // cell_size)
             cell_y = int(final_y // cell_size)
-            if (
-                (cell_x, cell_y) in layout.outer_wall_cells
-                or (cell_x, cell_y) in layout.outside_cells
-            ):
+            if (cell_x, cell_y) in layout.outer_wall_cells or (
+                cell_x,
+                cell_y,
+            ) in layout.outside_cells:
                 hit_outer = True
                 final_x = self.x
                 final_y = self.y
-        if not (0 <= final_x < layout.field_rect.width and 0 <= final_y < layout.field_rect.height):
+        if not (
+            0 <= final_x < layout.field_rect.width
+            and 0 <= final_y < layout.field_rect.height
+        ):
             hit_outer = True
             final_x = self.x
             final_y = self.y
 
         if _humanoid_collision(final_x, final_y):
             self.pause_until_ms = now + PATROL_BOT_HUMANOID_PAUSE_MS
-        elif hit_wall or hit_pitfall or hit_bot or hit_car or hit_outer or hit_houseplant:
+        elif (
+            hit_wall or hit_pitfall or hit_bot or hit_car or hit_outer or hit_houseplant
+        ):
             # Step back slightly to avoid corner lock, then rotate.
             backoff = max(0.5, self.speed * 0.5)
             final_x = self.x - float(self.direction[0]) * backoff
@@ -466,12 +474,8 @@ class PatrolBot(pygame.sprite.Sprite):
                         final_x, final_y = self._resolve_circle_from_wall(
                             final_x, final_y, collision_radius, wall
                         )
-                        final_x = min(
-                            layout.field_rect.width, max(0.0, final_x)
-                        )
-                        final_y = min(
-                            layout.field_rect.height, max(0.0, final_y)
-                        )
+                        final_x = min(layout.field_rect.width, max(0.0, final_x))
+                        final_y = min(layout.field_rect.height, max(0.0, final_y))
                         moved = True
                     if not moved:
                         break
@@ -495,7 +499,12 @@ class PatrolBot(pygame.sprite.Sprite):
 
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
-        if final_x <= 0 or final_y <= 0 or final_x >= level_width or final_y >= level_height:
+        if (
+            final_x <= 0
+            or final_y <= 0
+            or final_x >= level_width
+            or final_y >= level_height
+        ):
             self.direction = (-self.direction[0], -self.direction[1])
             self._set_indicator_mode("auto")
             final_x = min(level_width - 1, max(1.0, final_x))

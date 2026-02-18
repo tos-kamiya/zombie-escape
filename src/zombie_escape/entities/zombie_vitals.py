@@ -36,9 +36,10 @@ class ZombieVitals:
         self.health = max(0, min(self.max_health, int(new_health)))
         health_ratio = 0.0 if self.max_health <= 0 else self.health / self.max_health
         health_ratio = max(0.0, min(1.0, health_ratio))
-        speed_ratio = self.decay_min_speed_ratio + (
-            1.0 - self.decay_min_speed_ratio
-        ) * health_ratio
+        speed_ratio = (
+            self.decay_min_speed_ratio
+            + (1.0 - self.decay_min_speed_ratio) * health_ratio
+        )
         self.on_health_ratio(speed_ratio)
         if self.health <= 0:
             self.on_kill()

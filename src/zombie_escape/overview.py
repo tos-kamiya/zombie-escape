@@ -74,9 +74,7 @@ def _draw_overview_tag(
     padding: tuple[int, int] = (4, 2),
     line_height_scale: float = 1.0,
 ) -> None:
-    label = render_text_surface(
-        font, text, fg, line_height_scale=line_height_scale
-    )
+    label = render_text_surface(font, text, fg, line_height_scale=line_height_scale)
     label_rect = label.get_rect()
     padded = label_rect.inflate(padding[0] * 2, padding[1] * 2)
     top_left = (item_rect.left, item_rect.top)
@@ -266,9 +264,7 @@ def draw_level_overview(
         pygame.draw.rect(surface, BLACK, fuel.rect, width=2, border_radius=3)
     if empty_fuel_can and empty_fuel_can.alive():
         pygame.draw.rect(surface, LIGHT_GRAY, empty_fuel_can.rect, border_radius=3)
-        pygame.draw.rect(
-            surface, BLACK, empty_fuel_can.rect, width=2, border_radius=3
-        )
+        pygame.draw.rect(surface, BLACK, empty_fuel_can.rect, width=2, border_radius=3)
     if fuel_station and fuel_station.alive():
         pygame.draw.rect(surface, YELLOW, fuel_station.rect, border_radius=2)
         pygame.draw.rect(surface, BLACK, fuel_station.rect, width=2, border_radius=2)
@@ -544,9 +540,9 @@ def draw_debug_overview(
                 )
     if game_data.layout.puddle_cells:
         for x, y in game_data.layout.puddle_cells:
-            # Only draw tags for some or centered in zones? 
+            # Only draw tags for some or centered in zones?
             # For simplicity, just draw tags if they are within the view and spread out a bit
-            pass # Puddles are floor tiles, 'W' tags on every cell would be too noisy.
+            pass  # Puddles are floor tiles, 'W' tags on every cell would be too noisy.
             # Minimap color is already updated.
 
     debug_counts = build_zombie_debug_counts_text(

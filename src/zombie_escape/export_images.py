@@ -123,7 +123,9 @@ def _render_studio_snapshot(
     game_data = _build_studio_game_data(cell_size)
     game_data.state.ambient_palette_key = ambient_palette_key
     assets = build_render_assets(cell_size)
-    screen = pygame.Surface((assets.screen_width, assets.screen_height), pygame.SRCALPHA)
+    screen = pygame.Surface(
+        (assets.screen_width, assets.screen_height), pygame.SRCALPHA
+    )
 
     layout = game_data.layout
     layout.pitfall_cells = pitfall_cells or set()

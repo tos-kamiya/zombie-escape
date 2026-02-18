@@ -119,9 +119,7 @@ def test_validate_connectivity_refuel_requires_reachable_empty_can() -> None:
         "BBBBBBBBB",
     ]
 
-    assert (
-        validate_connectivity(grid, fuel_mode=FuelMode.REFUEL_CHAIN) is None
-    )
+    assert validate_connectivity(grid, fuel_mode=FuelMode.REFUEL_CHAIN) is None
 
 
 def test_validate_connectivity_refuel_respects_one_way_flow() -> None:
@@ -133,9 +131,7 @@ def test_validate_connectivity_refuel_respects_one_way_flow() -> None:
         "BBBBBBBBBBB",
     ]
 
-    assert (
-        validate_connectivity(grid, fuel_mode=FuelMode.REFUEL_CHAIN) is None
-    )
+    assert validate_connectivity(grid, fuel_mode=FuelMode.REFUEL_CHAIN) is None
 
 
 def test_generate_random_blueprint_allows_puddle_density_on_fall_spawn_zone() -> None:
@@ -201,7 +197,9 @@ def test_generate_random_blueprint_reinforced_wall_density_skips_moving_floor() 
     assert blueprint.grid[5][5] == "^"
 
 
-def test_generate_random_blueprint_adds_corner_outer_walls_for_closed_exit_side() -> None:
+def test_generate_random_blueprint_adds_corner_outer_walls_for_closed_exit_side() -> (
+    None
+):
     seed_rng(12345)
     blueprint = generate_random_blueprint(
         steel_chance=0.0,

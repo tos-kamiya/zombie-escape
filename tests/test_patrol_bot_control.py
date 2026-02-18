@@ -1,7 +1,11 @@
 import pytest
 
 from zombie_escape.entities import PatrolBot, Player
-from zombie_escape.level_constants import DEFAULT_CELL_SIZE, DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
+from zombie_escape.level_constants import (
+    DEFAULT_CELL_SIZE,
+    DEFAULT_GRID_COLS,
+    DEFAULT_GRID_ROWS,
+)
 from zombie_escape.models import LevelLayout
 
 pygame = pytest.importorskip("pygame")

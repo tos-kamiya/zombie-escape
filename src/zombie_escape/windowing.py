@@ -100,7 +100,10 @@ def apply_window_scale(
     scale: float, *, game_data: "GameData | None" = None
 ) -> surface.Surface:
     """Resize the OS window; logical render surface stays constant."""
-    global _last_window_scale_apply_ms, _pending_window_scale, _pending_window_scale_game_data
+    global \
+        _last_window_scale_apply_ms, \
+        _pending_window_scale, \
+        _pending_window_scale_game_data
 
     now = pygame.time.get_ticks()
     if pygame.display.get_surface() is None:
@@ -563,10 +566,11 @@ def _restore_window() -> None:
         return
 
 
-
-
 def _maybe_apply_pending_window_scale() -> None:
-    global _last_window_scale_apply_ms, _pending_window_scale, _pending_window_scale_game_data
+    global \
+        _last_window_scale_apply_ms, \
+        _pending_window_scale, \
+        _pending_window_scale_game_data
     if _pending_window_scale is None or current_maximized:
         return
     now = pygame.time.get_ticks()

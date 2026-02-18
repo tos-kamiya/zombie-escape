@@ -100,17 +100,24 @@ def _zombie_dog_default_movement(
     def _pick_charge_target() -> tuple[float, float] | None:
         for _ in range(8):
             angle = RNG.uniform(0.0, math.tau)
-            offset = RNG.uniform(zombie_dog.charge_offset_min, zombie_dog.charge_offset_max)
+            offset = RNG.uniform(
+                zombie_dog.charge_offset_min, zombie_dog.charge_offset_max
+            )
             tx = player_center[0] + math.cos(angle) * offset
             ty = player_center[1] + math.sin(angle) * offset
-            if not (0 <= tx < layout.field_rect.width and 0 <= ty < layout.field_rect.height):
+            if not (
+                0 <= tx < layout.field_rect.width and 0 <= ty < layout.field_rect.height
+            ):
                 continue
             if cell_size > 0:
                 target_cell = (int(tx // cell_size), int(ty // cell_size))
                 if target_cell in layout.wall_cells:
                     continue
             # Avoid micro-charge that looks like jitter.
-            if math.hypot(tx - zombie_dog.x, ty - zombie_dog.y) < zombie_dog.speed_assault * 6.0:
+            if (
+                math.hypot(tx - zombie_dog.x, ty - zombie_dog.y)
+                < zombie_dog.speed_assault * 6.0
+            ):
                 continue
             return (tx, ty)
         return None
@@ -142,7 +149,9 @@ def _zombie_dog_default_movement(
             else:
                 zombie_dog.charge_direction = None
             zombie_dog.charge_distance_remaining = zombie_dog.charge_distance_max
-    elif zombie_dog.mode == ZombieDogMode.CHARGE and not zombie_dog._in_sight(player_center):
+    elif zombie_dog.mode == ZombieDogMode.CHARGE and not zombie_dog._in_sight(
+        player_center
+    ):
         zombie_dog._set_mode(ZombieDogMode.WANDER)
         zombie_dog.next_charge_available_ms = now_ms + zombie_dog.charge_cooldown_ms
         zombie_dog.wander_change_time = now_ms
@@ -176,13 +185,17 @@ def _zombie_dog_default_movement(
             dist = math.hypot(dx, dy)
             if dist <= 1e-6:
                 zombie_dog._set_mode(ZombieDogMode.WANDER)
-                zombie_dog.next_charge_available_ms = now_ms + zombie_dog.charge_cooldown_ms
+                zombie_dog.next_charge_available_ms = (
+                    now_ms + zombie_dog.charge_cooldown_ms
+                )
                 zombie_dog.wander_change_time = now_ms
                 return (0.0, 0.0)
             charge_direction = (dx / dist, dy / dist)
             zombie_dog.charge_direction = charge_direction
         step = min(zombie_dog.speed_assault, zombie_dog.charge_distance_remaining)
-        zombie_dog.charge_distance_remaining = max(0.0, zombie_dog.charge_distance_remaining - step)
+        zombie_dog.charge_distance_remaining = max(
+            0.0, zombie_dog.charge_distance_remaining - step
+        )
         return (charge_direction[0] * step, charge_direction[1] * step)
     if zombie_dog.mode == ZombieDogMode.CHASE and chase_target is not None:
         dx = chase_target.rect.centerx - zombie_dog.x
@@ -230,7 +243,9 @@ class ZombieDog(pygame.sprite.Sprite):
         self.wander_change_time = 0
         self.movement_strategy = movement_strategy or _zombie_dog_default_movement
         self.variant = (
-            variant if isinstance(variant, ZombieDogVariant) else ZombieDogVariant(str(variant))
+            variant
+            if isinstance(variant, ZombieDogVariant)
+            else ZombieDogVariant(str(variant))
         )
         self.nimble_tail_side = RNG.choice([-1.0, 1.0])
         if self.variant == ZombieDogVariant.NIMBLE:
@@ -293,9 +308,7 @@ class ZombieDog(pygame.sprite.Sprite):
             forward = pygame.Vector2(math.cos(angle), math.sin(angle))
             right = pygame.Vector2(-forward.y, forward.x)
             tail_center = (
-                center
-                - (forward * rear_offset)
-                + (right * side_sign * side_offset)
+                center - (forward * rear_offset) + (right * side_sign * side_offset)
             )
             tail_pos = (int(round(tail_center.x)), int(round(tail_center.y)))
             pygame.draw.circle(surf, tail_fill, tail_pos, tail_radius)

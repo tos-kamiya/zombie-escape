@@ -518,7 +518,9 @@ class GameplayScreenRunner:
             ):
                 if self.debug_mode:
                     try:
-                        self.pause_selected_index = self.pause_option_ids.index("resume")
+                        self.pause_selected_index = self.pause_option_ids.index(
+                            "resume"
+                        )
                     except ValueError:
                         self.pause_selected_index = 0
                     transition = self._activate_pause_selection()
@@ -574,19 +576,20 @@ class GameplayScreenRunner:
                     self.pause_selected_index = 0
         else:
             if not (self.paused_manual or self.paused_focus) and (
-                snapshot.pressed(CommonAction.BACK) or snapshot.pressed(CommonAction.START)
+                snapshot.pressed(CommonAction.BACK)
+                or snapshot.pressed(CommonAction.START)
             ):
                 self.paused_manual = True
                 self.pause_selected_index = 0
             elif self.paused_manual or self.paused_focus:
                 if snapshot.pressed(CommonAction.UP):
-                    self.pause_selected_index = (
-                        self.pause_selected_index - 1
-                    ) % len(self.pause_option_ids)
+                    self.pause_selected_index = (self.pause_selected_index - 1) % len(
+                        self.pause_option_ids
+                    )
                 if snapshot.pressed(CommonAction.DOWN):
-                    self.pause_selected_index = (
-                        self.pause_selected_index + 1
-                    ) % len(self.pause_option_ids)
+                    self.pause_selected_index = (self.pause_selected_index + 1) % len(
+                        self.pause_option_ids
+                    )
                 if snapshot.pressed(CommonAction.START):
                     self.paused_manual = False
                     self.paused_focus = False
@@ -686,15 +689,9 @@ class GameplayScreenRunner:
             [zombie for zombie in groups.zombie_group if zombie.alive()]
         )
         mobile_entities.extend(
-            [
-                survivor
-                for survivor in groups.survivor_group
-                if survivor.alive()
-            ]
+            [survivor for survivor in groups.survivor_group if survivor.alive()]
         )
-        mobile_entities.extend(
-            [bot for bot in groups.patrol_bot_group if bot.alive()]
-        )
+        mobile_entities.extend([bot for bot in groups.patrol_bot_group if bot.alive()])
         state.spatial_index.rebuild(mobile_entities)
 
     def _draw_game_frame(self, current_fps: float) -> None:
@@ -709,7 +706,9 @@ class GameplayScreenRunner:
         hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
         elapsed_ms = state.clock.elapsed_ms
         fuel_progress = state.fuel_progress
-        hint_enabled = car_hint_conf.get("enabled", True) and not self.stage.endurance_stage
+        hint_enabled = (
+            car_hint_conf.get("enabled", True) and not self.stage.endurance_stage
+        )
         hint_target = None
         hint_color = YELLOW
         hint_expires_at = state.hint_expires_at
@@ -727,12 +726,15 @@ class GameplayScreenRunner:
             )
             if target_type != hint_target_type:
                 state.hint_target_type = target_type
-                state.hint_expires_at = (
-                    elapsed_ms + hint_delay if target_type else 0
-                )
+                state.hint_expires_at = elapsed_ms + hint_delay if target_type else 0
                 hint_expires_at = state.hint_expires_at
 
-            if target_type and hint_expires_at and elapsed_ms >= hint_expires_at and not player.in_car:
+            if (
+                target_type
+                and hint_expires_at
+                and elapsed_ms >= hint_expires_at
+                and not player.in_car
+            ):
                 hint_target_raw = _resolve_hint_target_position(
                     target_type=target_type,
                     game_data=game_data,
@@ -852,10 +854,7 @@ class GameplayScreenRunner:
         if state.game_over and not state.game_won:
             if state.game_over_at is None:
                 state.game_over_at = state.clock.elapsed_ms
-            if (
-                state.clock.elapsed_ms - state.game_over_at
-                < 1000
-            ):
+            if state.clock.elapsed_ms - state.game_over_at < 1000:
                 if self.debug_overview:
                     assert self.overview_surface is not None
                     draw_debug_overview(
@@ -901,7 +900,9 @@ class GameplayScreenRunner:
             font_settings = get_font_settings()
             font_size = font_settings.scaled_size(GAMEPLAY_FONT_SIZE * 2)
             font = load_font(font_settings.resource, font_size)
-            line_height = int(round(font.get_linesize() * font_settings.line_height_scale))
+            line_height = int(
+                round(font.get_linesize() * font_settings.line_height_scale)
+            )
             x = TIMED_MESSAGE_LEFT_X
             y = TIMED_MESSAGE_TOP_Y
             for line in intro_text.splitlines():
@@ -960,9 +961,13 @@ class GameplayScreenRunner:
         dx = float(mouse_screen_pos[0] - player_screen_pos[0])
         dy = float(mouse_screen_pos[1] - player_screen_pos[1])
         magnitude = math.hypot(dx, dy)
-        deadzone = max(2, int(getattr(player, "radius", 4) * _MOUSE_STEERING_DEADZONE_SCALE))
+        deadzone = max(
+            2, int(getattr(player, "radius", 4) * _MOUSE_STEERING_DEADZONE_SCALE)
+        )
         self.mouse_steering_active = True
-        self.mouse_cursor_visible_until_ms = pygame.time.get_ticks() + _MOUSE_CURSOR_SHOW_MS
+        self.mouse_cursor_visible_until_ms = (
+            pygame.time.get_ticks() + _MOUSE_CURSOR_SHOW_MS
+        )
         if magnitude <= float(deadzone):
             return 0.0, 0.0
         return dx / magnitude, dy / magnitude
@@ -980,9 +985,7 @@ class GameplayScreenRunner:
                 self.mouse_cursor_screen_pos[1] - self.mouse_cursor_prev_screen_pos[1]
             )
             if math.hypot(dx, dy) >= float(_MOUSE_CURSOR_MOVE_SHOW_DISTANCE_PX):
-                self.mouse_cursor_move_visible_until_ms = (
-                    now_ms + _MOUSE_CURSOR_SHOW_MS
-                )
+                self.mouse_cursor_move_visible_until_ms = now_ms + _MOUSE_CURSOR_SHOW_MS
         self.mouse_cursor_prev_screen_pos = self.mouse_cursor_screen_pos
 
         show_by_persist = now_ms <= self.mouse_cursor_visible_until_ms
@@ -1030,7 +1033,9 @@ class GameplayScreenRunner:
         dx = float(mouse_pos[0] - player_screen_pos[0])
         dy = float(mouse_pos[1] - player_screen_pos[1])
         distance = math.hypot(dx, dy)
-        accel_radius = max(2, int(getattr(player, "radius", 4) * _MOUSE_ACCEL_HOLD_SCALE))
+        accel_radius = max(
+            2, int(getattr(player, "radius", 4) * _MOUSE_ACCEL_HOLD_SCALE)
+        )
         return distance <= float(accel_radius)
 
     def _draw_player_time_accel_indicator(self) -> None:
@@ -1112,7 +1117,9 @@ class GameplayScreenRunner:
         s = _PAUSE_HOTSPOT_TRI_SIZE
         hovered: str | None = None
         if pygame.mouse.get_focused():
-            hovered = self._pause_hotspot_kind_at(tuple(map(int, pygame.mouse.get_pos())))
+            hovered = self._pause_hotspot_kind_at(
+                tuple(map(int, pygame.mouse.get_pos()))
+            )
         top_left_color = (
             _PAUSE_HOTSPOT_HOVER_COLOR
             if hovered == "top_left"

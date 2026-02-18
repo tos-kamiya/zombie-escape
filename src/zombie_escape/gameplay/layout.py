@@ -60,7 +60,9 @@ def _expand_zone_cells(
     return cells
 
 
-def _expand_moving_floor_cells(stage: Stage) -> dict[tuple[int, int], MovingFloorDirection]:
+def _expand_moving_floor_cells(
+    stage: Stage,
+) -> dict[tuple[int, int], MovingFloorDirection]:
     directions: dict[str, MovingFloorDirection] = {
         "u": MovingFloorDirection.UP,
         "up": MovingFloorDirection.UP,
@@ -172,7 +174,9 @@ def generate_level_from_blueprint(
         require_car_spawn = not stage.endurance_stage
         car_reachable = validate_connectivity(
             blueprint.grid,
-            fuel_mode=(stage.fuel_mode if not stage.endurance_stage else FuelMode.START_FULL),
+            fuel_mode=(
+                stage.fuel_mode if not stage.endurance_stage else FuelMode.START_FULL
+            ),
             require_player_exit_path=stage.endurance_stage,
             require_car_spawn=require_car_spawn,
         )
@@ -345,7 +349,9 @@ def generate_level_from_blueprint(
                         cell_rect.width,
                         health=STEEL_BEAM_HEALTH,
                         palette=palette,
-                        on_destroy=(lambda _b, cell=(x, y): remove_steel_beam_cell(cell)),
+                        on_destroy=(
+                            lambda _b, cell=(x, y): remove_steel_beam_cell(cell)
+                        ),
                     )
                 draw_bottom_side = not _has_wall(x, y + 1)
                 bevel_mask = (
@@ -539,20 +545,20 @@ def generate_level_from_blueprint(
     return (
         layout,
         {
-        "player_cells": player_cells,
-        "car_cells": list(car_cells),
-        "fuel_cells": list(fuel_cells),
-        "empty_fuel_can_cells": list(empty_fuel_can_cells),
-        "fuel_station_cells": list(fuel_cells),
-        "flashlight_cells": list(flashlight_cells),
-        "shoes_cells": list(shoes_cells),
-        "houseplant_cells": list(houseplant_cells),
-        "zombie_contaminated_cells": list(layout.zombie_contaminated_cells),
-        "puddle_cells": list(puddle_cells),
-        "walkable_cells": walkable_cells,
-        "car_walkable_cells": list(car_reachable_cells),
-        "item_spawn_cells": item_spawn_cells,
-        "car_spawn_cells": car_spawn_cells,
+            "player_cells": player_cells,
+            "car_cells": list(car_cells),
+            "fuel_cells": list(fuel_cells),
+            "empty_fuel_can_cells": list(empty_fuel_can_cells),
+            "fuel_station_cells": list(fuel_cells),
+            "flashlight_cells": list(flashlight_cells),
+            "shoes_cells": list(shoes_cells),
+            "houseplant_cells": list(houseplant_cells),
+            "zombie_contaminated_cells": list(layout.zombie_contaminated_cells),
+            "puddle_cells": list(puddle_cells),
+            "walkable_cells": walkable_cells,
+            "car_walkable_cells": list(car_reachable_cells),
+            "item_spawn_cells": item_spawn_cells,
+            "car_spawn_cells": car_spawn_cells,
         },
         wall_group,
         all_sprites,

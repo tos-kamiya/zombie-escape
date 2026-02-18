@@ -334,9 +334,7 @@ def _draw_entity_drop_shadows(
             alpha,
             edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
         )
-        shadow_rect = surface_to_draw.get_rect(
-            center=(int(cx), int(cy + jump_dy))
-        )
+        shadow_rect = surface_to_draw.get_rect(center=(int(cx), int(cy + jump_dy)))
         shadow_screen_rect = apply_rect(shadow_rect)
         if not shadow_screen_rect.colliderect(screen_rect):
             continue

@@ -93,7 +93,9 @@ def validate_humanoid_connectivity(grid: list[str]) -> bool:
     if start_pos is None:
         return False
 
-    reachable = _humanoid_reachable_cells(grid, start_pos, passable_cells=passable_cells)
+    reachable = _humanoid_reachable_cells(
+        grid, start_pos, passable_cells=passable_cells
+    )
     return len(passable_cells) == len(reachable)
 
 
@@ -1175,7 +1177,7 @@ def generate_random_blueprint(
     if wall_algo == "normal":
         wall_algo = "default"
     elif wall_algo.startswith("normal."):
-        wall_algo = f"default.{wall_algo[len('normal.'):]}"
+        wall_algo = f"default.{wall_algo[len('normal.') :]}"
     if wall_algo == "sparse":
         print("WARNING: 'sparse' is deprecated. Use 'sparse_moore' instead.")
         wall_algo = "sparse_moore"

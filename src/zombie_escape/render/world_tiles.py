@@ -238,7 +238,10 @@ def _draw_play_area(
                     offset_px = int(signed_offset % grid_snap)
                     clip_prev = screen.get_clip()
                     screen.set_clip(inner_rect)
-                    if direction in (MovingFloorDirection.UP, MovingFloorDirection.DOWN):
+                    if direction in (
+                        MovingFloorDirection.UP,
+                        MovingFloorDirection.DOWN,
+                    ):
                         blit_pos = (sr.left, sr.top - offset_px)
                     else:
                         blit_pos = (sr.left - offset_px, sr.top)
@@ -373,7 +376,9 @@ def _draw_play_area(
                     )
                     screen.blit(overlay, inner_rect.topleft)
                 if sr.width > 0 and sr.height > 0:
-                    border_surface = pygame.Surface((sr.width, sr.height), pygame.SRCALPHA)
+                    border_surface = pygame.Surface(
+                        (sr.width, sr.height), pygame.SRCALPHA
+                    )
                     pygame.draw.rect(
                         border_surface,
                         (

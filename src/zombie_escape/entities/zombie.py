@@ -66,6 +66,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
 
 RNG = get_rng()
 
+
 class MovementStrategy(Protocol):
     def __call__(
         self,
@@ -276,7 +277,10 @@ class Zombie(pygame.sprite.Sprite):
 
             # Lineformer logic: non-lineformers ignore lineformers
             other_kind = other.kind  # type: ignore[attr-defined]
-            if self.kind != ZombieKind.LINEFORMER and other_kind == ZombieKind.LINEFORMER:
+            if (
+                self.kind != ZombieKind.LINEFORMER
+                and other_kind == ZombieKind.LINEFORMER
+            ):
                 continue
 
             # Type ignore because spatial index might contain other sprites,

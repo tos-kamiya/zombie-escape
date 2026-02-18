@@ -230,13 +230,13 @@ def _zombie_wall_hug_movement(
 
     # Non-linear scaling for sensor distance based on cell size.
     dynamic_sensor_dist = cell_size * (0.4 + 0.005 * cell_size)
-    dynamic_sensor_dist *= (0.8 + 0.2 * speed_ratio)
+    dynamic_sensor_dist *= 0.8 + 0.2 * speed_ratio
 
     # Angles for Asymmetrical Probes
     # 1. Forward (0)
     # 2. Side Diagonal (default 55, scales with speed)
     # 3. Side Perpendicular (90)
-    angle_side_deg = ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG * (speed_ratio ** -0.2)
+    angle_side_deg = ZOMBIE_WALL_HUG_PROBE_ANGLE_DEG * (speed_ratio**-0.2)
     angle_perp_deg = ZOMBIE_WALL_HUG_PROBE_ANGLE_PERP_DEG
 
     probe_offset_side = math.radians(min(75.0, angle_side_deg))
@@ -280,8 +280,12 @@ def _zombie_wall_hug_movement(
     side_angle = zombie.wall_hug_angle + zombie.wall_hug_side * probe_offset_side
     perp_angle = zombie.wall_hug_angle + zombie.wall_hug_side * probe_offset_perp
 
-    side_dist = _zombie_wall_hug_wall_distance(zombie, walls, side_angle, sensor_distance)
-    perp_dist = _zombie_wall_hug_wall_distance(zombie, walls, perp_angle, sensor_distance)
+    side_dist = _zombie_wall_hug_wall_distance(
+        zombie, walls, side_angle, sensor_distance
+    )
+    perp_dist = _zombie_wall_hug_wall_distance(
+        zombie, walls, perp_angle, sensor_distance
+    )
     forward_dist = _zombie_wall_hug_wall_distance(
         zombie, walls, zombie.wall_hug_angle, sensor_distance
     )

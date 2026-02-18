@@ -168,6 +168,7 @@ class InputHelper:
                 self.joystick = None
                 self._hat_value = (0, 0)
             return
+
     def snapshot(
         self,
         events: Iterable[pygame.event.Event],
@@ -246,9 +247,7 @@ class InputHelper:
         return x, y
 
     def is_confirm_held(self, keys: Sequence[bool] | None = None) -> bool:
-        if keys is not None and (
-            keys[pygame.K_RETURN] or keys[pygame.K_SPACE]
-        ):
+        if keys is not None and (keys[pygame.K_RETURN] or keys[pygame.K_SPACE]):
             return True
         return self._held_confirm_button()
 
@@ -257,9 +256,7 @@ class InputHelper:
             if key in action_keys:
                 target[action] = True
 
-    def _mark_keyboard_shortcut(
-        self, target: set[KeyboardShortcut], key: int
-    ) -> None:
+    def _mark_keyboard_shortcut(self, target: set[KeyboardShortcut], key: int) -> None:
         for shortcut, shortcut_keys in self._KEYBOARD_SHORTCUT_KEYS.items():
             if key in shortcut_keys:
                 target.add(shortcut)
@@ -273,12 +270,9 @@ class InputHelper:
             target[CommonAction.BACK] = True
         if is_start_event(event):
             target[CommonAction.START] = True
-        if (
-            CONTROLLER_BUTTON_DOWN is not None
-            and event.type in (
-                CONTROLLER_BUTTON_DOWN,
-                getattr(pygame, "CONTROLLERBUTTONUP", None),
-            )
+        if CONTROLLER_BUTTON_DOWN is not None and event.type in (
+            CONTROLLER_BUTTON_DOWN,
+            getattr(pygame, "CONTROLLERBUTTONUP", None),
         ):
             if (
                 CONTROLLER_BUTTON_DPAD_UP is not None

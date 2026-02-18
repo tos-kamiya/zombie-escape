@@ -4,6 +4,7 @@ from typing import Callable, Iterable
 
 import pygame
 
+
 def update_paralyze_from_patrol_contact(
     *,
     entity_center: tuple[float, float],

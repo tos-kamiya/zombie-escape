@@ -5,7 +5,10 @@ from collections import deque
 import pytest
 
 from zombie_escape.entities_constants import MovingFloorDirection
-from zombie_escape.level_blueprints import generate_random_blueprint, validate_car_connectivity
+from zombie_escape.level_blueprints import (
+    generate_random_blueprint,
+    validate_car_connectivity,
+)
 from zombie_escape.level_constants import DEFAULT_STEEL_BEAM_CHANCE
 from zombie_escape.models import FuelMode
 from zombie_escape.rng import seed_rng
@@ -32,7 +35,9 @@ def _expand_zone_cells(
     return cells
 
 
-def _moving_floor_cells_for_stage(stage: object) -> dict[tuple[int, int], MovingFloorDirection]:
+def _moving_floor_cells_for_stage(
+    stage: object,
+) -> dict[tuple[int, int], MovingFloorDirection]:
     directions: dict[str, MovingFloorDirection] = {
         "u": MovingFloorDirection.UP,
         "up": MovingFloorDirection.UP,
@@ -87,10 +92,7 @@ def _humanoid_reachable_cells(
     rows = len(grid)
     cols = len(grid[0])
     passable_cells = {
-        (x, y)
-        for y in range(rows)
-        for x in range(cols)
-        if grid[y][x] not in ("x", "B")
+        (x, y) for y in range(rows) for x in range(cols) if grid[y][x] not in ("x", "B")
     }
     if start not in passable_cells:
         return set()
@@ -161,7 +163,9 @@ def _build_valid_blueprint_grid(stage: object, *, base_seed: int) -> list[str]:
         if validate_car_connectivity(blueprint.grid) is not None:
             return blueprint.grid
 
-    pytest.fail(f"Could not build a car-reachable blueprint for {stage.id} in 20 attempts")
+    pytest.fail(
+        f"Could not build a car-reachable blueprint for {stage.id} in 20 attempts"
+    )
 
 
 @pytest.mark.parametrize("stage", STAGES, ids=[stage.id for stage in STAGES])
@@ -183,16 +187,22 @@ def test_stage_blueprint_reachability(stage: object) -> None:
     humanoid_from_player = _humanoid_reachable_cells(grid, player_start)
 
     if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
-        assert empty_fuel_can_cells, f"{stage.id}: refuel chain requires empty-can cells"
+        assert empty_fuel_can_cells, (
+            f"{stage.id}: refuel chain requires empty-can cells"
+        )
         assert fuel_cells, f"{stage.id}: refuel chain requires station cells"
         empty_candidates = [
             cell for cell in empty_fuel_can_cells if cell in humanoid_from_player
         ]
-        assert empty_candidates, f"{stage.id}: player cannot reach any empty-can candidate"
+        assert empty_candidates, (
+            f"{stage.id}: player cannot reach any empty-can candidate"
+        )
         can_reach_car_after_refuel = False
         for empty_cell in empty_candidates:
             humanoid_from_empty = _humanoid_reachable_cells(grid, empty_cell)
-            station_candidates = [cell for cell in fuel_cells if cell in humanoid_from_empty]
+            station_candidates = [
+                cell for cell in fuel_cells if cell in humanoid_from_empty
+            ]
             for station_cell in station_candidates:
                 humanoid_from_station = _humanoid_reachable_cells(grid, station_cell)
                 if any(car_cell in humanoid_from_station for car_cell in car_cells):

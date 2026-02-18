@@ -245,7 +245,9 @@ def _handle_fuel_pickup(
         return
     state.fuel_progress = FuelProgress.FULL_CAN
     if state.timed_message == need_fuel_text:
-        schedule_timed_message(state, None, duration_frames=0, now_ms=state.clock.elapsed_ms)
+        schedule_timed_message(
+            state, None, duration_frames=0, now_ms=state.clock.elapsed_ms
+        )
     state.hint_expires_at = 0
     state.hint_target_type = None
     fuel.kill()
@@ -288,7 +290,7 @@ def _handle_fuel_station_refuel(
     interaction_radius: float,
     need_fuel_text: str,
     player_near_point: callable,
-    ) -> bool:
+) -> bool:
     state = game_data.state
     if not (
         fuel_station
@@ -545,7 +547,9 @@ def _handle_buddy_interactions(
                 continue
             buddy_on_screen = rect_visible_on_screen(camera, buddy.rect)
             if not player.in_car:
-                dist_to_player_sq = (player.x - buddy.x) ** 2 + (player.y - buddy.y) ** 2
+                dist_to_player_sq = (player.x - buddy.x) ** 2 + (
+                    player.y - buddy.y
+                ) ** 2
                 if buddy.following:
                     if (
                         dist_to_player_sq
@@ -584,11 +588,16 @@ def _handle_buddy_interactions(
             now = state.clock.elapsed_ms
             marker_caught = lineformer_trains.any_marker_collides_circle(
                 center=(buddy.x, buddy.y),
-                radius=max(1.0, float(getattr(buddy, "collision_radius", HUMANOID_RADIUS))),
+                radius=max(
+                    1.0, float(getattr(buddy, "collision_radius", HUMANOID_RADIUS))
+                ),
             )
-            buddy_caught = any(
-                is_active_zombie_threat(zombie, now_ms=now) for zombie in collisions
-            ) or marker_caught
+            buddy_caught = (
+                any(
+                    is_active_zombie_threat(zombie, now_ms=now) for zombie in collisions
+                )
+                or marker_caught
+            )
             if buddy.alive() and buddy_caught:
                 if player.in_car and active_car:
                     fov_target = active_car
@@ -869,9 +878,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     if player.in_car and active_car and active_car.health > 0 and shrunk_car:
         zombies_hit = [
             zombie
-            for zombie in pygame.sprite.spritecollide(
-                shrunk_car, zombie_group, False
-            )
+            for zombie in pygame.sprite.spritecollide(shrunk_car, zombie_group, False)
         ]
         if zombies_hit:
             move_dx = getattr(active_car, "last_move_dx", 0.0)
@@ -984,12 +991,16 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         now = state.clock.elapsed_ms
         marker_hit = game_data.lineformer_trains.any_marker_collides_circle(
             center=(player.x, player.y),
-            radius=max(1.0, float(getattr(player, "collision_radius", HUMANOID_RADIUS))),
+            radius=max(
+                1.0, float(getattr(player, "collision_radius", HUMANOID_RADIUS))
+            ),
         )
         contaminated_hit = _entity_on_contaminated_cell(player)
-        if any(
-            is_active_zombie_threat(zombie, now_ms=now) for zombie in collisions
-        ) or marker_hit or contaminated_hit:
+        if (
+            any(is_active_zombie_threat(zombie, now_ms=now) for zombie in collisions)
+            or marker_hit
+            or contaminated_hit
+        ):
             if not state.game_over:
                 player.set_zombified_visual()
                 state.game_over = True

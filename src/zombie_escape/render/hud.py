@@ -241,7 +241,9 @@ def _draw_status_bar(
                 LIGHT_GRAY,
                 line_height_scale=font_settings.line_height_scale,
             )
-            debug_rect = debug_surface.get_rect(left=overlay_left, bottom=overlay_bottom)
+            debug_rect = debug_surface.get_rect(
+                left=overlay_left, bottom=overlay_bottom
+            )
             screen.blit(debug_surface, debug_rect)
     except pygame.error as e:
         print(f"Error rendering status bar: {e}")
@@ -506,7 +508,10 @@ def _draw_timed_message(
         lines = message.text.splitlines() or [message.text]
         rendered_lines = [
             render_text_surface(
-                font, line, text_color, line_height_scale=font_settings.line_height_scale
+                font,
+                line,
+                text_color,
+                line_height_scale=font_settings.line_height_scale,
             )
             for line in lines
         ]

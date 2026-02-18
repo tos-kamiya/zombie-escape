@@ -83,12 +83,8 @@ def startup_check_screen(
             message_font = _get_font(font_settings.scaled_size(20))
             sub_font = _get_font(font_settings.scaled_size(11))
             max_width = max(1, width - 48)
-            msg_width, msg_height, _ = _measure_text(
-                message, message_font, max_width
-            )
-            sub_width, sub_height, _ = _measure_text(
-                sub_message, sub_font, max_width
-            )
+            msg_width, msg_height, _ = _measure_text(message, message_font, max_width)
+            sub_width, sub_height, _ = _measure_text(sub_message, sub_font, max_width)
             total_height = msg_height + 8 + sub_height
             top = max(24, height // 2 - total_height // 2)
             left = max(24, width // 2 - msg_width // 2)

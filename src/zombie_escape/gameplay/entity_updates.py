@@ -263,7 +263,10 @@ def update_entities(
             layout=game_data.layout,
             now_ms=game_data.state.clock.elapsed_ms,
         )
-        if getattr(player, "pending_pitfall_fall", False) and not game_data.state.game_over:
+        if (
+            getattr(player, "pending_pitfall_fall", False)
+            and not game_data.state.game_over
+        ):
             pull_dist = player.collision_radius * 0.5
             pitfall_target_pos = pitfall_target(
                 x=player.x,
@@ -436,7 +439,9 @@ def update_entities(
     tracker_buckets: dict[tuple[int, int, int], list[Zombie]] = {}
     tracker_cell_size = ZOMBIE_TRACKER_CROWD_BAND_WIDTH
     angle_step = math.pi / 4.0
-    zombie_kinds = SpatialKind.ZOMBIE | SpatialKind.ZOMBIE_DOG | SpatialKind.TRAPPED_ZOMBIE
+    zombie_kinds = (
+        SpatialKind.ZOMBIE | SpatialKind.ZOMBIE_DOG | SpatialKind.TRAPPED_ZOMBIE
+    )
     patrol_kinds = SpatialKind.PATROL_BOT
     base_radius = ZOMBIE_SEPARATION_DISTANCE + PLAYER_SPEED
     for zombie in zombies_sorted:
@@ -463,15 +468,19 @@ def update_entities(
         RNG.choice(bucket).tracker_force_wander = True
 
     survivor_candidates = [
-        survivor for survivor in survivor_group if survivor.alive() and not survivor.rescued
+        survivor
+        for survivor in survivor_group
+        if survivor.alive() and not survivor.rescued
     ]
-    dog_survivor_range_sq = ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE * ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE
+    dog_survivor_range_sq = (
+        ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE * ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE
+    )
 
     for zombie in zombies_sorted:
         target = target_center
         if getattr(zombie, "carbonized", False):
             zombie.on_moving_floor = False
-        
+
         floor_dx, floor_dy = get_moving_floor_drift(
             zombie.rect,
             game_data.layout,

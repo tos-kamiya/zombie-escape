@@ -162,9 +162,13 @@ def move_axis_with_pitfall(
             if clamp_range is not None:
                 sprite.y = min(clamp_range[1], max(clamp_range[0], sprite.y))  # type: ignore[attr-defined]
             sprite.rect.centery = int(sprite.y)  # type: ignore[attr-defined]
-        if blocked_by_pitfall and cell_size and _sprite_in_pitfall(
-            sprite,
-            cell_size=cell_size,
-            pitfall_cells=pitfall_cells,
+        if (
+            blocked_by_pitfall
+            and cell_size
+            and _sprite_in_pitfall(
+                sprite,
+                cell_size=cell_size,
+                pitfall_cells=pitfall_cells,
+            )
         ):
             sprite.pending_pitfall_fall = True  # type: ignore[attr-defined]
