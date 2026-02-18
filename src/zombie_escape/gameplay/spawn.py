@@ -1025,6 +1025,7 @@ def spawn_initial_patrol_bots(
         walkable_cells,
         cell_size,
         spawn_rate,
+        jitter_ratio=0.0,
         player=player,
         min_player_dist=ZOMBIE_SPAWN_PLAYER_BUFFER,
     )

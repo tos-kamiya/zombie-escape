@@ -98,6 +98,7 @@ def find_interior_spawn_positions(
     cell_size: int,
     spawn_rate: float,
     *,
+    jitter_ratio: float = 0.35,
     player: Player | None = None,
     min_player_dist: float | None = None,
 ) -> list[tuple[int, int]]:
@@ -105,14 +106,14 @@ def find_interior_spawn_positions(
         walkable_cells,
         cell_size,
         spawn_rate,
-        jitter_ratio=0.35,
+        jitter_ratio=jitter_ratio,
     )
     if not positions and spawn_rate > 0:
         positions = _scatter_positions_on_walkable(
             walkable_cells,
             cell_size,
             spawn_rate * 1.5,
-            jitter_ratio=0.35,
+            jitter_ratio=jitter_ratio,
         )
     if not positions:
         return []
