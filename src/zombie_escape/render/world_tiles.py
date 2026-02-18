@@ -14,6 +14,10 @@ from ..render_assets import RenderAssets
 from ..render_constants import (
     FIRE_FLOOR_BASE_COLOR,
     FIRE_FLOOR_FLAME_COLORS,
+    FIRE_GLASS_BASE_COLOR,
+    FIRE_GLASS_GRID_COLOR,
+    FIRE_GLASS_HIGHLIGHT_COLOR,
+    FIRE_GRATE_EDGE_COLOR,
     METAL_FLOOR_BASE_COLOR,
     METAL_FLOOR_LINE_COLOR,
     MOVING_FLOOR_BORDER_COLOR,
@@ -157,18 +161,51 @@ def _get_fire_tile_surface(*, cell_size: int, phase: int) -> surface.Surface:
         return cached
     size = key[0]
     tile = pygame.Surface((size, size), pygame.SRCALPHA)
-    tile.fill(FIRE_FLOOR_BASE_COLOR)
-    center_x = size // 2
-    base_y = size - max(2, size // 7)
     pulse = key[1]
+
+    # Molten base under the grate.
+    tile.fill(FIRE_FLOOR_BASE_COLOR)
+    band_h = max(3, size // 6)
+    for row in range(0, size, band_h):
+        color = FIRE_FLOOR_FLAME_COLORS[(row // band_h + pulse) % len(FIRE_FLOOR_FLAME_COLORS)]
+        glow_rect = pygame.Rect(0, row, size, min(band_h + 1, size - row))
+        pygame.draw.rect(tile, color, glow_rect)
     for idx, color in enumerate(FIRE_FLOOR_FLAME_COLORS):
-        width = max(2, int(size * (0.76 - idx * 0.18)))
-        height = max(2, int(size * (0.42 - idx * 0.08)))
-        x_off = ((pulse + idx) % 3) - 1
-        y_off = ((pulse + idx * 2) % 2) * -1
-        flame_rect = pygame.Rect(0, 0, width, height)
-        flame_rect.midbottom = (center_x + x_off, base_y + y_off)
-        pygame.draw.ellipse(tile, color, flame_rect)
+        ember_w = max(2, int(size * (0.18 + idx * 0.03)))
+        ember_h = max(2, int(size * (0.12 + idx * 0.02)))
+        ox = (idx * (size // 3) + pulse * 2) % max(1, size - ember_w)
+        oy = ((idx + pulse) * (size // 4)) % max(1, size - ember_h)
+        pygame.draw.ellipse(tile, color, pygame.Rect(ox, oy, ember_w, ember_h))
+
+    # Dark tempered-glass grate overlay.
+    grate = pygame.Surface((size, size), pygame.SRCALPHA)
+    grate.fill((*FIRE_GLASS_BASE_COLOR, 232))
+    slot_step = max(6, size // 4)
+    diamond_r = max(2, int(slot_step // 2.5))
+    row_index = 0
+    for cy in range(slot_step // 2, size, slot_step):
+        row_offset = (slot_step // 2) if (row_index % 2 == 1) else 0
+        start_x = (slot_step // 2) - row_offset
+        for cx in range(start_x, size + slot_step, slot_step):
+            if cx < -diamond_r or cx > size + diamond_r:
+                continue
+            points = [
+                (cx, cy - diamond_r),
+                (cx + diamond_r, cy),
+                (cx, cy + diamond_r),
+                (cx - diamond_r, cy),
+            ]
+            pygame.draw.polygon(grate, (0, 0, 0, 0), points)
+            pygame.draw.polygon(grate, (*FIRE_GLASS_GRID_COLOR, 170), points, width=1)
+        row_index += 1
+    highlight_w = max(2, size // 8)
+    highlight_h = max(2, size // 3)
+    highlight = pygame.Surface((highlight_w, highlight_h), pygame.SRCALPHA)
+    highlight.fill((*FIRE_GLASS_HIGHLIGHT_COLOR, 46))
+    grate.blit(highlight, (max(1, size // 8), max(1, size // 12)))
+    pygame.draw.rect(grate, FIRE_GRATE_EDGE_COLOR, grate.get_rect(), width=max(1, size // 12))
+    tile.blit(grate, (0, 0))
+
     _FIRE_TILE_CACHE[key] = tile
     return tile
 
