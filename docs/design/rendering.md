@@ -1,6 +1,6 @@
 # Rendering
 
-## INPROGRESS: Fire/Metal Floor Rendering
+## Fire/Metal Floor Rendering
 
 - Fire floor visual:
   - Fire floor tiles are rendered as an animated floor feature.

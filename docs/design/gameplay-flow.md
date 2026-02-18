@@ -1,6 +1,6 @@
 # Gameplay Flow
 
-## INPROGRESS: Fire Floor Runtime Rules
+## Fire Floor Runtime Rules
 
 - Fire floor (`fire_floor_cells`) behavior:
   - Player/Buddy: stepping on fire floor triggers immediate game over.

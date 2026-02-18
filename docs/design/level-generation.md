@@ -1,11 +1,11 @@
 # Level Generation
 
-## INPROGRESS: Fire Floor and Metal Floor
+## Fire Floor and Metal Floor
 
 - New terrain cells:
   - `fire_floor_cells`: lethal floor for humanoids and zombies.
   - `metal_floor_cells`: visual-only floor variant generated around fire floors.
-- Stage parameters (planned):
+- Stage parameters:
   - `fire_floor_density`
   - `fire_floor_zones`
 - Blueprint placement:
