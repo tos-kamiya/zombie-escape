@@ -32,6 +32,9 @@ Supporting modules:
 
 - Sprite layering is driven by `LAYER_*` constants.
 - Outside-area entities generally skip shadow rendering.
+- Entity shadows are rendered in one pass with a uniform alpha policy.
+  Sprites that define `shadow_radius` are included; there is no per-entity-type
+  shadow alpha override in `core.py`.
 - Jumping entities draw detached/offset shadows for airborne feel.
 
 ## HUD
