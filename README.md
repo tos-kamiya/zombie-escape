@@ -55,7 +55,15 @@ At the title screen you can pick a stage:
 - **Stage 4: Evacuate Survivors** — find the car, gather survivors, and escape before zombies reach them. The stage has multiple parked cars; ramming one while driving adds +5 capacity.
 - **Stage 5: Survive Until Dawn** — cars are unusable. Survive until sunrise, then leave on foot through an existing exterior opening.
 
-Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/right to select later stages.
+Stage pages unlock progressively:
+
+- Stages 1-5 are always available.
+- Stages 6-15 unlock after clearing all Stages 1-5.
+- Stages 16-25 unlock after clearing at least 5 stages on the Stages 6-15 page.
+- For later pages, the same rule repeats: clear at least 5 stages on the current page to unlock the next page.
+
+If fewer than 5 stages are cleared on a page (except page 1), the next page remains locked.
+On the title screen, use left/right to switch unlocked pages.
 
 **Stage names are red until cleared** and turn white after at least one clear. Cleared stage names also show icons for characters/items that appear in that stage.
 

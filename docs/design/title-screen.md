@@ -52,6 +52,7 @@ Icon order is fixed by category:
 - Page unlock rule:
   - Page 1 (Stages 1-5) is always available.
   - To unlock the next page, clear at least 5 stages on the current page.
+  - If fewer than 5 stages are cleared on the current page, the next page remains locked.
   - This means:
     - Clear all Stages 1-5 to unlock the Stages 6-15 page.
     - Clear 5 or more stages on the Stages 6-15 page to unlock the Stages 16-25 page.
