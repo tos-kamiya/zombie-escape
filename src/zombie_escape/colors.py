@@ -33,6 +33,13 @@ class EnvironmentPalette:
     inner_wall_border: tuple[int, int, int]
     outer_wall: tuple[int, int, int]
     outer_wall_border: tuple[int, int, int]
+    metal_floor_base: tuple[int, int, int]
+    metal_floor_line: tuple[int, int, int]
+    metal_floor_highlight: tuple[int, int, int]
+    metal_floor_hairline: tuple[int, int, int]
+    fire_floor_base: tuple[int, int, int]
+    fire_grate_edge: tuple[int, int, int]
+    fire_glass_base: tuple[int, int, int]
 
 
 def _adjust_color(
@@ -68,6 +75,13 @@ _DEFAULT_ENVIRONMENT_PALETTE = EnvironmentPalette(
     inner_wall_border=(136, 110, 85),
     outer_wall=(136, 135, 128),
     outer_wall_border=(147, 146, 138),
+    metal_floor_base=(52, 56, 62),
+    metal_floor_line=(78, 84, 94),
+    metal_floor_highlight=(104, 112, 126),
+    metal_floor_hairline=(122, 130, 144),
+    fire_floor_base=(88, 40, 22),
+    fire_grate_edge=(58, 62, 70),
+    fire_glass_base=(18, 22, 28),
 )
 
 # Dark, desaturated palette that sells the "alone without a flashlight" vibe.
@@ -117,6 +131,41 @@ _GLOOM_ENVIRONMENT_PALETTE = EnvironmentPalette(
         brightness=0.8,
         saturation=0.75,
     ),
+    metal_floor_base=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.metal_floor_base,
+        brightness=0.8,
+        saturation=0.75,
+    ),
+    metal_floor_line=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.metal_floor_line,
+        brightness=0.8,
+        saturation=0.75,
+    ),
+    metal_floor_highlight=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.metal_floor_highlight,
+        brightness=0.8,
+        saturation=0.75,
+    ),
+    metal_floor_hairline=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.metal_floor_hairline,
+        brightness=0.8,
+        saturation=0.75,
+    ),
+    fire_floor_base=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.fire_floor_base,
+        brightness=0.8,
+        saturation=0.75,
+    ),
+    fire_grate_edge=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.fire_grate_edge,
+        brightness=0.8,
+        saturation=0.75,
+    ),
+    fire_glass_base=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.fire_glass_base,
+        brightness=0.8,
+        saturation=0.75,
+    ),
 )
 
 _DAWN_ENVIRONMENT_PALETTE = EnvironmentPalette(
@@ -129,6 +178,13 @@ _DAWN_ENVIRONMENT_PALETTE = EnvironmentPalette(
     inner_wall_border=(136, 110, 85),
     outer_wall=(136, 135, 128),
     outer_wall_border=(147, 146, 138),
+    metal_floor_base=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_base,
+    metal_floor_line=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_line,
+    metal_floor_highlight=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_highlight,
+    metal_floor_hairline=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_hairline,
+    fire_floor_base=_DEFAULT_ENVIRONMENT_PALETTE.fire_floor_base,
+    fire_grate_edge=_DEFAULT_ENVIRONMENT_PALETTE.fire_grate_edge,
+    fire_glass_base=_DEFAULT_ENVIRONMENT_PALETTE.fire_glass_base,
 )
 
 _STUDIO_ENVIRONMENT_PALETTE = EnvironmentPalette(
@@ -141,6 +197,13 @@ _STUDIO_ENVIRONMENT_PALETTE = EnvironmentPalette(
     inner_wall_border=_DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border,
     outer_wall=_DEFAULT_ENVIRONMENT_PALETTE.outer_wall,
     outer_wall_border=_DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border,
+    metal_floor_base=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_base,
+    metal_floor_line=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_line,
+    metal_floor_highlight=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_highlight,
+    metal_floor_hairline=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_hairline,
+    fire_floor_base=_DEFAULT_ENVIRONMENT_PALETTE.fire_floor_base,
+    fire_grate_edge=_DEFAULT_ENVIRONMENT_PALETTE.fire_grate_edge,
+    fire_glass_base=_DEFAULT_ENVIRONMENT_PALETTE.fire_glass_base,
 )
 
 _ENVIRONMENT_PALETTES: dict[str, EnvironmentPalette] = {

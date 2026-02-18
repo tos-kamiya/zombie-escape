@@ -113,6 +113,7 @@ def _render_studio_snapshot(
     target_rect: pygame.Rect,
     sprites: list[pygame.sprite.Sprite] | None = None,
     pitfall_cells: set[tuple[int, int]] | None = None,
+    fire_floor_cells: set[tuple[int, int]] | None = None,
     fall_spawn_cells: set[tuple[int, int]] | None = None,
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] | None = None,
     puddle_cells: set[tuple[int, int]] | None = None,
@@ -129,7 +130,7 @@ def _render_studio_snapshot(
 
     layout = game_data.layout
     layout.pitfall_cells = pitfall_cells or set()
-    layout.fire_floor_cells = set()
+    layout.fire_floor_cells = fire_floor_cells or set()
     layout.metal_floor_cells = set()
     layout.fall_spawn_cells = fall_spawn_cells or set()
     layout.moving_floor_cells = moving_floor_cells or {}
@@ -558,6 +559,21 @@ def export_images(
     pitfall_path = out / "pitfall.png"
     _save_surface(pitfall_surface, pitfall_path, scale=output_scale)
     saved.append(pitfall_path)
+
+    fire_floor_rect = pygame.Rect(
+        cell_x * cell_size,
+        cell_y * cell_size,
+        cell_size,
+        cell_size,
+    )
+    fire_floor_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=fire_floor_rect,
+        fire_floor_cells={(cell_x, cell_y)},
+    )
+    fire_floor_path = out / "fire-floor.png"
+    _save_surface(fire_floor_surface, fire_floor_path, scale=output_scale)
+    saved.append(fire_floor_path)
 
     fall_target = (center_x, center_y)
     falling = FallingEntity(

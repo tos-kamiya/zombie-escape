@@ -1340,6 +1340,20 @@ def get_tile_icon(kind: str, size: int) -> pygame.Surface:
             (right_x, cy),
             width=2,
         )
+    elif kind == "fire_floor":
+        # Dark red tile with a bright diamond cutout.
+        base = (55, 20, 18)
+        diamond = (170, 36, 36)
+        pygame.draw.rect(surf, base, rect)
+        inset = max(1, int(round(rect.width * 0.22)))
+        cx, cy = rect.center
+        points = [
+            (cx, rect.top + inset),
+            (rect.right - inset, cy),
+            (cx, rect.bottom - inset),
+            (rect.left + inset, cy),
+        ]
+        pygame.draw.polygon(surf, diamond, points)
     elif kind == "puddle":
         # Transparent water effect: single ring only, slightly larger for visibility.
         ring_color = (95, 135, 185)

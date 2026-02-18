@@ -262,6 +262,7 @@ class TitleScreenController:
             "pitfall": get_tile_icon("pitfall", self.icon_radius),
             "fall_spawn": get_tile_icon("fall_spawn", self.icon_radius),
             "moving_floor": get_tile_icon("moving_floor", self.icon_radius),
+            "fire_floor": get_tile_icon("fire_floor", self.icon_radius),
             "puddle": get_tile_icon("puddle", self.icon_radius),
             "houseplant": get_tile_icon("houseplant", self.icon_radius),
         }
@@ -325,6 +326,8 @@ class TitleScreenController:
             icons.append(self.icon_surfaces["pitfall"])
         if stage.moving_floor_zones or stage.moving_floor_cells:
             icons.append(self.icon_surfaces["moving_floor"])
+        if stage.fire_floor_density > 0 or stage.fire_floor_zones:
+            icons.append(self.icon_surfaces["fire_floor"])
         if stage.puddle_density > 0 or stage.puddle_zones:
             icons.append(self.icon_surfaces["puddle"])
 

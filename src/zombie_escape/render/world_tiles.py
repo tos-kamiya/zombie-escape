@@ -12,15 +12,7 @@ from ..entities_constants import MovingFloorDirection
 from ..models import Footprint
 from ..render_assets import RenderAssets
 from ..render_constants import (
-    FIRE_FLOOR_BASE_COLOR,
     FIRE_FLOOR_FLAME_COLORS,
-    FIRE_GLASS_BASE_COLOR,
-    FIRE_GLASS_GRID_COLOR,
-    FIRE_GLASS_HIGHLIGHT_COLOR,
-    FIRE_GRATE_EDGE_COLOR,
-    METAL_FLOOR_BASE_COLOR,
-    METAL_FLOOR_HAIRLINE_COLOR,
-    METAL_FLOOR_HIGHLIGHT_COLOR,
     MOVING_FLOOR_BORDER_COLOR,
     MOVING_FLOOR_LINE_COLOR,
     MOVING_FLOOR_TILE_COLOR,
@@ -40,8 +32,20 @@ ELECTRIFIED_FLOOR_BORDER_ALPHA = 140
 _PUDDLE_TILE_CACHE: dict[
     tuple[int, tuple[int, int, int], int, bool], surface.Surface
 ] = {}
-_METAL_TILE_CACHE: dict[int, surface.Surface] = {}
-_FIRE_TILE_CACHE: dict[tuple[int, int], surface.Surface] = {}
+_METAL_TILE_CACHE: dict[
+    tuple[
+        int,
+        tuple[int, int, int],
+        tuple[int, int, int],
+        tuple[int, int, int],
+        tuple[int, int, int],
+    ],
+    surface.Surface,
+] = {}
+_FIRE_TILE_CACHE: dict[
+    tuple[int, int, tuple[int, int, int], tuple[int, int, int], tuple[int, int, int]],
+    surface.Surface,
+] = {}
 
 
 def _build_moving_floor_pattern(
@@ -139,25 +143,38 @@ def _get_puddle_tile_surface(
     return puddle_tile
 
 
-def _get_metal_tile_surface(*, cell_size: int) -> surface.Surface:
-    key = max(1, int(cell_size))
+def _get_metal_tile_surface(*, cell_size: int, palette: Any) -> surface.Surface:
+    key = (
+        max(1, int(cell_size)),
+        tuple(map(int, palette.metal_floor_base)),
+        tuple(map(int, palette.metal_floor_line)),
+        tuple(map(int, palette.metal_floor_highlight)),
+        tuple(map(int, palette.metal_floor_hairline)),
+    )
     cached = _METAL_TILE_CACHE.get(key)
     if cached is not None:
         return cached
-    tile = pygame.Surface((key, key), pygame.SRCALPHA)
-    tile.fill(METAL_FLOOR_BASE_COLOR)
+    size = key[0]
+    metal_base = key[1]
+    metal_line = key[2]
+    metal_highlight = key[3]
+    metal_hairline = key[4]
+    tile = pygame.Surface((size, size), pygame.SRCALPHA)
+    tile.fill(metal_base)
 
     frame_color = (
-        max(0, int(METAL_FLOOR_BASE_COLOR[0] * 0.70)),
-        max(0, int(METAL_FLOOR_BASE_COLOR[1] * 0.70)),
-        max(0, int(METAL_FLOOR_BASE_COLOR[2] * 0.70)),
+        max(0, int(metal_base[0] * 0.70)),
+        max(0, int(metal_base[1] * 0.70)),
+        max(0, int(metal_base[2] * 0.70)),
     )
-    inset = max(2, key // 8)
-    panel_rect = pygame.Rect(inset, inset, max(1, key - inset * 2), max(1, key - inset * 2))
-    pygame.draw.rect(tile, frame_color, tile.get_rect(), width=max(1, key // 14))
+    inset = max(2, size // 8)
+    panel_rect = pygame.Rect(
+        inset, inset, max(1, size - inset * 2), max(1, size - inset * 2)
+    )
+    pygame.draw.rect(tile, frame_color, tile.get_rect(), width=max(1, size // 14))
 
-    overlay = pygame.Surface((key, key), pygame.SRCALPHA)
-    base_step = max(5, key // 4)
+    overlay = pygame.Surface((size, size), pygame.SRCALPHA)
+    base_step = max(5, size // 4)
     rhythm = [
         base_step,
         max(3, base_step - 2),
@@ -171,14 +188,14 @@ def _get_metal_tile_surface(*, cell_size: int) -> surface.Surface:
         end = (sx + panel_rect.height, panel_rect.top)
         pygame.draw.line(
             overlay,
-            METAL_FLOOR_HIGHLIGHT_COLOR,
+            metal_highlight,
             start,
             end,
-            width=max(1, key // 18),
+            width=max(1, size // 18),
         )
         pygame.draw.line(
             overlay,
-            METAL_FLOOR_HAIRLINE_COLOR,
+            metal_line,
             (start[0] + 1, start[1]),
             (end[0] + 1, end[1]),
             width=1,
@@ -186,31 +203,40 @@ def _get_metal_tile_surface(*, cell_size: int) -> surface.Surface:
         sx += rhythm[i % len(rhythm)]
         i += 1
 
-    mask = pygame.Surface((key, key), pygame.SRCALPHA)
+    mask = pygame.Surface((size, size), pygame.SRCALPHA)
     pygame.draw.rect(mask, (255, 255, 255, 255), panel_rect)
     overlay.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     tile.blit(overlay, (0, 0))
 
     # Subtle top-left specular band to match reinforced-wall metallic feel.
-    band = pygame.Surface((max(2, key // 3), max(2, key // 10)), pygame.SRCALPHA)
-    band.fill((*METAL_FLOOR_HAIRLINE_COLOR, 44))
+    band = pygame.Surface((max(2, size // 3), max(2, size // 10)), pygame.SRCALPHA)
+    band.fill((*metal_hairline, 44))
     tile.blit(band, (inset + 1, inset + 1))
 
     _METAL_TILE_CACHE[key] = tile
     return tile
 
 
-def _get_fire_tile_surface(*, cell_size: int, phase: int) -> surface.Surface:
-    key = (max(1, int(cell_size)), int(phase) % 3)
+def _get_fire_tile_surface(*, cell_size: int, phase: int, palette: Any) -> surface.Surface:
+    key = (
+        max(1, int(cell_size)),
+        int(phase) % 3,
+        tuple(map(int, palette.fire_floor_base)),
+        tuple(map(int, palette.fire_glass_base)),
+        tuple(map(int, palette.fire_grate_edge)),
+    )
     cached = _FIRE_TILE_CACHE.get(key)
     if cached is not None:
         return cached
     size = key[0]
+    fire_base = key[2]
+    fire_glass_base = key[3]
+    fire_grate_edge = key[4]
     tile = pygame.Surface((size, size), pygame.SRCALPHA)
     pulse = key[1]
 
     # Molten base under the grate.
-    tile.fill(FIRE_FLOOR_BASE_COLOR)
+    tile.fill(fire_base)
     band_h = max(3, size // 6)
     for row in range(0, size, band_h):
         color = FIRE_FLOOR_FLAME_COLORS[(row // band_h + pulse) % len(FIRE_FLOOR_FLAME_COLORS)]
@@ -225,7 +251,7 @@ def _get_fire_tile_surface(*, cell_size: int, phase: int) -> surface.Surface:
 
     # Dark tempered-glass grate overlay.
     grate = pygame.Surface((size, size), pygame.SRCALPHA)
-    grate.fill((*FIRE_GLASS_BASE_COLOR, 232))
+    grate.fill((*fire_glass_base, 232))
     slot_step = max(6, size // 4)
     diamond_r = max(2, int(slot_step // 2.5))
     row_index = 0
@@ -242,14 +268,9 @@ def _get_fire_tile_surface(*, cell_size: int, phase: int) -> surface.Surface:
                 (cx - diamond_r, cy),
             ]
             pygame.draw.polygon(grate, (0, 0, 0, 0), points)
-            pygame.draw.polygon(grate, (*FIRE_GLASS_GRID_COLOR, 170), points, width=1)
+            pygame.draw.polygon(grate, (*fire_glass_base, 244), points, width=1)
         row_index += 1
-    highlight_w = max(2, size // 8)
-    highlight_h = max(2, size // 3)
-    highlight = pygame.Surface((highlight_w, highlight_h), pygame.SRCALPHA)
-    highlight.fill((*FIRE_GLASS_HIGHLIGHT_COLOR, 46))
-    grate.blit(highlight, (max(1, size // 8), max(1, size // 12)))
-    pygame.draw.rect(grate, FIRE_GRATE_EDGE_COLOR, grate.get_rect(), width=max(1, size // 14))
+    pygame.draw.rect(grate, fire_grate_edge, grate.get_rect(), width=max(1, size // 14))
     tile.blit(grate, (0, 0))
 
     _FIRE_TILE_CACHE[key] = tile
@@ -440,6 +461,7 @@ def _draw_play_area(
                     fire_tile = _get_fire_tile_surface(
                         cell_size=grid_snap,
                         phase=phase,
+                        palette=palette,
                     )
                     screen.blit(fire_tile, sr.topleft)
                     border_color = (
@@ -463,7 +485,10 @@ def _draw_play_area(
                 )
                 sr = apply_rect(r)
                 if sr.colliderect(screen_rect):
-                    metal_tile = _get_metal_tile_surface(cell_size=grid_snap)
+                    metal_tile = _get_metal_tile_surface(
+                        cell_size=grid_snap,
+                        palette=palette,
+                    )
                     screen.blit(metal_tile, sr.topleft)
                     border_color = (
                         palette.fall_zone_primary
