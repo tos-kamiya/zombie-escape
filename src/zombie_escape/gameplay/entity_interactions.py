@@ -35,7 +35,7 @@ from .constants import (
 from ..colors import BLUE, YELLOW
 from ..colors import ambient_palette_key_for_flashlights, get_environment_palette
 from ..localization import translate as tr
-from ..models import FuelMode, FuelProgress, GameData
+from ..models import ContactHintRecord, FuelMode, FuelProgress, GameData
 from ..rng import get_rng
 from ..render_constants import BUDDY_COLOR
 from ..screen_constants import FPS
@@ -87,6 +87,47 @@ class _StaticCellOverlay(pygame.sprite.Sprite):
         super().__init__()
         self.image = image
         self.rect = self.image.get_rect(topleft=(left, top))
+
+
+def _remember_contact_hint(
+    game_data: GameData,
+    *,
+    kind: str,
+    target: pygame.sprite.Sprite | None,
+) -> None:
+    if not (target and target.alive()):
+        return
+    state = game_data.state
+    target_id = id(target)
+    anchor_pos = (int(target.rect.centerx), int(target.rect.centery))
+    for record in state.contact_hint_records:
+        if record.kind == kind and record.target_id == target_id:
+            record.anchor_pos = anchor_pos
+            return
+    state.contact_hint_records.append(
+        ContactHintRecord(
+            kind=kind,
+            target_id=target_id,
+            anchor_pos=anchor_pos,
+        )
+    )
+
+
+def _forget_contact_hint(
+    game_data: GameData,
+    *,
+    kind: str,
+    target: pygame.sprite.Sprite | None,
+) -> None:
+    if target is None:
+        return
+    state = game_data.state
+    target_id = id(target)
+    state.contact_hint_records = [
+        record
+        for record in state.contact_hint_records
+        if not (record.kind == kind and record.target_id == target_id)
+    ]
 
 
 def _grayscale_preserve_luma(surface_in: pygame.Surface) -> pygame.Surface:
@@ -301,6 +342,7 @@ def _handle_fuel_station_refuel(
         return False
     if not player_near_point(fuel_station.rect.center, interaction_radius):
         return False
+    _remember_contact_hint(game_data, kind="fuel_station", target=fuel_station)
     state.fuel_progress = FuelProgress.FULL_CAN
     if state.timed_message == need_fuel_text:
         schedule_timed_message(
@@ -339,6 +381,7 @@ def _handle_fuel_station_without_can_hint(
         return
     if not player_near_point(fuel_station.rect.center, interaction_radius):
         return
+    _remember_contact_hint(game_data, kind="fuel_station", target=fuel_station)
     schedule_timed_message(
         state,
         need_empty_can_text,
@@ -561,6 +604,7 @@ def _handle_buddy_interactions(
                     <= BUDDY_FOLLOW_START_DISTANCE * BUDDY_FOLLOW_START_DISTANCE
                 ):
                     buddy.set_following()
+                    _remember_contact_hint(game_data, kind="buddy", target=buddy)
             elif player.in_car and active_car and shrunk_car:
                 g = pygame.sprite.Group()
                 g.add(buddy)
@@ -625,6 +669,7 @@ def _handle_buddy_interactions(
                         buddy.teleport(cell_center(new_cell))
                     else:
                         buddy.teleport(game_data.layout.field_rect.center)
+                    _forget_contact_hint(game_data, kind="buddy", target=buddy)
                     buddy.following = False
 
     if stage.buddy_required_count > 0:
@@ -782,6 +827,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         and active_car
         and active_car.health > 0
     ):
+        _remember_contact_hint(game_data, kind="car", target=active_car)
         if state.fuel_progress >= FuelProgress.FULL_CAN:
             player.in_car = True
             all_sprites.remove(player)
@@ -815,6 +861,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                 claimed_car = parked_car
                 break
         if claimed_car:
+            _remember_contact_hint(game_data, kind="car", target=claimed_car)
             if state.fuel_progress >= FuelProgress.FULL_CAN:
                 try:
                     game_data.waiting_cars.remove(claimed_car)

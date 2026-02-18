@@ -208,8 +208,8 @@
         "description": "Some dogs rush. Others skitter."
       },
       "stage32": {
-        "name": "#32 Fire Floor Drill",
-        "description": "A small test map to learn fire-floor risk."
+        "name": "#32 Burning Floor",
+        "description": "The floor is too hot to step on."
       },
       "stage33": {
         "name": "#33 Crosscurrent",
@@ -277,6 +277,7 @@
         "language": "Language",
         "footprints": "Footprints",
         "car_hint": "Car hint",
+        "contact_memory_hint": "Contact memory guide",
         "shadows": "Shadows",
         "fast_zombies": "Fast zombies",
         "steel_beams": "Steel beams"

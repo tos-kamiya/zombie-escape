@@ -14,6 +14,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "visual": {"shadows": {"enabled": True}},
     "fast_zombies": {"enabled": False, "ratio": 0.1},
     "car_hint": {"enabled": True, "delay_ms": 180_000},
+    "contact_memory_hint": {"enabled": False},
     "steel_beams": {"enabled": False, "chance": 0.05},
 }
 

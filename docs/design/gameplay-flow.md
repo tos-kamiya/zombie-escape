@@ -101,6 +101,34 @@ Initial placement policy:
   - Direct pickup to full fuel state.
 - Any fuel-state transition clears existing fuel hints.
 
+## INPROGRESS: Contact-Memory Guide Arrows
+
+- Goal:
+  - Optional player-support feature that remembers contacted objective points and
+    shows subtle directional arrows to those remembered locations.
+- Settings:
+  - New dedicated setting (not merged into existing `car_hint`).
+  - Default is `OFF`.
+- Tracked targets:
+  - Car and buddy are always eligible.
+  - Fuel station is also eligible on stages where it appears.
+  - Fuel station arrow is hidden while the player is carrying a full fuel can.
+- Registration timing:
+  - Register at interaction success events (not raw collision overlap).
+  - Stored as location records (world position), not live target-follow tracking.
+- Multiple records:
+  - If multiple targets are registered, render one arrow per record.
+- Visibility and priority:
+  - Render as thinner, less prominent arrows than the existing timed hint arrow.
+  - If existing timed hint (`car_hint`) is currently visible, contact-memory arrows
+    are hidden for that frame.
+- Invalidation:
+  - Remove record when the corresponding target is removed/replaced (despawn, death,
+    respawn replacement).
+- Reset scope:
+  - Reset all records on game over.
+  - Retry starts fresh (no carry-over).
+
 ## Endurance and Ambient
 
 - `update_endurance_timer(...)` manages endurance progress and dawn transition.

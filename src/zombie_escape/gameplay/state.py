@@ -98,6 +98,7 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
         ambient_palette_key=initial_palette_key,
         hint_expires_at=0,
         hint_target_type=None,
+        contact_hint_records=[],
         buddy_rescued=0,
         buddy_onboard=0,
         buddy_merged_count=0,

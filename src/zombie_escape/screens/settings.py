@@ -191,6 +191,13 @@ class SettingsScreenRunner:
                         "left_label": tr("common.on"),
                         "right_label": tr("common.off"),
                     },
+                    {
+                        "label": tr("settings.rows.contact_memory_hint"),
+                        "path": ("contact_memory_hint", "enabled"),
+                        "easy_value": False,
+                        "left_label": tr("common.off"),
+                        "right_label": tr("common.on"),
+                    },
                 ],
             },
             {

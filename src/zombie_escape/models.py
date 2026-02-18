@@ -158,6 +158,7 @@ class ProgressState:
     ambient_palette_key: str
     hint_expires_at: int
     hint_target_type: str | None
+    contact_hint_records: list["ContactHintRecord"]
     buddy_rescued: int
     buddy_onboard: int
     buddy_merged_count: int
@@ -192,6 +193,15 @@ class TimedMessage:
     clear_on_input: bool
     color: tuple[int, int, int] | None
     align: str
+
+
+@dataclass
+class ContactHintRecord:
+    """Persistent hint anchor for contacted objectives."""
+
+    kind: str
+    target_id: int
+    anchor_pos: tuple[int, int]
 
 
 @dataclass

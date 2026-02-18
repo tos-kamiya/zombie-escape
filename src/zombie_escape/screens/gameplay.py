@@ -158,6 +158,78 @@ def _resolve_hint_target_position(
     return None
 
 
+def _resolve_contact_memory_hint_targets(
+    *,
+    game_data: Any,
+    hint_target: tuple[int, int] | None,
+    enabled: bool,
+) -> list[tuple[int, int]]:
+    state = game_data.state
+    records = list(state.contact_hint_records)
+    if not records:
+        return []
+
+    active_car = game_data.car if game_data.car and game_data.car.alive() else None
+    cars_by_id: dict[int, Any] = {}
+    if active_car:
+        cars_by_id[id(active_car)] = active_car
+    for parked in game_data.waiting_cars:
+        if parked and parked.alive():
+            cars_by_id[id(parked)] = parked
+
+    buddies_by_id: dict[int, Any] = {}
+    for survivor in game_data.groups.survivor_group:
+        if (
+            survivor.alive()
+            and getattr(survivor, "is_buddy", False)
+            and not getattr(survivor, "rescued", False)
+        ):
+            buddies_by_id[id(survivor)] = survivor
+
+    station = (
+        game_data.fuel_station
+        if game_data.fuel_station and game_data.fuel_station.alive()
+        else None
+    )
+    station_id = id(station) if station else None
+
+    filtered_records = []
+    targets: list[tuple[int, int]] = []
+    for record in records:
+        kind = record.kind
+        if kind == "car":
+            is_valid = record.target_id in cars_by_id
+        elif kind == "buddy":
+            is_valid = record.target_id in buddies_by_id
+        elif kind == "fuel_station":
+            is_valid = station_id is not None and record.target_id == station_id
+        else:
+            is_valid = False
+
+        if not is_valid:
+            continue
+
+        filtered_records.append(record)
+        if not enabled or hint_target is not None:
+            continue
+        if (
+            kind == "fuel_station"
+            and state.fuel_progress == FuelProgress.FULL_CAN
+        ):
+            continue
+        if kind == "buddy":
+            buddy = buddies_by_id.get(record.target_id)
+            if buddy is not None:
+                targets.append((int(buddy.rect.centerx), int(buddy.rect.centery)))
+                continue
+        targets.append(record.anchor_pos)
+
+    if len(filtered_records) != len(state.contact_hint_records):
+        state.contact_hint_records = filtered_records
+
+    return targets
+
+
 def _spawn_stage_items(
     *,
     game_data: Any,
@@ -697,55 +769,21 @@ class GameplayScreenRunner:
     def _draw_game_frame(self, current_fps: float) -> None:
         assert self.game_data is not None
         game_data = self.game_data
-        state = game_data.state
         player = game_data.player
         if player is None:
             raise ValueError("Player missing from game data")
 
-        car_hint_conf = self.config.get("car_hint", {})
-        hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
-        elapsed_ms = state.clock.elapsed_ms
-        fuel_progress = state.fuel_progress
-        hint_enabled = (
-            car_hint_conf.get("enabled", True) and not self.stage.endurance_stage
-        )
-        hint_target = None
+        hint_target = self._resolve_current_hint_target()
         hint_color = YELLOW
-        hint_expires_at = state.hint_expires_at
-        hint_target_type = state.hint_target_type
-        active_car = game_data.car if game_data.car and game_data.car.alive() else None
-
-        if hint_enabled:
-            target_type = _resolve_hint_target_type(
-                stage=self.stage,
-                fuel_progress=fuel_progress,
-                game_data=game_data,
-                player_in_car=player.in_car,
-                active_car=active_car,
-                report_internal_error_once=self._report_internal_error_once,
-            )
-            if target_type != hint_target_type:
-                state.hint_target_type = target_type
-                state.hint_expires_at = elapsed_ms + hint_delay if target_type else 0
-                hint_expires_at = state.hint_expires_at
-
-            if (
-                target_type
-                and hint_expires_at
-                and elapsed_ms >= hint_expires_at
-                and not player.in_car
-            ):
-                hint_target_raw = _resolve_hint_target_position(
-                    target_type=target_type,
-                    game_data=game_data,
-                    active_car=active_car,
-                    player_pos=(player.x, player.y),
-                )
-                hint_target = (
-                    (int(hint_target_raw[0]), int(hint_target_raw[1]))
-                    if hint_target_raw
-                    else None
-                )
+        contact_hint_targets: list[tuple[int, int]] = []
+        contact_hint_enabled = self.config.get("contact_memory_hint", {}).get(
+            "enabled", False
+        )
+        contact_hint_targets = _resolve_contact_memory_hint_targets(
+            game_data=game_data,
+            hint_target=hint_target,
+            enabled=contact_hint_enabled,
+        )
 
         draw(
             self.render_assets,
@@ -753,6 +791,7 @@ class GameplayScreenRunner:
             game_data,
             config=self.config,
             hint_target=hint_target,
+            contact_hint_targets=contact_hint_targets,
             hint_color=hint_color,
             fps=current_fps,
         )
@@ -785,11 +824,22 @@ class GameplayScreenRunner:
                 screen_height=self.screen_height,
             )
         else:
+            hint_target = self._resolve_current_hint_target()
+            contact_hint_enabled = self.config.get("contact_memory_hint", {}).get(
+                "enabled", False
+            )
+            contact_hint_targets = _resolve_contact_memory_hint_targets(
+                game_data=self.game_data,
+                hint_target=hint_target,
+                enabled=contact_hint_enabled,
+            )
             draw(
                 self.render_assets,
                 self.screen,
                 self.game_data,
                 config=self.config,
+                hint_target=hint_target,
+                contact_hint_targets=contact_hint_targets,
                 fps=current_fps,
             )
         if self.show_pause_overlay:
@@ -835,6 +885,53 @@ class GameplayScreenRunner:
             toggle_fullscreen(game_data=self.game_data)
             return None
         return None
+
+    def _resolve_current_hint_target(self) -> tuple[int, int] | None:
+        assert self.game_data is not None
+        game_data = self.game_data
+        state = game_data.state
+        player = game_data.player
+        if player is None:
+            return None
+        car_hint_conf = self.config.get("car_hint", {})
+        hint_delay = car_hint_conf.get("delay_ms", CAR_HINT_DELAY_MS_DEFAULT)
+        elapsed_ms = state.clock.elapsed_ms
+        hint_expires_at = state.hint_expires_at
+        hint_target_type = state.hint_target_type
+        active_car = game_data.car if game_data.car and game_data.car.alive() else None
+        hint_enabled = (
+            car_hint_conf.get("enabled", True) and not self.stage.endurance_stage
+        )
+        if not hint_enabled:
+            return None
+        target_type = _resolve_hint_target_type(
+            stage=self.stage,
+            fuel_progress=state.fuel_progress,
+            game_data=game_data,
+            player_in_car=player.in_car,
+            active_car=active_car,
+            report_internal_error_once=self._report_internal_error_once,
+        )
+        if target_type != hint_target_type:
+            state.hint_target_type = target_type
+            state.hint_expires_at = elapsed_ms + hint_delay if target_type else 0
+            hint_expires_at = state.hint_expires_at
+        if (
+            not target_type
+            or not hint_expires_at
+            or elapsed_ms < hint_expires_at
+            or player.in_car
+        ):
+            return None
+        hint_target_raw = _resolve_hint_target_position(
+            target_type=target_type,
+            game_data=game_data,
+            active_car=active_car,
+            player_pos=(player.x, player.y),
+        )
+        if not hint_target_raw:
+            return None
+        return (int(hint_target_raw[0]), int(hint_target_raw[1]))
 
     def _enter_manual_pause(self) -> None:
         self.paused_manual = True

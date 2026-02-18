@@ -54,6 +54,7 @@ def draw(
     *,
     config: dict[str, Any],
     hint_target: tuple[int, int] | None = None,
+    contact_hint_targets: list[tuple[int, int]] | None = None,
     hint_color: tuple[int, int, int] | None = None,
     fps: float | None = None,
 ) -> None:
@@ -194,6 +195,7 @@ def draw(
         assets,
         player,
         hint_target,
+        contact_hint_targets=contact_hint_targets,
         hint_color=hint_color,
         stage=stage,
         flashlight_count=flashlight_count,

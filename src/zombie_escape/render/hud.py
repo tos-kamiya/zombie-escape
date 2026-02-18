@@ -706,27 +706,75 @@ def _draw_hint_arrow(
     pygame.draw.polygon(screen, color, [tip, left, right])
 
 
+def _draw_subtle_hint_arrow(
+    screen: surface.Surface,
+    camera: Any,
+    assets: RenderAssets,
+    player: Any,
+    target_pos: tuple[int, int],
+    *,
+    color: tuple[int, int, int] | None = None,
+    ring_radius: float | None = None,
+) -> None:
+    """Draw a thin, low-prominence directional hint arrow."""
+    color = color or LIGHT_GRAY
+    player_screen = camera.apply(player).center
+    target_rect = pygame.Rect(target_pos[0], target_pos[1], 0, 0)
+    target_screen = camera.apply_rect(target_rect).center
+    dx = target_screen[0] - player_screen[0]
+    dy = target_screen[1] - player_screen[1]
+    dist = math.hypot(dx, dy)
+    if dist < assets.fov_radius * 0.7:
+        return
+    dir_x = dx / dist
+    dir_y = dy / dist
+    ring_radius = (
+        ring_radius
+        if ring_radius is not None
+        else assets.fov_radius * 0.5 * assets.fog_radius_scale
+    )
+    center_x = player_screen[0] + dir_x * ring_radius
+    center_y = player_screen[1] + dir_y * ring_radius
+    normal_x = -dir_y
+    normal_y = dir_x
+    tip = (center_x + dir_x * 5, center_y + dir_y * 5)
+    back = (center_x - dir_x * 4, center_y - dir_y * 4)
+    left = (back[0] + normal_x * 3, back[1] + normal_y * 3)
+    right = (back[0] - normal_x * 3, back[1] - normal_y * 3)
+    pygame.draw.polygon(screen, color, [tip, left, right], width=1)
+
+
 def _draw_hint_indicator(
     screen: surface.Surface,
     camera: Any,
     assets: RenderAssets,
     player: Any,
     hint_target: tuple[int, int] | None,
+    contact_hint_targets: list[tuple[int, int]] | None = None,
     *,
     hint_color: tuple[int, int, int],
     stage: Stage | None,
     flashlight_count: int,
 ) -> None:
-    if not hint_target:
-        return
     current_fov_scale = _get_fog_scale(assets, flashlight_count)
     hint_ring_radius = assets.fov_radius * 0.5 * current_fov_scale
-    _draw_hint_arrow(
-        screen,
-        camera,
-        assets,
-        player,
-        hint_target,
-        color=hint_color,
-        ring_radius=hint_ring_radius,
-    )
+    if hint_target:
+        _draw_hint_arrow(
+            screen,
+            camera,
+            assets,
+            player,
+            hint_target,
+            color=hint_color,
+            ring_radius=hint_ring_radius,
+        )
+    for target_pos in contact_hint_targets or []:
+        _draw_subtle_hint_arrow(
+            screen,
+            camera,
+            assets,
+            player,
+            target_pos,
+            color=LIGHT_GRAY,
+            ring_radius=hint_ring_radius,
+        )
