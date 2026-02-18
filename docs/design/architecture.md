@@ -28,7 +28,8 @@
   - `world_tiles.py`: playfield and footprint rendering.
   - `entity_layer.py`: sprite and lineformer marker rendering.
   - `fog.py`: fog cache and fog compositing.
-  - `fx.py`: falling/decay/fade visual effects.
+  - `fx.py`: falling/decay/fade visual effects compositing.
+  - `decay_effects.py`: decay effect generation/state update (grayscale and burned variants).
   - `text_overlay.py`: wrapped text and pause overlay rendering.
   - `hud.py`: objective and status overlays.
   - `shadows.py`: shadow generation.

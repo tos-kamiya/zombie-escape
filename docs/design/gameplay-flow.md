@@ -10,6 +10,9 @@
 - Visual FX intent:
   - Burn-out uses a short death/fall-like effect path for consistency with existing
     transient disappearance effects.
+  - Runtime load control: decay masks are prebuilt at startup in three variants for
+    each tone (`grayscale` / `burned`), then one variant is chosen per effect via
+    Python's `random` module (separate from deterministic gameplay RNG).
 - Spawn/item rule:
   - Runtime item placement candidates are derived from `item_spawn_cells`, which
     will already exclude fire floor cells.
