@@ -51,6 +51,8 @@ Initial placement policy:
 - Target count uses `round(candidate_count * spawn_rate)`.
 - If `spawn_rate > 0` and the rounded result is `0`, one spawn is guaranteed
   (when candidates exist).
+- Patrol bots use zero spawn jitter for initial placement, so they stay on
+  human-walkable cell centers.
 - Initial zombie kind composition uses stage ratios to build a fixed-count plan
   for that initial batch, then shuffles the plan before assignment.
 
