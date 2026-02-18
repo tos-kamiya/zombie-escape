@@ -1,6 +1,11 @@
 # Stage 6+ Additions
 
-Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/right to select later stages.
+The stage list is paged on the title screen. Use left/right to switch pages.
+
+Unlock rule for later pages:
+- Clear all Stages 1-5 to unlock the Stages 6-15 page.
+- Clear at least 5 stages on a page to unlock the next page.
+- This repeats for later pages (for example, 5 clears on Stages 6-15 unlocks Stages 16-25).
 
 ## Control Recommendation (Stage 21+)
 

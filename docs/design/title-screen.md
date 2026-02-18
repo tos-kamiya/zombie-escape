@@ -49,6 +49,13 @@ Icon order is fixed by category:
 ## Stage List Paging
 
 - Stage pages can be switched by keyboard/gamepad left-right input.
+- Page unlock rule:
+  - Page 1 (Stages 1-5) is always available.
+  - To unlock the next page, clear at least 5 stages on the current page.
+  - This means:
+    - Clear all Stages 1-5 to unlock the Stages 6-15 page.
+    - Clear 5 or more stages on the Stages 6-15 page to unlock the Stages 16-25 page.
+    - The same rule repeats for later pages.
 - Exception: when the selected resource row is `Display Mode/Window Size`,
   left-right input changes window scale instead of switching stage pages.
 - The `STAGES` header also shows mouse-clickable left/right triangle buttons when paging in that direction is possible.

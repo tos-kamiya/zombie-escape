@@ -326,10 +326,15 @@ class TitleScreenController:
     def _page_available(self, page_index: int) -> bool:
         if page_index <= 0:
             return True
-        required = self.stage_options_all[: self.first_page_size]
-        return all(
-            self.stage_progress.get(option["stage"].id, 0) > 0 for option in required
+        if page_index >= len(self.stage_pages):
+            return False
+        prev_page_index = page_index - 1
+        clears_on_prev_page = sum(
+            self.stage_progress.get(option["stage"].id, 0) > 0
+            for option in self.stage_pages[prev_page_index]
         )
+        required_clears = min(5, len(self.stage_pages[prev_page_index]))
+        return clears_on_prev_page >= required_clears
 
     def _page_index_for_stage(self, stage_idx: int) -> int:
         if stage_idx < self.first_page_size:
@@ -448,7 +453,14 @@ class TitleScreenController:
 
             stage_count = len(self.stage_options)
             stage_header_text = tr("menu.sections.stage_select")
-            show_page_arrows = len(self.stage_pages) > 1 and self._page_available(1)
+            can_go_left = self.current_page > 0
+            can_go_right = (
+                self.current_page < len(self.stage_pages) - 1
+                and self._page_available(self.current_page + 1)
+            )
+            show_page_arrows = len(self.stage_pages) > 1 and (
+                can_go_left or can_go_right
+            )
             section_size = font_settings.scaled_size(11)
             section_font = _get_font(section_size)
             header_width, header_height, _ = _measure_text(
@@ -471,11 +483,8 @@ class TitleScreenController:
                 mouse_pos = pygame.mouse.get_pos()
                 mouse_focused = pygame.mouse.get_focused()
                 header_mid_y = section_top + header_height // 2
-                left_enabled = self.current_page > 0
-                right_enabled = (
-                    self.current_page < len(self.stage_pages) - 1
-                    and self._page_available(self.current_page + 1)
-                )
+                left_enabled = can_go_left
+                right_enabled = can_go_right
                 left_cx = list_column_x - tri_gap
                 right_cx = list_column_x + header_width + tri_gap
                 thick = 2
