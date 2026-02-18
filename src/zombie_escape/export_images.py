@@ -26,7 +26,6 @@ from .entities import (
 )
 from .entities_constants import (
     INTERNAL_WALL_BEVEL_DEPTH,
-    PATROL_BOT_COLLISION_RADIUS,
     STEEL_BEAM_HEALTH,
     ZOMBIE_RADIUS,
     MovingFloorDirection,
@@ -37,8 +36,8 @@ from .level_constants import DEFAULT_CELL_SIZE
 from .models import FallingEntity, FuelProgress, Stage
 from .render.core import _draw_entities, _draw_falling_fx, _draw_play_area
 from .render_constants import build_render_assets
-from .render.shadows import _get_shadow_layer, draw_single_entity_shadow_by_mode
 from .render_constants import ENTITY_SHADOW_ALPHA, ENTITY_SHADOW_EDGE_SOFTNESS
+from .render.shadows import _get_shadow_layer, draw_single_entity_shadow_by_mode
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
 __all__ = ["export_images"]
@@ -184,16 +183,18 @@ def _render_studio_snapshot(
         for sprite in sprites:
             if not sprite.alive():
                 continue
-            if isinstance(sprite, PatrolBot):
-                shadow_radius = max(1, int(PATROL_BOT_COLLISION_RADIUS * 1.2))
-                offset_scale = 1 / 3
+            shadow_radius_raw = getattr(sprite, "shadow_radius", None)
+            if shadow_radius_raw is not None:
+                shadow_radius = max(1, int(shadow_radius_raw))
             else:
-                sprite_radius = getattr(sprite, "radius", None)
-                if sprite_radius is None:
-                    shadow_radius = max(1, int(min(sprite.rect.width, sprite.rect.height) * 0.5 * 1.2))
+                collision_radius = getattr(sprite, "collision_radius", None)
+                if collision_radius is not None:
+                    shadow_radius = max(1, int(float(collision_radius) * 1.2))
                 else:
-                    shadow_radius = max(1, int(sprite_radius * 1.8))
-                offset_scale = 1.0
+                    shadow_radius = max(
+                        1, int(min(sprite.rect.width, sprite.rect.height) * 0.5 * 1.2)
+                    )
+            offset_scale = float(getattr(sprite, "shadow_offset_scale", 1.0))
             drew_shadow |= draw_single_entity_shadow_by_mode(
                 shadow_layer,
                 game_data.camera.apply_rect,
