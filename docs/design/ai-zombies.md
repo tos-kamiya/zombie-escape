@@ -21,7 +21,7 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
   - Compares local zombie counts in 3-cell side bands (up/down/left/right) around its tile and moves toward lower-density sides.
   - Can move in 8 directions when both axes have a lower-density side.
   - Excludes trapped zombies and zombie dogs from its local counting.
-  - If player/survivor target is within short sight range (`ZOMBIE_TRACKER_SIGHT_RANGE`), temporarily switches to direct chase.
+  - Does not switch to direct chase; player context is treated as another local-spacing input.
 - Zombie dog
   - State-based behavior (`WANDER`, `CHARGE`, `CHASE`).
   - When `friendliness_max > 0`, can run friendly-orbit behavior and later fall back to feral states.
@@ -89,6 +89,9 @@ To avoid over-stacking on the same footprint lane:
   - down-side cells: immediate lower row (`y+1`, `x-1..x+1`)
   - left-side cells: immediate left column (`x-1`, `y-1..y+1`)
   - right-side cells: immediate right column (`x+1`, `y-1..y+1`)
+- Counting weights:
+  - nearby zombie (non-trapped, non-dog): weight `3`
+  - player context (player position, or active car position while in-car): weight `1`
 - Movement choice:
   - Y axis: move toward the side with fewer zombies (`up` or `down`) if counts differ.
   - X axis: move toward the side with fewer zombies (`left` or `right`) if counts differ.
