@@ -16,7 +16,7 @@ from ..render_constants import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
-    from ..gameplay.decay_effects import DecayingEntityEffect
+    from .decay_effects import DecayingEntityEffect
 
 
 def _draw_fade_in_overlay(screen: surface.Surface, state: GameData | Any) -> None:
@@ -156,4 +156,5 @@ def _draw_decay_fx(
     if not decay_effects:
         return
     for effect in decay_effects:
-        screen.blit(effect.surface, apply_rect(effect.rect))
+        draw_surface = effect.build_draw_surface()
+        screen.blit(draw_surface, apply_rect(effect.rect))

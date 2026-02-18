@@ -41,7 +41,7 @@ from ..entities.movement_helpers import pitfall_target
 from ..world_grid import WallIndex, apply_cell_edge_nudge, walls_for_radius
 from .moving_floor import get_floor_overlap_rect, get_moving_floor_drift
 from .constants import LAYER_PLAYERS, MAX_ZOMBIES
-from .decay_effects import DecayingEntityEffect, update_decay_effects
+from ..render.decay_effects import DecayingEntityEffect, update_decay_effects
 from .spawn import spawn_weighted_zombie, update_falling_zombies
 from .spatial_index import SpatialKind
 from .survivors import update_survivors
@@ -674,7 +674,11 @@ def update_entities(
                 flashlight_count=game_data.state.flashlight_count,
             ):
                 game_data.state.decay_effects.append(
-                    DecayingEntityEffect(zombie.image, zombie.rect.center)
+                    DecayingEntityEffect(
+                        zombie.image,
+                        zombie.rect.center,
+                        tone="burned",
+                    )
                 )
             continue
 

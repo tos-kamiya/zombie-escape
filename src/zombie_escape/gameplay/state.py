@@ -26,7 +26,7 @@ from ..screen_constants import FPS
 from ..entities import Camera
 from .ambient import _set_ambient_palette
 from .constants import INTRO_MESSAGE_DISPLAY_FRAMES
-from .decay_effects import prepare_decay_mask
+from ..render.decay_effects import prepare_decay_mask
 from .spatial_index import SPATIAL_INDEX_CELL_SIZE, SpatialIndex
 
 
