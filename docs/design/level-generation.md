@@ -8,9 +8,14 @@
 - Stage parameters:
   - `fire_floor_density`
   - `fire_floor_zones`
+  - `metal_floor_density`
+  - `metal_floor_zones`
 - Blueprint placement:
   - Fire floor supports both zone placement and density placement.
+  - Metal floor supports both zone placement and density placement.
   - Fire floor cells are reserved against spawn/item candidate placement.
+  - Stage-defined metal floor cells are placed before other hazards and are kept
+    from being replaced by pitfall/puddle/houseplant/reinforced-wall placement.
   - Item spawn candidates must exclude fire floor cells.
 - Adjacency decoration:
   - Orthogonally adjacent normal floor cells next to fire floors are converted to
