@@ -158,6 +158,8 @@ def generate_level_from_blueprint(
                 pitfall_zones=stage.pitfall_zones,
                 fire_floor_density=stage.fire_floor_density,
                 fire_floor_zones=stage.fire_floor_zones,
+                metal_floor_density=stage.metal_floor_density,
+                metal_floor_zones=stage.metal_floor_zones,
                 reinforced_wall_density=stage.reinforced_wall_density,
                 reinforced_wall_zones=stage.reinforced_wall_zones,
                 moving_floor_cells=base_moving_floor_cells,

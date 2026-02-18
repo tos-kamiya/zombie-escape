@@ -955,6 +955,64 @@ def _place_fire_floor_density(
         grid[y][x] = "F"
 
 
+def _place_metal_floor_zones(
+    grid: list[list[str]],
+    *,
+    metal_floor_zones: list[tuple[int, int, int, int]] | None = None,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Place zone-defined metal-floor cells on empty floor cells."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+
+    if not metal_floor_zones:
+        return
+    for col, row, width, height in metal_floor_zones:
+        if width <= 0 or height <= 0:
+            continue
+        start_x = max(0, col)
+        start_y = max(0, row)
+        end_x = min(cols, col + width)
+        end_y = min(rows, row + height)
+        for y in range(start_y, end_y):
+            for x in range(start_x, end_x):
+                if (x, y) in forbidden:
+                    continue
+                if grid[y][x] == ".":
+                    grid[y][x] = "m"
+
+
+def _place_metal_floor_density(
+    grid: list[list[str]],
+    *,
+    density: float,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Replace empty floor cells with metal floors based on density."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+
+    if density <= 0.0:
+        return
+    candidates = [
+        (x, y)
+        for y in range(1, rows - 1)
+        for x in range(1, cols - 1)
+        if (x, y) not in forbidden and grid[y][x] == "."
+    ]
+    selected = _select_cells_by_ratio(
+        candidates,
+        density,
+        feature_name="metal floor",
+    )
+    for x, y in selected:
+        grid[y][x] = "m"
+
+
 def _place_metal_adjacent_to_fire_floor(grid: list[list[str]]) -> None:
     """Convert floor cells adjacent to fire floors into metal floor cells."""
     cols, rows = len(grid[0]), len(grid)
@@ -1110,6 +1168,8 @@ def generate_random_blueprint(
     pitfall_zones: list[tuple[int, int, int, int]] | None = None,
     fire_floor_density: float = 0.0,
     fire_floor_zones: list[tuple[int, int, int, int]] | None = None,
+    metal_floor_density: float = 0.0,
+    metal_floor_zones: list[tuple[int, int, int, int]] | None = None,
     reserved_cells: set[tuple[int, int]] | None = None,
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] | None = None,
     fuel_count: int = 1,
@@ -1148,6 +1208,22 @@ def generate_random_blueprint(
                 grid[my][mx] = "<"
             elif direction == MovingFloorDirection.RIGHT:
                 grid[my][mx] = ">"
+
+    # Place zone-defined metal floors first to keep them from later hazard replacement.
+    if metal_floor_zones:
+        _place_metal_floor_zones(
+            grid,
+            metal_floor_zones=metal_floor_zones,
+            forbidden_cells=reserved_cells,
+        )
+        reserved_cells.update(
+            _expand_zone_cells(
+                metal_floor_zones,
+                grid_cols=cols,
+                grid_rows=rows,
+            )
+        )
+
     # Place zone-defined pitfalls
     if pitfall_zones:
         _place_pitfall_zones(
@@ -1370,6 +1446,13 @@ def generate_random_blueprint(
             f"WARNING: Unknown wall algorithm '{wall_algo}'. Falling back to 'default'."
         )
         wall_algo = "default"
+
+    # Place density-based pitfalls.
+    _place_metal_floor_density(
+        grid,
+        density=metal_floor_density,
+        forbidden_cells=reserved_cells,
+    )
 
     # Place density-based pitfalls.
     _place_pitfall_density(

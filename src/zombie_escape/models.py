@@ -260,6 +260,8 @@ class Stage:
     pitfall_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
     fire_floor_density: float = 0.0
     fire_floor_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
+    metal_floor_density: float = 0.0
+    metal_floor_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
     moving_floor_zones: dict[str, list[tuple[int, int, int, int]]] = field(
         default_factory=dict
     )
@@ -361,6 +363,7 @@ class Stage:
         # Collect all cells from different gimmicks
         pitfall_cells = _get_cells(self.pitfall_zones)
         fire_floor_cells = _get_cells(self.fire_floor_zones)
+        metal_floor_cells = _get_cells(self.metal_floor_zones)
         reinforced_cells = _get_cells(self.reinforced_wall_zones)
 
         floor_cells = set()
@@ -377,6 +380,9 @@ class Stage:
         )
         assert not (pitfall_cells & fire_floor_cells), (
             f"Stage {self.id}: Pitfall and Fire Floor zones overlap"
+        )
+        assert not (pitfall_cells & metal_floor_cells), (
+            f"Stage {self.id}: Pitfall and Metal Floor zones overlap"
         )
         assert not (pitfall_cells & plant_cells), (
             f"Stage {self.id}: Pitfall and Houseplant zones overlap"
@@ -398,6 +404,9 @@ class Stage:
         assert not (floor_cells & fire_floor_cells), (
             f"Stage {self.id}: Moving Floor and Fire Floor zones overlap"
         )
+        assert not (floor_cells & metal_floor_cells), (
+            f"Stage {self.id}: Moving Floor and Metal Floor zones overlap"
+        )
 
         # 3. Houseplant vs Puddle
         assert not (plant_cells & water_cells), (
@@ -406,11 +415,23 @@ class Stage:
         assert not (plant_cells & fire_floor_cells), (
             f"Stage {self.id}: Houseplant and Fire Floor zones overlap"
         )
+        assert not (plant_cells & metal_floor_cells), (
+            f"Stage {self.id}: Houseplant and Metal Floor zones overlap"
+        )
         assert not (water_cells & fire_floor_cells), (
             f"Stage {self.id}: Puddle and Fire Floor zones overlap"
         )
+        assert not (water_cells & metal_floor_cells), (
+            f"Stage {self.id}: Puddle and Metal Floor zones overlap"
+        )
         assert not (reinforced_cells & fire_floor_cells), (
             f"Stage {self.id}: Reinforced Wall and Fire Floor zones overlap"
+        )
+        assert not (reinforced_cells & metal_floor_cells), (
+            f"Stage {self.id}: Reinforced Wall and Metal Floor zones overlap"
+        )
+        assert not (fire_floor_cells & metal_floor_cells), (
+            f"Stage {self.id}: Fire Floor and Metal Floor zones overlap"
         )
 
     @property
