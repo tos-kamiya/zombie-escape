@@ -8,11 +8,6 @@ from pygame import surface
 from ..colors import YELLOW, get_environment_palette
 from ..models import FuelProgress, GameData
 from ..render_assets import RenderAssets
-from ..render_constants import (
-    ENTITY_SHADOW_ALPHA,
-    ENTITY_SHADOW_EDGE_SOFTNESS,
-    PLAYER_SHADOW_ALPHA_MULT,
-)
 from .entity_layer import _draw_entities, _draw_lineformer_train_markers
 from .fog import _draw_fog_of_war, prewarm_fog_overlays
 from .fx import _draw_decay_fx, _draw_fade_in_overlay, _draw_falling_fx
@@ -31,7 +26,6 @@ from .shadows import (
     _draw_wall_shadows,
     _get_shadow_layer,
     draw_entity_shadows_by_mode,
-    draw_single_entity_shadow_by_mode,
 )
 from .text_overlay import (
     blit_message,
@@ -108,13 +102,6 @@ def draw(
     )
     shadows_enabled = config.get("visual", {}).get("shadows", {}).get("enabled", True)
     if shadows_enabled:
-        patrol_bots = tuple(game_data.groups.patrol_bot_group)
-        exclude_shadow_entities: tuple[pygame.sprite.Sprite | None, ...]
-        if player.in_car:
-            exclude_shadow_entities = (player, active_car, *patrol_bots)
-        else:
-            exclude_shadow_entities = (player, *patrol_bots)
-
         dawn_shadow_mode = bool(stage and stage.endurance_stage and state.dawn_ready)
         lsp = (
             None if dawn_shadow_mode else (fov_target.rect.center if fov_target else None)
@@ -139,52 +126,10 @@ def draw(
             all_sprites,
             dawn_shadow_mode=dawn_shadow_mode,
             light_source_pos=light_source_pos,
-            exclude_entities=exclude_shadow_entities,
             outside_cells=outside_cells,
             cell_size=game_data.cell_size,
             flashlight_count=flashlight_count,
         )
-        if patrol_bots:
-            bot_alpha = max(1, int(ENTITY_SHADOW_ALPHA * 0.6))
-            for bot in patrol_bots:
-                if not bot.alive():
-                    continue
-                drew_shadow |= draw_single_entity_shadow_by_mode(
-                    shadow_layer,
-                    camera.apply_rect,
-                    entity=bot,
-                    dawn_shadow_mode=dawn_shadow_mode,
-                    light_source_pos=light_source_pos,
-                    outside_cells=outside_cells,
-                    cell_size=game_data.cell_size,
-                    alpha=bot_alpha,
-                    edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
-                )
-        player_shadow_alpha = max(
-            1, int(ENTITY_SHADOW_ALPHA * PLAYER_SHADOW_ALPHA_MULT)
-        )
-        if player.in_car:
-            drew_shadow |= draw_single_entity_shadow_by_mode(
-                shadow_layer,
-                camera.apply_rect,
-                entity=active_car,
-                dawn_shadow_mode=dawn_shadow_mode,
-                light_source_pos=light_source_pos,
-                outside_cells=outside_cells,
-                cell_size=game_data.cell_size,
-                alpha=player_shadow_alpha,
-            )
-        else:
-            drew_shadow |= draw_single_entity_shadow_by_mode(
-                shadow_layer,
-                camera.apply_rect,
-                entity=player,
-                dawn_shadow_mode=dawn_shadow_mode,
-                light_source_pos=light_source_pos,
-                outside_cells=outside_cells,
-                cell_size=game_data.cell_size,
-                alpha=player_shadow_alpha,
-            )
         if drew_shadow:
             screen.blit(shadow_layer, (0, 0))
     _draw_footprints(

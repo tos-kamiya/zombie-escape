@@ -221,7 +221,6 @@ def _draw_entity_shadows(
     all_sprites: sprite.LayeredUpdates,
     *,
     light_source_pos: tuple[float, float] | None,
-    exclude_entities: tuple[pygame.sprite.Sprite | None, ...] = (),
     outside_cells: set[tuple[int, int]] | None,
     cell_size: int,
     flashlight_count: int = 0,
@@ -239,8 +238,6 @@ def _draw_entity_shadows(
     drew = False
     for entity in all_sprites:
         if not entity.alive():
-            continue
-        if any(entity is excluded for excluded in exclude_entities if excluded is not None):
             continue
         radius_raw = getattr(entity, "shadow_radius", None)
         if radius_raw is None:
@@ -298,7 +295,6 @@ def _draw_entity_drop_shadows(
     apply_rect: RectTransformer,
     all_sprites: sprite.LayeredUpdates,
     *,
-    exclude_entities: tuple[pygame.sprite.Sprite | None, ...] = (),
     outside_cells: set[tuple[int, int]] | None,
     cell_size: int,
     flashlight_count: int = 0,
@@ -313,8 +309,6 @@ def _draw_entity_drop_shadows(
     drew = False
     for entity in all_sprites:
         if not entity.alive():
-            continue
-        if any(entity is excluded for excluded in exclude_entities if excluded is not None):
             continue
         radius_raw = getattr(entity, "shadow_radius", None)
         if radius_raw is None:
@@ -362,7 +356,6 @@ def draw_entity_shadows_by_mode(
     *,
     dawn_shadow_mode: bool,
     light_source_pos: tuple[float, float] | None,
-    exclude_entities: tuple[pygame.sprite.Sprite | None, ...] = (),
     outside_cells: set[tuple[int, int]] | None,
     cell_size: int,
     flashlight_count: int = 0,
@@ -373,7 +366,6 @@ def draw_entity_shadows_by_mode(
             shadow_layer,
             apply_rect,
             all_sprites,
-            exclude_entities=exclude_entities,
             outside_cells=outside_cells,
             cell_size=cell_size,
             flashlight_count=flashlight_count,
@@ -384,7 +376,6 @@ def draw_entity_shadows_by_mode(
         apply_rect,
         all_sprites,
         light_source_pos=light_source_pos,
-        exclude_entities=exclude_entities,
         outside_cells=outside_cells,
         cell_size=cell_size,
         flashlight_count=flashlight_count,
