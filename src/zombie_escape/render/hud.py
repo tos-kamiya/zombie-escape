@@ -116,14 +116,24 @@ def build_zombie_debug_counts_text(
     tracker = sum(1 for kind in kinds if kind == ZombieKind.TRACKER)
     wall = sum(1 for kind in kinds if kind == ZombieKind.WALL_HUGGER)
     lineformer = sum(1 for kind in kinds if kind == ZombieKind.LINEFORMER)
+    solitary = sum(1 for kind in kinds if kind == ZombieKind.SOLITARY)
     marker_count = max(0, int(lineformer_marker_count or 0))
     lineformer_total = lineformer + marker_count
     dog_count = sum(1 for kind in kinds if kind == ZombieKind.DOG)
+    nimble_dog_count = sum(
+        1
+        for z in zombies
+        if getattr(z, "kind", None) == ZombieKind.DOG
+        and str(getattr(z, "variant", "")) in {"nimble", "ZombieDogVariant.NIMBLE"}
+    )
     trapped_count = sum(1 for z in zombies if z.__class__.__name__ == "TrappedZombie")
-    normal = max(0, total - tracker - wall - lineformer - dog_count - trapped_count)
+    normal = max(
+        0, total - tracker - wall - lineformer - solitary - dog_count - trapped_count
+    )
     debug_counts = (
         f"Z:{total} N:{normal} T:{tracker} W:{wall} "
-        f"L:{lineformer}({lineformer_total}) D:{dog_count} P:{trapped_count}"
+        f"L:{lineformer}({lineformer_total}) S:{solitary} "
+        f"D:{dog_count} DN:{nimble_dog_count} P:{trapped_count}"
     )
     if falling_spawn_carry is not None:
         debug_counts = f"{debug_counts} C:{max(0, falling_spawn_carry)}"
