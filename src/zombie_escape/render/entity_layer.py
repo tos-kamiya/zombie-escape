@@ -5,7 +5,7 @@ import math
 import pygame
 from pygame import sprite, surface
 
-from ..colors import YELLOW
+from ..colors import BLACK, LIGHT_GRAY, YELLOW
 from ..entities_constants import ZOMBIE_RADIUS
 from ..render_assets import (
     build_zombie_directional_surfaces,
@@ -61,8 +61,8 @@ def _draw_fuel_indicator(
         fill_color = YELLOW
         border_color = (180, 160, 40)
     else:
-        fill_color = (235, 235, 235)
-        border_color = (180, 180, 180)
+        fill_color = LIGHT_GRAY
+        border_color = BLACK
     pygame.draw.rect(screen, fill_color, indicator_rect)
     pygame.draw.rect(screen, border_color, indicator_rect, width=1)
 
