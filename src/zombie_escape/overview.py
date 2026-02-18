@@ -37,6 +37,7 @@ from .localization import get_font_settings
 from .models import Footprint, GameData
 from .render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
 from .render_constants import (
+    FIRE_FLOOR_FLAME_COLORS,
     LINEFORMER_MARKER_OVERVIEW_COLOR,
     MOVING_FLOOR_OVERVIEW_COLOR,
     TRAPPED_ZOMBIE_OVERVIEW_COLOR,
@@ -141,6 +142,7 @@ def draw_level_overview(
     lineformer_trains: "LineformerTrainManager | None" = None,
     fall_spawn_cells: set[tuple[int, int]] | None = None,
     moving_floor_cells: dict[tuple[int, int], object] | None = None,
+    fire_floor_cells: set[tuple[int, int]] | None = None,
     puddle_cells: set[tuple[int, int]] | None = None,
     zombie_contaminated_cells: set[tuple[int, int]] | None = None,
     palette_key: str | None = None,
@@ -190,6 +192,25 @@ def draw_level_overview(
                         cell_size,
                     ),
                 )
+        if fire_floor_cells:
+            fire_diamond = tuple(max(0, int(channel * 0.35)) for channel in FIRE_FLOOR_FLAME_COLORS[0])
+            for x, y in fire_floor_cells:
+                cell_rect = pygame.Rect(
+                    x * cell_size,
+                    y * cell_size,
+                    cell_size,
+                    cell_size,
+                )
+                inset = max(1, int(cell_size * 0.22))
+                cx = cell_rect.centerx
+                cy = cell_rect.centery
+                diamond = [
+                    (cx, cell_rect.top + inset),
+                    (cell_rect.right - inset, cy),
+                    (cx, cell_rect.bottom - inset),
+                    (cell_rect.left + inset, cy),
+                ]
+                pygame.draw.polygon(surface, fire_diamond, diamond)
         if puddle_cells:
             puddle_wave_color = get_puddle_wave_color(alpha=None)
             for x, y in puddle_cells:
@@ -406,6 +427,7 @@ def draw_debug_overview(
         lineformer_trains=game_data.lineformer_trains,
         fall_spawn_cells=game_data.layout.fall_spawn_cells,
         moving_floor_cells=game_data.layout.moving_floor_cells,
+        fire_floor_cells=game_data.layout.fire_floor_cells,
         puddle_cells=game_data.layout.puddle_cells,
         zombie_contaminated_cells=game_data.layout.zombie_contaminated_cells,
         palette_key=game_data.state.ambient_palette_key,
