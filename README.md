@@ -56,7 +56,6 @@ At the title screen you can pick a stage:
 - **Stage 5: Survive Until Dawn** — cars are unusable. Survive until sunrise, then leave on foot through an existing exterior opening.
 
 Stages 6+ unlock after clearing Stages 1–5. On the title screen, use left/right to select later stages.
-Open the Stage 6+ description: [docs/stages-6plus.md](docs/stages-6plus.md)
 
 **Stage names are red until cleared** and turn white after at least one clear. Cleared stage names also show icons for characters/items that appear in that stage.
 
