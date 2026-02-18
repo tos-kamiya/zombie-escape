@@ -101,7 +101,7 @@ Initial placement policy:
   - Direct pickup to full fuel state.
 - Any fuel-state transition clears existing fuel hints.
 
-## INPROGRESS: Contact-Memory Guide Arrows
+## Contact-Memory Guide Arrows
 
 - Goal:
   - Optional player-support feature that remembers contacted objective points and
@@ -115,16 +115,23 @@ Initial placement policy:
   - Fuel station arrow is hidden while the player is carrying a full fuel can.
 - Registration timing:
   - Register at interaction success events (not raw collision overlap).
-  - Stored as location records (world position), not live target-follow tracking.
+  - Records keep target identity and anchor position.
+- Runtime target resolution:
+  - Buddy uses live position each frame while the record is valid.
+  - Car/fuel-station use remembered anchor positions.
 - Multiple records:
-  - If multiple targets are registered, render one arrow per record.
+  - If multiple targets are registered, render one marker per record.
 - Visibility and priority:
-  - Render as thinner, less prominent arrows than the existing timed hint arrow.
+  - Contact markers are visible in both gameplay and paused gameplay views.
+  - Marker style:
+    - Buddy: hollow white circle marker.
+    - Car/Fuel station: hollow subtle triangle marker.
   - If existing timed hint (`car_hint`) is currently visible, contact-memory arrows
     are hidden for that frame.
 - Invalidation:
   - Remove record when the corresponding target is removed/replaced (despawn, death,
     respawn replacement).
+  - Buddy records are also removed when buddy is force-relocated.
 - Reset scope:
   - Reset all records on game over.
   - Retry starts fresh (no carry-over).
