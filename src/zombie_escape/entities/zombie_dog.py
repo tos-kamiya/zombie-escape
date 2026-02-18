@@ -44,6 +44,7 @@ from ..entities_constants import (
 from ..rng import get_rng
 from ..surface_effects import is_in_contaminated_cell, is_in_puddle_cell
 from ..render.entity_overlays import draw_paralyze_marker_overlay
+from ..render_constants import ENTITY_SHADOW_RADIUS_MULT
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_dog_directional_surfaces,
@@ -268,7 +269,9 @@ class ZombieDog(pygame.sprite.Sprite):
             on_carbonize=self._apply_carbonize_visuals,
         )
         self.collision_radius = float(self.radius)
-        self.shadow_radius = max(1, int(self.collision_radius * 1.8))
+        self.shadow_radius = max(
+            1, int(self.collision_radius * ENTITY_SHADOW_RADIUS_MULT)
+        )
         self.shadow_offset_scale = 1.0
 
     def _build_nimble_directional_images(

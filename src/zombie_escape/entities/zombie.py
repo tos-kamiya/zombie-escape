@@ -39,6 +39,7 @@ from ..render.entity_overlays import (
     apply_zombie_kind_overlay,
     draw_paralyze_marker_overlay,
 )
+from ..render_constants import ENTITY_SHADOW_RADIUS_MULT
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_directional_surfaces,
@@ -165,7 +166,9 @@ class Zombie(pygame.sprite.Sprite):
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
         self.collision_radius = float(self.radius)
-        self.shadow_radius = max(1, int(self.collision_radius * 1.8))
+        self.shadow_radius = max(
+            1, int(self.collision_radius * ENTITY_SHADOW_RADIUS_MULT)
+        )
         self.shadow_offset_scale = 1.0
         self.solitary_eval_frame_counter = 0
         self.solitary_committed_move: tuple[int, int] | None = None
@@ -583,7 +586,9 @@ class TrappedZombie(pygame.sprite.Sprite):
         self.facing_bin = facing_bin
         self.radius = radius
         self.collision_radius = collision_radius
-        self.shadow_radius = max(1, int(self.collision_radius * 1.8))
+        self.shadow_radius = max(
+            1, int(self.collision_radius * ENTITY_SHADOW_RADIUS_MULT)
+        )
         self.shadow_offset_scale = 1.0
         self.is_trapped = True
 

@@ -26,7 +26,7 @@ from ..entities_constants import (
     SURVIVOR_RADIUS,
 )
 from ..render_assets import angle_bin_from_vector, build_survivor_directional_surfaces
-from ..render_constants import ANGLE_BINS
+from ..render_constants import ANGLE_BINS, ENTITY_SHADOW_RADIUS_MULT
 from ..world_grid import WallIndex, apply_cell_edge_nudge
 from .collisions import collide_circle_custom, spritecollideany_walls
 from .movement import _can_humanoid_jump, _get_jump_scale
@@ -75,7 +75,9 @@ class Survivor(pygame.sprite.Sprite):
         self.jump_duration = JUMP_DURATION_MS
         self.is_jumping = False
         self.collision_radius = float(self.radius)
-        self.shadow_radius = max(1, int(self.collision_radius * 1.8))
+        self.shadow_radius = max(
+            1, int(self.collision_radius * ENTITY_SHADOW_RADIUS_MULT)
+        )
         self.shadow_offset_scale = 1.0
 
     def set_following(self: Self) -> None:

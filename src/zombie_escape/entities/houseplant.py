@@ -8,14 +8,20 @@ from ..entities_constants import (
     HOUSEPLANT_COLLISION_RADIUS,
     HOUSEPLANT_RADIUS,
 )
-from ..render_constants import HOUSEPLANT_BODY_COLOR, HOUSEPLANT_SPIKE_COLOR
+from ..render_constants import (
+    ENTITY_SHADOW_RADIUS_MULT,
+    HOUSEPLANT_BODY_COLOR,
+    HOUSEPLANT_SPIKE_COLOR,
+)
 
 class SpikyHouseplant(pygame.sprite.Sprite):
     def __init__(self, x: int, y: int):
         super().__init__()
         self.radius = HOUSEPLANT_RADIUS
         self.collision_radius = HOUSEPLANT_COLLISION_RADIUS
-        self.shadow_radius = max(1, int(self.collision_radius * 1.8))
+        self.shadow_radius = max(
+            1, int(self.collision_radius * ENTITY_SHADOW_RADIUS_MULT)
+        )
         self.shadow_offset_scale = 1.0
         self.health = HOUSEPLANT_HEALTH
         self.max_health = HOUSEPLANT_HEALTH

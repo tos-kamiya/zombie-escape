@@ -29,7 +29,7 @@ from ..render_assets import (
     build_player_directional_surfaces,
     build_zombie_directional_surfaces,
 )
-from ..render_constants import ANGLE_BINS
+from ..render_constants import ANGLE_BINS, PLAYER_SHADOW_RADIUS_MULT
 from ..world_grid import WallIndex
 from .collisions import collide_circle_custom, spritecollideany_walls
 from .movement import _can_humanoid_jump, _get_jump_scale
@@ -68,7 +68,7 @@ class Player(pygame.sprite.Sprite):
         self.jump_duration = JUMP_DURATION_MS
         self.is_jumping = False
         self.collision_radius = float(self.radius)
-        self.shadow_radius = max(1, int(self.collision_radius * 1.6))
+        self.shadow_radius = max(1, int(self.collision_radius * PLAYER_SHADOW_RADIUS_MULT))
         self.shadow_offset_scale = 1.0
         self.is_zombified_visual = False
 
