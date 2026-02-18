@@ -51,19 +51,28 @@ _README_URLS: dict[str, str] = {
     "en": "https://github.com/tos-kamiya/zombie-escape/blob/main/README.md",
     "ja": "https://github.com/tos-kamiya/zombie-escape/blob/main/README-ja_JP.md",
 }
-_STAGE6_URLS: dict[str, str] = {
-    "en": "https://github.com/tos-kamiya/zombie-escape/blob/main/docs/stages-6plus.md",
-    "ja": "https://github.com/tos-kamiya/zombie-escape/blob/main/docs/stages-6plus-ja_JP.md",
-}
 _UNCLEARED_STAGE_COLOR: tuple[int, int, int] = (220, 80, 80)
 
 
-def _open_readme_link(*, use_stage6: bool = False) -> None:
-    """Open the GitHub README or Stage 6+ guide for the active UI language."""
+def _stage_guide_url_for_page(*, page_index: int, language: str) -> str:
+    start_stage = 6 + max(0, page_index - 1) * 10
+    if language == "ja":
+        return (
+            "https://github.com/tos-kamiya/zombie-escape/blob/main/docs/"
+            f"stages-{start_stage}plus-ja_JP.md"
+        )
+    return (
+        "https://github.com/tos-kamiya/zombie-escape/blob/main/docs/"
+        f"stages-{start_stage}plus.md"
+    )
+
+
+def _open_readme_link(*, page_index: int = 0) -> None:
+    """Open the README (page 0) or a stage-page guide (pages 1+)."""
 
     language = get_language()
-    if use_stage6:
-        url = _STAGE6_URLS.get(language, _STAGE6_URLS["en"])
+    if page_index > 0:
+        url = _stage_guide_url_for_page(page_index=page_index, language=language)
     else:
         url = _README_URLS.get(language, _README_URLS["en"])
     try:
@@ -394,7 +403,7 @@ class TitleScreenController:
             adjust_menu_logical_size()
             return None
         if current["type"] == "readme":
-            _open_readme_link(use_stage6=self.current_page > 0)
+            _open_readme_link(page_index=self.current_page)
             return None
         if current["type"] == "quit":
             return ScreenTransition(
@@ -649,7 +658,9 @@ class TitleScreenController:
                     label = tr("menu.display_mode_window_size")
                 elif option["type"] == "readme":
                     label_key = (
-                        "menu.readme_stage6" if self.current_page > 0 else "menu.readme"
+                        "menu.readme_stage_group"
+                        if self.current_page > 0
+                        else "menu.readme"
                     )
                     label = f"> {tr(label_key)}"
                 else:
@@ -716,7 +727,7 @@ class TitleScreenController:
                 help_text = tr("menu.option_help.quit")
             elif current["type"] == "readme":
                 help_key = (
-                    "menu.option_help.readme_stage6"
+                    "menu.option_help.readme_stage_group"
                     if self.current_page > 0
                     else "menu.option_help.readme"
                 )

@@ -27,7 +27,7 @@
         "resources": "リソース"
       },
       "readme": "README/ライセンス",
-      "readme_stage6": "ステージ6以降の説明を開く",
+      "readme_stage_group": "このステージ群の説明を開く",
       "hints": {
         "navigate": "上下: 項目選択",
         "page_switch": "左右: ステージ群切替",
@@ -42,7 +42,7 @@
         "display_mode_window_size": "左右でウィンドウサイズ変更、Enter/Southでフルスクリーン切り替え。",
         "quit": "ゲームを終了します。",
         "readme": "GitHub の README ページをブラウザで開きます。ライセンス情報もここから確認できます",
-        "readme_stage6": "ステージ6以降の説明ページをブラウザで開きます。"
+        "readme_stage_group": "現在のステージ群の説明ページをブラウザで開きます。"
       }
     },
     "stages": {
@@ -207,17 +207,18 @@
         "name": "#31 ちょこまかゾンビ犬",
         "description": "突進する犬あり。ちょこまか走る犬あり。"
       },
-      "stage32": {
-        "name": "#32 トゲトゲ観葉植物",
-        "description": "トゲトゲ観葉植物を利用してゾンビを足止めしよう。"
-      },
       "stage33": {
-        "name": "#33 交差流",
+        "name": "#33 横殴り",
         "description": "横切るゾンビ犬に注意。"
       },
       "stage34": {
         "name": "#34 反発する混沌",
         "description": "距離を取りたがるゾンビが出現する。"
+      },
+      "stage35": {
+        "name": "#35 トゲトゲ観葉植物",
+        "description": "トゲトゲ観葉植物を利用してゾンビを足止めしよう。",
+        "intro": "（例のトゲトゲの植物と、\n落とし穴もあった。\nここで夜明けまで耐えよう。）"
       }
     },
     "status": {

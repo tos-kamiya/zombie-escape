@@ -27,7 +27,7 @@
         "resources": "Resources"
       },
       "readme": "README/LICENSE",
-      "readme_stage6": "Open Stage 6+ Guide",
+      "readme_stage_group": "Open Stage Group Guide",
       "hints": {
         "navigate": "Up/Down: choose an option",
         "page_switch": "Left/Right: switch stage groups",
@@ -42,7 +42,7 @@
         "display_mode_window_size": "Left/Right: resize window. Enter/South: toggle fullscreen.",
         "quit": "Close the game.",
         "readme": "Open the GitHub README in your browser. License information is also available there.",
-        "readme_stage6": "Open the Stage 6+ guide in your browser."
+        "readme_stage_group": "Open the guide for this stage group in your browser."
       }
     },
     "stages": {
@@ -207,17 +207,18 @@
         "name": "#31 Skitter Dog",
         "description": "Some dogs rush. Others skitter."
       },
-      "stage32": {
-        "name": "#32 Spiky Houseplant",
-        "description": "Use the spiky houseplants to block the zombies."
-      },
       "stage33": {
         "name": "#33 Crosscurrent",
         "description": "Watch for dogs cutting across your path."
       },
       "stage34": {
-        "name": "#34 ChaoticC Repulsion",
+        "name": "#34 Chaotic Repulsion",
         "description": "A distance-seeking zombie appears."
+      },
+      "stage35": {
+        "name": "#35 Spiky Houseplant",
+        "description": "Use the spiky houseplants to block the zombies.",
+        "intro": "(That spiky plant again...\nLooks like there's a pitfall, too.\nLet’s survive here until dawn.)"
       }
     },
     "status": {

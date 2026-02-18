@@ -33,5 +33,9 @@ This file is the main documentation index.
 
 ## Other
 
-- `docs/stages-6plus.md`: Stage 6+ gameplay notes.
-- `docs/stages-6plus-ja_JP.md`: Stage 6+ notes (Japanese).
+- `docs/stages-6plus.md`: Stage 6-15 gameplay notes.
+- `docs/stages-6plus-ja_JP.md`: Stage 6-15 notes (Japanese).
+- `docs/stages-16plus.md`: Stage 16-25 gameplay notes.
+- `docs/stages-16plus-ja_JP.md`: Stage 16-25 notes (Japanese).
+- `docs/stages-26plus.md`: Stage 26-35 gameplay notes.
+- `docs/stages-26plus-ja_JP.md`: Stage 26-35 notes (Japanese).

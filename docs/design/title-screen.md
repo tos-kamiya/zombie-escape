@@ -65,9 +65,9 @@ Icon order is fixed by category:
 
 ## Resource Menu Rows
 
-- Resource rows are shown on every title page (stages 1-5 and stage 6+ pages).
+- Resource rows are shown on every title page (stages 1-5 and later stage-group pages).
 - Row order is fixed as:
   1. `Display Mode/Window Size`
   2. `Settings`
-  3. `README/LICENSE` (or stage 6+ guide row on later pages)
+  3. `README/LICENSE` (or stage-group guide row on later pages)
   4. `Quit`
