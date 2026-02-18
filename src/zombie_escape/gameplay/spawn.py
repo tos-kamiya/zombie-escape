@@ -641,8 +641,23 @@ def place_flashlights(
     reserved_centers: set[tuple[int, int]] | None = None,
     count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT,
 ) -> list[Flashlight]:
-    """Spawn multiple flashlights using the single-place helper to spread them out."""
+    """Spawn flashlights from blueprint cells (with fallback sampling if needed)."""
+    if count <= 0 or not walkable_cells:
+        return []
+
+    # Blueprint-provided flashlight cells are explicit spawn points.
     placed: list[Flashlight] = []
+    for cell in walkable_cells:
+        if len(placed) >= count:
+            break
+        center = _cell_center(cell, cell_size)
+        if reserved_centers and center in reserved_centers:
+            continue
+        placed.append(Flashlight(center[0], center[1]))
+    if len(placed) >= count:
+        return placed
+
+    # Fallback for legacy/random candidate lists.
     attempts = 0
     max_attempts = max(200, count * 80)
     while len(placed) < count and attempts < max_attempts:
