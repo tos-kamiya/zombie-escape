@@ -44,6 +44,16 @@ Major spawn functions in `gameplay/spawn.py`:
 - Flashlight/shoes placement
 - Waiting car maintenance and replenishment
 
+Initial placement policy:
+
+- Initial interior spawn-rate placements (zombies/survivors/patrol bots) use
+  candidate collection + shuffle + fixed-count selection.
+- Target count uses `round(candidate_count * spawn_rate)`.
+- If `spawn_rate > 0` and the rounded result is `0`, one spawn is guaranteed
+  (when candidates exist).
+- Initial zombie kind composition uses stage ratios to build a fixed-count plan
+  for that initial batch, then shuffles the plan before assignment.
+
 ## Update Phase
 
 - `process_player_input(...)`

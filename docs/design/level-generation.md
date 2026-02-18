@@ -32,6 +32,15 @@
 
 Reserved cells are protected from incompatible terrain placement.
 
+## Ratio-Based Cell Selection
+
+- Density-based terrain placement (`pitfall`, `puddle`, `houseplant`, `reinforced wall`)
+  uses candidate collection + shuffle + fixed-count selection.
+- Target count is calculated as `round(candidate_count * density)`.
+- If `density > 0` and the rounded result is `0`, one cell is still selected.
+- If `density > 0` but candidate count is `0`, blueprint generation raises
+  `MapGenerationError` (treated as retryable generation failure).
+
 ## Exit Side Rule
 
 - `Stage.exit_sides` selects which sides (`top`, `bottom`, `left`, `right`) can have exits.
@@ -107,4 +116,6 @@ Two BFS checks gate acceptance:
 
 - On failure, generation retries with `seed + attempt_index`.
 - Maximum retries: 20.
+- Retry covers both connectivity failures and blueprint-generation failures
+  (including ratio-positive / zero-candidate density placement).
 - If all attempts fail, raises `MapGenerationError` and safely returns to title flow.
