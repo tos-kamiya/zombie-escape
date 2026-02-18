@@ -19,7 +19,8 @@ from ..render_constants import (
     FIRE_GLASS_HIGHLIGHT_COLOR,
     FIRE_GRATE_EDGE_COLOR,
     METAL_FLOOR_BASE_COLOR,
-    METAL_FLOOR_LINE_COLOR,
+    METAL_FLOOR_HAIRLINE_COLOR,
+    METAL_FLOOR_HIGHLIGHT_COLOR,
     MOVING_FLOOR_BORDER_COLOR,
     MOVING_FLOOR_LINE_COLOR,
     MOVING_FLOOR_TILE_COLOR,
@@ -145,11 +146,56 @@ def _get_metal_tile_surface(*, cell_size: int) -> surface.Surface:
         return cached
     tile = pygame.Surface((key, key), pygame.SRCALPHA)
     tile.fill(METAL_FLOOR_BASE_COLOR)
-    step = max(4, key // 4)
-    for x in range(0, key, step):
-        pygame.draw.line(tile, METAL_FLOOR_LINE_COLOR, (x, 0), (x, key - 1), width=1)
-    for y in range(0, key, step):
-        pygame.draw.line(tile, METAL_FLOOR_LINE_COLOR, (0, y), (key - 1, y), width=1)
+
+    frame_color = (
+        max(0, int(METAL_FLOOR_BASE_COLOR[0] * 0.70)),
+        max(0, int(METAL_FLOOR_BASE_COLOR[1] * 0.70)),
+        max(0, int(METAL_FLOOR_BASE_COLOR[2] * 0.70)),
+    )
+    inset = max(2, key // 8)
+    panel_rect = pygame.Rect(inset, inset, max(1, key - inset * 2), max(1, key - inset * 2))
+    pygame.draw.rect(tile, frame_color, tile.get_rect(), width=max(1, key // 14))
+
+    overlay = pygame.Surface((key, key), pygame.SRCALPHA)
+    base_step = max(5, key // 4)
+    rhythm = [
+        base_step,
+        max(3, base_step - 2),
+        base_step + 1,
+        max(4, base_step - 1),
+    ]
+    sx = panel_rect.left - panel_rect.height
+    i = 0
+    while sx <= panel_rect.right + panel_rect.height:
+        start = (sx, panel_rect.bottom)
+        end = (sx + panel_rect.height, panel_rect.top)
+        pygame.draw.line(
+            overlay,
+            METAL_FLOOR_HIGHLIGHT_COLOR,
+            start,
+            end,
+            width=max(1, key // 18),
+        )
+        pygame.draw.line(
+            overlay,
+            METAL_FLOOR_HAIRLINE_COLOR,
+            (start[0] + 1, start[1]),
+            (end[0] + 1, end[1]),
+            width=1,
+        )
+        sx += rhythm[i % len(rhythm)]
+        i += 1
+
+    mask = pygame.Surface((key, key), pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255, 255), panel_rect)
+    overlay.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    tile.blit(overlay, (0, 0))
+
+    # Subtle top-left specular band to match reinforced-wall metallic feel.
+    band = pygame.Surface((max(2, key // 3), max(2, key // 10)), pygame.SRCALPHA)
+    band.fill((*METAL_FLOOR_HAIRLINE_COLOR, 44))
+    tile.blit(band, (inset + 1, inset + 1))
+
     _METAL_TILE_CACHE[key] = tile
     return tile
 
@@ -203,7 +249,7 @@ def _get_fire_tile_surface(*, cell_size: int, phase: int) -> surface.Surface:
     highlight = pygame.Surface((highlight_w, highlight_h), pygame.SRCALPHA)
     highlight.fill((*FIRE_GLASS_HIGHLIGHT_COLOR, 46))
     grate.blit(highlight, (max(1, size // 8), max(1, size // 12)))
-    pygame.draw.rect(grate, FIRE_GRATE_EDGE_COLOR, grate.get_rect(), width=max(1, size // 12))
+    pygame.draw.rect(grate, FIRE_GRATE_EDGE_COLOR, grate.get_rect(), width=max(1, size // 14))
     tile.blit(grate, (0, 0))
 
     _FIRE_TILE_CACHE[key] = tile
@@ -396,6 +442,12 @@ def _draw_play_area(
                         phase=phase,
                     )
                     screen.blit(fire_tile, sr.topleft)
+                    border_color = (
+                        palette.fall_zone_primary
+                        if (x, y) in fall_spawn_cells
+                        else palette.floor_primary
+                    )
+                    pygame.draw.rect(screen, border_color, sr, width=1)
                 continue
 
             if (x, y) in metal_floor_cells:
@@ -413,6 +465,12 @@ def _draw_play_area(
                 if sr.colliderect(screen_rect):
                     metal_tile = _get_metal_tile_surface(cell_size=grid_snap)
                     screen.blit(metal_tile, sr.topleft)
+                    border_color = (
+                        palette.fall_zone_primary
+                        if (x, y) in fall_spawn_cells
+                        else palette.floor_primary
+                    )
+                    pygame.draw.rect(screen, border_color, sr, width=1)
                 continue
 
             use_secondary = ((x // 2) + (y // 2)) % 2 == 0
