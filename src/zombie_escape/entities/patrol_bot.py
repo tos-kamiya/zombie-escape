@@ -221,6 +221,7 @@ class PatrolBot(pygame.sprite.Sprite):
         parked_cars: list[pygame.sprite.Sprite] | None = None,
         cell_size: int,
         pitfall_cells: set[tuple[int, int]],
+        fire_floor_cells: set[tuple[int, int]] | None = None,
         layout,
         drift: tuple[float, float] = (0.0, 0.0),
         now_ms: int,
@@ -419,12 +420,15 @@ class PatrolBot(pygame.sprite.Sprite):
             return False
 
         hit_pitfall = False
-        if pitfall_cells and cell_size > 0:
+        blocked_hazard_cells = set(pitfall_cells)
+        if fire_floor_cells:
+            blocked_hazard_cells.update(fire_floor_cells)
+        if blocked_hazard_cells and cell_size > 0:
             lead_x = next_x + float(self.direction[0]) * collision_radius
             lead_y = next_y + float(self.direction[1]) * collision_radius
             cell_x = int(lead_x // cell_size)
             cell_y = int(lead_y // cell_size)
-            if (cell_x, cell_y) in pitfall_cells:
+            if (cell_x, cell_y) in blocked_hazard_cells:
                 hit_pitfall = True
                 final_x = self.x
                 final_y = self.y

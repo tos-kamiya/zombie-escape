@@ -731,6 +731,7 @@ def update_entities(
             parked_cars=game_data.waiting_cars,
             cell_size=game_data.cell_size,
             pitfall_cells=pitfall_cells,
+            fire_floor_cells=fire_floor_cells,
             layout=game_data.layout,
             drift=(floor_dx, floor_dy),
             now_ms=game_data.state.clock.elapsed_ms,
