@@ -208,7 +208,7 @@ def update_entities(
         player.x, player.y = active_car.x, active_car.y
     elif not player.in_car:
         # Ensure player is in all_sprites if not in car
-        if player not in all_sprites:
+        if player not in all_sprites and not game_data.state.game_over:
             all_sprites.add(player, layer=LAYER_PLAYERS)
         player.pending_pitfall_fall = False
         movement_locked = game_data.state.game_over
