@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import random
 from dataclasses import dataclass
 
 import pygame
@@ -11,14 +12,13 @@ from ..entities_constants import (
     ZOMBIE_DOG_SHORT_AXIS_RATIO,
     ZOMBIE_RADIUS,
 )
-from ..rng import get_rng
 from ..render_assets import (
     build_zombie_dog_directional_surfaces,
     build_zombie_directional_surfaces,
 )
 from ..screen_constants import FPS
 
-RNG = get_rng()
+DECAY_VARIANT_COUNT = 3
 
 
 DECAY_EFFECT_DURATION_FRAMES = max(1, int(FPS))
@@ -34,7 +34,7 @@ class DecayMask:
     positions: list[tuple[int, int]]
 
 
-_DECAY_MASK: DecayMask | None = None
+_DECAY_MASKS: dict[str, list[DecayMask]] | None = None
 
 
 def _max_decay_surface_size() -> tuple[int, int]:
@@ -51,19 +51,29 @@ def _max_decay_surface_size() -> tuple[int, int]:
 def _build_decay_mask() -> DecayMask:
     width, height = _max_decay_surface_size()
     positions = [(x, y) for y in range(height) for x in range(width)]
-    RNG.shuffle(positions)
+    random.shuffle(positions)
     return DecayMask(width=width, height=height, positions=positions)
 
 
+def _build_decay_masks() -> dict[str, list[DecayMask]]:
+    return {
+        "grayscale": [_build_decay_mask() for _ in range(DECAY_VARIANT_COUNT)],
+        "burned": [_build_decay_mask() for _ in range(DECAY_VARIANT_COUNT)],
+    }
+
+
 def prepare_decay_mask() -> DecayMask:
-    global _DECAY_MASK
-    if _DECAY_MASK is None:
-        _DECAY_MASK = _build_decay_mask()
-    return _DECAY_MASK
+    global _DECAY_MASKS
+    if _DECAY_MASKS is None:
+        _DECAY_MASKS = _build_decay_masks()
+    return _DECAY_MASKS["grayscale"][0]
 
 
-def get_decay_mask() -> DecayMask:
-    return prepare_decay_mask()
+def get_decay_mask(*, tone: str = "grayscale") -> DecayMask:
+    prepare_decay_mask()
+    assert _DECAY_MASKS is not None
+    masks = _DECAY_MASKS.get(tone) or _DECAY_MASKS["grayscale"]
+    return random.choice(masks)
 
 
 class DecayingEntityEffect:
@@ -89,7 +99,7 @@ class DecayingEntityEffect:
             resolved_duration = BURNED_DECAY_EFFECT_DURATION_FRAMES
         self.duration_frames = resolved_duration
         self.frames_elapsed = 0
-        self.mask = mask or get_decay_mask()
+        self.mask = mask or get_decay_mask(tone=tone)
         self.mask_index = 0
         self.pixel_carry = 0.0
         self.pixels_per_frame = len(self.mask.positions) / self.duration_frames
@@ -178,7 +188,7 @@ class DecayingEntityEffect:
         max_effect_radius = min_dim * 0.25
         particle_count = max(8, min(12, len(opaque_points) // 10))
         shuffled = list(opaque_points)
-        RNG.shuffle(shuffled)
+        random.shuffle(shuffled)
         selected_count = 0
         for x, y in shuffled:
             if selected_count >= particle_count:
@@ -192,13 +202,13 @@ class DecayingEntityEffect:
             if base_radius_max < base_radius_min:
                 base_radius = max(1.0, max_local_radius)
             else:
-                base_radius = RNG.uniform(base_radius_min, base_radius_max)
-            start_frame = RNG.uniform(0.0, self.duration_frames * 0.28)
-            life_frames = RNG.uniform(
+                base_radius = random.uniform(base_radius_min, base_radius_max)
+            start_frame = random.uniform(0.0, self.duration_frames * 0.28)
+            life_frames = random.uniform(
                 self.duration_frames * 0.40,
                 self.duration_frames * 0.95,
             )
-            jitter = RNG.uniform(0.85, 1.15)
+            jitter = random.uniform(0.85, 1.15)
             self._burn_particles.append(
                 (float(x), float(y), float(base_radius), start_frame, life_frames * jitter)
             )
