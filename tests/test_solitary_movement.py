@@ -33,7 +33,7 @@ def _make_layout() -> LevelLayout:
     )
 
 
-def test_solitary_chases_target_when_within_short_range() -> None:
+def test_solitary_keeps_distance_from_player_when_adjacent() -> None:
     solitary = Zombie(100, 100, kind=ZombieKind.SOLITARY)
     layout = _make_layout()
 
@@ -42,11 +42,11 @@ def test_solitary_chases_target_when_within_short_range() -> None:
         [],
         DEFAULT_CELL_SIZE,
         layout,
-        (110, 100),
+        (100 + DEFAULT_CELL_SIZE, 100),
         [],
         [],
         now_ms=1,
     )
 
-    assert move_x > 0
+    assert move_x < 0
     assert move_y == 0

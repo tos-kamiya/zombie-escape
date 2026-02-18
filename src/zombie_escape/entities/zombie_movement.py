@@ -8,7 +8,6 @@ import pygame
 from ..entities_constants import (
     ZombieKind,
     ZOMBIE_SOLITARY_EVAL_INTERVAL_FRAMES,
-    ZOMBIE_SOLITARY_SIGHT_RANGE,
     ZOMBIE_LINEFORMER_FOLLOW_DISTANCE,
     ZOMBIE_LINEFORMER_FOLLOW_TOLERANCE,
     ZOMBIE_LINEFORMER_SPEED_MULTIPLIER,
@@ -367,7 +366,7 @@ def _zombie_solitary_movement(
     _walls: list["Wall"],
     cell_size: int,
     _layout: "LevelLayout",
-    _player_center: tuple[float, float],
+    player_center: tuple[float, float],
     nearby_zombies: Iterable["Zombie"],
     _footprints: list["Footprint"],
     *,
@@ -376,9 +375,8 @@ def _zombie_solitary_movement(
     del now_ms
     if cell_size <= 0:
         return 0.0, 0.0
-    is_in_sight = zombie._update_mode(_player_center, ZOMBIE_SOLITARY_SIGHT_RANGE)
-    if is_in_sight:
-        return _zombie_move_toward(zombie, _player_center)
+    zombie_weight = 3
+    player_weight = 1
     if zombie.solitary_eval_frame_counter <= 0:
         zombie.solitary_eval_frame_counter = ZOMBIE_SOLITARY_EVAL_INTERVAL_FRAMES
 
@@ -403,13 +401,26 @@ def _zombie_solitary_movement(
             if abs(dx) > 1 or abs(dy) > 1:
                 continue
             if dy == -1 and abs(dx) <= 1:
-                up_count += 1
+                up_count += zombie_weight
             if dy == 1 and abs(dx) <= 1:
-                down_count += 1
+                down_count += zombie_weight
             if dx == -1 and abs(dy) <= 1:
-                left_count += 1
+                left_count += zombie_weight
             if dx == 1 and abs(dy) <= 1:
-                right_count += 1
+                right_count += zombie_weight
+        player_cell_x = int(player_center[0] // cell_size)
+        player_cell_y = int(player_center[1] // cell_size)
+        player_dx = player_cell_x - self_cell_x
+        player_dy = player_cell_y - self_cell_y
+        if abs(player_dx) <= 1 and abs(player_dy) <= 1:
+            if player_dy == -1 and abs(player_dx) <= 1:
+                up_count += player_weight
+            if player_dy == 1 and abs(player_dx) <= 1:
+                down_count += player_weight
+            if player_dx == -1 and abs(player_dy) <= 1:
+                left_count += player_weight
+            if player_dx == 1 and abs(player_dy) <= 1:
+                right_count += player_weight
 
         dir_x = 0
         dir_y = 0
