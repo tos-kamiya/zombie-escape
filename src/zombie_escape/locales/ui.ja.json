@@ -277,7 +277,7 @@
         "language": "テキスト言語",
         "footprints": "足跡",
         "car_hint": "車のヒント",
-        "contact_memory_hint": "接触済み対象ガイド",
+        "contact_memory_hint": "接触済みガイド",
         "shadows": "影の表示",
         "fast_zombies": "高速ゾンビ",
         "steel_beams": "鉄筋"

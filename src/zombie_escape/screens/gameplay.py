@@ -163,7 +163,7 @@ def _resolve_contact_memory_hint_targets(
     game_data: Any,
     hint_target: tuple[int, int] | None,
     enabled: bool,
-) -> list[tuple[int, int]]:
+) -> list[tuple[str, tuple[int, int]]]:
     state = game_data.state
     records = list(state.contact_hint_records)
     if not records:
@@ -194,7 +194,7 @@ def _resolve_contact_memory_hint_targets(
     station_id = id(station) if station else None
 
     filtered_records = []
-    targets: list[tuple[int, int]] = []
+    targets: list[tuple[str, tuple[int, int]]] = []
     for record in records:
         kind = record.kind
         if kind == "car":
@@ -220,9 +220,11 @@ def _resolve_contact_memory_hint_targets(
         if kind == "buddy":
             buddy = buddies_by_id.get(record.target_id)
             if buddy is not None:
-                targets.append((int(buddy.rect.centerx), int(buddy.rect.centery)))
+                targets.append(
+                    ("buddy", (int(buddy.rect.centerx), int(buddy.rect.centery)))
+                )
                 continue
-        targets.append(record.anchor_pos)
+        targets.append((kind, record.anchor_pos))
 
     if len(filtered_records) != len(state.contact_hint_records):
         state.contact_hint_records = filtered_records
@@ -775,7 +777,7 @@ class GameplayScreenRunner:
 
         hint_target = self._resolve_current_hint_target()
         hint_color = YELLOW
-        contact_hint_targets: list[tuple[int, int]] = []
+        contact_hint_targets: list[tuple[str, tuple[int, int]]] = []
         contact_hint_enabled = self.config.get("contact_memory_hint", {}).get(
             "enabled", False
         )

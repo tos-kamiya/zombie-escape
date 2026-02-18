@@ -54,7 +54,7 @@ def draw(
     *,
     config: dict[str, Any],
     hint_target: tuple[int, int] | None = None,
-    contact_hint_targets: list[tuple[int, int]] | None = None,
+    contact_hint_targets: list[tuple[str, tuple[int, int]]] | None = None,
     hint_color: tuple[int, int, int] | None = None,
     fps: float | None = None,
 ) -> None:

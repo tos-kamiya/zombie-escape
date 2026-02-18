@@ -6,7 +6,7 @@ from typing import Any
 import pygame
 from pygame import sprite, surface
 
-from ..colors import LIGHT_GRAY, ORANGE, YELLOW
+from ..colors import LIGHT_GRAY, ORANGE, WHITE, YELLOW
 from ..entities_constants import (
     CAR_HEIGHT,
     CAR_WIDTH,
@@ -750,7 +750,7 @@ def _draw_hint_indicator(
     assets: RenderAssets,
     player: Any,
     hint_target: tuple[int, int] | None,
-    contact_hint_targets: list[tuple[int, int]] | None = None,
+    contact_hint_targets: list[tuple[str, tuple[int, int]]] | None = None,
     *,
     hint_color: tuple[int, int, int],
     stage: Stage | None,
@@ -768,7 +768,22 @@ def _draw_hint_indicator(
             color=hint_color,
             ring_radius=hint_ring_radius,
         )
-    for target_pos in contact_hint_targets or []:
+    for kind, target_pos in contact_hint_targets or []:
+        if kind == "buddy":
+            player_screen = camera.apply(player).center
+            target_rect = pygame.Rect(target_pos[0], target_pos[1], 0, 0)
+            target_screen = camera.apply_rect(target_rect).center
+            dx = target_screen[0] - player_screen[0]
+            dy = target_screen[1] - player_screen[1]
+            dist = math.hypot(dx, dy)
+            if dist < assets.fov_radius * 0.7:
+                continue
+            dir_x = dx / dist
+            dir_y = dy / dist
+            center_x = int(round(player_screen[0] + dir_x * hint_ring_radius))
+            center_y = int(round(player_screen[1] + dir_y * hint_ring_radius))
+            pygame.draw.circle(screen, WHITE, (center_x, center_y), 3, width=1)
+            continue
         _draw_subtle_hint_arrow(
             screen,
             camera,
