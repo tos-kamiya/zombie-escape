@@ -59,7 +59,6 @@ def test_lineformer_default_strategy_is_train_head_movement() -> None:
     lineformer.lineformer_target_pos = (200, 100)
     move_x, move_y = lineformer.movement_strategy(
         lineformer,
-        [],
         DEFAULT_CELL_SIZE,
         layout,
         (0, 0),
@@ -79,7 +78,6 @@ def test_lineformer_train_head_boosts_movement_only_while_tracking() -> None:
     head.lineformer_target_pos = None
     wander_x, wander_y = _zombie_lineformer_train_head_movement(
         head,
-        [],
         DEFAULT_CELL_SIZE,
         layout,
         (0, 0),
@@ -91,7 +89,6 @@ def test_lineformer_train_head_boosts_movement_only_while_tracking() -> None:
     head.lineformer_target_pos = (200, 100)
     chase_x, chase_y = _zombie_lineformer_train_head_movement(
         head,
-        [],
         DEFAULT_CELL_SIZE,
         layout,
         (0, 0),
@@ -116,7 +113,6 @@ def test_lineformer_repels_when_touching_target() -> None:
     head.lineformer_target_pos = (target.x, target.y)
     move_x, move_y = _zombie_lineformer_train_head_movement(
         head,
-        [],
         DEFAULT_CELL_SIZE,
         layout,
         (0, 0),

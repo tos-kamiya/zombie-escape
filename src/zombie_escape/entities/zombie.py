@@ -71,7 +71,6 @@ class MovementStrategy(Protocol):
     def __call__(
         self,
         zombie: "Zombie",
-        walls: list[Wall],
         cell_size: int,
         layout: LevelLayout,
         player_center: tuple[float, float],
@@ -480,7 +479,6 @@ class Zombie(pygame.sprite.Sprite):
         avoid_radius_sq = avoid_radius * avoid_radius
         move_x, move_y = self.movement_strategy(
             self,
-            walls,
             cell_size,
             layout,
             player_center,

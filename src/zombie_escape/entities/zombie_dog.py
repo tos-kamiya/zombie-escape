@@ -161,10 +161,24 @@ def _zombie_dog_default_movement(
         if now_ms - zombie_dog.wander_change_time > ZOMBIE_DOG_WANDER_INTERVAL_MS:
             zombie_dog.wander_change_time = now_ms
             zombie_dog.wander_angle = RNG.uniform(0.0, math.tau)
-        return (
-            math.cos(zombie_dog.wander_angle) * zombie_dog.speed_patrol,
-            math.sin(zombie_dog.wander_angle) * zombie_dog.speed_patrol,
-        )
+        move_x = math.cos(zombie_dog.wander_angle) * zombie_dog.speed_patrol
+        move_y = math.sin(zombie_dog.wander_angle) * zombie_dog.speed_patrol
+        if cell_size > 0 and layout.fire_floor_cells:
+            next_cell = (
+                int((zombie_dog.x + move_x) // cell_size),
+                int((zombie_dog.y + move_y) // cell_size),
+            )
+            if next_cell in layout.fire_floor_cells:
+                zombie_dog.wander_angle = (zombie_dog.wander_angle + math.pi) % math.tau
+                move_x = math.cos(zombie_dog.wander_angle) * zombie_dog.speed_patrol
+                move_y = math.sin(zombie_dog.wander_angle) * zombie_dog.speed_patrol
+                retry_cell = (
+                    int((zombie_dog.x + move_x) // cell_size),
+                    int((zombie_dog.y + move_y) // cell_size),
+                )
+                if retry_cell in layout.fire_floor_cells:
+                    return (0.0, 0.0)
+        return (move_x, move_y)
     if zombie_dog.mode == ZombieDogMode.CHARGE:
         if zombie_dog.charge_target is None:
             zombie_dog._set_mode(ZombieDogMode.WANDER)

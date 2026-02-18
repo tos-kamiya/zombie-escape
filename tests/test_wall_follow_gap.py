@@ -3,7 +3,7 @@ import math
 import pygame
 
 from src.zombie_escape.level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
-from zombie_escape.entities import Wall, Zombie
+from zombie_escape.entities import Zombie
 from zombie_escape.entities_constants import ZombieKind
 from zombie_escape.entities.movement import _zombie_wall_hug_movement
 from zombie_escape.level_constants import DEFAULT_CELL_SIZE
@@ -15,12 +15,11 @@ def _init_pygame() -> None:
         pygame.init()
 
 
-def test_wall_hug_turns_away_when_too_close() -> None:
+def test_wall_hug_lost_wall_falls_back_to_wander() -> None:
     _init_pygame()
     zombie = Zombie(100, 100, kind=ZombieKind.WALL_HUGGER)
     zombie.wall_hug_side = 1.0
     zombie.wall_hug_angle = 0.0
-    wall = Wall(105, 105, 8, 8)
     layout = LevelLayout(
         field_rect=pygame.Rect(
             0,
@@ -48,7 +47,7 @@ def test_wall_hug_turns_away_when_too_close() -> None:
     before = zombie.wall_hug_angle
     _zombie_wall_hug_movement(
         zombie,
-        [wall],
+        [],
         DEFAULT_CELL_SIZE,
         layout,
         (9999, 9999),
@@ -58,4 +57,6 @@ def test_wall_hug_turns_away_when_too_close() -> None:
     )
     delta = (zombie.wall_hug_angle - before + math.pi) % (2 * math.pi) - math.pi
 
-    assert delta < 0
+    assert delta != 0
+    assert zombie.wall_hug_side == 0.0
+    assert zombie.wall_hug_last_wall_time is None

@@ -27,18 +27,17 @@ from ..entities_constants import (
 )
 from ..gameplay.constants import FOOTPRINT_STEP_DISTANCE
 from ..rng import get_rng
-from .movement import _circle_wall_collision
+from .movement import _circle_rect_collision
 
 if TYPE_CHECKING:
     from ..models import Footprint, LevelLayout
-    from . import Wall, Zombie
+    from . import Zombie
 
 RNG = get_rng()
 
 
 def _zombie_lineformer_train_head_movement(
     zombie: "Zombie",
-    walls: list["Wall"],
     cell_size: int,
     layout: "LevelLayout",
     _player_center: tuple[float, float],
@@ -51,7 +50,6 @@ def _zombie_lineformer_train_head_movement(
     if target_pos is None:
         return _zombie_wander_movement(
             zombie,
-            walls,
             cell_size,
             layout,
             now_ms=now_ms,
@@ -101,34 +99,8 @@ def _zombie_lineformer_train_head_movement(
     )
 
 
-def _line_of_sight_clear(
-    start: tuple[float, float],
-    end: tuple[float, float],
-    walls: list["Wall"],
-) -> bool:
-    min_x = min(start[0], end[0])
-    min_y = min(start[1], end[1])
-    max_x = max(start[0], end[0])
-    max_y = max(start[1], end[1])
-    check_rect = pygame.Rect(
-        int(min_x),
-        int(min_y),
-        max(1, int(max_x - min_x)),
-        max(1, int(max_y - min_y)),
-    )
-    start_point = (int(start[0]), int(start[1]))
-    end_point = (int(end[0]), int(end[1]))
-    for wall in walls:
-        if not wall.rect.colliderect(check_rect):
-            continue
-        if wall.rect.clipline(start_point, end_point):
-            return False
-    return True
-
-
 def _zombie_tracker_movement(
     zombie: "Zombie",
-    walls: list["Wall"],
     cell_size: int,
     layout: "LevelLayout",
     player_center: tuple[float, float],
@@ -150,17 +122,21 @@ def _zombie_tracker_movement(
             zombie.tracker_target_pos = None
             return _zombie_wander_movement(
                 zombie,
-                walls,
                 cell_size,
                 layout,
                 now_ms=now,
             )
-        _zombie_update_tracker_target(zombie, footprints, walls, now_ms=now)
+        _zombie_update_tracker_target(
+            zombie,
+            footprints,
+            layout,
+            cell_size=cell_size,
+            now_ms=now,
+        )
         if zombie.tracker_target_pos is not None:
             return _zombie_move_toward(zombie, zombie.tracker_target_pos)
         return _zombie_wander_movement(
             zombie,
-            walls,
             cell_size,
             layout,
             now_ms=now,
@@ -170,49 +146,66 @@ def _zombie_tracker_movement(
 
 def _zombie_wall_hug_wall_distance(
     zombie: "Zombie",
-    walls: list["Wall"],
     angle: float,
     max_distance: float,
+    *,
+    blocked_cells: set[tuple[int, int]],
+    cell_size: int,
+    grid_cols: int,
+    grid_rows: int,
 ) -> float:
-    """Calculate the distance to the nearest wall in the given direction using fast raycasting."""
+    """Approximate distance to nearest blocked cell along the ray."""
+    if cell_size <= 0 or not blocked_cells:
+        return max_distance
+
     direction_x = math.cos(angle)
     direction_y = math.sin(angle)
+    radius = zombie.collision_radius
 
-    start_x, start_y = zombie.x, zombie.y
-    line_start = (start_x, start_y)
-    line_end = (
-        start_x + direction_x * max_distance,
-        start_y + direction_y * max_distance,
-    )
+    def _hits_blocked(sample_dist: float) -> bool:
+        sample_x = zombie.x + direction_x * sample_dist
+        sample_y = zombie.y + direction_y * sample_dist
+        min_cell_x = max(0, int((sample_x - radius) // cell_size))
+        max_cell_x = min(grid_cols - 1, int((sample_x + radius) // cell_size))
+        min_cell_y = max(0, int((sample_y - radius) // cell_size))
+        max_cell_y = min(grid_rows - 1, int((sample_y + radius) // cell_size))
+        for cy in range(min_cell_y, max_cell_y + 1):
+            for cx in range(min_cell_x, max_cell_x + 1):
+                if (cx, cy) not in blocked_cells:
+                    continue
+                rect = pygame.Rect(cx * cell_size, cy * cell_size, cell_size, cell_size)
+                if _circle_rect_collision((sample_x, sample_y), radius, rect):
+                    return True
+        return False
 
-    min_dist_sq = max_distance * max_distance
-    hit = False
-
-    # We use pre-filtered walls (spatial index) and inflate them by radius to simulate circle check.
-    r = zombie.collision_radius
-    for wall in walls:
-        rect = wall.rect
-        # Inflating the rect by zombie radius allows us to approximate circle-rect intersection
-        # using a simple line-rect clipping test.
-        inflated = rect.inflate(r * 2, r * 2)
-        points = inflated.clipline(line_start, line_end)
-        if points:
-            p1, _p2 = points
-            dx = p1[0] - start_x
-            dy = p1[1] - start_y
-            dist_sq = dx * dx + dy * dy
-            if dist_sq < min_dist_sq:
-                min_dist_sq = dist_sq
-                hit = True
-
-    if hit:
-        return math.sqrt(min_dist_sq)
+    step = max(1.0, min(cell_size * 0.25, max_distance))
+    prev_dist = 0.0
+    scan_dist = 0.0
+    while scan_dist <= max_distance:
+        if _hits_blocked(scan_dist):
+            lo, hi = prev_dist, scan_dist
+            for _ in range(5):
+                mid = (lo + hi) * 0.5
+                if _hits_blocked(mid):
+                    hi = mid
+                else:
+                    lo = mid
+            return hi
+        prev_dist = scan_dist
+        scan_dist += step
     return max_distance
+
+
+def _wall_hug_blocked_cells(layout: "LevelLayout") -> set[tuple[int, int]]:
+    blocked = set(layout.wall_cells)
+    blocked.update(layout.outer_wall_cells)
+    blocked.update(layout.steel_beam_cells)
+    blocked.update(layout.fire_floor_cells)
+    return blocked
 
 
 def _zombie_wall_hug_movement(
     zombie: "Zombie",
-    walls: list["Wall"],
     cell_size: int,
     layout: "LevelLayout",
     player_center: tuple[float, float],
@@ -244,19 +237,38 @@ def _zombie_wall_hug_movement(
 
     sensor_distance = dynamic_sensor_dist + zombie.collision_radius
     target_gap_diagonal = ZOMBIE_WALL_HUG_TARGET_GAP / math.cos(probe_offset_side)
+    blocked_cells = _wall_hug_blocked_cells(layout)
 
     if zombie.wall_hug_side == 0:
         # Initial side discovery (still symmetrical for the very first frame)
         left_angle = zombie.wall_hug_angle + probe_offset_side
         right_angle = zombie.wall_hug_angle - probe_offset_side
         left_dist = _zombie_wall_hug_wall_distance(
-            zombie, walls, left_angle, sensor_distance
+            zombie,
+            left_angle,
+            sensor_distance,
+            blocked_cells=blocked_cells,
+            cell_size=cell_size,
+            grid_cols=layout.grid_cols,
+            grid_rows=layout.grid_rows,
         )
         right_dist = _zombie_wall_hug_wall_distance(
-            zombie, walls, right_angle, sensor_distance
+            zombie,
+            right_angle,
+            sensor_distance,
+            blocked_cells=blocked_cells,
+            cell_size=cell_size,
+            grid_cols=layout.grid_cols,
+            grid_rows=layout.grid_rows,
         )
         forward_dist = _zombie_wall_hug_wall_distance(
-            zombie, walls, zombie.wall_hug_angle, sensor_distance
+            zombie,
+            zombie.wall_hug_angle,
+            sensor_distance,
+            blocked_cells=blocked_cells,
+            cell_size=cell_size,
+            grid_cols=layout.grid_cols,
+            grid_rows=layout.grid_rows,
         )
 
         if (
@@ -272,22 +284,38 @@ def _zombie_wall_hug_movement(
         else:
             if is_in_sight:
                 return _zombie_move_toward(zombie, player_center)
-            return _zombie_wander_movement(
-                zombie, walls, cell_size, layout, now_ms=now_ms
-            )
+            return _zombie_wander_movement(zombie, cell_size, layout, now_ms=now_ms)
 
     # Asymmetrical Probing while following
     side_angle = zombie.wall_hug_angle + zombie.wall_hug_side * probe_offset_side
     perp_angle = zombie.wall_hug_angle + zombie.wall_hug_side * probe_offset_perp
 
     side_dist = _zombie_wall_hug_wall_distance(
-        zombie, walls, side_angle, sensor_distance
+        zombie,
+        side_angle,
+        sensor_distance,
+        blocked_cells=blocked_cells,
+        cell_size=cell_size,
+        grid_cols=layout.grid_cols,
+        grid_rows=layout.grid_rows,
     )
     perp_dist = _zombie_wall_hug_wall_distance(
-        zombie, walls, perp_angle, sensor_distance
+        zombie,
+        perp_angle,
+        sensor_distance,
+        blocked_cells=blocked_cells,
+        cell_size=cell_size,
+        grid_cols=layout.grid_cols,
+        grid_rows=layout.grid_rows,
     )
     forward_dist = _zombie_wall_hug_wall_distance(
-        zombie, walls, zombie.wall_hug_angle, sensor_distance
+        zombie,
+        zombie.wall_hug_angle,
+        sensor_distance,
+        blocked_cells=blocked_cells,
+        cell_size=cell_size,
+        grid_cols=layout.grid_cols,
+        grid_rows=layout.grid_rows,
     )
 
     side_has_wall = side_dist < sensor_distance
@@ -308,7 +336,7 @@ def _zombie_wall_hug_movement(
 
     # Steering Logic
     if perp_has_wall:
-        # Wall is definitely there. Use diagonal for distance tracking.
+        # Obstacle is definitely there. Use diagonal for distance tracking.
         zombie.wall_hug_last_side_has_wall = True
         gap_error = target_gap_diagonal - side_dist
         if abs(gap_error) > 0.1:
@@ -320,7 +348,7 @@ def _zombie_wall_hug_movement(
                 zombie.wall_hug_angle += zombie.wall_hug_side * turn
 
         if forward_dist < ZOMBIE_WALL_HUG_TARGET_GAP:
-            # Wall ahead! Turn sharply.
+            # Obstacle ahead! Turn sharply.
             zombie.wall_hug_angle -= zombie.wall_hug_side * (turn_step * 2.0)
     else:
         # PERPENDICULAR PROBE LOST WALL!
@@ -345,7 +373,6 @@ def _zombie_wall_hug_movement(
 
 def _zombie_normal_movement(
     zombie: "Zombie",
-    walls: list["Wall"],
     cell_size: int,
     layout: "LevelLayout",
     player_center: tuple[float, float],
@@ -357,7 +384,6 @@ def _zombie_normal_movement(
     if not is_in_sight:
         return _zombie_wander_movement(
             zombie,
-            walls,
             cell_size,
             layout,
             now_ms=now_ms,
@@ -367,7 +393,6 @@ def _zombie_normal_movement(
 
 def _zombie_solitary_movement(
     zombie: "Zombie",
-    _walls: list["Wall"],
     cell_size: int,
     _layout: "LevelLayout",
     player_center: tuple[float, float],
@@ -469,8 +494,9 @@ def _zombie_solitary_movement(
 def _zombie_update_tracker_target(
     zombie: "Zombie",
     footprints: list["Footprint"],
-    walls: list["Wall"],
+    layout: "LevelLayout",
     *,
+    cell_size: int,
     now_ms: int,
 ) -> None:
     # footprints are ordered oldest -> newest by time.
@@ -531,10 +557,18 @@ def _zombie_update_tracker_target(
         else:
             candidates = newer[:ZOMBIE_TRACKER_SCENT_TOP_K]
 
+    blocked_cells = _tracker_blocked_cells(layout)
     for fp in candidates:
         pos = fp.pos
         fp_time = fp.time
-        if _line_of_sight_clear((zombie.x, zombie.y), pos, walls):
+        if _line_of_sight_clear_cells(
+            (zombie.x, zombie.y),
+            pos,
+            blocked_cells=blocked_cells,
+            cell_size=cell_size,
+            grid_cols=layout.grid_cols,
+            grid_rows=layout.grid_rows,
+        ):
             zombie.tracker_target_pos = pos
             zombie.tracker_target_time = fp_time
             if relock_after is not None and fp_time >= relock_after:
@@ -560,18 +594,56 @@ def _zombie_update_tracker_target(
     return
 
 
+def _line_of_sight_clear_cells(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    *,
+    blocked_cells: set[tuple[int, int]],
+    cell_size: int,
+    grid_cols: int,
+    grid_rows: int,
+) -> bool:
+    if cell_size <= 0 or not blocked_cells:
+        return True
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+    dist = math.hypot(dx, dy)
+    if dist <= 1e-6:
+        return True
+    step = max(1.0, min(cell_size * 0.5, dist))
+    samples = max(1, int(math.ceil(dist / step)))
+    for i in range(samples + 1):
+        t = i / samples
+        x = start[0] + dx * t
+        y = start[1] + dy * t
+        cx = int(x // cell_size)
+        cy = int(y // cell_size)
+        if cx < 0 or cy < 0 or cx >= grid_cols or cy >= grid_rows:
+            continue
+        if (cx, cy) in blocked_cells:
+            return False
+    return True
+
+
+def _tracker_blocked_cells(layout: "LevelLayout") -> set[tuple[int, int]]:
+    blocked = set(layout.wall_cells)
+    blocked.update(layout.outer_wall_cells)
+    blocked.update(layout.steel_beam_cells)
+    return blocked
+
+
 def _zombie_wander_movement(
     zombie: "Zombie",
-    walls: list["Wall"],
     cell_size: int,
     layout: "LevelLayout",
     *,
     now_ms: int,
-) -> tuple[float, float]:
+) -> None:
     grid_cols = layout.grid_cols
     grid_rows = layout.grid_rows
     outer_wall_cells = layout.outer_wall_cells
     pitfall_cells = layout.pitfall_cells
+    fire_floor_cells = layout.fire_floor_cells
     now = now_ms
     changed_angle = False
     if now - zombie.last_wander_change_time > zombie.wander_change_interval:
@@ -599,46 +671,26 @@ def _zombie_wander_movement(
                 zombie.wander_angle = (zombie.wander_angle + math.pi) % math.tau
 
     if at_x_edge or at_y_edge:
-        if outer_wall_cells is not None:
-            if at_x_edge:
-                inward_cell = (1, cell_y) if cell_x == 0 else (grid_cols - 2, cell_y)
-                if inward_cell not in outer_wall_cells:
-                    target_x = (inward_cell[0] + 0.5) * cell_size
-                    target_y = (inward_cell[1] + 0.5) * cell_size
-                    return _zombie_move_toward(zombie, (target_x, target_y))
-            if at_y_edge:
-                inward_cell = (cell_x, 1) if cell_y == 0 else (cell_x, grid_rows - 2)
-                if inward_cell not in outer_wall_cells:
-                    target_x = (inward_cell[0] + 0.5) * cell_size
-                    target_y = (inward_cell[1] + 0.5) * cell_size
-                    return _zombie_move_toward(zombie, (target_x, target_y))
-        else:
+        if at_x_edge:
+            inward_cell = (1, cell_y) if cell_x == 0 else (grid_cols - 2, cell_y)
+            if inward_cell not in outer_wall_cells:
+                target_x = (inward_cell[0] + 0.5) * cell_size
+                target_y = (inward_cell[1] + 0.5) * cell_size
+                return _zombie_move_toward(zombie, (target_x, target_y))
+        if at_y_edge:
+            inward_cell = (cell_x, 1) if cell_y == 0 else (cell_x, grid_rows - 2)
+            if inward_cell not in outer_wall_cells:
+                target_x = (inward_cell[0] + 0.5) * cell_size
+                target_y = (inward_cell[1] + 0.5) * cell_size
+                return _zombie_move_toward(zombie, (target_x, target_y))
 
-            def path_clear(next_x: float, next_y: float) -> bool:
-                nearby_walls = [
-                    wall
-                    for wall in walls
-                    if abs(wall.rect.centerx - next_x) < 120
-                    and abs(wall.rect.centery - next_y) < 120
-                ]
-                return not any(
-                    _circle_wall_collision(
-                        (next_x, next_y), zombie.collision_radius, wall
-                    )
-                    for wall in nearby_walls
-                )
+    def _base_move() -> tuple[float, float]:
+        return (
+            math.cos(zombie.wander_angle) * zombie.speed,
+            math.sin(zombie.wander_angle) * zombie.speed,
+        )
 
-            if at_x_edge:
-                inward_dx = zombie.speed if cell_x == 0 else -zombie.speed
-                if path_clear(zombie.x + inward_dx, zombie.y):
-                    return inward_dx, 0.0
-            if at_y_edge:
-                inward_dy = zombie.speed if cell_y == 0 else -zombie.speed
-                if path_clear(zombie.x, zombie.y + inward_dy):
-                    return 0.0, inward_dy
-
-    move_x = math.cos(zombie.wander_angle) * zombie.speed
-    move_y = math.sin(zombie.wander_angle) * zombie.speed
+    move_x, move_y = _base_move()
     if pitfall_cells is not None:
         avoid_x, avoid_y = zombie._avoid_pitfalls(pitfall_cells, cell_size)
         move_x += avoid_x
@@ -649,8 +701,7 @@ def _zombie_wander_movement(
             next_cell = (int(next_x // cell_size), int(next_y // cell_size))
             if next_cell in pitfall_cells:
                 zombie.wander_angle = (zombie.wander_angle + math.pi) % math.tau
-                move_x = math.cos(zombie.wander_angle) * zombie.speed
-                move_y = math.sin(zombie.wander_angle) * zombie.speed
+                move_x, move_y = _base_move()
                 avoid_x, avoid_y = zombie._avoid_pitfalls(pitfall_cells, cell_size)
                 move_x += avoid_x
                 move_y += avoid_y
@@ -659,6 +710,22 @@ def _zombie_wander_movement(
                 next_cell = (int(next_x // cell_size), int(next_y // cell_size))
                 if next_cell in pitfall_cells:
                     return 0.0, 0.0
+    if fire_floor_cells and cell_size > 0:
+        next_x = zombie.x + move_x
+        next_y = zombie.y + move_y
+        next_cell = (int(next_x // cell_size), int(next_y // cell_size))
+        if next_cell in fire_floor_cells:
+            zombie.wander_angle = (zombie.wander_angle + math.pi) % math.tau
+            move_x, move_y = _base_move()
+            if pitfall_cells is not None:
+                avoid_x, avoid_y = zombie._avoid_pitfalls(pitfall_cells, cell_size)
+                move_x += avoid_x
+                move_y += avoid_y
+            next_x = zombie.x + move_x
+            next_y = zombie.y + move_y
+            next_cell = (int(next_x // cell_size), int(next_y // cell_size))
+            if next_cell in fire_floor_cells:
+                return 0.0, 0.0
     return move_x, move_y
 
 

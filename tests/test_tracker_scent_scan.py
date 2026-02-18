@@ -1,7 +1,14 @@
-from zombie_escape.entities import Wall, Zombie
+import pygame
+
+from zombie_escape.entities import Zombie
 from zombie_escape.entities_constants import ZombieKind
 from zombie_escape.entities.movement import _zombie_update_tracker_target
-from zombie_escape.models import Footprint
+from zombie_escape.level_constants import (
+    DEFAULT_CELL_SIZE,
+    DEFAULT_GRID_COLS,
+    DEFAULT_GRID_ROWS,
+)
+from zombie_escape.models import Footprint, LevelLayout
 
 
 def _make_footprint(pos: tuple[float, float], time_ms: int) -> Footprint:
@@ -13,39 +20,84 @@ def _force_scan(zombie: Zombie) -> None:
     zombie.tracker_last_scan_time = -999999
 
 
+def _make_layout(*, wall_cells: set[tuple[int, int]]) -> LevelLayout:
+    return LevelLayout(
+        field_rect=pygame.Rect(
+            0,
+            0,
+            DEFAULT_GRID_COLS * DEFAULT_CELL_SIZE,
+            DEFAULT_GRID_ROWS * DEFAULT_CELL_SIZE,
+        ),
+        grid_cols=DEFAULT_GRID_COLS,
+        grid_rows=DEFAULT_GRID_ROWS,
+        outside_cells=set(),
+        walkable_cells=[],
+        outer_wall_cells=set(),
+        wall_cells=wall_cells,
+        steel_beam_cells=set(),
+        pitfall_cells=set(),
+        car_walkable_cells=set(),
+        car_spawn_cells=[],
+        fall_spawn_cells=set(),
+        houseplant_cells=set(),
+        puddle_cells=set(),
+        bevel_corners={},
+        moving_floor_cells={},
+    )
+
+
 def test_tracker_picks_latest_visible_footprint() -> None:
     zombie = Zombie(10, 10, kind=ZombieKind.TRACKER)
     _force_scan(zombie)
+    layout = _make_layout(wall_cells=set())
     footprints = [
         _make_footprint((30, 10), 1000),
         _make_footprint((40, 10), 2000),
     ]
-    _zombie_update_tracker_target(zombie, footprints, [], now_ms=0)
+    _zombie_update_tracker_target(
+        zombie,
+        footprints,
+        layout,
+        cell_size=DEFAULT_CELL_SIZE,
+        now_ms=0,
+    )
     assert zombie.tracker_target_pos == (40, 10)
 
 
 def test_tracker_skips_blocked_latest_footprint() -> None:
     zombie = Zombie(10, 10, kind=ZombieKind.TRACKER)
     _force_scan(zombie)
-    wall = Wall(30, 0, 10, 20)
+    layout = _make_layout(wall_cells={(1, 0)})
     footprints = [
         _make_footprint((50, 10), 3000),
         _make_footprint((10, 50), 2000),
         _make_footprint((30, 10), 1000),
     ]
-    _zombie_update_tracker_target(zombie, footprints, [wall], now_ms=0)
+    _zombie_update_tracker_target(
+        zombie,
+        footprints,
+        layout,
+        cell_size=DEFAULT_CELL_SIZE,
+        now_ms=0,
+    )
     assert zombie.tracker_target_pos == (10, 50)
 
 
 def test_tracker_limits_to_top_k_candidates() -> None:
     zombie = Zombie(10, 10, kind=ZombieKind.TRACKER)
     _force_scan(zombie)
-    wall = Wall(20, 0, 5, 30)
+    layout = _make_layout(wall_cells={(1, 0), (1, 1)})
     footprints = [
         _make_footprint((50, 10), 4000),
         _make_footprint((60, 15), 3000),
         _make_footprint((70, 5), 2000),
         _make_footprint((10, 40), 1000),
     ]
-    _zombie_update_tracker_target(zombie, footprints, [wall], now_ms=0)
+    _zombie_update_tracker_target(
+        zombie,
+        footprints,
+        layout,
+        cell_size=DEFAULT_CELL_SIZE,
+        now_ms=0,
+    )
     assert zombie.tracker_target_pos is None

@@ -43,7 +43,6 @@ def test_solitary_keeps_distance_from_player_when_adjacent() -> None:
 
     move_x, move_y = _zombie_solitary_movement(
         solitary,
-        [],
         DEFAULT_CELL_SIZE,
         layout,
         (100 + DEFAULT_CELL_SIZE, 100),
