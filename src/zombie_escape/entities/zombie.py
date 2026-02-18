@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Any, Iterable, Protocol, TYPE_CHECKING
+from typing import Any, Iterable, Protocol
 
 import pygame
 
@@ -60,9 +60,6 @@ from .zombie_movement import (
 from .walls import Wall
 from .zombie_visuals import build_grayscale_image
 from .zombie_vitals import ZombieVitals
-
-if TYPE_CHECKING:  # pragma: no cover - typing-only imports
-    from .patrol_bot import PatrolBot
 
 RNG = get_rng()
 
@@ -433,7 +430,6 @@ class Zombie(pygame.sprite.Sprite):
         player_center: tuple[float, float],
         walls: list[Wall],
         nearby_zombies: Iterable[Zombie],
-        nearby_patrol_bots: Iterable["PatrolBot"],
         electrified_cells: set[tuple[int, int]] | None = None,
         footprints: list[Footprint] | None = None,
         *,
@@ -453,7 +449,6 @@ class Zombie(pygame.sprite.Sprite):
         if not self.alive():
             return
 
-        _ = nearby_patrol_bots
         on_electrified_floor = False
         if cell_size > 0 and electrified_cells:
             current_cell = (int(self.x // cell_size), int(self.y // cell_size))

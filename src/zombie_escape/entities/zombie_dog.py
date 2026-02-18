@@ -538,7 +538,6 @@ class ZombieDog(pygame.sprite.Sprite):
         player_center: tuple[float, float],
         walls: list[pygame.sprite.Sprite],
         nearby_zombies: list[pygame.sprite.Sprite],
-        nearby_patrol_bots: list[pygame.sprite.Sprite] | None = None,
         electrified_cells: set[tuple[int, int]] | None = None,
         footprints: list | None = None,
         *,

@@ -501,7 +501,6 @@ def update_entities(
     zombie_kinds = (
         SpatialKind.ZOMBIE | SpatialKind.ZOMBIE_DOG | SpatialKind.TRAPPED_ZOMBIE
     )
-    patrol_kinds = SpatialKind.PATROL_BOT
     base_radius = ZOMBIE_SEPARATION_DISTANCE + PLAYER_SPEED
     for zombie in zombies_sorted:
         if (
@@ -628,18 +627,12 @@ def update_entities(
         zombie_search_radius = (
             ZOMBIE_WALL_HUG_SENSOR_DISTANCE + zombie.collision_radius + 120
         )
-        nearby_patrol_bots = spatial_index.query_radius(
-            (zombie.x, zombie.y),
-            zombie_search_radius,
-            kinds=patrol_kinds,
-        )
         dog_candidates = nearby_candidates
         nearby_walls = _walls_near((zombie.x, zombie.y), zombie_search_radius)
         zombie.update(
             target,
             nearby_walls,
             dog_candidates,
-            nearby_patrol_bots,
             electrified_cells,
             footprints=game_data.state.footprints,
             cell_size=game_data.cell_size,
