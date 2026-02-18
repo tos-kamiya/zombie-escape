@@ -764,14 +764,19 @@ def _place_pitfall_density(
 
     if density <= 0.0:
         return
-    for y in range(1, rows - 1):
-        for x in range(1, cols - 1):
-            if (x, y) in forbidden:
-                continue
-            if grid[y][x] != ".":
-                continue
-            if RNG.random() < density:
-                grid[y][x] = "x"
+    candidates = [
+        (x, y)
+        for y in range(1, rows - 1)
+        for x in range(1, cols - 1)
+        if (x, y) not in forbidden and grid[y][x] == "."
+    ]
+    selected = _select_cells_by_ratio(
+        candidates,
+        density,
+        feature_name="pitfall",
+    )
+    for x, y in selected:
+        grid[y][x] = "x"
 
 
 def _place_houseplant_zones(
@@ -817,14 +822,19 @@ def _place_houseplant_density(
 
     if density <= 0.0:
         return
-    for y in range(1, rows - 1):
-        for x in range(1, cols - 1):
-            if (x, y) in forbidden:
-                continue
-            if grid[y][x] != ".":
-                continue
-            if RNG.random() < density:
-                grid[y][x] = "h"
+    candidates = [
+        (x, y)
+        for y in range(1, rows - 1)
+        for x in range(1, cols - 1)
+        if (x, y) not in forbidden and grid[y][x] == "."
+    ]
+    selected = _select_cells_by_ratio(
+        candidates,
+        density,
+        feature_name="houseplant",
+    )
+    for x, y in selected:
+        grid[y][x] = "h"
 
 
 def _place_puddle_zones(
@@ -870,14 +880,19 @@ def _place_puddle_density(
 
     if density <= 0.0:
         return
-    for y in range(1, rows - 1):
-        for x in range(1, cols - 1):
-            if (x, y) in forbidden:
-                continue
-            if grid[y][x] != ".":
-                continue
-            if RNG.random() < density:
-                grid[y][x] = "w"
+    candidates = [
+        (x, y)
+        for y in range(1, rows - 1)
+        for x in range(1, cols - 1)
+        if (x, y) not in forbidden and grid[y][x] == "."
+    ]
+    selected = _select_cells_by_ratio(
+        candidates,
+        density,
+        feature_name="puddle",
+    )
+    for x, y in selected:
+        grid[y][x] = "w"
 
 
 def _place_reinforced_wall_zones(
@@ -923,14 +938,42 @@ def _place_reinforced_wall_density(
 
     if density <= 0.0:
         return
-    for y in range(1, rows - 1):
-        for x in range(1, cols - 1):
-            if (x, y) in forbidden:
-                continue
-            if grid[y][x] != ".":
-                continue
-            if RNG.random() < density:
-                grid[y][x] = "R"
+    candidates = [
+        (x, y)
+        for y in range(1, rows - 1)
+        for x in range(1, cols - 1)
+        if (x, y) not in forbidden and grid[y][x] == "."
+    ]
+    selected = _select_cells_by_ratio(
+        candidates,
+        density,
+        feature_name="reinforced wall",
+    )
+    for x, y in selected:
+        grid[y][x] = "R"
+
+
+def _select_cells_by_ratio(
+    candidates: list[tuple[int, int]],
+    ratio: float,
+    *,
+    feature_name: str,
+) -> list[tuple[int, int]]:
+    if ratio <= 0.0:
+        return []
+    if not candidates:
+        raise MapGenerationError(
+            f"{feature_name} ratio is positive but no candidate cells are available"
+        )
+    target_count = int(round(len(candidates) * ratio))
+    if target_count == 0:
+        target_count = 1
+    target_count = max(0, min(len(candidates), target_count))
+    if target_count == 0:
+        return []
+    shuffled = list(candidates)
+    RNG.shuffle(shuffled)
+    return shuffled[:target_count]
 
 
 def _pick_empty_cell(

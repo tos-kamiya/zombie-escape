@@ -145,27 +145,30 @@ def generate_level_from_blueprint(
     for attempt in range(20):
         if seed is not None:
             seed_rng(seed + attempt)
-        blueprint = generate_random_blueprint(
-            steel_chance=steel_chance,
-            cols=stage.grid_cols,
-            rows=stage.grid_rows,
-            exit_sides=stage.exit_sides,
-            wall_algo=stage.wall_algorithm,
-            pitfall_density=stage.pitfall_density,
-            pitfall_zones=stage.pitfall_zones,
-            reinforced_wall_density=stage.reinforced_wall_density,
-            reinforced_wall_zones=stage.reinforced_wall_zones,
-            moving_floor_cells=base_moving_floor_cells,
-            fuel_count=fuel_count,
-            empty_fuel_can_count=empty_fuel_can_count,
-            fuel_station_count=fuel_station_count,
-            flashlight_count=flashlight_count,
-            shoes_count=shoes_count,
-            houseplant_density=stage.houseplant_density,
-            houseplant_zones=stage.houseplant_zones,
-            puddle_density=stage.puddle_density,
-            puddle_zones=stage.puddle_zones,
-        )
+        try:
+            blueprint = generate_random_blueprint(
+                steel_chance=steel_chance,
+                cols=stage.grid_cols,
+                rows=stage.grid_rows,
+                exit_sides=stage.exit_sides,
+                wall_algo=stage.wall_algorithm,
+                pitfall_density=stage.pitfall_density,
+                pitfall_zones=stage.pitfall_zones,
+                reinforced_wall_density=stage.reinforced_wall_density,
+                reinforced_wall_zones=stage.reinforced_wall_zones,
+                moving_floor_cells=base_moving_floor_cells,
+                fuel_count=fuel_count,
+                empty_fuel_can_count=empty_fuel_can_count,
+                fuel_station_count=fuel_station_count,
+                flashlight_count=flashlight_count,
+                shoes_count=shoes_count,
+                houseplant_density=stage.houseplant_density,
+                houseplant_zones=stage.houseplant_zones,
+                puddle_density=stage.puddle_density,
+                puddle_zones=stage.puddle_zones,
+            )
+        except MapGenerationError:
+            continue
         require_car_spawn = not stage.endurance_stage
         car_reachable = validate_connectivity(
             blueprint.grid,
@@ -178,7 +181,9 @@ def generate_level_from_blueprint(
             blueprint_data = blueprint
             break
     if blueprint_data is None:
-        raise MapGenerationError("Connectivity validation failed after 20 attempts")
+        raise MapGenerationError(
+            "Blueprint generation/connectivity validation failed after 20 attempts"
+        )
     blueprint = blueprint_data.grid
     steel_cells_raw = blueprint_data.steel_cells
     car_reachable_cells = blueprint_data.car_reachable_cells

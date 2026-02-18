@@ -79,6 +79,8 @@ def _scatter_positions_on_walkable(
     cells = list(walkable_cells)
     RNG.shuffle(cells)
     target_count = int(len(cells) * clamped_rate + 0.5)
+    if clamped_rate > 0.0 and target_count == 0:
+        target_count = 1
     if target_count <= 0:
         return positions
     for cell_x, cell_y in cells[:target_count]:

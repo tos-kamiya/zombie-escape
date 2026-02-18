@@ -138,6 +138,53 @@ def _pick_zombie_variant(stage: Stage | None) -> ZombieKind:
     return ZombieKind.DOG
 
 
+def _build_initial_zombie_kind_plan(stage: Stage | None, total: int) -> list[ZombieKind]:
+    if total <= 0:
+        return []
+    normal_ratio = 1.0
+    tracker_ratio = 0.0
+    wall_hugging_ratio = 0.0
+    lineformer_ratio = 0.0
+    solitary_ratio = 0.0
+    dog_ratio = 0.0
+    if stage is not None:
+        normal_ratio = max(0.0, float(stage.zombie_normal_ratio))
+        tracker_ratio = max(0.0, float(stage.zombie_tracker_ratio))
+        wall_hugging_ratio = max(0.0, float(stage.zombie_wall_hugging_ratio))
+        lineformer_ratio = max(0.0, float(stage.zombie_lineformer_ratio))
+        solitary_ratio = max(0.0, float(stage.zombie_solitary_ratio))
+        nimble_ratio = max(0.0, float(stage.zombie_nimble_dog_ratio))
+        dog_ratio = max(0.0, float(stage.zombie_dog_ratio)) + nimble_ratio
+    weighted_kinds = [
+        (ZombieKind.NORMAL, normal_ratio),
+        (ZombieKind.TRACKER, tracker_ratio),
+        (ZombieKind.WALL_HUGGER, wall_hugging_ratio),
+        (ZombieKind.LINEFORMER, lineformer_ratio),
+        (ZombieKind.SOLITARY, solitary_ratio),
+        (ZombieKind.DOG, dog_ratio),
+    ]
+    total_ratio = sum(weight for _, weight in weighted_kinds)
+    if total_ratio <= 0.0:
+        return [ZombieKind.NORMAL] * total
+    planned: list[ZombieKind] = []
+    for kind, weight in weighted_kinds:
+        if weight <= 0.0:
+            continue
+        count = int(round(total * (weight / total_ratio)))
+        if count == 0:
+            count = 1
+        planned.extend([kind] * count)
+    if not planned:
+        return [ZombieKind.NORMAL] * total
+    RNG.shuffle(planned)
+    if len(planned) >= total:
+        return planned[:total]
+    while len(planned) < total:
+        planned.append(RNG.choice(planned))
+    RNG.shuffle(planned)
+    return planned
+
+
 def _is_spawn_position_clear(
     game_data: GameData,
     candidate: Zombie | ZombieDog,
@@ -924,9 +971,12 @@ def spawn_initial_zombies(
         player=player,
         min_player_dist=ZOMBIE_SPAWN_PLAYER_BUFFER,
     )
+    kind_plan = _build_initial_zombie_kind_plan(game_data.stage, len(positions))
 
     for spawn_index, pos in enumerate(positions):
-        kind = _pick_zombie_variant(game_data.stage)
+        kind = kind_plan[spawn_index] if spawn_index < len(kind_plan) else _pick_zombie_variant(
+            game_data.stage
+        )
         if kind == ZombieKind.LINEFORMER:
             _spawn_lineformer_request(
                 game_data,
