@@ -178,6 +178,8 @@ def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
             car_spawn_cells=[],
             fall_spawn_cells=set(),
             houseplant_cells=set(),
+            fire_floor_cells=set(),
+            metal_floor_cells=set(),
             zombie_contaminated_cells=set(),
             puddle_cells=set(),
             bevel_corners={},

@@ -1,5 +1,17 @@
 # Rendering
 
+## INPROGRESS: Fire/Metal Floor Rendering
+
+- Fire floor visual:
+  - Fire floor tiles are rendered as an animated floor feature.
+  - Animation uses a small loop (about 3 frames) with slow phase progression.
+- Metal floor visual:
+  - `metal_floor_cells` are rendered as a distinct industrial floor tile.
+  - Behavior remains identical to normal floor; this is a visual transition layer
+    around fire floor regions.
+- Draw-order intent:
+  - Fire/metal floor rendering is handled in world-tile pass, before entities and fog.
+
 Supporting modules:
 - `src/zombie_escape/render_assets.py` (procedural sprite/icon construction used by renderers and UI)
 - `src/zombie_escape/colors.py` (palette selection and ambient color policy)

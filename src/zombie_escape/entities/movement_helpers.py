@@ -107,6 +107,7 @@ def move_axis_with_pitfall(
     collide: Callable[[], T | None],
     cell_size: int | None,
     pitfall_cells: set[tuple[int, int]],
+    pending_fall_cells: set[tuple[int, int]] | None = None,
     can_jump_now: bool,
     now: int,
     rollback_factor: float = 1.0,
@@ -115,6 +116,10 @@ def move_axis_with_pitfall(
 ) -> None:
     if not delta:
         return
+
+    pending_cells = (
+        pitfall_cells if pending_fall_cells is None else pending_fall_cells
+    )
 
     if axis == "x":
         sprite.x += delta  # type: ignore[attr-defined]
@@ -168,7 +173,7 @@ def move_axis_with_pitfall(
             and _sprite_in_pitfall(
                 sprite,
                 cell_size=cell_size,
-                pitfall_cells=pitfall_cells,
+                pitfall_cells=pending_cells,
             )
         ):
             sprite.pending_pitfall_fall = True  # type: ignore[attr-defined]

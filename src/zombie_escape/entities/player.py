@@ -91,6 +91,8 @@ class Player(pygame.sprite.Sprite):
         self.pending_pitfall_fall = False
 
         pitfall_cells = layout.pitfall_cells
+        fire_floor_cells = layout.fire_floor_cells
+        blocked_hazard_cells = pitfall_cells | fire_floor_cells
         walkable_cells = layout.walkable_cells
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
@@ -118,7 +120,7 @@ class Player(pygame.sprite.Sprite):
                 dy,
                 PLAYER_JUMP_RANGE,
                 cell_size,
-                pitfall_cells,
+                blocked_hazard_cells,
                 walkable_cells,
             )
         )
@@ -158,7 +160,8 @@ class Player(pygame.sprite.Sprite):
             delta=dx,
             collide=_collide_player,
             cell_size=cell_size,
-            pitfall_cells=pitfall_cells,
+            pitfall_cells=blocked_hazard_cells,
+            pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
             rollback_factor=1.0,
@@ -172,7 +175,8 @@ class Player(pygame.sprite.Sprite):
             delta=dy,
             collide=_collide_player,
             cell_size=cell_size,
-            pitfall_cells=pitfall_cells,
+            pitfall_cells=blocked_hazard_cells,
+            pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
             rollback_factor=1.0,

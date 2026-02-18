@@ -12,6 +12,10 @@ from ..entities_constants import MovingFloorDirection
 from ..models import Footprint
 from ..render_assets import RenderAssets
 from ..render_constants import (
+    FIRE_FLOOR_BASE_COLOR,
+    FIRE_FLOOR_FLAME_COLORS,
+    METAL_FLOOR_BASE_COLOR,
+    METAL_FLOOR_LINE_COLOR,
     MOVING_FLOOR_BORDER_COLOR,
     MOVING_FLOOR_LINE_COLOR,
     MOVING_FLOOR_TILE_COLOR,
@@ -31,6 +35,8 @@ ELECTRIFIED_FLOOR_BORDER_ALPHA = 140
 _PUDDLE_TILE_CACHE: dict[
     tuple[int, tuple[int, int, int], int, bool], surface.Surface
 ] = {}
+_METAL_TILE_CACHE: dict[int, surface.Surface] = {}
+_FIRE_TILE_CACHE: dict[tuple[int, int], surface.Surface] = {}
 
 
 def _build_moving_floor_pattern(
@@ -128,6 +134,45 @@ def _get_puddle_tile_surface(
     return puddle_tile
 
 
+def _get_metal_tile_surface(*, cell_size: int) -> surface.Surface:
+    key = max(1, int(cell_size))
+    cached = _METAL_TILE_CACHE.get(key)
+    if cached is not None:
+        return cached
+    tile = pygame.Surface((key, key), pygame.SRCALPHA)
+    tile.fill(METAL_FLOOR_BASE_COLOR)
+    step = max(4, key // 4)
+    for x in range(0, key, step):
+        pygame.draw.line(tile, METAL_FLOOR_LINE_COLOR, (x, 0), (x, key - 1), width=1)
+    for y in range(0, key, step):
+        pygame.draw.line(tile, METAL_FLOOR_LINE_COLOR, (0, y), (key - 1, y), width=1)
+    _METAL_TILE_CACHE[key] = tile
+    return tile
+
+
+def _get_fire_tile_surface(*, cell_size: int, phase: int) -> surface.Surface:
+    key = (max(1, int(cell_size)), int(phase) % 3)
+    cached = _FIRE_TILE_CACHE.get(key)
+    if cached is not None:
+        return cached
+    size = key[0]
+    tile = pygame.Surface((size, size), pygame.SRCALPHA)
+    tile.fill(FIRE_FLOOR_BASE_COLOR)
+    center_x = size // 2
+    base_y = size - max(2, size // 7)
+    pulse = key[1]
+    for idx, color in enumerate(FIRE_FLOOR_FLAME_COLORS):
+        width = max(2, int(size * (0.76 - idx * 0.18)))
+        height = max(2, int(size * (0.42 - idx * 0.08)))
+        x_off = ((pulse + idx) % 3) - 1
+        y_off = ((pulse + idx * 2) % 2) * -1
+        flame_rect = pygame.Rect(0, 0, width, height)
+        flame_rect.midbottom = (center_x + x_off, base_y + y_off)
+        pygame.draw.ellipse(tile, color, flame_rect)
+    _FIRE_TILE_CACHE[key] = tile
+    return tile
+
+
 def _draw_play_area(
     screen: surface.Surface,
     apply_rect: Callable[[pygame.Rect], pygame.Rect],
@@ -138,6 +183,8 @@ def _draw_play_area(
     outside_cells: set[tuple[int, int]],
     fall_spawn_cells: set[tuple[int, int]],
     pitfall_cells: set[tuple[int, int]],
+    fire_floor_cells: set[tuple[int, int]],
+    metal_floor_cells: set[tuple[int, int]],
     puddle_cells: set[tuple[int, int]],
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection],
     electrified_cells: set[tuple[int, int]],
@@ -291,6 +338,44 @@ def _draw_play_area(
                             width=2,
                         )
 
+                continue
+
+            if (x, y) in fire_floor_cells:
+                lx, ly = (
+                    x * grid_snap,
+                    y * grid_snap,
+                )
+                r = pygame.Rect(
+                    lx,
+                    ly,
+                    grid_snap,
+                    grid_snap,
+                )
+                sr = apply_rect(r)
+                if sr.colliderect(screen_rect):
+                    phase = ((elapsed_ms // 360) + x + y) % 3
+                    fire_tile = _get_fire_tile_surface(
+                        cell_size=grid_snap,
+                        phase=phase,
+                    )
+                    screen.blit(fire_tile, sr.topleft)
+                continue
+
+            if (x, y) in metal_floor_cells:
+                lx, ly = (
+                    x * grid_snap,
+                    y * grid_snap,
+                )
+                r = pygame.Rect(
+                    lx,
+                    ly,
+                    grid_snap,
+                    grid_snap,
+                )
+                sr = apply_rect(r)
+                if sr.colliderect(screen_rect):
+                    metal_tile = _get_metal_tile_surface(cell_size=grid_snap)
+                    screen.blit(metal_tile, sr.topleft)
                 continue
 
             use_secondary = ((x // 2) + (y // 2)) % 2 == 0

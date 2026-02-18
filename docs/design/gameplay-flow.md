@@ -1,5 +1,19 @@
 # Gameplay Flow
 
+## INPROGRESS: Fire Floor Runtime Rules
+
+- Fire floor (`fire_floor_cells`) behavior:
+  - Player/Buddy: stepping on fire floor triggers immediate game over.
+  - Survivor: stepping on fire floor immediately burns out (removed).
+  - Zombies (all variants, including dogs): stepping on fire floor immediately burns out (removed).
+  - Patrol bots and cars are unaffected and can move over fire floor normally.
+- Visual FX intent:
+  - Burn-out uses a short death/fall-like effect path for consistency with existing
+    transient disappearance effects.
+- Spawn/item rule:
+  - Runtime item placement candidates are derived from `item_spawn_cells`, which
+    will already exclude fire floor cells.
+
 ## Pitfalls and Jumping
 
 - Player/car treat pitfall as blocked terrain by default.

@@ -87,7 +87,7 @@ def validate_humanoid_connectivity(grid: list[str]) -> bool:
             ch = grid[y][x]
             if ch == "P":
                 start_pos = (x, y)
-            if ch not in ("x", "B", "R"):
+            if ch not in ("x", "B", "R", "F"):
                 passable_cells.add((x, y))
 
     if start_pos is None:
@@ -112,7 +112,7 @@ def _humanoid_reachable_cells(
             (x, y)
             for y in range(rows)
             for x in range(cols)
-            if grid[y][x] not in ("x", "B", "R")
+            if grid[y][x] not in ("x", "B", "R", "F")
         }
     if start_pos not in passable_cells:
         return set()
@@ -171,7 +171,7 @@ def validate_humanoid_objective_connectivity(
         (x, y)
         for y in range(rows)
         for x in range(cols)
-        if grid[y][x] not in ("x", "B", "R")
+        if grid[y][x] not in ("x", "B", "R", "F")
     }
     player_cells = [
         (x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "P"
@@ -897,6 +897,84 @@ def _place_puddle_density(
         grid[y][x] = "w"
 
 
+def _place_fire_floor_zones(
+    grid: list[list[str]],
+    *,
+    fire_floor_zones: list[tuple[int, int, int, int]] | None = None,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Place zone-defined fire-floor cells on empty floor cells."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+
+    if not fire_floor_zones:
+        return
+    for col, row, width, height in fire_floor_zones:
+        if width <= 0 or height <= 0:
+            continue
+        start_x = max(0, col)
+        start_y = max(0, row)
+        end_x = min(cols, col + width)
+        end_y = min(rows, row + height)
+        for y in range(start_y, end_y):
+            for x in range(start_x, end_x):
+                if (x, y) in forbidden:
+                    continue
+                if grid[y][x] == ".":
+                    grid[y][x] = "F"
+
+
+def _place_fire_floor_density(
+    grid: list[list[str]],
+    *,
+    density: float,
+    forbidden_cells: set[tuple[int, int]] | None = None,
+) -> None:
+    """Replace empty floor cells with fire floors based on density."""
+    cols, rows = len(grid[0]), len(grid)
+    forbidden = _collect_exit_adjacent_cells(grid)
+    if forbidden_cells:
+        forbidden |= forbidden_cells
+
+    if density <= 0.0:
+        return
+    candidates = [
+        (x, y)
+        for y in range(1, rows - 1)
+        for x in range(1, cols - 1)
+        if (x, y) not in forbidden and grid[y][x] == "."
+    ]
+    selected = _select_cells_by_ratio(
+        candidates,
+        density,
+        feature_name="fire floor",
+    )
+    for x, y in selected:
+        grid[y][x] = "F"
+
+
+def _place_metal_adjacent_to_fire_floor(grid: list[list[str]]) -> None:
+    """Convert floor cells adjacent to fire floors into metal floor cells."""
+    cols, rows = len(grid[0]), len(grid)
+    fire_cells = [
+        (x, y)
+        for y in range(rows)
+        for x in range(cols)
+        if grid[y][x] == "F"
+    ]
+    if not fire_cells:
+        return
+    for x, y in fire_cells:
+        for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            nx, ny = x + dx, y + dy
+            if nx < 0 or ny < 0 or nx >= cols or ny >= rows:
+                continue
+            if grid[ny][nx] == ".":
+                grid[ny][nx] = "m"
+
+
 def _place_reinforced_wall_zones(
     grid: list[list[str]],
     *,
@@ -1030,6 +1108,8 @@ def generate_random_blueprint(
     wall_algo: str = "default",
     pitfall_density: float = 0.0,
     pitfall_zones: list[tuple[int, int, int, int]] | None = None,
+    fire_floor_density: float = 0.0,
+    fire_floor_zones: list[tuple[int, int, int, int]] | None = None,
     reserved_cells: set[tuple[int, int]] | None = None,
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] | None = None,
     fuel_count: int = 1,
@@ -1093,6 +1173,20 @@ def generate_random_blueprint(
         reserved_cells.update(
             _expand_zone_cells(
                 puddle_zones,
+                grid_cols=cols,
+                grid_rows=rows,
+            )
+        )
+    # Place zone-defined fire floors.
+    if fire_floor_zones:
+        _place_fire_floor_zones(
+            grid,
+            fire_floor_zones=fire_floor_zones,
+            forbidden_cells=reserved_cells,
+        )
+        reserved_cells.update(
+            _expand_zone_cells(
+                fire_floor_zones,
                 grid_cols=cols,
                 grid_rows=rows,
             )
@@ -1290,6 +1384,12 @@ def generate_random_blueprint(
         density=puddle_density,
         forbidden_cells=reserved_cells,
     )
+    # Place density-based fire floors.
+    _place_fire_floor_density(
+        grid,
+        density=fire_floor_density,
+        forbidden_cells=reserved_cells,
+    )
 
     # Place density-based houseplants.
     _place_houseplant_density(
@@ -1317,6 +1417,8 @@ def generate_random_blueprint(
         )
     else:
         algo_func(grid, forbidden_cells=reserved_cells)
+
+    _place_metal_adjacent_to_fire_floor(grid)
 
     steel_beams = _place_steel_beams(
         grid, chance=steel_chance, forbidden_cells=reserved_cells

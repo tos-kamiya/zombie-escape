@@ -94,6 +94,8 @@ def draw(
         outside_cells,
         game_data.layout.fall_spawn_cells,
         game_data.layout.pitfall_cells,
+        game_data.layout.fire_floor_cells,
+        game_data.layout.metal_floor_cells,
         game_data.layout.puddle_cells,
         game_data.layout.moving_floor_cells,
         state.electrified_cells,

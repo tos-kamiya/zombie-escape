@@ -54,6 +54,28 @@ from .utils import (
 RNG = get_rng()
 
 
+def _cell_at_position(
+    x: float,
+    y: float,
+    *,
+    cell_size: int,
+) -> tuple[int, int] | None:
+    if cell_size <= 0:
+        return None
+    return (int(x // cell_size), int(y // cell_size))
+
+
+def _is_on_fire_floor(
+    x: float,
+    y: float,
+    *,
+    cell_size: int,
+    fire_floor_cells: set[tuple[int, int]],
+) -> bool:
+    cell = _cell_at_position(x, y, cell_size=cell_size)
+    return bool(cell is not None and cell in fire_floor_cells)
+
+
 def process_player_input(
     keys: Sequence[bool],
     player: Player,
@@ -131,6 +153,7 @@ def update_entities(
     stage = game_data.stage
     active_car = car if car and car.alive() else None
     pitfall_cells = game_data.layout.pitfall_cells
+    fire_floor_cells = game_data.layout.fire_floor_cells
     field_rect = game_data.layout.field_rect
     current_time = game_data.state.clock.elapsed_ms
 
@@ -264,6 +287,24 @@ def update_entities(
             now_ms=game_data.state.clock.elapsed_ms,
         )
         if (
+            not game_data.state.game_over
+            and not player.is_jumping
+            and _is_on_fire_floor(
+                player.x,
+                player.y,
+                cell_size=game_data.cell_size,
+                fire_floor_cells=fire_floor_cells,
+            )
+        ):
+            game_data.state.decay_effects.append(
+                DecayingEntityEffect(player.image, player.rect.center)
+            )
+            if player in all_sprites:
+                all_sprites.remove(player)
+            game_data.state.game_over = True
+            game_data.state.game_over_at = game_data.state.clock.elapsed_ms
+            print("Player burned on fire floor!")
+        if (
             getattr(player, "pending_pitfall_fall", False)
             and not game_data.state.game_over
         ):
@@ -325,6 +366,24 @@ def update_entities(
     )
     for survivor in list(survivor_group):
         if not survivor.alive():
+            continue
+        if _is_on_fire_floor(
+            survivor.x,
+            survivor.y,
+            cell_size=game_data.cell_size,
+            fire_floor_cells=fire_floor_cells,
+        ) and not getattr(survivor, "is_jumping", False):
+            game_data.state.decay_effects.append(
+                DecayingEntityEffect(survivor.image, survivor.rect.center)
+            )
+            survivor.kill()
+            if getattr(survivor, "is_buddy", False):
+                game_data.state.game_over = True
+                if game_data.state.game_over_at is None:
+                    game_data.state.game_over_at = game_data.state.clock.elapsed_ms
+                print("Buddy burned on fire floor!")
+            else:
+                print("Survivor burned on fire floor!")
             continue
         if getattr(survivor, "pending_pitfall_fall", False):
             visible = rect_visible_on_screen(camera, survivor.rect)
@@ -606,6 +665,24 @@ def update_entities(
                     game_data.state.decay_effects.append(
                         DecayingEntityEffect(zombie.image, zombie.rect.center)
                     )
+            continue
+
+        if _is_on_fire_floor(
+            zombie.x,
+            zombie.y,
+            cell_size=game_data.cell_size,
+            fire_floor_cells=fire_floor_cells,
+        ):
+            zombie.kill()
+            fov_target = active_car if player.in_car and active_car else player
+            if rect_visible_on_screen(camera, zombie.rect) and is_entity_in_fov(
+                zombie.rect,
+                fov_target=fov_target,
+                flashlight_count=game_data.state.flashlight_count,
+            ):
+                game_data.state.decay_effects.append(
+                    DecayingEntityEffect(zombie.image, zombie.rect.center)
+                )
             continue
 
         # Check zombie pitfall

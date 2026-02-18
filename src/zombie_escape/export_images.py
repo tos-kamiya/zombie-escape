@@ -129,6 +129,8 @@ def _render_studio_snapshot(
 
     layout = game_data.layout
     layout.pitfall_cells = pitfall_cells or set()
+    layout.fire_floor_cells = set()
+    layout.metal_floor_cells = set()
     layout.fall_spawn_cells = fall_spawn_cells or set()
     layout.moving_floor_cells = moving_floor_cells or {}
     layout.puddle_cells = puddle_cells or set()
@@ -166,6 +168,8 @@ def _render_studio_snapshot(
         layout.outside_cells,
         layout.fall_spawn_cells,
         layout.pitfall_cells,
+        layout.fire_floor_cells,
+        layout.metal_floor_cells,
         layout.puddle_cells,
         layout.moving_floor_cells,
         set(),

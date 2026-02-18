@@ -207,6 +207,10 @@
         "name": "#31 Skitter Dog",
         "description": "Some dogs rush. Others skitter."
       },
+      "stage32": {
+        "name": "#32 Fire Floor Drill",
+        "description": "A small test map to learn fire-floor risk."
+      },
       "stage33": {
         "name": "#33 Crosscurrent",
         "description": "Watch for dogs cutting across your path."

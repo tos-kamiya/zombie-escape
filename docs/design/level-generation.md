@@ -1,5 +1,26 @@
 # Level Generation
 
+## INPROGRESS: Fire Floor and Metal Floor
+
+- New terrain cells:
+  - `fire_floor_cells`: lethal floor for humanoids and zombies.
+  - `metal_floor_cells`: visual-only floor variant generated around fire floors.
+- Stage parameters (planned):
+  - `fire_floor_density`
+  - `fire_floor_zones`
+- Blueprint placement:
+  - Fire floor supports both zone placement and density placement.
+  - Fire floor cells are reserved against spawn/item candidate placement.
+  - Item spawn candidates must exclude fire floor cells.
+- Adjacency decoration:
+  - Orthogonally adjacent normal floor cells next to fire floors are converted to
+    `metal_floor_cells` for visual transition.
+  - `metal_floor_cells` keep normal floor behavior (walkable, spawn-eligible,
+    no hazard effect).
+- Connectivity validation:
+  - Fire floor is treated as blocked for humanoid objective-path validation.
+  - Car connectivity keeps existing passability rules.
+
 ## Blueprint Legend
 
 - `O`: outside area (victory zone)

@@ -156,6 +156,8 @@ def generate_level_from_blueprint(
                 wall_algo=stage.wall_algorithm,
                 pitfall_density=stage.pitfall_density,
                 pitfall_zones=stage.pitfall_zones,
+                fire_floor_density=stage.fire_floor_density,
+                fire_floor_zones=stage.fire_floor_zones,
                 reinforced_wall_density=stage.reinforced_wall_density,
                 reinforced_wall_zones=stage.reinforced_wall_zones,
                 moving_floor_cells=base_moving_floor_cells,
@@ -219,6 +221,8 @@ def generate_level_from_blueprint(
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = {}
     walkable_cells: list[tuple[int, int]] = []
     pitfall_cells: set[tuple[int, int]] = set()
+    fire_floor_cells: set[tuple[int, int]] = set()
+    metal_floor_cells: set[tuple[int, int]] = set()
     houseplant_cells: set[tuple[int, int]] = set()
     puddle_cells: set[tuple[int, int]] = set()
     player_cells: list[tuple[int, int]] = []
@@ -326,6 +330,14 @@ def generate_level_from_blueprint(
                 continue
             if ch == "x":
                 pitfall_cells.add((x, y))
+                continue
+            if ch == "F":
+                fire_floor_cells.add((x, y))
+                continue
+            if ch == "m":
+                metal_floor_cells.add((x, y))
+                if not cell_has_beam:
+                    walkable_cells.append((x, y))
                 continue
             if ch == "h":
                 houseplant_cells.add((x, y))
@@ -481,6 +493,8 @@ def generate_level_from_blueprint(
         car_spawn_cells=[],
         fall_spawn_cells=set(),
         houseplant_cells=houseplant_cells,
+        fire_floor_cells=fire_floor_cells,
+        metal_floor_cells=metal_floor_cells,
         zombie_contaminated_cells=set(),
         puddle_cells=puddle_cells,
         bevel_corners=bevel_corners,
@@ -493,6 +507,8 @@ def generate_level_from_blueprint(
                 walkable_cells.append(cell)
     if pitfall_cells:
         walkable_cells = [cell for cell in walkable_cells if cell not in pitfall_cells]
+    if fire_floor_cells:
+        walkable_cells = [cell for cell in walkable_cells if cell not in fire_floor_cells]
     layout.walkable_cells = walkable_cells
     layout.outer_wall_cells = outer_wall_cells
     layout.wall_cells = wall_cells
@@ -531,9 +547,13 @@ def generate_level_from_blueprint(
 
     moving_floor_set = set(moving_floor_cells)
     item_spawn_cells = (
-        [cell for cell in walkable_cells if cell not in moving_floor_set]
+        [
+            cell
+            for cell in walkable_cells
+            if cell not in moving_floor_set and cell not in fire_floor_cells
+        ]
         if moving_floor_set
-        else list(walkable_cells)
+        else [cell for cell in walkable_cells if cell not in fire_floor_cells]
     )
     car_spawn_cells = (
         [cell for cell in car_reachable_cells if cell not in moving_floor_set]
@@ -553,6 +573,8 @@ def generate_level_from_blueprint(
             "flashlight_cells": list(flashlight_cells),
             "shoes_cells": list(shoes_cells),
             "houseplant_cells": list(houseplant_cells),
+            "fire_floor_cells": list(fire_floor_cells),
+            "metal_floor_cells": list(metal_floor_cells),
             "zombie_contaminated_cells": list(layout.zombie_contaminated_cells),
             "puddle_cells": list(puddle_cells),
             "walkable_cells": walkable_cells,
