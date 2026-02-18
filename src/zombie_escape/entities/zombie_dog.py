@@ -51,8 +51,7 @@ from ..render_assets import (
 )
 from ..world_grid import apply_cell_edge_nudge
 from .zombie import Zombie
-from .movement import _circle_wall_collision
-from .walls import Wall
+from .movement import _circle_rect_collision
 from .zombie_visuals import build_grayscale_image
 from .zombie_vitals import ZombieVitals
 
@@ -75,7 +74,6 @@ class MovementStrategy(Protocol):
     def __call__(
         self,
         zombie_dog: "ZombieDog",
-        walls: list[Wall],
         cell_size: int,
         layout,
         player_center: tuple[float, float],
@@ -88,7 +86,6 @@ class MovementStrategy(Protocol):
 
 def _zombie_dog_default_movement(
     zombie_dog: "ZombieDog",
-    _walls: list[Wall],
     cell_size: int,
     layout,
     player_center: tuple[float, float],
@@ -472,34 +469,50 @@ class ZombieDog(pygame.sprite.Sprite):
         self: Self,
         next_x: float,
         next_y: float,
-        walls: list[Wall],
+        *,
+        cell_size: int,
+        layout,
     ) -> tuple[float, float, bool, bool]:
+        if cell_size <= 0:
+            return next_x, next_y, False, False
+
+        blocked_cells = set(layout.wall_cells)
+        blocked_cells.update(layout.outer_wall_cells)
+        blocked_cells.update(layout.steel_beam_cells)
+
+        def _collides(x: float, y: float) -> bool:
+            radius = self.collision_radius
+            min_cell_x = max(0, int((x - radius) // cell_size))
+            max_cell_x = min(layout.grid_cols - 1, int((x + radius) // cell_size))
+            min_cell_y = max(0, int((y - radius) // cell_size))
+            max_cell_y = min(layout.grid_rows - 1, int((y + radius) // cell_size))
+            for cy in range(min_cell_y, max_cell_y + 1):
+                for cx in range(min_cell_x, max_cell_x + 1):
+                    if (cx, cy) not in blocked_cells:
+                        continue
+                    rect = pygame.Rect(
+                        cx * cell_size,
+                        cy * cell_size,
+                        cell_size,
+                        cell_size,
+                    )
+                    if _circle_rect_collision((x, y), radius, rect):
+                        return True
+            return False
+
         hit_x = False
         hit_y = False
-        possible_walls = [
-            w
-            for w in walls
-            if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100
-        ]
         final_x = self.x
         final_y = self.y
         if next_x != self.x:
-            for wall in possible_walls:
-                if _circle_wall_collision(
-                    (next_x, final_y), self.collision_radius, wall
-                ):
-                    hit_x = True
-                    next_x = self.x
-                    break
+            if _collides(next_x, final_y):
+                hit_x = True
+                next_x = self.x
             final_x = next_x
         if next_y != self.y:
-            for wall in possible_walls:
-                if _circle_wall_collision(
-                    (final_x, next_y), self.collision_radius, wall
-                ):
-                    hit_y = True
-                    next_y = self.y
-                    break
+            if _collides(final_x, next_y):
+                hit_y = True
+                next_y = self.y
             final_y = next_y
         return final_x, final_y, hit_x, hit_y
 
@@ -523,7 +536,7 @@ class ZombieDog(pygame.sprite.Sprite):
     def update(
         self: Self,
         player_center: tuple[float, float],
-        walls: list[Wall],
+        walls: list[pygame.sprite.Sprite],
         nearby_zombies: list[pygame.sprite.Sprite],
         nearby_patrol_bots: list[pygame.sprite.Sprite] | None = None,
         electrified_cells: set[tuple[int, int]] | None = None,
@@ -541,7 +554,7 @@ class ZombieDog(pygame.sprite.Sprite):
         if not self.alive():
             return
 
-        _ = nearby_zombies, footprints
+        _ = nearby_zombies, footprints, walls
         now = now_ms
         drift_x, drift_y = drift
         on_electrified_floor = False
@@ -565,7 +578,6 @@ class ZombieDog(pygame.sprite.Sprite):
 
         move_x, move_y = self.movement_strategy(
             self,
-            walls,
             cell_size,
             layout,
             player_center,
@@ -618,7 +630,10 @@ class ZombieDog(pygame.sprite.Sprite):
         next_x = self.x + move_x
         next_y = self.y + move_y
         final_x, final_y, hit_x, hit_y = self._apply_wall_collision(
-            next_x, next_y, walls
+            next_x,
+            next_y,
+            cell_size=cell_size,
+            layout=layout,
         )
 
         if self.mode == ZombieDogMode.WANDER and (hit_x or hit_y):
@@ -654,7 +669,10 @@ class ZombieDog(pygame.sprite.Sprite):
                 cell_size=cell_size,
             )
             retry_x, retry_y, _, _ = self._apply_wall_collision(
-                self.x + try_dx, self.y + try_dy, walls
+                self.x + try_dx,
+                self.y + try_dy,
+                cell_size=cell_size,
+                layout=layout,
             )
             if retry_x != self.x or retry_y != self.y:
                 final_x = retry_x

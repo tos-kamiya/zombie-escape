@@ -633,8 +633,8 @@ def update_entities(
             zombie_search_radius,
             kinds=patrol_kinds,
         )
-        nearby_walls = _walls_near((zombie.x, zombie.y), zombie_search_radius)
         dog_candidates = nearby_candidates
+        nearby_walls = _walls_near((zombie.x, zombie.y), zombie_search_radius)
         zombie.update(
             target,
             nearby_walls,

@@ -89,7 +89,6 @@ def test_zombie_dog_wander_avoids_fire_floor_cell() -> None:
 
     move_x, move_y = _zombie_dog_default_movement(
         zombie_dog,
-        [],
         DEFAULT_CELL_SIZE,
         layout,
         (9999.0, 9999.0),
