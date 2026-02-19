@@ -440,10 +440,21 @@ class GameplayScreenRunner:
 
         global _SHARED_FOG_CACHE
         if _SHARED_FOG_CACHE is None:
+            def _render_prewarm_progress(current: int, total: int) -> None:
+                self._show_loading_still(
+                    loading_status_text=tr(
+                        "hud.loading_prewarm_cache",
+                        current=str(current),
+                        total=str(total),
+                    )
+                )
+
+            _render_prewarm_progress(0, 3)
             prewarm_fog_overlays(
                 self.game_data.fog,
                 self.render_assets,
                 stage=self.stage,
+                progress_callback=_render_prewarm_progress,
             )
             _SHARED_FOG_CACHE = self.game_data.fog
         else:
@@ -993,7 +1004,7 @@ class GameplayScreenRunner:
             now_ms=self.game_data.state.clock.elapsed_ms,
         )
 
-    def _show_loading_still(self) -> None:
+    def _show_loading_still(self, loading_status_text: str | None = None) -> None:
         self.screen.fill((0, 0, 0))
         if self.stage.intro_key:
             intro_text = tr(self.stage.intro_key)
@@ -1012,6 +1023,18 @@ class GameplayScreenRunner:
                 rendered = font.render(line, False, WHITE)
                 self.screen.blit(rendered, (x, y))
                 y += line_height
+        if loading_status_text:
+            font_settings = get_font_settings()
+            status_font = load_font(
+                font_settings.resource, font_settings.scaled_size(GAMEPLAY_FONT_SIZE)
+            )
+            status_line_height = int(
+                round(status_font.get_linesize() * font_settings.line_height_scale)
+            )
+            status_surface = status_font.render(loading_status_text, False, LIGHT_GRAY)
+            status_x = TIMED_MESSAGE_LEFT_X
+            status_y = self.screen_height - status_line_height - 6
+            self.screen.blit(status_surface, (status_x, status_y))
         present(self.screen)
         pygame.event.pump()
 

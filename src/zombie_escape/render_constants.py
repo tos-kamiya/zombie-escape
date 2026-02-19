@@ -67,11 +67,13 @@ TIMED_MESSAGE_BAND_ALPHA = 80
 
 # --- Fog/FOV tuning ---
 FOG_RADIUS_SCALE = 1.2
+FOG_EDGE_SOFTNESS_PX = 6
+FOG_LAYER_AA_SCALE = 4
 
 FLASHLIGHT_FOG_SCALE_ONE = FOG_RADIUS_SCALE + 0.3
 FLASHLIGHT_FOG_SCALE_TWO = FOG_RADIUS_SCALE + 0.6
 _FLASHLIGHT_HATCH_EXTRA_SCALE = 0.12
-FOG_HATCH_SOFTEN_SCALE = 0.9
+FOG_HATCH_SOFTEN_SCALE = 1.0
 FOG_HATCH_DENSITY_RAMPS: list[tuple[float, float]] = [
     (0.5, 0.5),
     (0.97, 0.3),
@@ -120,6 +122,8 @@ class RenderAssets:
     flashlight_hatch_extra_scale: float
     fog_hatch_soften_scale: float
     fog_hatch_density_ramps: list[tuple[float, float]]
+    fog_edge_softness_px: int
+    fog_layer_aa_scale: int
 
 
 def build_render_assets(cell_size: int) -> RenderAssets:
@@ -138,6 +142,8 @@ def build_render_assets(cell_size: int) -> RenderAssets:
         flashlight_hatch_extra_scale=_FLASHLIGHT_HATCH_EXTRA_SCALE,
         fog_hatch_soften_scale=FOG_HATCH_SOFTEN_SCALE,
         fog_hatch_density_ramps=FOG_HATCH_DENSITY_RAMPS,
+        fog_edge_softness_px=FOG_EDGE_SOFTNESS_PX,
+        fog_layer_aa_scale=FOG_LAYER_AA_SCALE,
     )
 
 
@@ -186,6 +192,8 @@ __all__ = [
     "TIMED_MESSAGE_BAND_ALPHA",
     # Fog/FOV tuning
     "FOG_RADIUS_SCALE",
+    "FOG_EDGE_SOFTNESS_PX",
+    "FOG_LAYER_AA_SCALE",
     "FLASHLIGHT_FOG_SCALE_ONE",
     "FLASHLIGHT_FOG_SCALE_TWO",
     "FOG_HATCH_SOFTEN_SCALE",

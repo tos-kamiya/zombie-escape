@@ -1,8 +1,6 @@
 from __future__ import annotations
-
-import math
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np  # type: ignore
 import pygame
@@ -13,6 +11,24 @@ from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
 from ..models import Stage
 from ..render_assets import RenderAssets
 from .hud import _get_fog_scale
+
+
+def _build_bayer_matrix(size: int) -> np.ndarray:
+    """Build an NxN Bayer threshold matrix where N is a power of two."""
+    if size < 2 or (size & (size - 1)) != 0:
+        raise ValueError("Bayer matrix size must be a power of two >= 2")
+    matrix = np.array([[0, 2], [3, 1]], dtype=np.int32)
+    while matrix.shape[0] < size:
+        matrix = np.block(
+            [
+                [4 * matrix + 0, 4 * matrix + 2],
+                [4 * matrix + 3, 4 * matrix + 1],
+            ]
+        )
+    return matrix
+
+
+_BAYER_MATRIX_16 = _build_bayer_matrix(16)
 
 
 def _max_flashlight_pickups() -> int:
@@ -48,16 +64,21 @@ def prewarm_fog_overlays(
     assets: RenderAssets,
     *,
     stage: Stage | None = None,
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> None:
     """Populate fog overlay cache for each reachable flashlight count."""
 
-    for profile in _FogProfile:
+    profiles = list(_FogProfile)
+    total = len(profiles)
+    for index, profile in enumerate(profiles, start=1):
         _get_fog_overlay_surfaces(
             fog_data,
             assets,
             profile,
             stage=stage,
         )
+        if progress_callback is not None:
+            progress_callback(index, total)
 
 
 def _soften_surface(
@@ -86,16 +107,7 @@ def _build_continuous_hatch_surface(
     hatch = pygame.Surface((width, height), pygame.SRCALPHA)
     hatch.fill((base_color[0], base_color[1], base_color[2], 0))
 
-    bayer = [
-        [0, 32, 8, 40, 2, 34, 10, 42],
-        [48, 16, 56, 24, 50, 18, 58, 26],
-        [12, 44, 4, 36, 14, 46, 6, 38],
-        [60, 28, 52, 20, 62, 30, 54, 22],
-        [3, 35, 11, 43, 1, 33, 9, 41],
-        [51, 19, 59, 27, 49, 17, 57, 25],
-        [15, 47, 7, 39, 13, 45, 5, 37],
-        [63, 31, 55, 23, 61, 29, 53, 21],
-    ]
+    bayer = _BAYER_MATRIX_16
     ramps: list[tuple[float, float, float]] = []
     for ramp_start_ratio, ramp_max_density in density_ramps:
         safe_start = max(0.0, min(1.0, ramp_start_ratio))
@@ -118,12 +130,11 @@ def _build_continuous_hatch_surface(
         progress = np.clip(progress, 0.0, 1.0)
         density += ramp_max_density * progress
     density = np.clip(density, 0.0, 1.0)
-    threshold = (density * 64).astype(np.int32)
-
-    bayer_np = np.array(bayer, dtype=np.int32)
-    grid_x = (xx // spacing) % 8
-    grid_y = (yy // spacing) % 8
-    bayer_vals = bayer_np[grid_y, grid_x]
+    bayer_size = bayer.shape[0]
+    threshold = (density * (bayer_size * bayer_size)).astype(np.int32)
+    grid_x = (xx // spacing) % bayer_size
+    grid_y = (yy // spacing) % bayer_size
+    bayer_vals = bayer[grid_y, grid_x]
     mask = bayer_vals < threshold
 
     dot_radius = np.maximum(1.0, density * spacing)
@@ -135,6 +146,34 @@ def _build_continuous_hatch_surface(
     del alpha_view
 
     return hatch
+
+
+def _build_edge_feather_surface(
+    size: tuple[int, int],
+    center: tuple[int, int],
+    max_radius: int,
+    softness_px: int,
+) -> surface.Surface:
+    """Return a radial alpha feather around the FOV edge."""
+    width, height = size
+    feather = pygame.Surface((width, height), pygame.SRCALPHA)
+    feather.fill((0, 0, 0, 0))
+    if softness_px <= 0:
+        return feather
+
+    inner_radius = max(0.0, float(max_radius - softness_px))
+    outer_radius = float(max_radius + softness_px)
+    transition = max(1.0, outer_radius - inner_radius)
+
+    alpha_view = pg_surfarray.pixels_alpha(feather)
+    yy, xx = np.indices((height, width))
+    dx = xx - center[0]
+    dy = yy - center[1]
+    dist = np.hypot(dx, dy)
+    progress = np.clip((dist - inner_radius) / transition, 0.0, 1.0)
+    alpha_view[:, :] = (progress.T * 255).astype(np.uint8)
+    del alpha_view
+    return feather
 
 
 def _get_fog_overlay_surfaces(
@@ -156,34 +195,58 @@ def _get_fog_overlay_surfaces(
     coverage_height = max(assets.screen_height * 2, max_radius * 2)
     width = coverage_width + padding * 2
     height = coverage_height + padding * 2
-    center = (width // 2, height // 2)
 
-    hard_surface = pygame.Surface((width, height), pygame.SRCALPHA)
+    aa_scale = max(1, int(assets.fog_layer_aa_scale))
+    render_width = max(1, width * aa_scale)
+    render_height = max(1, height * aa_scale)
+    render_center = (render_width // 2, render_height // 2)
+    render_radius = max(1, int(max_radius * aa_scale))
+
+    hard_surface_render = pygame.Surface((render_width, render_height), pygame.SRCALPHA)
     base_color = profile.color
-    hard_surface.fill(base_color)
-    pygame.draw.circle(hard_surface, (0, 0, 0, 0), center, max_radius)
+    hard_surface_render.fill(base_color)
+    pygame.draw.circle(hard_surface_render, (0, 0, 0, 0), render_center, render_radius)
 
     ring_surfaces: list[surface.Surface] = []
 
-    combined_surface = hard_surface.copy()
+    combined_surface_render = hard_surface_render.copy()
+    edge_feather = _build_edge_feather_surface(
+        (render_width, render_height),
+        render_center,
+        render_radius,
+        max(0, int(assets.fog_edge_softness_px * aa_scale)),
+    )
+    combined_surface_render.blit(edge_feather, (0, 0))
     hatch_surface = _build_continuous_hatch_surface(
-        (width, height),
-        center,
+        (render_width, render_height),
+        render_center,
         base_color,
-        max_radius,
+        render_radius,
         assets.fog_hatch_density_ramps,
+        spacing=max(1, 4 * aa_scale),
     )
     if assets.fog_hatch_soften_scale < 1.0:
         hatch_surface = _soften_surface(
             hatch_surface,
             assets.fog_hatch_soften_scale,
         )
-    combined_surface.blit(hatch_surface, (0, 0))
+    combined_surface_render.blit(hatch_surface, (0, 0))
 
     visible_fade_surface = _build_flashlight_fade_surface(
-        (width, height), center, max_radius
+        (render_width, render_height),
+        render_center,
+        render_radius,
+        outer_extension=max(1, 30 * aa_scale),
     )
-    combined_surface.blit(visible_fade_surface, (0, 0))
+    combined_surface_render.blit(visible_fade_surface, (0, 0))
+    if aa_scale > 1:
+        hard_surface = pygame.transform.smoothscale(hard_surface_render, (width, height))
+        combined_surface = pygame.transform.smoothscale(
+            combined_surface_render, (width, height)
+        )
+    else:
+        hard_surface = hard_surface_render
+        combined_surface = combined_surface_render
 
     overlay_entry = {
         "hard": hard_surface,
@@ -213,36 +276,17 @@ def _build_flashlight_fade_surface(
     end_radius = max(start_radius + 1, max_radius + outer_extension)
     fade_range = max(1.0, end_radius - start_radius)
 
-    alpha_view = None
-    if pg_surfarray is not None:
-        alpha_view = pg_surfarray.pixels_alpha(fade_surface)
-    else:  # pragma: no cover - numpy-less fallback
-        fade_surface.lock()
-
     cx, cy = center
-    for y in range(height):
-        dy = y - cy
-        for x in range(width):
-            dx = x - cx
-            dist = math.hypot(dx, dy)
-            if dist > end_radius:
-                dist = end_radius
-            if dist <= start_radius:
-                alpha = 0
-            else:
-                progress = min(1.0, (dist - start_radius) / fade_range)
-                alpha = int(max_alpha * progress)
-            if alpha <= 0:
-                continue
-            if alpha_view is not None:
-                alpha_view[x, y] = alpha
-            else:
-                fade_surface.set_at((x, y), (0, 0, 0, alpha))
-
-    if alpha_view is not None:
-        del alpha_view
-    else:  # pragma: no cover
-        fade_surface.unlock()
+    yy, xx = np.indices((height, width))
+    dx = xx - cx
+    dy = yy - cy
+    dist = np.hypot(dx, dy)
+    dist = np.minimum(dist, end_radius)
+    progress = np.clip((dist - start_radius) / fade_range, 0.0, 1.0)
+    alpha = (progress * max_alpha).astype(np.uint8)
+    alpha_view = pg_surfarray.pixels_alpha(fade_surface)
+    alpha_view[:, :] = alpha.T
+    del alpha_view
 
     return fade_surface
 
