@@ -592,6 +592,7 @@ class TitleScreenController:
             action_rows_start = action_header_rect.bottom + 6
 
             row_top = stage_rows_start
+            selected_stage_highlight_rect: pygame.Rect | None = None
             for idx, option in enumerate(self.stage_options):
                 row_height = stage_row_heights[idx]
                 full_content_width = (info_column_x + info_column_width) - list_column_x
@@ -605,6 +606,7 @@ class TitleScreenController:
                 is_selected = idx == self.selected
                 if is_selected:
                     pygame.draw.rect(self.screen, highlight_color, highlight_rect)
+                    selected_stage_highlight_rect = highlight_rect.copy()
                 label = option["stage"].name
                 if not option.get("available"):
                     locked_suffix = tr("menu.locked_suffix")
@@ -703,6 +705,7 @@ class TitleScreenController:
             current = self.options[self.selected]
             desc_area_top = section_top
             if current["type"] == "stage":
+                desc_anchor_gap = 4
                 desc_size = font_settings.scaled_size(11)
                 desc_font = _get_font(desc_size)
                 desc_color = WHITE if current.get("available") else GRAY
@@ -713,12 +716,22 @@ class TitleScreenController:
                     current["stage"].description, desc_font, info_column_width
                 )
                 desc_height = max(1, len(desc_lines)) * desc_line_height
-                if self.selected < stage_count // 2:
-                    desc_area_top = (
-                        stage_rows_start + fixed_stage_block_height
-                    ) - desc_height
+                if selected_stage_highlight_rect is not None:
+                    if self.selected < stage_count // 2:
+                        desc_area_top = (
+                            selected_stage_highlight_rect.bottom + desc_anchor_gap
+                        )
+                    else:
+                        desc_area_top = (
+                            selected_stage_highlight_rect.top
+                            - desc_height
+                            - desc_anchor_gap
+                        )
                 else:
                     desc_area_top = section_top
+                desc_area_top = max(
+                    section_top, min(desc_area_top, self.height - desc_height - 8)
+                )
                 desc_panel_padding = 6
                 desc_panel_rect = pygame.Rect(
                     info_column_x - desc_panel_padding,
