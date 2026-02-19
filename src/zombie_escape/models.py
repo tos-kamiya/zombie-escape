@@ -171,6 +171,7 @@ class ProgressState:
     dawn_ready: bool
     dawn_prompt_at: int | None
     time_accel_active: bool
+    time_accel_multiplier: float
     last_zombie_spawn_time: int
     dawn_carbonized: bool
     debug_mode: bool

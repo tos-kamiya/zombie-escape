@@ -14,6 +14,7 @@ from ..gameplay_constants import (
     CAR_HINT_DELAY_MS_DEFAULT,
     SURVIVAL_TIME_ACCEL_SUBSTEPS,
     SURVIVAL_TIME_ACCEL_MAX_SUBSTEP,
+    SURVIVAL_TIME_ACCEL_RAMP_MS,
 )
 from ..gameplay import (
     MapGenerationError,
@@ -370,6 +371,8 @@ class GameplayScreenRunner:
         self.mouse_cursor_move_visible_until_ms = (
             pygame.time.get_ticks() + _MOUSE_CURSOR_SHOW_MS
         )
+        self.time_accel_hold_ms = 0.0
+        self.time_accel_step_carry = 0.0
 
         self.game_data: Any = None
         self.overview_surface: surface.Surface | None = None
@@ -701,12 +704,26 @@ class GameplayScreenRunner:
             and player_ref is not None
             and self._is_mouse_accel_active(player_ref)
         )
-        accel_active = accel_allowed and (
+        accel_input_active = accel_allowed and (
             input_snapshot.held(CommonAction.ACCEL) or mouse_accel_active
         )
-        state.time_accel_active = accel_active
-        substeps = SURVIVAL_TIME_ACCEL_SUBSTEPS if accel_active else 1
-        sub_dt = min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if accel_active else dt
+        if accel_input_active:
+            ramp_ratio = self.time_accel_hold_ms / float(SURVIVAL_TIME_ACCEL_RAMP_MS)
+            accel_multiplier = 1.5 + 2.5 * ramp_ratio
+            self.time_accel_hold_ms = min(
+                float(SURVIVAL_TIME_ACCEL_RAMP_MS),
+                self.time_accel_hold_ms + dt * 1000.0,
+            )
+        else:
+            self.time_accel_hold_ms = 0.0
+            self.time_accel_step_carry = 0.0
+            accel_multiplier = 1.0
+        state.time_accel_active = accel_input_active
+        state.time_accel_multiplier = accel_multiplier
+        self.time_accel_step_carry += accel_multiplier
+        substeps = max(1, min(SURVIVAL_TIME_ACCEL_SUBSTEPS, int(self.time_accel_step_carry)))
+        self.time_accel_step_carry -= float(substeps)
+        sub_dt = min(dt, SURVIVAL_TIME_ACCEL_MAX_SUBSTEP) if substeps > 1 else dt
         if consume_wall_index_dirty():
             game_data.wall_index_dirty = True
         if game_data.wall_index is None or game_data.wall_index_dirty:
@@ -751,10 +768,9 @@ class GameplayScreenRunner:
             )
             update_footprints(game_data, self.config)
             step_ms = int(sub_dt * 1000)
-            if accel_active:
+            if substeps > 1:
                 step_ms = max(1, step_ms)
-            time_scale = 4.0 / max(1, substeps) if accel_active else 1.0
-            state.clock.time_scale = time_scale
+            state.clock.time_scale = 1.0
             step_ms = state.clock.tick(step_ms)
             update_endurance_timer(game_data, step_ms)
             cleanup_survivor_messages(state)
@@ -1174,7 +1190,7 @@ class GameplayScreenRunner:
         font_settings = get_font_settings()
         font = load_font(font_settings.resource, font_settings.scaled_size(11))
         if state.time_accel_active:
-            text = build_time_accel_text()
+            text = build_time_accel_text(multiplier=state.time_accel_multiplier)
             color = WHITE
         else:
             mouse_state = read_mouse_state()
@@ -1183,7 +1199,7 @@ class GameplayScreenRunner:
                 and not mouse_state.buttons[0]
                 and self._is_mouse_over_player_accel_zone(player, mouse_pos=mouse_state.pos)
             ):
-                text = ">> 4x"
+                text = ">> 4.0x"
                 color = LIGHT_GRAY
             else:
                 return

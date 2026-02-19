@@ -110,6 +110,7 @@ def initialize_game_state(stage: Stage) -> GameData:
         dawn_ready=False,
         dawn_prompt_at=None,
         time_accel_active=False,
+        time_accel_multiplier=1.0,
         last_zombie_spawn_time=0,
         dawn_carbonized=False,
         debug_mode=False,

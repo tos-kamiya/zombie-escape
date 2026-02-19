@@ -84,7 +84,8 @@ Initial placement policy:
 - `update_entities(...)`
   - Applies movement, camera updates, AI updates, pitfall/jump handling.
   - Includes tile-edge steering correction near walls.
-- Mouse acceleration (`4x`) requires left-button press-down on the player before hold is considered valid.
+- Time acceleration ramps from `1.5x` to `4x` over about 2 seconds while ACCEL input is held.
+- Mouse acceleration requires left-button press-down on the player before hold is considered valid.
 - Hovering the cursor over the player (without pressing left button) displays static `>> 4x` near the player.
 - `check_interactions(...)`
   - Handles pickups, rescue boarding, car destruction, and win/loss logic.

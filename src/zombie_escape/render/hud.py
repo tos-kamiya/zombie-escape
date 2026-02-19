@@ -47,12 +47,15 @@ _HUD_ICON_CACHE: dict[str, surface.Surface] = {}
 _TIME_ACCEL_FRAMES = ("  >>", ">  >", ">>  ", " >> ")
 
 
-def build_time_accel_text(*, now_ms: int | None = None) -> str:
-    """Build animated accel text so 4x state is visible even on static scenes."""
+def build_time_accel_text(
+    *, multiplier: float = 4.0, now_ms: int | None = None
+) -> str:
+    """Build animated accel text with a calendar-time animation cadence."""
     if now_ms is None:
         now_ms = pygame.time.get_ticks()
     frame_index = (max(0, int(now_ms)) // 180) % len(_TIME_ACCEL_FRAMES)
-    return f"{_TIME_ACCEL_FRAMES[frame_index]}4x"
+    safe_multiplier = max(1.0, float(multiplier))
+    return f"{_TIME_ACCEL_FRAMES[frame_index]}{safe_multiplier:.1f}x"
 
 
 def _scale_icon_to_box(icon: surface.Surface, size: int) -> surface.Surface:
