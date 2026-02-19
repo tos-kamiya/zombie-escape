@@ -86,6 +86,26 @@ class ClickTarget:
     enabled: bool = True
 
 
+@dataclass(frozen=True)
+class MouseState:
+    pos: tuple[int, int]
+    focused: bool
+    buttons: tuple[bool, bool, bool]
+
+
+def read_mouse_state(*, button_count: int = 3) -> MouseState:
+    raw_pos = pygame.mouse.get_pos()
+    raw_buttons = pygame.mouse.get_pressed(button_count)
+    left = bool(raw_buttons[0]) if len(raw_buttons) > 0 else False
+    middle = bool(raw_buttons[1]) if len(raw_buttons) > 1 else False
+    right = bool(raw_buttons[2]) if len(raw_buttons) > 2 else False
+    return MouseState(
+        pos=(int(raw_pos[0]), int(raw_pos[1])),
+        focused=bool(pygame.mouse.get_focused()),
+        buttons=(left, middle, right),
+    )
+
+
 class ClickableMap:
     """Simple rect-based target map for hover/click selection."""
 

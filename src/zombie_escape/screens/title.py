@@ -26,6 +26,7 @@ from ..input_utils import (
     InputHelper,
     KeyboardShortcut,
     MouseUiGuard,
+    read_mouse_state,
 )
 from ..screens import (
     ScreenID,
@@ -498,8 +499,9 @@ class TitleScreenController:
                 tri_h = 10
                 tri_gap = 12
                 tri_color_enabled = LIGHT_GRAY
-                mouse_pos = pygame.mouse.get_pos()
-                mouse_focused = pygame.mouse.get_focused()
+                mouse_state = read_mouse_state()
+                mouse_pos = mouse_state.pos
+                mouse_focused = mouse_state.focused
                 header_mid_y = section_top + header_height // 2
                 left_enabled = can_go_left
                 right_enabled = can_go_right
@@ -914,7 +916,7 @@ class TitleScreenController:
                 return self._activate_current_selection()
             return None
         if event.type == pygame.MOUSEWHEEL and self.mouse_ui_guard.can_process_mouse():
-            if self.stage_pane_rect.collidepoint(pygame.mouse.get_pos()):
+            if self.stage_pane_rect.collidepoint(read_mouse_state().pos):
                 wheel_y = int(getattr(event, "y", 0))
                 if getattr(event, "flipped", False):
                     wheel_y = -wheel_y

@@ -53,6 +53,7 @@ from ..input_utils import (
     InputHelper,
     KeyboardShortcut,
     MouseUiGuard,
+    read_mouse_state,
 )
 from ..gameplay.spawn import _alive_waiting_cars
 from ..world_grid import build_wall_index
@@ -380,7 +381,7 @@ class GameplayScreenRunner:
         assert self.game_data is not None
         assert self.overview_surface is not None
 
-        self._set_mouse_hidden(pygame.mouse.get_focused())
+        self._set_mouse_hidden(read_mouse_state().focused)
         while True:
             frame_ms = (
                 self.clock.tick_busy_loop(self.fps)
@@ -408,7 +409,7 @@ class GameplayScreenRunner:
                 self._set_mouse_hidden(False)
                 self._render_paused_state(current_fps)
                 continue
-            self._set_mouse_hidden(pygame.mouse.get_focused())
+            self._set_mouse_hidden(read_mouse_state().focused)
 
             self._update_world(dt, input_snapshot)
             if self.debug_overview:
@@ -1046,11 +1047,12 @@ class GameplayScreenRunner:
         return dx, dy
 
     def _read_mouse_steering_vector(self, player: Any) -> tuple[float, float] | None:
-        if self.paused_focus or not pygame.mouse.get_focused():
+        mouse_state = read_mouse_state()
+        if self.paused_focus or not mouse_state.focused:
             self.mouse_steering_active = False
             return None
-        self.mouse_cursor_screen_pos = tuple(map(int, pygame.mouse.get_pos()))
-        buttons = pygame.mouse.get_pressed(3)
+        self.mouse_cursor_screen_pos = mouse_state.pos
+        buttons = mouse_state.buttons
         if not buttons or not buttons[0]:
             self.mouse_steering_active = False
             return None
@@ -1072,10 +1074,11 @@ class GameplayScreenRunner:
         return dx / magnitude, dy / magnitude
 
     def _draw_mouse_steering_overlay(self) -> None:
-        if not pygame.mouse.get_focused():
+        mouse_state = read_mouse_state()
+        if not mouse_state.focused:
             return
         now_ms = pygame.time.get_ticks()
-        self.mouse_cursor_screen_pos = tuple(map(int, pygame.mouse.get_pos()))
+        self.mouse_cursor_screen_pos = mouse_state.pos
         if self.mouse_cursor_prev_screen_pos is not None:
             dx = float(
                 self.mouse_cursor_screen_pos[0] - self.mouse_cursor_prev_screen_pos[0]
@@ -1094,7 +1097,7 @@ class GameplayScreenRunner:
 
         mx, my = self.mouse_cursor_screen_pos
         overlay = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
-        if self.mouse_steering_active and pygame.mouse.get_pressed(3)[0]:
+        if self.mouse_steering_active and mouse_state.buttons[0]:
             color = (255, 255, 255, 240)
             width = 2
         else:
@@ -1106,14 +1109,15 @@ class GameplayScreenRunner:
         self.screen.blit(overlay, (0, 0))
 
     def _is_mouse_accel_active(self, player: Any) -> bool:
-        if self.paused_manual or self.paused_focus or not pygame.mouse.get_focused():
+        mouse_state = read_mouse_state()
+        if self.paused_manual or self.paused_focus or not mouse_state.focused:
             return False
         if not self.mouse_accel_armed:
             return False
-        buttons = pygame.mouse.get_pressed(3)
+        buttons = mouse_state.buttons
         if not buttons or not buttons[0]:
             return False
-        mouse_pos = tuple(map(int, pygame.mouse.get_pos()))
+        mouse_pos = mouse_state.pos
         if self._pause_hotspot_kind_at(mouse_pos) is not None:
             # Prefer pause hotspot behavior over mouse-hold acceleration.
             return False
@@ -1127,7 +1131,7 @@ class GameplayScreenRunner:
     ) -> bool:
         assert self.game_data is not None
         if mouse_pos is None:
-            mouse_pos = tuple(map(int, pygame.mouse.get_pos()))
+            mouse_pos = read_mouse_state().pos
         player_screen_pos = self.game_data.camera.apply(player).center
         dx = float(mouse_pos[0] - player_screen_pos[0])
         dy = float(mouse_pos[1] - player_screen_pos[1])
@@ -1149,15 +1153,17 @@ class GameplayScreenRunner:
         if state.time_accel_active:
             text = build_time_accel_text()
             color = WHITE
-        elif (
-            pygame.mouse.get_focused()
-            and not pygame.mouse.get_pressed(3)[0]
-            and self._is_mouse_over_player_accel_zone(player)
-        ):
-            text = ">> 4x"
-            color = LIGHT_GRAY
         else:
-            return
+            mouse_state = read_mouse_state()
+            if (
+                mouse_state.focused
+                and not mouse_state.buttons[0]
+                and self._is_mouse_over_player_accel_zone(player, mouse_pos=mouse_state.pos)
+            ):
+                text = ">> 4x"
+                color = LIGHT_GRAY
+            else:
+                return
         label = render_text_surface(
             font,
             text,
@@ -1215,10 +1221,9 @@ class GameplayScreenRunner:
         w, h = self.screen.get_size()
         s = _PAUSE_HOTSPOT_TRI_SIZE
         hovered: str | None = None
-        if pygame.mouse.get_focused():
-            hovered = self._pause_hotspot_kind_at(
-                tuple(map(int, pygame.mouse.get_pos()))
-            )
+        mouse_state = read_mouse_state()
+        if mouse_state.focused:
+            hovered = self._pause_hotspot_kind_at(mouse_state.pos)
         top_left_color = (
             _PAUSE_HOTSPOT_HOVER_COLOR
             if hovered == "top_left"
