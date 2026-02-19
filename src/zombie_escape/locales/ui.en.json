@@ -207,17 +207,13 @@
         "name": "#31 Skitter Dog",
         "description": "Some dogs rush. Others skitter."
       },
-      "stage32": {
-        "name": "#32 Burning Floor",
-        "description": "The floor is too hot to step on."
-      },
       "stage33": {
         "name": "#33 Crosscurrent",
         "description": "Watch for dogs cutting across your path."
       },
       "stage34": {
-        "name": "#34 Chaotic Repulsion",
-        "description": "A distance-seeking zombie appears."
+        "name": "#34 Burning Floor",
+        "description": "The floor is too hot to step on."
       },
       "stage35": {
         "name": "#35 Spiky Plant",
