@@ -32,8 +32,6 @@ from .entities import (
     Zombie,
     ZombieDog,
 )
-from .font_utils import load_font, render_text_surface
-from .localization import get_font_settings
 from .models import Footprint, GameData
 from .render_assets import RenderAssets, resolve_steel_beam_colors, resolve_wall_colors
 from .render_constants import (
@@ -43,7 +41,7 @@ from .render_constants import (
     TRAPPED_ZOMBIE_OVERVIEW_COLOR,
 )
 from .entities_constants import PATROL_BOT_COLLISION_RADIUS
-from .render.hud import _get_fog_scale, build_zombie_debug_counts_text
+from .render.hud import _draw_status_bar, _get_fog_scale
 from .render.puddle import draw_puddle_rings, get_puddle_wave_color
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -445,6 +443,7 @@ def draw_debug_overview(
     *,
     screen_width: int,
     screen_height: int,
+    show_debug_counts: bool = True,
 ) -> None:
     cell_size = assets.internal_wall_grid_snap
     floor_cells: set[tuple[int, int]] = set()
@@ -540,26 +539,15 @@ def draw_debug_overview(
         scaled_overview,
         scaled_rect,
     )
-    try:
-        font_settings = get_font_settings()
-        label_font = load_font(font_settings.resource, font_settings.scaled_size(11))
-    except pygame.error as e:
-        print(f"Error loading overview font: {e}")
-        return
-
-    debug_counts = build_zombie_debug_counts_text(
+    _draw_status_bar(
+        screen,
+        assets,
+        config,
+        stage=game_data.stage,
+        seed=game_data.state.seed,
+        debug_mode=show_debug_counts,
         zombie_group=game_data.groups.zombie_group,
         lineformer_marker_count=game_data.lineformer_trains.total_marker_count(),
         falling_spawn_carry=game_data.state.falling_spawn_carry,
+        show_fps=game_data.state.show_fps,
     )
-    if debug_counts:
-        count_surface = render_text_surface(
-            label_font,
-            debug_counts,
-            LIGHT_GRAY,
-            line_height_scale=font_settings.line_height_scale,
-        )
-        count_rect = count_surface.get_rect(
-            midbottom=(screen_width // 2, screen_height - 6)
-        )
-        screen.blit(count_surface, count_rect)

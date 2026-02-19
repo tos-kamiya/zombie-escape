@@ -20,10 +20,7 @@ from ..localization import get_font_settings
 from ..localization import translate as tr
 from ..models import GameData, Stage
 from ..overview import draw_debug_overview
-from ..render import (
-    RenderAssets,
-    _draw_status_bar,
-)
+from ..render import RenderAssets
 from ..screens import ScreenID, ScreenTransition
 from ..windowing import nudge_window_scale, present, sync_window_size, toggle_fullscreen
 
@@ -106,6 +103,7 @@ def game_over_screen(
         level_size = (level_rect.width, level_rect.height)
         if overview_surface is None or overview_surface.get_size() != level_size:
             overview_surface = pygame.Surface(level_size)
+        overview_height = max(1, screen_height - render_assets.status_bar_height)
         draw_debug_overview(
             render_assets,
             screen,
@@ -113,7 +111,8 @@ def game_over_screen(
             game_data,
             config,
             screen_width=screen_width,
-            screen_height=screen_height,
+            screen_height=overview_height,
+            show_debug_counts=True,
         )
         headline_lines: list[tuple[str, tuple[int, int, int]]] = []
         if state.game_won:
@@ -172,15 +171,6 @@ def game_over_screen(
             label_rect = label_surface.get_rect(center=row_rect.center)
             screen.blit(label_surface, label_rect)
         option_click_map.set_targets(option_targets)
-
-        _draw_status_bar(
-            screen,
-            render_assets,
-            config,
-            stage=stage,
-            seed=state.seed,
-            debug_mode=state.debug_mode,
-        )
 
         present(screen)
         clock.tick(fps)

@@ -106,6 +106,7 @@ def build_zombie_debug_counts_text(
     zombie_group: sprite.Group | None,
     lineformer_marker_count: int | None = None,
     falling_spawn_carry: int | None = None,
+    stage: Stage | None = None,
 ) -> str | None:
     """Build the shared zombie debug summary text used in HUD/overview."""
     from ..entities.zombie import TrappedZombie
@@ -128,18 +129,65 @@ def build_zombie_debug_counts_text(
         if getattr(z, "kind", None) == ZombieKind.DOG
         and str(getattr(z, "variant", "")) in {"nimble", "ZombieDogVariant.NIMBLE"}
     )
+    dog_normal_count = max(0, dog_count - nimble_dog_count)
     trapped_count = sum(1 for z in zombies if isinstance(z, TrappedZombie))
     normal = max(
-        0, total - tracker - wall - lineformer - solitary - dog_count - trapped_count
+        0,
+        total
+        - tracker
+        - wall
+        - lineformer
+        - solitary
+        - dog_normal_count
+        - nimble_dog_count
+        - trapped_count,
     )
-    debug_counts = (
-        f"Z:{total} N:{normal} T:{tracker} W:{wall} "
-        f"L:{lineformer}({lineformer_total}) S:{solitary} "
-        f"D:{dog_count} DN:{nimble_dog_count} P:{trapped_count}"
-    )
-    if falling_spawn_carry is not None:
-        debug_counts = f"{debug_counts} C:{max(0, falling_spawn_carry)}"
-    return debug_counts
+    carry = max(0, int(falling_spawn_carry or 0))
+
+    allowed = {
+        "n": True,
+        "t": True,
+        "w": True,
+        "l": True,
+        "s": True,
+        "d": True,
+        "dn": True,
+        "p": True,
+    }
+    if stage is not None:
+        allowed["n"] = stage.zombie_normal_ratio > 0.0
+        allowed["t"] = stage.zombie_tracker_ratio > 0.0
+        allowed["w"] = stage.zombie_wall_hugging_ratio > 0.0
+        allowed["l"] = stage.zombie_lineformer_ratio > 0.0
+        allowed["s"] = stage.zombie_solitary_ratio > 0.0
+        allowed["d"] = stage.zombie_dog_ratio > 0.0
+        allowed["dn"] = (
+            stage.zombie_dog_ratio > 0.0 and stage.zombie_nimble_dog_ratio > 0.0
+        )
+        allowed["p"] = (
+            stage.spiky_plant_density > 0.0 or bool(stage.spiky_plant_zones)
+        )
+
+    detail_parts: list[str] = []
+    if allowed["n"] or normal > 0:
+        detail_parts.append(f"n:{normal}")
+    if allowed["t"] or tracker > 0:
+        detail_parts.append(f"t:{tracker}")
+    if allowed["w"] or wall > 0:
+        detail_parts.append(f"w:{wall}")
+    if allowed["l"] or lineformer > 0 or marker_count > 0:
+        detail_parts.append(f"l:{lineformer}({lineformer_total})")
+    if allowed["s"] or solitary > 0:
+        detail_parts.append(f"s:{solitary}")
+    if allowed["d"] or dog_normal_count > 0:
+        detail_parts.append(f"d:{dog_normal_count}")
+    if allowed["dn"] or nimble_dog_count > 0:
+        detail_parts.append(f"dn:{nimble_dog_count}")
+    if allowed["p"] or trapped_count > 0:
+        detail_parts.append(f"p:{trapped_count}")
+
+    details = ", ".join(detail_parts) if detail_parts else "none"
+    return f"z:{total} c:{carry} | {details}"
 
 
 def _draw_status_bar(
@@ -196,6 +244,7 @@ def _draw_status_bar(
             zombie_group=zombie_group,
             lineformer_marker_count=lineformer_marker_count,
             falling_spawn_carry=falling_spawn_carry,
+            stage=stage,
         )
     status_text = " | ".join(parts)
     color = LIGHT_GRAY
