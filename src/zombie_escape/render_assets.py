@@ -391,6 +391,7 @@ def resolve_steel_beam_colors(
     health_ratio: float,
     palette: EnvironmentPalette | None = None,
 ) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
+    _ = health_ratio, palette
     return STEEL_BEAM_COLOR, STEEL_BEAM_LINE_COLOR
 
 

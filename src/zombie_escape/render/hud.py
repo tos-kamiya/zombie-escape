@@ -108,6 +108,8 @@ def build_zombie_debug_counts_text(
     falling_spawn_carry: int | None = None,
 ) -> str | None:
     """Build the shared zombie debug summary text used in HUD/overview."""
+    from ..entities.zombie import TrappedZombie
+
     if zombie_group is None:
         return None
     zombies = [z for z in zombie_group if z.alive()]
@@ -126,7 +128,7 @@ def build_zombie_debug_counts_text(
         if getattr(z, "kind", None) == ZombieKind.DOG
         and str(getattr(z, "variant", "")) in {"nimble", "ZombieDogVariant.NIMBLE"}
     )
-    trapped_count = sum(1 for z in zombies if z.__class__.__name__ == "TrappedZombie")
+    trapped_count = sum(1 for z in zombies if isinstance(z, TrappedZombie))
     normal = max(
         0, total - tracker - wall - lineformer - solitary - dog_count - trapped_count
     )
@@ -434,7 +436,6 @@ def _draw_time_accel_indicator(
     assets: RenderAssets,
     *,
     stage: Stage | None,
-    state: Any,
 ) -> None:
     if stage and stage.endurance_stage:
         return
@@ -753,7 +754,6 @@ def _draw_hint_indicator(
     contact_hint_targets: list[tuple[str, tuple[int, int]]] | None = None,
     *,
     hint_color: tuple[int, int, int],
-    stage: Stage | None,
     flashlight_count: int,
 ) -> None:
     current_fov_scale = _get_fog_scale(assets, flashlight_count)

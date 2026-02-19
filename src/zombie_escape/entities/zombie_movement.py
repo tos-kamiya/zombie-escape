@@ -104,7 +104,7 @@ def _zombie_tracker_movement(
     cell_size: int,
     layout: "LevelLayout",
     player_center: tuple[float, float],
-    nearby_zombies: Iterable["Zombie"],
+    _nearby_zombies: Iterable["Zombie"],
     footprints: list["Footprint"],
     *,
     now_ms: int,

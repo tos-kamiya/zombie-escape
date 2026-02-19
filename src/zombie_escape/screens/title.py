@@ -368,7 +368,7 @@ class TitleScreenController:
         options = list(stage_options) + resource_options
         return options, stage_options
 
-    def _build_resource_options(self, page_index: int) -> list[dict[str, Any]]:
+    def _build_resource_options(self, _page_index: int) -> list[dict[str, Any]]:
         options = list(self.resource_base_options)
         options.insert(0, {"type": "fullscreen"})
         return options

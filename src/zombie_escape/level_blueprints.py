@@ -1186,6 +1186,7 @@ def generate_random_blueprint(
     fall_spawn_zones: list[tuple[int, int, int, int]] | None = None,
 ) -> Blueprint:
     """Generate a single randomized blueprint grid without connectivity validation."""
+    _ = fall_spawn_zones
     grid = _init_grid(cols, rows)
     _place_exits(grid, EXITS_PER_SIDE, exit_sides)
     _place_corner_outer_walls_for_closed_sides(grid, exit_sides=exit_sides)

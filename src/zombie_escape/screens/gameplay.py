@@ -432,7 +432,7 @@ class GameplayScreenRunner:
         loading_started_ms = pygame.time.get_ticks()
         self._show_loading_still()
 
-        self.game_data = initialize_game_state(self.config, self.stage)
+        self.game_data = initialize_game_state(self.stage)
         self.game_data.state.seed = applied_seed
         self.game_data.state.debug_mode = self.debug_mode
         self.game_data.state.show_fps = self.show_fps

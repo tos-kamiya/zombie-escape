@@ -29,7 +29,7 @@ class _FogProfile(Enum):
         self.flashlight_count = flashlight_count
         self.color = color
 
-    def _scale(self, assets: RenderAssets, stage: Stage | None) -> float:
+    def _scale(self, assets: RenderAssets, _stage: Stage | None) -> float:
         count = max(0, min(self.flashlight_count, _max_flashlight_pickups()))
         return _get_fog_scale(assets, count)
 

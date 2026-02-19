@@ -272,7 +272,7 @@ class SettingsScreenRunner:
     def _handle_event(
         self,
         event: pygame.event.Event,
-        events: list[pygame.event.Event],
+        _events: list[pygame.event.Event],
     ) -> dict[str, Any] | None:
         if event.type == pygame.QUIT:
             return self.config

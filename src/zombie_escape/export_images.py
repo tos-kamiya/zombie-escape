@@ -83,7 +83,7 @@ def _build_studio_stage(cell_size: int) -> Stage:
 
 def _build_studio_game_data(cell_size: int):
     stage = _build_studio_stage(cell_size)
-    game_data = initialize_game_state({}, stage)
+    game_data = initialize_game_state(stage)
     state = game_data.state
     state.ambient_palette_key = STUDIO_AMBIENT_PALETTE_KEY
     state.fuel_progress = FuelProgress.NONE

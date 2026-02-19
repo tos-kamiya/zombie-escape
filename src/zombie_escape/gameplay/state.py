@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pygame
 
 from ..colors import (
@@ -65,7 +63,7 @@ def schedule_timed_message(
     )
 
 
-def initialize_game_state(config: dict[str, Any], stage: Stage) -> GameData:
+def initialize_game_state(stage: Stage) -> GameData:
     """Initialize and return the base game state objects."""
     fuel_progress = (
         FuelProgress.FULL_CAN

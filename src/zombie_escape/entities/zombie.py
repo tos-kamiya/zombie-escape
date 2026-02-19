@@ -700,7 +700,7 @@ class TrappedZombie(pygame.sprite.Sprite):
             decay_duration_frames=decay_duration_frames,
             decay_min_speed_ratio=ZOMBIE_DECAY_MIN_SPEED_RATIO,
             carbonize_decay_frames=ZOMBIE_CARBONIZE_DECAY_FRAMES,
-            on_health_ratio=lambda r: None,  # No speed change needed
+            on_health_ratio=lambda _r: None,  # No speed change needed
             on_kill=self.kill,
             on_carbonize=self._apply_carbonize_visuals,
         )
@@ -733,7 +733,7 @@ class TrappedZombie(pygame.sprite.Sprite):
             return
         self.vitals.take_damage(amount, source=source, now_ms=now_ms)
 
-    def update(self: Self, *args: Any, **kwargs: Any) -> None:
+    def update(self: Self, *_args: Any, **_kwargs: Any) -> None:
         """Handle decay and jittering visuals."""
         self.vitals.apply_decay()
         if not self.alive():

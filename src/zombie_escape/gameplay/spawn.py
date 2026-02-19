@@ -764,7 +764,6 @@ def place_buddies(
     cell_size: int,
     player: Player,
     *,
-    cars: Sequence[Car] | None = None,
     count: int = 1,
 ) -> list[Survivor]:
     placed: list[Survivor] = []
@@ -868,7 +867,6 @@ def spawn_survivors(
                 walkable,
                 cell_size,
                 game_data.player,
-                cars=game_data.waiting_cars,
                 count=buddy_count,
             )
         for buddy in buddies:

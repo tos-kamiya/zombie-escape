@@ -197,7 +197,6 @@ def draw(
         hint_target,
         contact_hint_targets=contact_hint_targets,
         hint_color=hint_color,
-        stage=stage,
         flashlight_count=flashlight_count,
     )
     fov_center_screen: tuple[int, int] | None = None
@@ -238,7 +237,7 @@ def draw(
     )
     _draw_survivor_messages(screen, assets, list(state.survivor_messages))
     _draw_endurance_timer(screen, assets, stage=stage, state=state)
-    _draw_time_accel_indicator(screen, assets, stage=stage, state=state)
+    _draw_time_accel_indicator(screen, assets, stage=stage)
     _draw_status_bar(
         screen,
         assets,

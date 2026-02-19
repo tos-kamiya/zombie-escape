@@ -541,6 +541,7 @@ def _set_sdl2_fullscreen(enable: bool, display_index: int | None) -> bool:
 
 def _update_window_size(size: tuple[int, int], *, source: str) -> None:
     global current_window_size, last_logged_window_size
+    _ = source
     current_window_size = size
     if size != last_logged_window_size:
         print(f"WINDOW_SIZE {size[0]}x{size[1]}")

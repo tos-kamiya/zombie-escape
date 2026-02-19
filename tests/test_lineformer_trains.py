@@ -13,7 +13,7 @@ def _make_game_data():
         description_key="stages.test.description",
         zombie_normal_ratio=1.0,
     )
-    return initialize_game_state({}, stage)
+    return initialize_game_state(stage)
 
 
 def test_resolve_spawn_target_prefers_existing_train_tail() -> None:
