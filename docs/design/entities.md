@@ -47,7 +47,7 @@
 - Applies additive velocity; does not cancel player input or AI decisions.
 - Can be specified by explicit cells and/or rectangular zones.
 
-## Spiky Houseplant
+## Spiky Plant
 
 - Fixed trap centered in a cell.
 - Captures zombies/zombie dogs into immobile trapped variants.

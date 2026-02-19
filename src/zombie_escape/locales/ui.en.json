@@ -220,9 +220,9 @@
         "description": "A distance-seeking zombie appears."
       },
       "stage35": {
-        "name": "#35 Spiky Houseplant",
+        "name": "#35 Spiky Plant",
         "description": "Use the spiky houseplants to block the zombies.",
-        "intro": "(That spiky plant again...\nLooks like there's a pitfall, too.\nLet’s survive here until dawn.)"
+        "intro": "(The spiky plants...\nLet's survive here until dawn.)"
       }
     },
     "status": {
