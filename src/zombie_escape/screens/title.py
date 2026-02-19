@@ -755,6 +755,8 @@ class TitleScreenController:
                 )
 
             option_help_top = desc_area_top
+            if current["type"] != "stage":
+                option_help_top = action_rows_start
             help_text = ""
             if current["type"] == "settings":
                 help_text = tr("menu.option_help.settings")
@@ -787,21 +789,23 @@ class TitleScreenController:
             hint_line_height = int(
                 round(hint_font.get_linesize() * font_settings.line_height_scale)
             )
-            hint_start_y = action_header_pos[1]
             hint_step = hint_line_height
+            seed_offset_y = hint_step
+            seed_bottom = self.height - 30 + seed_offset_y
             if self.current_page == 0:
                 hint_lines = [tr("menu.hints.navigate")]
                 if len(self.stage_pages) > 1 and self._page_available(1):
                     hint_lines.append(tr("menu.hints.page_switch"))
                 hint_lines.extend(tr("menu.hints.confirm").splitlines())
+                hint_start_y = seed_bottom - (len(hint_lines) * hint_step)
                 for offset, line in enumerate(hint_lines):
                     blit_text_wrapped(
                         self.screen,
                         line,
                         hint_font,
                         WHITE,
-                        (info_column_x, hint_start_y + offset * hint_step),
-                        info_column_width,
+                        (list_column_x, hint_start_y + offset * hint_step),
+                        list_column_width,
                         line_height_scale=font_settings.line_height_scale,
                     )
 
@@ -811,11 +815,9 @@ class TitleScreenController:
                 else tr("menu.seed_empty")
             )
             seed_label = tr("menu.seed_label", value=seed_value_display)
-            seed_offset_y = hint_step
             seed_width, seed_height, _ = _measure_text(
                 seed_label, hint_font, info_column_width
             )
-            seed_bottom = self.height - 30 + seed_offset_y
             blit_text_wrapped(
                 self.screen,
                 seed_label,
