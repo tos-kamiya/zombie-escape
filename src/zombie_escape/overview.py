@@ -392,8 +392,8 @@ def draw_debug_overview(
     floor_cells: set[tuple[int, int]] = set()
     if cell_size > 0:
         floor_cells = compute_floor_cells(
-            cols=max(0, game_data.layout.field_rect.width // cell_size),
-            rows=max(0, game_data.layout.field_rect.height // cell_size),
+            cols=game_data.layout.grid_cols,
+            rows=game_data.layout.grid_rows,
             wall_cells=game_data.layout.wall_cells,
             outer_wall_cells=game_data.layout.outer_wall_cells,
             pitfall_cells=game_data.layout.pitfall_cells,

@@ -96,6 +96,8 @@ class Player(pygame.sprite.Sprite):
         walkable_cells = layout.walkable_cells
         level_width = layout.field_rect.width
         level_height = layout.field_rect.height
+        grid_cols = layout.grid_cols
+        grid_rows = layout.grid_rows
 
         now = now_ms
         if self.is_jumping:
@@ -146,8 +148,8 @@ class Player(pygame.sprite.Sprite):
                         center,
                         radius,
                         cell_size=cell_size,
-                        grid_cols=level_width // cell_size,
-                        grid_rows=level_height // cell_size,
+                        grid_cols=grid_cols,
+                        grid_rows=grid_rows,
                     )
             collided_walls = [
                 wall
@@ -179,8 +181,8 @@ class Player(pygame.sprite.Sprite):
                 walls,
                 wall_index=wall_index,
                 cell_size=cell_size,
-                grid_cols=level_width // cell_size if cell_size else None,
-                grid_rows=level_height // cell_size if cell_size else None,
+                grid_cols=grid_cols if cell_size else None,
+                grid_rows=grid_rows if cell_size else None,
             )
             return hit_wall
 
