@@ -16,6 +16,7 @@
     "menu": {
       "settings": "設定",
       "display_mode_window_size": "表示モード/画面サイズ",
+      "toggle_fullscreen": "フルスクリーン切替",
       "quit": "終了",
       "locked_suffix": "[Locked]",
       "window_hint": "[キーで1段階縮小（400x300）、]キーで1段階拡大。\nF: フルスクリーン切替。",

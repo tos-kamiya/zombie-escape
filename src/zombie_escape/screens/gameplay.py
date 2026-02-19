@@ -876,7 +876,7 @@ class GameplayScreenRunner:
             labels = [
                 tr("hud.pause_menu_resume"),
                 tr("hud.pause_menu_title"),
-                tr("menu.display_mode_window_size"),
+                tr("menu.toggle_fullscreen"),
             ]
             option_rects = draw_pause_overlay(
                 self.screen,

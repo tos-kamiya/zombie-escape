@@ -16,6 +16,7 @@
     "menu": {
       "settings": "Settings",
       "display_mode_window_size": "Display Mode/Window Size",
+      "toggle_fullscreen": "Toggle Fullscreen",
       "quit": "Quit",
       "locked_suffix": "[Locked]",
       "window_hint": "Resize window: [ to shrink by one step (400x300), ] to enlarge by one step.\nF: toggle fullscreen.",
