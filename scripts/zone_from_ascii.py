@@ -19,7 +19,7 @@ MOVING_FLOOR_MAP = {
 PITFALL_CHAR = "x"
 REINFORCED_WALL_CHAR = "R"
 FALL_SPAWN_CHAR = "?"
-HOUSEPLANT_CHAR = "h"
+SPIKY_PLANT_CHAR = "h"
 PUDDLE_CHAR = "w"
 
 
@@ -94,7 +94,7 @@ def _validate_grid(grid: list[str]) -> None:
         PITFALL_CHAR,
         REINFORCED_WALL_CHAR,
         FALL_SPAWN_CHAR,
-        HOUSEPLANT_CHAR,
+        SPIKY_PLANT_CHAR,
         PUDDLE_CHAR,
         ".",
     }
@@ -121,7 +121,7 @@ def generate_zone_data(lines: list[str]) -> dict[str, object]:
     output["pitfall_zones"] = _compress_rectangles(grid, PITFALL_CHAR)
     output["reinforced_wall_zones"] = _compress_rectangles(grid, REINFORCED_WALL_CHAR)
     output["fall_spawn_zones"] = _compress_rectangles(grid, FALL_SPAWN_CHAR)
-    output["houseplant_zones"] = _compress_rectangles(grid, HOUSEPLANT_CHAR)
+    output["spiky_plant_zones"] = _compress_rectangles(grid, SPIKY_PLANT_CHAR)
     output["puddle_zones"] = _compress_rectangles(grid, PUDDLE_CHAR)
 
     for letter in _collect_zone_letters(grid):

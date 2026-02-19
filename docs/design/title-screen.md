@@ -23,7 +23,7 @@ Icon order is fixed by category:
 - `zombie_wall` when that ratio is present.
 - `zombie_line` when that ratio is present.
 - `zombie_dog` when that ratio is present.
-- `houseplant` when houseplant hazard settings are present.
+- `spiky_plant` when spiky-plant hazard settings are present.
 
 3. Environment (floor)
 - `fall_spawn` when falling spawn floor settings are present.

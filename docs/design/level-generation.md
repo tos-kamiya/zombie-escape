@@ -15,7 +15,7 @@
   - Metal floor supports both zone placement and density placement.
   - Fire floor cells are reserved against spawn/item candidate placement.
   - Stage-defined metal floor cells are placed before other hazards and are kept
-    from being replaced by pitfall/puddle/houseplant/reinforced-wall placement.
+    from being replaced by pitfall/puddle/spiky-plant/reinforced-wall placement.
   - Item spawn candidates must exclude fire floor cells.
 - Adjacency decoration:
   - Orthogonally adjacent normal floor cells next to fire floors are converted to
@@ -37,7 +37,7 @@
 - `P`: player spawn candidate
 - `C`: car spawn candidate
 - `x`: pitfall
-- `h`: houseplant cell
+- `h`: spiky plant cell
 - `w`: puddle cell
 - `e`: empty fuel can candidate
 - `f`: fuel-related candidate (fuel can or fuel station by mode)
@@ -60,7 +60,7 @@ Reserved cells are protected from incompatible terrain placement.
 
 ## Ratio-Based Cell Selection
 
-- Density-based terrain placement (`pitfall`, `puddle`, `houseplant`, `reinforced wall`)
+- Density-based terrain placement (`pitfall`, `puddle`, `spiky plant`, `reinforced wall`)
   uses candidate collection + shuffle + fixed-count selection.
 - Target count is calculated as `round(candidate_count * density)`.
 - If `density > 0` and the rounded result is `0`, one cell is still selected.

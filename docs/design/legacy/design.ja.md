@@ -155,7 +155,7 @@
 - 瓦礫壁の割合: `wall_rubble_ratio`（内部壁のうち、瓦礫外観に差し替える比率）
 - 落とし穴の出現率: `pitfall_density` (0.0〜1.0)
 - 落とし穴の固定配置: `pitfall_zones`（矩形指定で落とし穴セルを確定配置）
-- 観葉植物の出現率/固定配置: `houseplant_density`, `houseplant_zones`
+- 観葉植物の出現率/固定配置: `spiky_plant_density`, `spiky_plant_zones`
 - 水たまりの出現率/固定配置: `puddle_density`, `puddle_zones`
 - 落下スポーン領域: `fall_spawn_zones`, `fall_spawn_cell_ratio`
 - ステージ公開: `available`
@@ -171,7 +171,7 @@
 - `wall_cells`: 壁セル（外周壁＋内部壁）の座標。
 - `pitfall_cells`: 落とし穴セルの座標。
 - `fall_spawn_cells`: 落下ゾンビの候補セル。
-- `houseplant_cells`: 観葉植物セルの座標。
+- `spiky_plant_cells`: 観葉植物セルの座標。
 - `puddle_cells`: 水たまりセルの座標。
 - `bevel_corners`: 壁描画の角丸／面取り情報。
 - 命名規則: `*_cells` はセル座標の集合（`list`/`set`）。
@@ -193,7 +193,7 @@
 - `Survivor`（`is_buddy` フラグで相棒を表現）
 - `PatrolBot`（巡回ロボット）
 - `FuelCan`, `EmptyFuelCan`, `FuelStation`, `Flashlight`, `Shoes`（収集アイテム・設備）
-- `SpikyHouseplant`（トゲトゲした観葉植物：トラップ）
+- `SpikyPlant`（トゲトゲの植物：トラップ）
 
 ### 4.2 ゾンビ
 
@@ -253,7 +253,7 @@
 
 - **概要**:
   - セル中心に配置される固定トラップ（`h` タイル由来のエンティティ）。
-  - 体力は `HOUSEPLANT_HEALTH=300`、半径は `HOUSEPLANT_RADIUS=8`（衝突半径も 8）。
+  - 体力は `SPIKY_PLANT_HEALTH=300`、半径は `SPIKY_PLANT_RADIUS=8`（衝突半径も 8）。
 - **捕獲メカニズム**:
   - ゾンビ/ゾンビ犬が観葉植物セル上で接触半径内に入ると、`TrappedZombie` に置き換えて固定化する。
   - 捕獲体は種類・体力・向き・減衰時間を引き継ぎ、通常の減衰で消滅する。
@@ -264,7 +264,7 @@
   - ゾンビ犬の群れ追従ターゲットからは除外される。
 - **人間・車両への影響**:
   - プレイヤー（徒歩）/生存者/相棒/車は通過可能。
-  - 接触中は `HOUSEPLANT_HUMANOID_SPEED_FACTOR` / `HOUSEPLANT_CAR_SPEED_FACTOR`（どちらも 0.2）で減速する。
+  - 接触中は `SPIKY_PLANT_HUMANOID_SPEED_FACTOR` / `SPIKY_PLANT_CAR_SPEED_FACTOR`（どちらも 0.2）で減速する。
   - 速度補正は「観葉植物 > 水たまり」の優先順で適用される。
 - **車との相互作用**:
   - 車が接触すると観葉植物は即時破壊され、車側は小ダメージ（`CAR_WALL_DAMAGE // 4`）を受ける。
@@ -564,7 +564,7 @@
   - `P`: プレイヤー候補（player spawn candidate）
   - `C`: 車候補（car spawn candidate）
   - `x`: 落とし穴（pitfall trap）
-  - `h`: 観葉植物セル（houseplant trap）
+  - `h`: トゲトゲ植物セル（spiky plant trap）
   - `w`: 水たまりセル（puddle slow-down tile）
   - `e`: 空の燃料缶候補（empty fuel can candidate）
   - `f`: 燃料候補（fuel candidate）

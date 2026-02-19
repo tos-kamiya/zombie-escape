@@ -5,7 +5,7 @@ from typing import Protocol
 from .entities_constants import PUDDLE_SPEED_FACTOR
 
 
-class HouseplantLike(Protocol):
+class SpikyPlantLike(Protocol):
     x: float
     y: float
     collision_radius: float
@@ -39,25 +39,25 @@ def is_in_contaminated_cell(
     return cell in contaminated_cells
 
 
-def is_touching_houseplant(
+def is_touching_spiky_plant(
     x: float,
     y: float,
     collision_radius: float,
     *,
     cell_size: int,
-    houseplants: dict[tuple[int, int], HouseplantLike] | None,
+    spiky_plants: dict[tuple[int, int], SpikyPlantLike] | None,
 ) -> bool:
-    if not houseplants or cell_size <= 0:
+    if not spiky_plants or cell_size <= 0:
         return False
     center_cell = (int(x // cell_size), int(y // cell_size))
     for dy in range(-1, 2):
         for dx in range(-1, 2):
-            houseplant = houseplants.get((center_cell[0] + dx, center_cell[1] + dy))
-            if not houseplant or not houseplant.alive():
+            spiky_plant = spiky_plants.get((center_cell[0] + dx, center_cell[1] + dy))
+            if not spiky_plant or not spiky_plant.alive():
                 continue
-            diff_x = x - houseplant.x
-            diff_y = y - houseplant.y
-            max_dist = collision_radius + houseplant.collision_radius
+            diff_x = x - spiky_plant.x
+            diff_y = y - spiky_plant.y
+            max_dist = collision_radius + spiky_plant.collision_radius
             if diff_x * diff_x + diff_y * diff_y <= max_dist * max_dist:
                 return True
     return False
@@ -70,18 +70,18 @@ def resolve_surface_speed_factor(
     *,
     cell_size: int,
     puddle_cells: set[tuple[int, int]],
-    houseplants: dict[tuple[int, int], HouseplantLike] | None = None,
-    houseplant_speed_factor: float = 1.0,
+    spiky_plants: dict[tuple[int, int], SpikyPlantLike] | None = None,
+    spiky_plant_speed_factor: float = 1.0,
     puddle_speed_factor: float = PUDDLE_SPEED_FACTOR,
 ) -> float:
-    if is_touching_houseplant(
+    if is_touching_spiky_plant(
         x,
         y,
         collision_radius,
         cell_size=cell_size,
-        houseplants=houseplants,
+        spiky_plants=spiky_plants,
     ):
-        return houseplant_speed_factor
+        return spiky_plant_speed_factor
     if is_in_puddle_cell(
         x,
         y,
@@ -90,3 +90,4 @@ def resolve_surface_speed_factor(
     ):
         return puddle_speed_factor
     return 1.0
+

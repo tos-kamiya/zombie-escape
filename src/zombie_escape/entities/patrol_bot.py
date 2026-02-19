@@ -29,7 +29,7 @@ from .movement import _circle_wall_collision
 from .walls import Wall
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
-    from .houseplant import SpikyHouseplant
+    from .spiky_plant import SpikyPlant
 
 RNG = get_rng()
 
@@ -225,7 +225,7 @@ class PatrolBot(pygame.sprite.Sprite):
         layout,
         drift: tuple[float, float] = (0.0, 0.0),
         now_ms: int,
-        houseplants: dict[tuple[int, int], "SpikyHouseplant"] | None = None,
+        spiky_plants: dict[tuple[int, int], "SpikyPlant"] | None = None,
     ) -> None:
         now = now_ms
         drift_x, drift_y = drift
@@ -369,23 +369,23 @@ class PatrolBot(pygame.sprite.Sprite):
                 final_y = self.y
                 break
 
-        hit_houseplant = False
-        if houseplants and cell_size > 0:
+        hit_spiky_plant = False
+        if spiky_plants and cell_size > 0:
             cx_idx = int(final_x // cell_size)
             cy_idx = int(final_y // cell_size)
             for dy in range(-1, 2):
                 for dx in range(-1, 2):
-                    hp = houseplants.get((cx_idx + dx, cy_idx + dy))
+                    hp = spiky_plants.get((cx_idx + dx, cy_idx + dy))
                     if hp and hp.alive():
                         h_dx = final_x - hp.x
                         h_dy = final_y - hp.y
                         h_hit_range = collision_radius + hp.collision_radius
                         if h_dx * h_dx + h_dy * h_dy <= h_hit_range * h_hit_range:
-                            hit_houseplant = True
+                            hit_spiky_plant = True
                             final_x = self.x
                             final_y = self.y
                             break
-                if hit_houseplant:
+                if hit_spiky_plant:
                     break
 
         possible_humans = []
@@ -455,7 +455,12 @@ class PatrolBot(pygame.sprite.Sprite):
         if _humanoid_collision(final_x, final_y):
             self.pause_until_ms = now + PATROL_BOT_HUMANOID_PAUSE_MS
         elif (
-            hit_wall or hit_pitfall or hit_bot or hit_car or hit_outer or hit_houseplant
+            hit_wall
+            or hit_pitfall
+            or hit_bot
+            or hit_car
+            or hit_outer
+            or hit_spiky_plant
         ):
             # Step back slightly to avoid corner lock, then rotate.
             backoff = max(0.5, self.speed * 0.5)

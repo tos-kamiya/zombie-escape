@@ -38,7 +38,7 @@ def test_wall_hug_lost_wall_falls_back_to_wander() -> None:
         car_walkable_cells=set(),
         car_spawn_cells=[],
         fall_spawn_cells=set(),
-        houseplant_cells=set(),
+        spiky_plant_cells=set(),
         puddle_cells=set(),
         bevel_corners={},
         moving_floor_cells={},

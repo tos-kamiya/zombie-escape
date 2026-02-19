@@ -15,8 +15,8 @@ from ..entities import (
     ZombieDog,
 )
 from ..entities_constants import (
-    HOUSEPLANT_HUMANOID_SPEED_FACTOR,
-    HOUSEPLANT_CAR_SPEED_FACTOR,
+    SPIKY_PLANT_HUMANOID_SPEED_FACTOR,
+    SPIKY_PLANT_CAR_SPEED_FACTOR,
     PUDDLE_SPEED_FACTOR,
     HUMANOID_WALL_BUMP_FRAMES,
     MOVING_FLOOR_SPEED,
@@ -183,15 +183,15 @@ def update_entities(
         car_dx += floor_dx
         car_dy += floor_dy
 
-        # Houseplant / Puddle slow-down
+        # Spiky plant / Puddle slow-down
         speed_factor = resolve_surface_speed_factor(
             active_car.x,
             active_car.y,
             active_car.collision_radius,
             cell_size=game_data.cell_size,
             puddle_cells=game_data.layout.puddle_cells,
-            houseplants=game_data.houseplants,
-            houseplant_speed_factor=HOUSEPLANT_CAR_SPEED_FACTOR,
+            spiky_plants=game_data.spiky_plants,
+            spiky_plant_speed_factor=SPIKY_PLANT_CAR_SPEED_FACTOR,
             puddle_speed_factor=PUDDLE_SPEED_FACTOR,
         )
 
@@ -247,15 +247,15 @@ def update_entities(
             player_dx += floor_dx
             player_dy += floor_dy
 
-            # Houseplant / Puddle slow-down
+            # Spiky plant / Puddle slow-down
             speed_factor = resolve_surface_speed_factor(
                 player.x,
                 player.y,
                 player.collision_radius,
                 cell_size=game_data.cell_size,
                 puddle_cells=game_data.layout.puddle_cells,
-                houseplants=game_data.houseplants,
-                houseplant_speed_factor=HOUSEPLANT_HUMANOID_SPEED_FACTOR,
+                spiky_plants=game_data.spiky_plants,
+                spiky_plant_speed_factor=SPIKY_PLANT_HUMANOID_SPEED_FACTOR,
                 puddle_speed_factor=PUDDLE_SPEED_FACTOR,
             )
 
@@ -473,18 +473,18 @@ def update_entities(
         config=config,
         now_ms=current_time,
     )
-    trapped_houseplant_counts: dict[tuple[int, int], int] = {}
+    trapped_spiky_plant_counts: dict[tuple[int, int], int] = {}
     cell_size = game_data.cell_size
-    houseplants = game_data.houseplants
-    if cell_size > 0 and houseplants:
+    spiky_plants = game_data.spiky_plants
+    if cell_size > 0 and spiky_plants:
         for zombie in zombie_group:
             if not zombie.alive() or not getattr(zombie, "is_trapped", False):
                 continue
             cell = (int(zombie.x // cell_size), int(zombie.y // cell_size))
-            hp = houseplants.get(cell)
+            hp = spiky_plants.get(cell)
             if hp and hp.alive():
-                trapped_houseplant_counts[cell] = (
-                    trapped_houseplant_counts.get(cell, 0) + 1
+                trapped_spiky_plant_counts[cell] = (
+                    trapped_spiky_plant_counts.get(cell, 0) + 1
                 )
     zombies_sorted: list[Zombie | ZombieDog] = sorted(
         list(zombie_group), key=lambda z: z.x
@@ -652,8 +652,8 @@ def update_entities(
             layout=game_data.layout,
             now_ms=game_data.state.clock.elapsed_ms,
             drift=(floor_dx, floor_dy),
-            houseplants=houseplants,
-            trapped_houseplant_counts=trapped_houseplant_counts,
+            spiky_plants=spiky_plants,
+            trapped_spiky_plant_counts=trapped_spiky_plant_counts,
         )
         if not zombie.alive():
             last_damage_ms = getattr(zombie, "last_damage_ms", None)
@@ -750,7 +750,7 @@ def update_entities(
             layout=game_data.layout,
             drift=(floor_dx, floor_dy),
             now_ms=game_data.state.clock.elapsed_ms,
-            houseplants=game_data.houseplants,
+            spiky_plants=game_data.spiky_plants,
         )
 
     update_decay_effects(game_data.state.decay_effects, frames=1)

@@ -1,41 +1,40 @@
 from __future__ import annotations
 
 import math
+
 import pygame
 
 from ..entities_constants import (
-    HOUSEPLANT_HEALTH,
-    HOUSEPLANT_COLLISION_RADIUS,
-    HOUSEPLANT_RADIUS,
+    SPIKY_PLANT_COLLISION_RADIUS,
+    SPIKY_PLANT_HEALTH,
+    SPIKY_PLANT_RADIUS,
 )
 from ..render_constants import (
     ENTITY_SHADOW_RADIUS_MULT,
-    HOUSEPLANT_BODY_COLOR,
-    HOUSEPLANT_SPIKE_COLOR,
+    SPIKY_PLANT_BODY_COLOR,
+    SPIKY_PLANT_SPIKE_COLOR,
 )
 
 
-class SpikyHouseplant(pygame.sprite.Sprite):
+class SpikyPlant(pygame.sprite.Sprite):
     def __init__(self, x: int, y: int):
         super().__init__()
-        self.radius = HOUSEPLANT_RADIUS
-        self.collision_radius = HOUSEPLANT_COLLISION_RADIUS
+        self.radius = SPIKY_PLANT_RADIUS
+        self.collision_radius = SPIKY_PLANT_COLLISION_RADIUS
         self.shadow_radius = max(
             1, int(self.collision_radius * ENTITY_SHADOW_RADIUS_MULT)
         )
         self.shadow_offset_scale = 1.0
-        self.health = HOUSEPLANT_HEALTH
-        self.max_health = HOUSEPLANT_HEALTH
+        self.health = SPIKY_PLANT_HEALTH
+        self.max_health = SPIKY_PLANT_HEALTH
 
         self.image = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
-        # Main body
         pygame.draw.circle(
             self.image,
-            HOUSEPLANT_BODY_COLOR,
+            SPIKY_PLANT_BODY_COLOR,
             (self.radius, self.radius),
             self.radius - 2,
         )
-        # Spikes (just some lines for now)
         for i in range(8):
             angle = i * (math.tau / 8)
             start_dist = self.radius - 4
@@ -48,7 +47,7 @@ class SpikyHouseplant(pygame.sprite.Sprite):
                 self.radius + math.cos(angle) * end_dist,
                 self.radius + math.sin(angle) * end_dist,
             )
-            pygame.draw.line(self.image, HOUSEPLANT_SPIKE_COLOR, start_p, end_p, 2)
+            pygame.draw.line(self.image, SPIKY_PLANT_SPIKE_COLOR, start_p, end_p, 2)
 
         self.rect = self.image.get_rect(center=(x, y))
         self.x = float(x)
@@ -58,3 +57,5 @@ class SpikyHouseplant(pygame.sprite.Sprite):
         self.health -= amount
         if self.health <= 0:
             self.kill()
+
+__all__ = ["SpikyPlant"]

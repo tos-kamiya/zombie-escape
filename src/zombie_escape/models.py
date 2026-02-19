@@ -10,7 +10,7 @@ import pygame
 from pygame import sprite, surface
 
 from .entities_constants import (
-    HOUSEPLANT_RADIUS,
+    SPIKY_PLANT_RADIUS,
     MovingFloorDirection,
     ZOMBIE_DECAY_DURATION_FRAMES,
     ZombieKind,
@@ -34,7 +34,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
         Player,
         Shoes,
     )
-    from .entities.houseplant import SpikyHouseplant
+    from .entities.spiky_plant import SpikyPlant
     from .render.decay_effects import DecayingEntityEffect
     from .gameplay.lineformer_trains import LineformerTrainManager
     from .gameplay.spatial_index import SpatialIndex
@@ -76,7 +76,7 @@ class LevelLayout:
     car_walkable_cells: set[tuple[int, int]]
     car_spawn_cells: list[tuple[int, int]]
     fall_spawn_cells: set[tuple[int, int]]
-    houseplant_cells: set[tuple[int, int]]
+    spiky_plant_cells: set[tuple[int, int]]
     fire_floor_cells: set[tuple[int, int]] = field(default_factory=set)
     metal_floor_cells: set[tuple[int, int]] = field(default_factory=set)
     zombie_contaminated_cells: set[tuple[int, int]] = field(default_factory=set)
@@ -87,7 +87,6 @@ class LevelLayout:
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = field(
         default_factory=dict
     )
-
 
 @dataclass
 class FallingEntity:
@@ -237,12 +236,11 @@ class GameData:
     player: Player | None = None
     car: Car | None = None
     waiting_cars: list[Car] = field(default_factory=list)
-    houseplants: dict[tuple[int, int], "SpikyHouseplant"] = field(default_factory=dict)
+    spiky_plants: dict[tuple[int, int], "SpikyPlant"] = field(default_factory=dict)
     last_logged_waiting_cars: int | None = None
     lineformer_trains: "LineformerTrainManager" = field(
         default_factory=_make_lineformer_manager
     )
-
 
 @dataclass(frozen=True)
 class Stage:
@@ -278,8 +276,8 @@ class Stage:
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = field(
         default_factory=dict
     )
-    houseplant_density: float = 0.0
-    houseplant_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
+    spiky_plant_density: float = 0.0
+    spiky_plant_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
     puddle_density: float = 0.0
     puddle_zones: list[tuple[int, int, int, int]] = field(default_factory=list)
 
@@ -338,10 +336,10 @@ class Stage:
             assert self.fuel_station_spawn_count >= 1, (
                 "refuel_chain stages must set fuel_station_spawn_count >= 1"
             )
-        if self.houseplant_density > 0 or self.houseplant_zones:
-            assert self.cell_size * 0.5 > HOUSEPLANT_RADIUS + 2, (
-                f"cell_size ({self.cell_size}) is too small for houseplant optimization "
-                f"(requires half-cell > {HOUSEPLANT_RADIUS + 2})"
+        if self.spiky_plant_density > 0 or self.spiky_plant_zones:
+            assert self.cell_size * 0.5 > SPIKY_PLANT_RADIUS + 2, (
+                f"cell_size ({self.cell_size}) is too small for spiky_plant optimization "
+                f"(requires half-cell > {SPIKY_PLANT_RADIUS + 2})"
             )
         total_zombie_ratio = (
             float(self.zombie_normal_ratio)
@@ -380,7 +378,7 @@ class Stage:
         for zones in self.moving_floor_zones.values():
             floor_cells.update(_get_cells(zones))
 
-        plant_cells = _get_cells(self.houseplant_zones)
+        plant_cells = _get_cells(self.spiky_plant_zones)
         water_cells = _get_cells(self.puddle_zones)
 
         # Check overlaps
@@ -395,7 +393,7 @@ class Stage:
             f"Stage {self.id}: Pitfall and Metal Floor zones overlap"
         )
         assert not (pitfall_cells & plant_cells), (
-            f"Stage {self.id}: Pitfall and Houseplant zones overlap"
+            f"Stage {self.id}: Pitfall and SpikyPlant zones overlap"
         )
         assert not (pitfall_cells & water_cells), (
             f"Stage {self.id}: Pitfall and Puddle zones overlap"
@@ -403,7 +401,7 @@ class Stage:
 
         # 2. Moving Floor vs others
         assert not (floor_cells & plant_cells), (
-            f"Stage {self.id}: Moving Floor and Houseplant zones overlap"
+            f"Stage {self.id}: Moving Floor and SpikyPlant zones overlap"
         )
         assert not (floor_cells & water_cells), (
             f"Stage {self.id}: Moving Floor and Puddle zones overlap"
@@ -418,15 +416,15 @@ class Stage:
             f"Stage {self.id}: Moving Floor and Metal Floor zones overlap"
         )
 
-        # 3. Houseplant vs Puddle
+        # 3. SpikyPlant vs Puddle
         assert not (plant_cells & water_cells), (
-            f"Stage {self.id}: Houseplant and Puddle zones overlap"
+            f"Stage {self.id}: SpikyPlant and Puddle zones overlap"
         )
         assert not (plant_cells & fire_floor_cells), (
-            f"Stage {self.id}: Houseplant and Fire Floor zones overlap"
+            f"Stage {self.id}: SpikyPlant and Fire Floor zones overlap"
         )
         assert not (plant_cells & metal_floor_cells), (
-            f"Stage {self.id}: Houseplant and Metal Floor zones overlap"
+            f"Stage {self.id}: SpikyPlant and Metal Floor zones overlap"
         )
         assert not (water_cells & fire_floor_cells), (
             f"Stage {self.id}: Puddle and Fire Floor zones overlap"

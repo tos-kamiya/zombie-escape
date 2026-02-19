@@ -264,7 +264,7 @@ class TitleScreenController:
             "moving_floor": get_tile_icon("moving_floor", self.icon_radius),
             "fire_floor": get_tile_icon("fire_floor", self.icon_radius),
             "puddle": get_tile_icon("puddle", self.icon_radius),
-            "houseplant": get_tile_icon("houseplant", self.icon_radius),
+            "spiky_plant": get_tile_icon("spiky_plant", self.icon_radius),
         }
         self.icon_surfaces = icon_surfaces
         icon_surfaces["car_forbidden"] = self._build_forbidden_icon(
@@ -313,8 +313,8 @@ class TitleScreenController:
             icons.append(self.icon_surfaces["zombie_dog"])
         if stage.zombie_nimble_dog_ratio > 0:
             icons.append(self.icon_surfaces["zombie_dog_nimble"])
-        if stage.houseplant_density > 0 or stage.houseplant_zones:
-            icons.append(self.icon_surfaces["houseplant"])
+        if stage.spiky_plant_density > 0 or stage.spiky_plant_zones:
+            icons.append(self.icon_surfaces["spiky_plant"])
 
         if (
             stage.interior_fall_spawn_weight > 0

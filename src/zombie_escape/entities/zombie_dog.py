@@ -46,7 +46,7 @@ from ..entities_constants import (
     ZOMBIE_SEPARATION_DISTANCE,
 )
 from ..rng import get_rng
-from ..surface_effects import HouseplantLike, is_in_contaminated_cell, is_in_puddle_cell
+from ..surface_effects import SpikyPlantLike, is_in_contaminated_cell, is_in_puddle_cell
 from ..render.entity_overlays import draw_paralyze_marker_overlay
 from ..render_constants import ENTITY_SHADOW_RADIUS_MULT
 from ..render_assets import (
@@ -494,16 +494,16 @@ class ZombieDog(pygame.sprite.Sprite):
                 )
         return move_x, move_y
 
-    def _repel_from_loaded_houseplants(
+    def _repel_from_loaded_spiky_plants(
         self: Self,
         move_x: float,
         move_y: float,
         *,
         cell_size: int,
-        houseplants: dict[tuple[int, int], HouseplantLike] | None,
-        trapped_houseplant_counts: dict[tuple[int, int], int] | None,
+        spiky_plants: dict[tuple[int, int], SpikyPlantLike] | None,
+        trapped_spiky_plant_counts: dict[tuple[int, int], int] | None,
     ) -> tuple[float, float]:
-        if cell_size <= 0 or not houseplants or not trapped_houseplant_counts:
+        if cell_size <= 0 or not spiky_plants or not trapped_spiky_plant_counts:
             return move_x, move_y
         next_x = self.x + move_x
         next_y = self.y + move_y
@@ -513,10 +513,10 @@ class ZombieDog(pygame.sprite.Sprite):
         )
         repel_x = 0.0
         repel_y = 0.0
-        for cell, trapped_count in trapped_houseplant_counts.items():
+        for cell, trapped_count in trapped_spiky_plant_counts.items():
             if trapped_count <= 0:
                 continue
-            hp = houseplants.get(cell)
+            hp = spiky_plants.get(cell)
             if hp is None or not hp.alive():
                 continue
             dx = next_x - hp.x
@@ -622,8 +622,8 @@ class ZombieDog(pygame.sprite.Sprite):
         layout,
         now_ms: int,
         drift: tuple[float, float] = (0.0, 0.0),
-        houseplants: dict[tuple[int, int], HouseplantLike] | None = None,
-        trapped_houseplant_counts: dict[tuple[int, int], int] | None = None,
+        spiky_plants: dict[tuple[int, int], SpikyPlantLike] | None = None,
+        trapped_spiky_plant_counts: dict[tuple[int, int], int] | None = None,
     ) -> None:
         if self.vitals.carbonized:
             self._apply_decay()
@@ -688,12 +688,12 @@ class ZombieDog(pygame.sprite.Sprite):
             move_x, move_y = self._slow_near_trapped_zombies(
                 move_x, move_y, list(nearby_zombies)
             )
-        move_x, move_y = self._repel_from_loaded_houseplants(
+        move_x, move_y = self._repel_from_loaded_spiky_plants(
             move_x,
             move_y,
             cell_size=cell_size,
-            houseplants=houseplants,
-            trapped_houseplant_counts=trapped_houseplant_counts,
+            spiky_plants=spiky_plants,
+            trapped_spiky_plant_counts=trapped_spiky_plant_counts,
         )
 
         if nearby_zombies:

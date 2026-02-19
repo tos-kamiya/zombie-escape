@@ -45,7 +45,7 @@ Per-stage tunables and feature toggles.
   - normal/tracker/wall-hugger/lineformer/solitary/dog ratios
   - nimble-dog ratio (`zombie_nimble_dog_ratio`) within dog spawns
 - Terrain features:
-  - wall algorithm, rubble ratio, pitfall/houseplant/puddle settings
+  - wall algorithm, rubble ratio, pitfall/spiky-plant/puddle settings
   - moving-floor and fall-spawn zone controls
   - reinforced inner wall controls (`reinforced_wall_density`, `reinforced_wall_zones`)
   - exit-side control via `exit_sides` (`top`, `bottom`, `left`, `right`)
@@ -61,7 +61,7 @@ Generated map surface and cell sets.
 - `field_rect`
 - `outside_cells`, `walkable_cells`, `wall_cells`, `outer_wall_cells`, `steel_beam_cells`
 - `pitfall_cells`, `fall_spawn_cells`
-- `houseplant_cells`, `puddle_cells`
+- `spiky_plant_cells`, `puddle_cells`
 - `bevel_corners`
 
 Naming convention: `*_cells` stores cell-coordinate collections.

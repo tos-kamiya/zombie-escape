@@ -24,8 +24,8 @@ from .render_constants import (
     ANGLE_BINS,
     BUDDY_COLOR,
     HAND_SPREAD_RAD,
-    HOUSEPLANT_BODY_COLOR,
-    HOUSEPLANT_SPIKE_COLOR,
+    SPIKY_PLANT_BODY_COLOR,
+    SPIKY_PLANT_SPIKE_COLOR,
     HUMANOID_OUTLINE_COLOR,
     HUMANOID_OUTLINE_WIDTH,
     PATROL_BOT_ARROW_COLOR,
@@ -1364,11 +1364,11 @@ def get_tile_icon(kind: str, size: int) -> pygame.Surface:
         ring_rect = ring_rect.inflate(inflate_w, inflate_h)
         if ring_rect.width > 0 and ring_rect.height > 0:
             pygame.draw.ellipse(surf, ring_color, ring_rect, width=1)
-    elif kind == "houseplant":
+    elif kind == "spiky_plant":
         # Simple marker: body + four spikes.
         center = rect.center
         body_radius = max(2, scaled_size // 4)
-        pygame.draw.circle(surf, HOUSEPLANT_BODY_COLOR, center, max(1, body_radius - 1))
+        pygame.draw.circle(surf, SPIKY_PLANT_BODY_COLOR, center, max(1, body_radius - 1))
         spike_inner = max(1, body_radius)
         spike_outer = max(spike_inner + 1, body_radius + 1)
         for i in range(4):
@@ -1382,7 +1382,7 @@ def get_tile_icon(kind: str, size: int) -> pygame.Surface:
                 int(center[0] + direction.x * spike_outer),
                 int(center[1] + direction.y * spike_outer),
             )
-            pygame.draw.line(surf, HOUSEPLANT_SPIKE_COLOR, start, end, width=1)
+            pygame.draw.line(surf, SPIKY_PLANT_SPIKE_COLOR, start, end, width=1)
     else:
         pygame.draw.rect(surf, (128, 128, 128), rect, width=1)
 

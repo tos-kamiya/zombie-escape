@@ -31,7 +31,7 @@ Example formatted output:
     "pitfall_zones": [],
     "reinforced_wall_zones": [],
     "fall_spawn_zones": [],
-    "houseplant_zones": [],
+    "spiky_plant_zones": [],
     "puddle_zones": [],
 }
 ```
@@ -49,7 +49,7 @@ and spaces/tabs are treated as `.`.
 - `x` pitfall
 - `R` reinforced wall zone
 - `?` fall spawn zone
-- `h` houseplant zone
+- `h` spiky plant zone
 - `w` puddle zone
 - `A`-`Z` custom zones except `R` (emitted as `zone_a`, `zone_b`, ...)
 
@@ -68,7 +68,7 @@ The output is intended to be dropped into a `Stage` definition:
   "pitfall_zones": [(x, y, w, h)],
   "reinforced_wall_zones": [(x, y, w, h)],
   "fall_spawn_zones": [(x, y, w, h)],
-  "houseplant_zones": [(x, y, w, h)],
+  "spiky_plant_zones": [(x, y, w, h)],
   "puddle_zones": [(x, y, w, h)],
   "zone_a": [(x, y, w, h)],
   "zone_b": [(x, y, w, h)]

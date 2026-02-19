@@ -782,7 +782,7 @@ STAGES: list[Stage] = [
         ],
         puddle_density=0.05,
         exit_sides=["top", "bottom"],
-        houseplant_density=0.04,
+        spiky_plant_density=0.04,
     ),
     Stage(
         id="stage29",
@@ -804,7 +804,7 @@ STAGES: list[Stage] = [
         initial_flashlight_count=3,
         waiting_car_target_count=1,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 3,
-        houseplant_zones=[
+        spiky_plant_zones=[
             (3, 3, 38, 2),
             (3, 5, 2, 36),
             (7, 5, 2, 36),
@@ -1154,10 +1154,10 @@ STAGES: list[Stage] = [
         initial_shoes_count=2,
         waiting_car_target_count=1,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 3,
-        houseplant_density=0.12,
+        spiky_plant_density=0.12,
         puddle_density=0.01,
         # pitfall_zones=[(12, 12, 1, 1)],
-        houseplant_zones=[
+        spiky_plant_zones=[
             (12, 11, 1, 1),
             (11, 12, 1, 1),
             (13, 12, 1, 1),

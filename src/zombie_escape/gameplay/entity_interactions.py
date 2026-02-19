@@ -115,10 +115,10 @@ def _forget_contact_hint(
     ]
 
 
-def _handle_houseplant_trapping(game_data: GameData) -> None:
-    """Check if any zombies should be trapped by houseplants."""
-    houseplants = game_data.houseplants
-    if not houseplants:
+def _handle_spiky_plant_trapping(game_data: GameData) -> None:
+    """Check if any zombies should be trapped by spiky plants."""
+    spiky_plants = game_data.spiky_plants
+    if not spiky_plants:
         return
     zombie_group = game_data.groups.zombie_group
     all_sprites = game_data.groups.all_sprites
@@ -131,7 +131,7 @@ def _handle_houseplant_trapping(game_data: GameData) -> None:
             continue
 
         cell = (int(zombie.x // cell_size), int(zombie.y // cell_size))
-        hp = houseplants.get(cell)
+        hp = spiky_plants.get(cell)
         if hp and hp.alive():
             dx = hp.x - zombie.x
             dy = hp.y - zombie.y
@@ -596,7 +596,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         stage.survivor_rescue_stage or stage.survivor_spawn_rate > 0.0
     )
     maintain_waiting_car_supply(game_data)
-    _handle_houseplant_trapping(game_data)
+    _handle_spiky_plant_trapping(game_data)
     active_car = car if car and car.alive() else None
     waiting_cars = game_data.waiting_cars
     shrunk_car = get_shrunk_sprite(active_car, 0.8) if active_car else None
@@ -868,13 +868,13 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
             elif marker_hits > 0:
                 active_car._take_damage(CAR_ZOMBIE_CONTACT_DAMAGE * marker_hits)
 
-    # Car hitting houseplants
+    # Car hitting spiky plants
     if player.in_car and active_car and active_car.health > 0 and shrunk_car:
         car_cell_x = int(active_car.x // cell_size)
         car_cell_y = int(active_car.y // cell_size)
         for dy in range(-1, 2):
             for dx in range(-1, 2):
-                hp = game_data.houseplants.get((car_cell_x + dx, car_cell_y + dy))
+                hp = game_data.spiky_plants.get((car_cell_x + dx, car_cell_y + dy))
                 if hp and hp.alive():
                     if shrunk_car.rect.colliderect(hp.rect):
                         # Car destroys the plant instantly (or applies high damage)

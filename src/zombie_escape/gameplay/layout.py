@@ -168,8 +168,8 @@ def generate_level_from_blueprint(
                 fuel_station_count=fuel_station_count,
                 flashlight_count=flashlight_count,
                 shoes_count=shoes_count,
-                houseplant_density=stage.houseplant_density,
-                houseplant_zones=stage.houseplant_zones,
+                spiky_plant_density=stage.spiky_plant_density,
+                spiky_plant_zones=stage.spiky_plant_zones,
                 puddle_density=stage.puddle_density,
                 puddle_zones=stage.puddle_zones,
             )
@@ -225,7 +225,7 @@ def generate_level_from_blueprint(
     pitfall_cells: set[tuple[int, int]] = set()
     fire_floor_cells: set[tuple[int, int]] = set()
     metal_floor_cells: set[tuple[int, int]] = set()
-    houseplant_cells: set[tuple[int, int]] = set()
+    spiky_plant_cells: set[tuple[int, int]] = set()
     puddle_cells: set[tuple[int, int]] = set()
     player_cells: list[tuple[int, int]] = []
     car_cells: list[tuple[int, int]] = []
@@ -342,7 +342,7 @@ def generate_level_from_blueprint(
                     walkable_cells.append((x, y))
                 continue
             if ch == "h":
-                houseplant_cells.add((x, y))
+                spiky_plant_cells.add((x, y))
                 if not cell_has_beam:
                     walkable_cells.append((x, y))
                 continue
@@ -494,7 +494,7 @@ def generate_level_from_blueprint(
         car_walkable_cells=car_reachable_cells,
         car_spawn_cells=[],
         fall_spawn_cells=set(),
-        houseplant_cells=houseplant_cells,
+        spiky_plant_cells=spiky_plant_cells,
         fire_floor_cells=fire_floor_cells,
         metal_floor_cells=metal_floor_cells,
         zombie_contaminated_cells=set(),
@@ -574,7 +574,7 @@ def generate_level_from_blueprint(
             "fuel_station_cells": list(fuel_cells),
             "flashlight_cells": list(flashlight_cells),
             "shoes_cells": list(shoes_cells),
-            "houseplant_cells": list(houseplant_cells),
+            "spiky_plant_cells": list(spiky_plant_cells),
             "fire_floor_cells": list(fire_floor_cells),
             "metal_floor_cells": list(metal_floor_cells),
             "zombie_contaminated_cells": list(layout.zombie_contaminated_cells),

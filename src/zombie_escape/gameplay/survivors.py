@@ -10,7 +10,7 @@ import pygame
 from ..entities_constants import (
     BUDDY_RADIUS,
     CAR_SPEED,
-    HOUSEPLANT_HUMANOID_SPEED_FACTOR,
+    SPIKY_PLANT_HUMANOID_SPEED_FACTOR,
     PUDDLE_SPEED_FACTOR,
     SURVIVOR_MAX_SAFE_PASSENGERS,
     SURVIVOR_MIN_SPEED_FACTOR,
@@ -86,8 +86,8 @@ def update_survivors(
             survivor.collision_radius,
             cell_size=game_data.cell_size,
             puddle_cells=game_data.layout.puddle_cells,
-            houseplants=game_data.houseplants,
-            houseplant_speed_factor=HOUSEPLANT_HUMANOID_SPEED_FACTOR,
+            spiky_plants=game_data.spiky_plants,
+            spiky_plant_speed_factor=SPIKY_PLANT_HUMANOID_SPEED_FACTOR,
             puddle_speed_factor=PUDDLE_SPEED_FACTOR,
         )
 

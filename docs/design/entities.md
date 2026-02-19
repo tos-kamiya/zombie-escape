@@ -8,7 +8,7 @@
 - `PatrolBot`: moving hazard/support object with programmable turning behavior.
 - `Wall` / `RubbleWall` / `SteelBeam`: collision and destruction-capable obstacles.
 - Item entities: `FuelCan`, `EmptyFuelCan`, `FuelStation`, `Flashlight`, `Shoes`.
-- Trap entity: `SpikyHouseplant`.
+- Trap entity: `SpikyPlant`.
 
 ## Zombie Entities
 
@@ -59,5 +59,5 @@
 
 - Terrain-only slow tile (`w`), not a sprite.
 - Applies movement speed factor while on puddle cells.
-- Houseplant slow has higher priority than puddle slow.
+- Spiky plant slow has higher priority than puddle slow.
 - Visualized with animated ripple rings in normal and overview renders.

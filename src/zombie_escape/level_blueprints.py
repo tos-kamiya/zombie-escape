@@ -781,21 +781,21 @@ def _place_pitfall_density(
         grid[y][x] = "x"
 
 
-def _place_houseplant_zones(
+def _place_spiky_plant_zones(
     grid: list[list[str]],
     *,
-    houseplant_zones: list[tuple[int, int, int, int]] | None = None,
+    spiky_plant_zones: list[tuple[int, int, int, int]] | None = None,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
-    """Place zone-defined houseplants on empty floor cells."""
+    """Place zone-defined spiky plants on empty floor cells."""
     cols, rows = len(grid[0]), len(grid)
     forbidden = _collect_exit_adjacent_cells(grid)
     if forbidden_cells:
         forbidden |= forbidden_cells
 
-    if not houseplant_zones:
+    if not spiky_plant_zones:
         return
-    for col, row, width, height in houseplant_zones:
+    for col, row, width, height in spiky_plant_zones:
         if width <= 0 or height <= 0:
             continue
         start_x = max(0, col)
@@ -810,13 +810,13 @@ def _place_houseplant_zones(
                     grid[y][x] = "h"
 
 
-def _place_houseplant_density(
+def _place_spiky_plant_density(
     grid: list[list[str]],
     *,
     density: float,
     forbidden_cells: set[tuple[int, int]] | None = None,
 ) -> None:
-    """Replace empty floor cells with houseplants based on density."""
+    """Replace empty floor cells with spiky plants based on density."""
     cols, rows = len(grid[0]), len(grid)
     forbidden = _collect_exit_adjacent_cells(grid)
     if forbidden_cells:
@@ -833,7 +833,7 @@ def _place_houseplant_density(
     selected = _select_cells_by_ratio(
         candidates,
         density,
-        feature_name="houseplant",
+        feature_name="spiky_plant",
     )
     for x, y in selected:
         grid[y][x] = "h"
@@ -1177,8 +1177,8 @@ def generate_random_blueprint(
     fuel_station_count: int = 0,
     flashlight_count: int = 2,
     shoes_count: int = 2,
-    houseplant_density: float = 0.0,
-    houseplant_zones: list[tuple[int, int, int, int]] | None = None,
+    spiky_plant_density: float = 0.0,
+    spiky_plant_zones: list[tuple[int, int, int, int]] | None = None,
     puddle_density: float = 0.0,
     puddle_zones: list[tuple[int, int, int, int]] | None = None,
     reinforced_wall_density: float = 0.0,
@@ -1268,12 +1268,19 @@ def generate_random_blueprint(
             )
         )
 
-    # Place zone-defined houseplants
-    if houseplant_zones:
-        _place_houseplant_zones(
+    # Place zone-defined spiky plants.
+    if spiky_plant_zones:
+        _place_spiky_plant_zones(
             grid,
-            houseplant_zones=houseplant_zones,
+            spiky_plant_zones=spiky_plant_zones,
             forbidden_cells=reserved_cells,
+        )
+        reserved_cells.update(
+            _expand_zone_cells(
+                spiky_plant_zones,
+                grid_cols=cols,
+                grid_rows=rows,
+            )
         )
 
     # Place zone-defined reinforced walls.
@@ -1286,13 +1293,6 @@ def generate_random_blueprint(
         reserved_cells.update(
             _expand_zone_cells(
                 reinforced_wall_zones,
-                grid_cols=cols,
-                grid_rows=rows,
-            )
-        )
-        reserved_cells.update(
-            _expand_zone_cells(
-                houseplant_zones,
                 grid_cols=cols,
                 grid_rows=rows,
             )
@@ -1474,10 +1474,10 @@ def generate_random_blueprint(
         forbidden_cells=reserved_cells,
     )
 
-    # Place density-based houseplants.
-    _place_houseplant_density(
+    # Place density-based spiky plants.
+    _place_spiky_plant_density(
         grid,
-        density=houseplant_density,
+        density=spiky_plant_density,
         forbidden_cells=reserved_cells,
     )
     # Place density-based reinforced walls.

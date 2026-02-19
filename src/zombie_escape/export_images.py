@@ -22,7 +22,7 @@ from .entities import (
     Wall,
     Zombie,
     ZombieDog,
-    SpikyHouseplant,
+    SpikyPlant,
 )
 from .entities_constants import (
     INTERNAL_WALL_BEVEL_DEPTH,
@@ -654,15 +654,15 @@ def export_images(
     _save_surface(puddle_surface, puddle_path, scale=output_scale)
     saved.append(puddle_path)
 
-    houseplant = SpikyHouseplant(center_x, center_y)
-    houseplant_surface = _render_studio_snapshot(
+    spiky_plant = SpikyPlant(center_x, center_y)
+    spiky_plant_surface = _render_studio_snapshot(
         cell_size=cell_size,
-        target_rect=houseplant.rect,
-        sprites=[houseplant],
+        target_rect=spiky_plant.rect,
+        sprites=[spiky_plant],
         enable_shadows=True,
     )
-    houseplant_path = out / "houseplant.png"
-    _save_surface(houseplant_surface, houseplant_path, scale=output_scale)
-    saved.append(houseplant_path)
+    spiky_plant_path = out / "spiky_plant.png"
+    _save_surface(spiky_plant_surface, spiky_plant_path, scale=output_scale)
+    saved.append(spiky_plant_path)
 
     return saved

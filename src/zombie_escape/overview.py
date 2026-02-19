@@ -24,7 +24,7 @@ from .entities import (
     Player,
     PatrolBot,
     Shoes,
-    SpikyHouseplant,
+    SpikyPlant,
     SteelBeam,
     Survivor,
     TrappedZombie,
@@ -91,7 +91,7 @@ def _draw_overview_tag(
     surface.blit(label, label_rect)
 
 
-def _draw_houseplant_spike_mark(
+def _draw_spiky_plant_spike_mark(
     surface: surface.Surface,
     center: tuple[int, int],
     radius: int,
@@ -137,7 +137,7 @@ def draw_level_overview(
     buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
     patrol_bots: list[PatrolBot] | None = None,
-    houseplants: list[SpikyHouseplant] | None = None,
+    spiky_plants: list[SpikyPlant] | None = None,
     zombies: list[pygame.sprite.Sprite] | None = None,
     lineformer_trains: "LineformerTrainManager | None" = None,
     fall_spawn_cells: set[tuple[int, int]] | None = None,
@@ -338,10 +338,10 @@ def draw_level_overview(
                     bot.rect.center,
                     int(PATROL_BOT_COLLISION_RADIUS),
                 )
-    if houseplants:
-        for hp in houseplants:
+    if spiky_plants:
+        for hp in spiky_plants:
             if hp.alive():
-                _draw_houseplant_spike_mark(
+                _draw_spiky_plant_spike_mark(
                     surface,
                     hp.rect.center,
                     max(2, int(hp.radius)),
@@ -422,7 +422,7 @@ def draw_debug_overview(
         ],
         survivors=list(game_data.groups.survivor_group),
         patrol_bots=list(game_data.groups.patrol_bot_group),
-        houseplants=list(game_data.houseplants.values()),
+        spiky_plants=list(game_data.spiky_plants.values()),
         zombies=list(game_data.groups.zombie_group),
         lineformer_trains=game_data.lineformer_trains,
         fall_spawn_cells=game_data.layout.fall_spawn_cells,

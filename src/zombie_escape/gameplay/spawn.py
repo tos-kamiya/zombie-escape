@@ -13,7 +13,7 @@ from ..entities import (
     PatrolBot,
     Player,
     Shoes,
-    SpikyHouseplant,
+    SpikyPlant,
     Survivor,
     Zombie,
     ZombieDog,
@@ -74,7 +74,7 @@ __all__ = [
     "setup_player_and_cars",
     "spawn_initial_zombies",
     "spawn_initial_patrol_bots",
-    "spawn_houseplants",
+    "spawn_spiky_plants",
     "spawn_waiting_car",
     "maintain_waiting_car_supply",
     "nearest_waiting_car",
@@ -909,11 +909,11 @@ def setup_player_and_cars(
         or layout_data.get("car_walkable_cells")
         or walkable_cells
     )
-    houseplant_set = set(layout_data.get("houseplant_cells", []))
+    spiky_plant_set = set(layout_data.get("spiky_plant_cells", []))
     car_candidates = [
         c
         for c in (layout_data["car_cells"] or car_spawn_cells)
-        if c not in houseplant_set
+        if c not in spiky_plant_set
     ]
     waiting_cars: list[Car] = []
     car_appearance = _car_appearance_for_stage(game_data.stage)
@@ -1339,23 +1339,23 @@ def spawn_weighted_zombie(
     return False
 
 
-def spawn_houseplants(
+def spawn_spiky_plants(
     game_data: GameData,
     layout_data: Mapping[str, list[tuple[int, int]]],
-) -> list[SpikyHouseplant]:
-    """Spawn houseplants based on blueprint cells."""
-    houseplants: list[SpikyHouseplant] = []
-    houseplant_cells = layout_data.get("houseplant_cells", [])
-    if not houseplant_cells:
-        return houseplants
+) -> list[SpikyPlant]:
+    """Spawn spiky plants based on blueprint cells."""
+    spiky_plants: list[SpikyPlant] = []
+    spiky_plant_cells = layout_data.get("spiky_plant_cells", [])
+    if not spiky_plant_cells:
+        return spiky_plants
 
     all_sprites = game_data.groups.all_sprites
     cell_size = game_data.cell_size
 
-    for cell in houseplant_cells:
+    for cell in spiky_plant_cells:
         pos = _cell_center(cell, cell_size)
-        hp = SpikyHouseplant(pos[0], pos[1])
-        all_sprites.add(hp, layer=LAYER_HOUSEPLANTS)
-        houseplants.append(hp)
+        spiky_plant = SpikyPlant(pos[0], pos[1])
+        all_sprites.add(spiky_plant, layer=LAYER_HOUSEPLANTS)
+        spiky_plants.append(spiky_plant)
 
-    return houseplants
+    return spiky_plants
