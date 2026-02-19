@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Iterable
 
 import math
+import os
 
 try:
     from typing import Self
@@ -55,7 +56,13 @@ class Car(pygame.sprite.Sprite):
         self.last_safe_pos: tuple[float, float] = (self.x, self.y)
         self.pending_pitfall_fall = False
         self.pitfall_eject_pos: tuple[int, int] | None = None
+        self.debug_wall_bounce = os.environ.get("ZOMBIE_ESCAPE_DEBUG_CAR_BOUNCE") == "1"
         self._update_color()
+
+    def _debug_bounce(self: Self, message: str) -> None:
+        if not self.debug_wall_bounce:
+            return
+        print(f"[CAR_BOUNCE] {message}")
 
     def _take_damage(self: Self, amount: float) -> None:
         if self.health > 0:
@@ -100,6 +107,76 @@ class Car(pygame.sprite.Sprite):
             x + math.cos(angle) * offset,
             y + math.sin(angle) * offset,
         )
+
+    def _repel_from_wall(
+        self: Self,
+        x: float,
+        y: float,
+        wall: Wall,
+        *,
+        scale: float,
+        extra_clearance: float = 0.0,
+    ) -> tuple[float, float]:
+        """Push car away from a wall by overlap depth scaled by `scale`."""
+        cx, cy = self._collision_center(x, y)
+        radius = float(self.collision_radius)
+        rect = wall.rect
+
+        closest_x = max(rect.left, min(cx, rect.right))
+        closest_y = max(rect.top, min(cy, rect.bottom))
+        dx = cx - closest_x
+        dy = cy - closest_y
+        dist = math.hypot(dx, dy)
+
+        if dist > 1e-6:
+            penetration = radius - dist
+            if penetration <= 0:
+                return x, y
+            push = penetration * scale + max(0.0, extra_clearance)
+            return x + (dx / dist) * push, y + (dy / dist) * push
+
+        # Collision center is on/inside the rect; choose the shortest exit axis.
+        push_left = (cx - rect.left) + radius
+        push_right = (rect.right - cx) + radius
+        push_up = (cy - rect.top) + radius
+        push_down = (rect.bottom - cy) + radius
+        push_candidates = (
+            (push_left, -1.0, 0.0),
+            (push_right, 1.0, 0.0),
+            (push_up, 0.0, -1.0),
+            (push_down, 0.0, 1.0),
+        )
+        penetration, nx, ny = min(push_candidates, key=lambda item: item[0])
+        push = max(0.0, penetration) * scale + max(0.0, extra_clearance)
+        return x + nx * push, y + ny * push
+
+    def _separate_from_walls(
+        self: Self, x: float, y: float, walls: list[Wall], *, scale: float
+    ) -> tuple[float, float, bool]:
+        """Resolve car-vs-wall overlaps; add clearance on first push for visible bounce."""
+        extra_clearance = 6.0
+        for attempt in range(4):
+            moved = False
+            for wall in walls:
+                if not _circle_wall_collision(
+                    self._collision_center(x, y), self.collision_radius, wall
+                ):
+                    continue
+                x, y = self._repel_from_wall(
+                    x,
+                    y,
+                    wall,
+                    scale=scale,
+                    extra_clearance=extra_clearance if attempt == 0 else 0.0,
+                )
+                moved = True
+            if not moved:
+                return x, y, True
+        separated = not any(
+            _circle_wall_collision(self._collision_center(x, y), self.collision_radius, wall)
+            for wall in walls
+        )
+        return x, y, separated
 
     def get_collision_circle(self: Self) -> tuple[tuple[int, int], float]:
         cx, cy = self._collision_center(self.x, self.y)
@@ -191,8 +268,33 @@ class Car(pygame.sprite.Sprite):
                     )
                 )
                 nearest_wall = hit_walls[0]
-                new_x += (self.x - nearest_wall.rect.centerx) * 1.2
-                new_y += (self.y - nearest_wall.rect.centery) * 1.2
+                self._debug_bounce(
+                    "hit "
+                    f"move=({dx:.2f},{dy:.2f}) "
+                    f"from=({self.x:.2f},{self.y:.2f}) "
+                    f"target=({new_x:.2f},{new_y:.2f}) "
+                    f"collision_center=({car_center[0]:.2f},{car_center[1]:.2f}) "
+                    f"walls={len(hit_walls)} "
+                    f"nearest=({nearest_wall.rect.centerx},{nearest_wall.rect.centery})"
+                )
+                ordered_walls = [nearest_wall] + [
+                    wall for wall in hit_walls if wall is not nearest_wall
+                ]
+                new_x, new_y, separated = self._separate_from_walls(
+                    new_x, new_y, ordered_walls, scale=2.1
+                )
+                self._debug_bounce(
+                    "separate "
+                    f"result=({new_x:.2f},{new_y:.2f}) "
+                    f"delta=({new_x - self.x:.2f},{new_y - self.y:.2f}) "
+                    f"separated={separated}"
+                )
+                if not separated:
+                    self._debug_bounce(
+                        "fallback "
+                        f"to_last_safe=({self.last_safe_pos[0]:.2f},{self.last_safe_pos[1]:.2f})"
+                    )
+                    new_x, new_y = self.last_safe_pos
             else:
                 # Pitfall only: bounce back from current position
                 new_x = self.x - dx * 0.5
