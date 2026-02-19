@@ -183,6 +183,76 @@ def _circle_wall_collision(
     return _circle_rect_collision(center, radius, wall.rect)
 
 
+def separate_circle_from_walls(
+    center: tuple[float, float],
+    radius: float,
+    walls: Sequence["Wall"],
+    *,
+    scale: float,
+    max_attempts: int = 4,
+    first_extra_clearance: float = 0.0,
+) -> tuple[tuple[float, float], bool]:
+    """Resolve circle-vs-wall overlaps for a center point."""
+    cx, cy = center
+    clearance = max(0.0, first_extra_clearance)
+    for attempt in range(max(1, max_attempts)):
+        moved = False
+        for wall in walls:
+            if not _circle_wall_collision((cx, cy), radius, wall):
+                continue
+            cx, cy = _repel_circle_from_wall(
+                (cx, cy),
+                radius,
+                wall,
+                scale=scale,
+                extra_clearance=clearance if attempt == 0 else 0.0,
+            )
+            moved = True
+        if not moved:
+            return (cx, cy), True
+    separated = not any(_circle_wall_collision((cx, cy), radius, wall) for wall in walls)
+    return (cx, cy), separated
+
+
+def _repel_circle_from_wall(
+    center: tuple[float, float],
+    radius: float,
+    wall: "Wall",
+    *,
+    scale: float,
+    extra_clearance: float = 0.0,
+) -> tuple[float, float]:
+    cx, cy = center
+    rect_obj = wall.rect
+    closest_x = max(rect_obj.left, min(cx, rect_obj.right))
+    closest_y = max(rect_obj.top, min(cy, rect_obj.bottom))
+    dx = cx - closest_x
+    dy = cy - closest_y
+    dist = math.hypot(dx, dy)
+    if dist > 1e-6:
+        penetration = radius - dist
+        if penetration <= 0.0:
+            return cx, cy
+        push = penetration * scale + max(0.0, extra_clearance)
+        return cx + (dx / dist) * push, cy + (dy / dist) * push
+
+    left_pen = (cx - rect_obj.left) + radius
+    right_pen = (rect_obj.right - cx) + radius
+    top_pen = (cy - rect_obj.top) + radius
+    bottom_pen = (rect_obj.bottom - cy) + radius
+    penetration, nx, ny = min(
+        (
+            (left_pen, -1.0, 0.0),
+            (right_pen, 1.0, 0.0),
+            (top_pen, 0.0, -1.0),
+            (bottom_pen, 0.0, 1.0),
+        ),
+        key=lambda item: item[0],
+    )
+    push = max(0.0, penetration) * scale + max(0.0, extra_clearance)
+    return cx + nx * push, cy + ny * push
+
+
 def _zombie_update_tracker_target(
     zombie,
     footprints,
