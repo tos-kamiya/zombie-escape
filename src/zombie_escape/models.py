@@ -20,7 +20,7 @@ from .gameplay_constants import (
     DEFAULT_SHOES_SPAWN_COUNT,
     ZOMBIE_SPAWN_DELAY_MS,
 )
-from .level_constants import DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
+from .level_constants import DEFAULT_CELL_SIZE, DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
 from .localization import translate as tr
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -253,7 +253,7 @@ class Stage:
     intro_key: str | None = None
 
     # Map layout
-    cell_size: int = 50
+    cell_size: int = DEFAULT_CELL_SIZE
     grid_cols: int = DEFAULT_GRID_COLS
     grid_rows: int = DEFAULT_GRID_ROWS
     wall_algorithm: str = "default"
