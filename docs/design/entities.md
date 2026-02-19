@@ -24,6 +24,12 @@
 - Buddy can damage interior walls/steel beams when colliding.
 - Player wall collision applies damage to only the first detected wall per contact.
 - Off-screen survivor/buddy zombie contact triggers respawn behavior.
+- Car and patrol bot wall-overlap resolution uses shared
+  `separate_circle_from_walls(...)` from `entities/movement.py`.
+  - Car parameters prioritize visible bounce (`scale=2.1`,
+    `first_extra_clearance=6.0`) and fall back to `last_safe_pos` if still stuck.
+  - Patrol bot parameters prioritize conservative correction (`scale=1.0`,
+    no extra clearance) and fall back to its current position if still stuck.
 
 ## Footprints
 
