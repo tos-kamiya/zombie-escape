@@ -10,8 +10,7 @@
 | 水たまり | <img src="../imgs/exports/puddle.png" width="80"> | ステージ28 | 水たまりセル上にいる間、移動速度が低下する。 |
 | トゲトゲの植物 | <img src="../imgs/exports/spiky_plant.png" width="80"> | ステージ28 | 通常状態だと人間は移動速度が遅くなる。ゾンビは引っかかって移動できなくなる。 |
 | ちょこまかゾンビ犬 | <img src="../imgs/exports/zombie-dog-nimble.png" width="80"> | ステージ31 | ちょこまか動くゾンビ犬。 |
-| 炎床 | <img src="../imgs/exports/fire-floor.png" width="80"> | ステージ32 | 炎床セルは危険地形。人間・ゾンビともにダメージを受ける。 |
-| 金属床 | - | ステージ32 | 炎床の周辺に生成される金属調の床。見た目用で、挙動は通常床と同じ。 |
+| 炎床 | <img src="../imgs/exports/fire-floor.png" width="80"> | ステージ32 | 下に炎が見える床。ゾンビは燃え尽きる。人間はコーナーの短い距離なら飛び越えられる。 |
 
 ## 燃料ルールの違い（空の燃料缶が出るステージ）
 
