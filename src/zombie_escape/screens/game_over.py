@@ -5,7 +5,7 @@ from typing import Any
 import pygame
 from pygame import surface, time
 
-from ..colors import BLACK, GREEN, LIGHT_GRAY, RED, WHITE
+from ..colors import GREEN, LIGHT_GRAY, RED, WHITE
 from ..font_utils import load_font, render_text_surface
 from ..gameplay_constants import SURVIVAL_FAKE_CLOCK_RATIO
 from ..input_utils import (
@@ -19,7 +19,7 @@ from ..input_utils import (
 from ..localization import get_font_settings
 from ..localization import translate as tr
 from ..models import GameData, Stage
-from ..overview import compute_floor_cells, draw_level_overview
+from ..overview import draw_debug_overview
 from ..render import (
     RenderAssets,
     _draw_status_bar,
@@ -44,8 +44,6 @@ def game_over_screen(
         return ScreenTransition(ScreenID.TITLE)
 
     state = game_data.state
-    wall_group = game_data.groups.wall_group
-    footprints_enabled = config.get("footprints", {}).get("enabled", True)
     input_helper = InputHelper()
     pygame.mouse.set_visible(True)
     options: list[dict[str, str]] = [
@@ -56,6 +54,7 @@ def game_over_screen(
     selected = 0
     option_click_map = ClickableMap()
     mouse_ui_guard = MouseUiGuard()
+    overview_surface: surface.Surface | None = None
 
     def _activate_option(option_id: str) -> ScreenTransition:
         if option_id == "retry" and stage is not None:
@@ -103,109 +102,50 @@ def game_over_screen(
     while True:
         screen_width = screen.get_width()
         screen_height = screen.get_height()
-        if not state.overview_created:
-            level_rect = game_data.layout.field_rect
-            level_width = level_rect.width
-            level_height = level_rect.height
-            overview_surface = pygame.Surface((level_width, level_height))
-            cell_size = render_assets.internal_wall_grid_snap
-            floor_cells: set[tuple[int, int]] = set()
-            if cell_size > 0:
-                floor_cells = compute_floor_cells(
-                    cols=game_data.layout.grid_cols,
-                    rows=game_data.layout.grid_rows,
-                    wall_cells=game_data.layout.wall_cells,
-                    outer_wall_cells=game_data.layout.outer_wall_cells,
-                    pitfall_cells=game_data.layout.pitfall_cells,
-                )
-            footprints_to_draw = state.footprints if footprints_enabled else []
-            draw_level_overview(
-                render_assets,
-                overview_surface,
-                wall_group,
-                floor_cells,
-                game_data.player,
-                game_data.car,
-                game_data.waiting_cars,
-                footprints_to_draw,
-                now_ms=state.clock.elapsed_ms,
-                fuel=game_data.fuel,
-                empty_fuel_can=game_data.empty_fuel_can,
-                fuel_station=game_data.fuel_station,
-                flashlights=game_data.flashlights or [],
-                shoes=game_data.shoes or [],
-                buddies=[
-                    survivor
-                    for survivor in game_data.groups.survivor_group
-                    if survivor.alive() and survivor.is_buddy and not survivor.rescued
-                ],
-                survivors=list(game_data.groups.survivor_group),
-                patrol_bots=list(game_data.groups.patrol_bot_group),
-                spiky_plants=list(game_data.spiky_plants.values()),
-                zombies=list(game_data.groups.zombie_group),
-                lineformer_trains=game_data.lineformer_trains,
-                fall_spawn_cells=game_data.layout.fall_spawn_cells,
-                moving_floor_cells=game_data.layout.moving_floor_cells,
-                fire_floor_cells=game_data.layout.fire_floor_cells,
-                puddle_cells=game_data.layout.puddle_cells,
-                zombie_contaminated_cells=game_data.layout.zombie_contaminated_cells,
-                palette_key=state.ambient_palette_key,
+        level_rect = game_data.layout.field_rect
+        level_size = (level_rect.width, level_rect.height)
+        if overview_surface is None or overview_surface.get_size() != level_size:
+            overview_surface = pygame.Surface(level_size)
+        draw_debug_overview(
+            render_assets,
+            screen,
+            overview_surface,
+            game_data,
+            config,
+            screen_width=screen_width,
+            screen_height=screen_height,
+        )
+        headline_lines: list[tuple[str, tuple[int, int, int]]] = []
+        if state.game_won:
+            headline_lines.append((tr("game_over.win"), GREEN))
+        else:
+            headline_lines.append((tr("game_over.lose"), RED))
+        if stage and (
+            stage.survivor_rescue_stage
+            or stage.survivor_spawn_rate > 0.0
+            or stage.buddy_required_count > 0
+        ):
+            total_rescued = state.survivors_rescued + state.buddy_rescued
+            headline_lines.append(
+                (tr("game_over.survivors_summary", count=total_rescued), LIGHT_GRAY)
             )
-
-            level_aspect = level_width / max(1, level_height)
-            screen_aspect = screen_width / max(1, screen_height)
-            if level_aspect > screen_aspect:
-                scaled_w = screen_width - 40
-                scaled_h = int(scaled_w / level_aspect)
-            else:
-                scaled_h = screen_height - 40
-                scaled_w = int(scaled_h * level_aspect)
-            scaled_w = max(1, scaled_w)
-            scaled_h = max(1, scaled_h)
-            state.scaled_overview = pygame.transform.smoothscale(
-                overview_surface, (scaled_w, scaled_h)
+        elif stage and stage.endurance_stage:
+            elapsed_ms = max(0, state.endurance_elapsed_ms)
+            goal_ms = max(0, state.endurance_goal_ms)
+            if goal_ms:
+                elapsed_ms = min(elapsed_ms, goal_ms)
+            display_ms = int(elapsed_ms * SURVIVAL_FAKE_CLOCK_RATIO)
+            hours = display_ms // 3_600_000
+            minutes = (display_ms % 3_600_000) // 60_000
+            time_label = f"{int(hours):02d}:{int(minutes):02d}"
+            headline_lines.append(
+                (tr("game_over.endurance_duration", time=time_label), LIGHT_GRAY)
             )
-            state.overview_created = True
-
-        screen.fill(BLACK)
-        if state.scaled_overview:
-            screen.blit(
-                state.scaled_overview,
-                state.scaled_overview.get_rect(
-                    center=(screen_width // 2, screen_height // 2)
-                ),
-            )
-            headline_lines: list[tuple[str, tuple[int, int, int]]] = []
-            if state.game_won:
-                headline_lines.append((tr("game_over.win"), GREEN))
-            else:
-                headline_lines.append((tr("game_over.lose"), RED))
-            if stage and (
-                stage.survivor_rescue_stage
-                or stage.survivor_spawn_rate > 0.0
-                or stage.buddy_required_count > 0
-            ):
-                total_rescued = state.survivors_rescued + state.buddy_rescued
-                headline_lines.append(
-                    (tr("game_over.survivors_summary", count=total_rescued), LIGHT_GRAY)
-                )
-            elif stage and stage.endurance_stage:
-                elapsed_ms = max(0, state.endurance_elapsed_ms)
-                goal_ms = max(0, state.endurance_goal_ms)
-                if goal_ms:
-                    elapsed_ms = min(elapsed_ms, goal_ms)
-                display_ms = int(elapsed_ms * SURVIVAL_FAKE_CLOCK_RATIO)
-                hours = display_ms // 3_600_000
-                minutes = (display_ms % 3_600_000) // 60_000
-                time_label = f"{int(hours):02d}:{int(minutes):02d}"
-                headline_lines.append(
-                    (tr("game_over.endurance_duration", time=time_label), LIGHT_GRAY)
-                )
-            _draw_message_box(
-                headline_lines,
-                center=(screen_width // 2, screen_height // 2 - 18),
-                size=11,
-            )
+        _draw_message_box(
+            headline_lines,
+            center=(screen_width // 2, screen_height // 2 - 18),
+            size=11,
+        )
 
         font_settings = get_font_settings()
         menu_font = load_font(font_settings.resource, font_settings.scaled_size(11))

@@ -65,32 +65,6 @@ def compute_floor_cells(
     return {(x, y) for y in range(rows) for x in range(cols) if (x, y) not in blocked}
 
 
-def _draw_overview_tag(
-    surface: surface.Surface,
-    font: pygame.font.Font,
-    text: str,
-    item_rect: pygame.Rect,
-    *,
-    fg: tuple[int, int, int] = YELLOW,
-    padding: tuple[int, int] = (4, 2),
-    line_height_scale: float = 1.0,
-) -> None:
-    label = render_text_surface(font, text, fg, line_height_scale=line_height_scale)
-    label_rect = label.get_rect()
-    padded = label_rect.inflate(padding[0] * 2, padding[1] * 2)
-    top_left = (item_rect.left, item_rect.top)
-    bottom_left = (item_rect.left, item_rect.bottom - padded.height)
-    if top_left[1] < 0 or top_left[1] + padded.height > surface.get_height():
-        x, y = bottom_left
-    else:
-        x, y = top_left
-    x = max(0, min(surface.get_width() - padded.width, x))
-    y = max(0, min(surface.get_height() - padded.height, y))
-    padded.topleft = (x, y)
-    label_rect.center = padded.center
-    surface.blit(label, label_rect)
-
-
 def _draw_spiky_plant_spike_mark(
     surface: surface.Surface,
     center: tuple[int, int],
@@ -118,130 +92,83 @@ def _draw_spiky_plant_spike_mark(
         pygame.draw.line(surface, spike_color, start, end, width=2)
 
 
-def draw_level_overview(
-    assets: RenderAssets,
+def _draw_overview_floor_layers(
     surface: surface.Surface,
-    wall_group: sprite.Group,
-    floor_cells: set[tuple[int, int]],
-    player: Player | None,
-    car: Car | None,
-    waiting_cars: list[Car] | None,
-    footprints: list[Footprint],
     *,
-    now_ms: int,
-    fuel: FuelCan | None = None,
-    empty_fuel_can: EmptyFuelCan | None = None,
-    fuel_station: FuelStation | None = None,
-    flashlights: list[Flashlight] | None = None,
-    shoes: list[Shoes] | None = None,
-    buddies: list[Survivor] | None = None,
-    survivors: list[Survivor] | None = None,
-    patrol_bots: list[PatrolBot] | None = None,
-    spiky_plants: list[SpikyPlant] | None = None,
-    zombies: list[pygame.sprite.Sprite] | None = None,
-    lineformer_trains: "LineformerTrainManager | None" = None,
-    fall_spawn_cells: set[tuple[int, int]] | None = None,
-    moving_floor_cells: dict[tuple[int, int], object] | None = None,
-    fire_floor_cells: set[tuple[int, int]] | None = None,
-    puddle_cells: set[tuple[int, int]] | None = None,
-    zombie_contaminated_cells: set[tuple[int, int]] | None = None,
-    palette_key: str | None = None,
+    cell_size: int,
+    floor_cells: set[tuple[int, int]],
+    floor_color: tuple[int, int, int],
+    fall_floor: tuple[int, int, int],
+    fall_spawn_cells: set[tuple[int, int]] | None,
+    moving_floor_cells: dict[tuple[int, int], object] | None,
+    fire_floor_cells: set[tuple[int, int]] | None,
+    puddle_cells: set[tuple[int, int]] | None,
+    zombie_contaminated_cells: set[tuple[int, int]] | None,
 ) -> None:
-    palette = get_environment_palette(palette_key)
-    base_floor = palette.floor_primary
-    dark_floor = tuple(max(0, int(channel * 0.35)) for channel in base_floor)
-    floor_color = tuple(max(0, int(channel * 0.65)) for channel in base_floor)
-    fall_floor = tuple(
-        max(0, int(channel * 0.55)) for channel in palette.fall_zone_primary
-    )
-    surface.fill(dark_floor)
-    cell_size = assets.internal_wall_grid_snap
-    if cell_size > 0:
-        for x, y in floor_cells:
+    if cell_size <= 0:
+        return
+
+    def _cell_rect(x: int, y: int) -> pygame.Rect:
+        return pygame.Rect(x * cell_size, y * cell_size, cell_size, cell_size)
+
+    for x, y in floor_cells:
+        pygame.draw.rect(surface, floor_color, _cell_rect(x, y))
+    if fall_spawn_cells:
+        for x, y in fall_spawn_cells:
+            pygame.draw.rect(surface, fall_floor, _cell_rect(x, y))
+    if moving_floor_cells:
+        for x, y in moving_floor_cells.keys():
+            pygame.draw.rect(surface, MOVING_FLOOR_OVERVIEW_COLOR, _cell_rect(x, y))
+    if fire_floor_cells:
+        fire_diamond = tuple(
+            max(0, int(channel * 0.35)) for channel in FIRE_FLOOR_FLAME_COLORS[0]
+        )
+        for x, y in fire_floor_cells:
+            cell_rect = _cell_rect(x, y)
+            inset = max(1, int(cell_size * 0.22))
+            cx = cell_rect.centerx
+            cy = cell_rect.centery
+            diamond = [
+                (cx, cell_rect.top + inset),
+                (cell_rect.right - inset, cy),
+                (cx, cell_rect.bottom - inset),
+                (cell_rect.left + inset, cy),
+            ]
+            pygame.draw.polygon(surface, fire_diamond, diamond)
+    if puddle_cells:
+        puddle_wave_color = get_puddle_wave_color(alpha=None)
+        for x, y in puddle_cells:
+            draw_puddle_rings(
+                surface,
+                rect=_cell_rect(x, y),
+                phase=0,
+                color=puddle_wave_color,
+                width=1,
+            )
+    if zombie_contaminated_cells:
+        for x, y in zombie_contaminated_cells:
+            inset = max(1, int(cell_size * 0.05))
+            cell_rect = _cell_rect(x, y)
             pygame.draw.rect(
                 surface,
-                floor_color,
+                RED,
                 pygame.Rect(
-                    x * cell_size,
-                    y * cell_size,
-                    cell_size,
-                    cell_size,
+                    cell_rect.x + inset,
+                    cell_rect.y + inset,
+                    max(1, cell_size - inset * 2),
+                    max(1, cell_size - inset * 2),
                 ),
+                width=1,
             )
-        if fall_spawn_cells:
-            for x, y in fall_spawn_cells:
-                pygame.draw.rect(
-                    surface,
-                    fall_floor,
-                    pygame.Rect(
-                        x * cell_size,
-                        y * cell_size,
-                        cell_size,
-                        cell_size,
-                    ),
-                )
-        if moving_floor_cells:
-            for x, y in moving_floor_cells.keys():
-                pygame.draw.rect(
-                    surface,
-                    MOVING_FLOOR_OVERVIEW_COLOR,
-                    pygame.Rect(
-                        x * cell_size,
-                        y * cell_size,
-                        cell_size,
-                        cell_size,
-                    ),
-                )
-        if fire_floor_cells:
-            fire_diamond = tuple(max(0, int(channel * 0.35)) for channel in FIRE_FLOOR_FLAME_COLORS[0])
-            for x, y in fire_floor_cells:
-                cell_rect = pygame.Rect(
-                    x * cell_size,
-                    y * cell_size,
-                    cell_size,
-                    cell_size,
-                )
-                inset = max(1, int(cell_size * 0.22))
-                cx = cell_rect.centerx
-                cy = cell_rect.centery
-                diamond = [
-                    (cx, cell_rect.top + inset),
-                    (cell_rect.right - inset, cy),
-                    (cx, cell_rect.bottom - inset),
-                    (cell_rect.left + inset, cy),
-                ]
-                pygame.draw.polygon(surface, fire_diamond, diamond)
-        if puddle_cells:
-            puddle_wave_color = get_puddle_wave_color(alpha=None)
-            for x, y in puddle_cells:
-                cell_rect = pygame.Rect(
-                    x * cell_size,
-                    y * cell_size,
-                    cell_size,
-                    cell_size,
-                )
-                draw_puddle_rings(
-                    surface,
-                    rect=cell_rect,
-                    phase=0,
-                    color=puddle_wave_color,
-                    width=1,
-                )
-        if zombie_contaminated_cells:
-            for x, y in zombie_contaminated_cells:
-                inset = max(1, int(cell_size * 0.05))
-                pygame.draw.rect(
-                    surface,
-                    RED,
-                    pygame.Rect(
-                        x * cell_size + inset,
-                        y * cell_size + inset,
-                        max(1, cell_size - inset * 2),
-                        max(1, cell_size - inset * 2),
-                    ),
-                    width=1,
-                )
 
+
+def _draw_overview_walls(
+    surface: surface.Surface,
+    *,
+    wall_group: sprite.Group,
+    floor_color: tuple[int, int, int],
+    palette: object,
+) -> None:
     for wall in wall_group:
         if wall.max_health > 0:
             health_ratio = max(0.0, min(1.0, wall.health / wall.max_health))
@@ -266,11 +193,19 @@ def draw_level_overview(
                     palette=palette,
                 )
                 pygame.draw.rect(surface, fill_color, wall.rect)
-    now = now_ms
+
+
+def _draw_overview_footprints(
+    surface: surface.Surface,
+    *,
+    assets: RenderAssets,
+    footprints: list[Footprint],
+    now_ms: int,
+) -> None:
     for fp in footprints:
         if not fp.visible:
             continue
-        age = now - fp.time
+        age = now_ms - fp.time
         fade = 1 - (age / assets.footprint_lifetime_ms)
         fade = max(assets.footprint_min_fade, fade)
         color = tuple(max(0, min(255, int(c * fade))) for c in FOOTPRINT_COLOR)
@@ -280,6 +215,17 @@ def draw_level_overview(
             (int(fp.pos[0]), int(fp.pos[1])),
             assets.footprint_overview_radius,
         )
+
+
+def _draw_overview_items(
+    surface: surface.Surface,
+    *,
+    fuel: FuelCan | None,
+    empty_fuel_can: EmptyFuelCan | None,
+    fuel_station: FuelStation | None,
+    flashlights: list[Flashlight] | None,
+    shoes: list[Shoes] | None,
+) -> None:
     if fuel and fuel.alive():
         pygame.draw.rect(surface, YELLOW, fuel.rect, border_radius=3)
         pygame.draw.rect(surface, BLACK, fuel.rect, width=2, border_radius=3)
@@ -300,6 +246,20 @@ def draw_level_overview(
         for item in shoes:
             if item.alive():
                 surface.blit(item.image, item.rect)
+
+
+def _draw_overview_humanoids(
+    surface: surface.Surface,
+    *,
+    assets: RenderAssets,
+    player: Player | None,
+    survivors: list[Survivor] | None,
+    buddies: list[Survivor] | None,
+    car: Car | None,
+    waiting_cars: list[Car] | None,
+    patrol_bots: list[PatrolBot] | None,
+    spiky_plants: list[SpikyPlant] | None,
+) -> None:
     if survivors:
         for survivor in survivors:
             if survivor.alive():
@@ -346,36 +306,134 @@ def draw_level_overview(
                     hp.rect.center,
                     max(2, int(hp.radius)),
                 )
-    if zombies:
-        zombie_color = (200, 80, 80)
-        zombie_radius = max(2, int(assets.player_radius * 1.2))
-        for zombie in zombies:
-            if not zombie.alive():
-                continue
-            if isinstance(zombie, (Zombie, ZombieDog)):
-                pygame.draw.circle(
-                    surface,
-                    zombie_color,
-                    zombie.rect.center,
-                    zombie_radius,
-                )
-            elif isinstance(zombie, TrappedZombie):
-                pygame.draw.circle(
-                    surface,
-                    TRAPPED_ZOMBIE_OVERVIEW_COLOR,
-                    zombie.rect.center,
-                    zombie_radius,
-                )
-        if lineformer_trains is not None:
-            marker_radius = max(1, zombie_radius - 1)
-            marker_draw_data = lineformer_trains.iter_marker_draw_data(zombies)
-            for marker_x, marker_y, _ in marker_draw_data:
-                pygame.draw.circle(
-                    surface,
-                    LINEFORMER_MARKER_OVERVIEW_COLOR,
-                    (int(marker_x), int(marker_y)),
-                    marker_radius,
-                )
+
+
+def _draw_overview_zombies(
+    surface: surface.Surface,
+    *,
+    assets: RenderAssets,
+    zombies: list[pygame.sprite.Sprite] | None,
+    lineformer_trains: "LineformerTrainManager | None",
+) -> None:
+    if not zombies:
+        return
+    zombie_color = (200, 80, 80)
+    zombie_radius = max(2, int(assets.player_radius * 1.2))
+    for zombie in zombies:
+        if not zombie.alive():
+            continue
+        if isinstance(zombie, (Zombie, ZombieDog)):
+            pygame.draw.circle(
+                surface,
+                zombie_color,
+                zombie.rect.center,
+                zombie_radius,
+            )
+        elif isinstance(zombie, TrappedZombie):
+            pygame.draw.circle(
+                surface,
+                TRAPPED_ZOMBIE_OVERVIEW_COLOR,
+                zombie.rect.center,
+                zombie_radius,
+            )
+    if lineformer_trains is not None:
+        marker_radius = max(1, zombie_radius - 1)
+        marker_draw_data = lineformer_trains.iter_marker_draw_data(zombies)
+        for marker_x, marker_y, _ in marker_draw_data:
+            pygame.draw.circle(
+                surface,
+                LINEFORMER_MARKER_OVERVIEW_COLOR,
+                (int(marker_x), int(marker_y)),
+                marker_radius,
+            )
+
+
+def draw_level_overview(
+    assets: RenderAssets,
+    surface: surface.Surface,
+    wall_group: sprite.Group,
+    floor_cells: set[tuple[int, int]],
+    player: Player | None,
+    car: Car | None,
+    waiting_cars: list[Car] | None,
+    footprints: list[Footprint],
+    *,
+    now_ms: int,
+    fuel: FuelCan | None = None,
+    empty_fuel_can: EmptyFuelCan | None = None,
+    fuel_station: FuelStation | None = None,
+    flashlights: list[Flashlight] | None = None,
+    shoes: list[Shoes] | None = None,
+    buddies: list[Survivor] | None = None,
+    survivors: list[Survivor] | None = None,
+    patrol_bots: list[PatrolBot] | None = None,
+    spiky_plants: list[SpikyPlant] | None = None,
+    zombies: list[pygame.sprite.Sprite] | None = None,
+    lineformer_trains: "LineformerTrainManager | None" = None,
+    fall_spawn_cells: set[tuple[int, int]] | None = None,
+    moving_floor_cells: dict[tuple[int, int], object] | None = None,
+    fire_floor_cells: set[tuple[int, int]] | None = None,
+    puddle_cells: set[tuple[int, int]] | None = None,
+    zombie_contaminated_cells: set[tuple[int, int]] | None = None,
+    palette_key: str | None = None,
+) -> None:
+    palette = get_environment_palette(palette_key)
+    base_floor = palette.floor_primary
+    dark_floor = tuple(max(0, int(channel * 0.35)) for channel in base_floor)
+    floor_color = tuple(max(0, int(channel * 0.65)) for channel in base_floor)
+    fall_floor = tuple(
+        max(0, int(channel * 0.55)) for channel in palette.fall_zone_primary
+    )
+    surface.fill(dark_floor)
+    _draw_overview_floor_layers(
+        surface,
+        cell_size=assets.internal_wall_grid_snap,
+        floor_cells=floor_cells,
+        floor_color=floor_color,
+        fall_floor=fall_floor,
+        fall_spawn_cells=fall_spawn_cells,
+        moving_floor_cells=moving_floor_cells,
+        fire_floor_cells=fire_floor_cells,
+        puddle_cells=puddle_cells,
+        zombie_contaminated_cells=zombie_contaminated_cells,
+    )
+    _draw_overview_walls(
+        surface,
+        wall_group=wall_group,
+        floor_color=floor_color,
+        palette=palette,
+    )
+    _draw_overview_footprints(
+        surface,
+        assets=assets,
+        footprints=footprints,
+        now_ms=now_ms,
+    )
+    _draw_overview_items(
+        surface,
+        fuel=fuel,
+        empty_fuel_can=empty_fuel_can,
+        fuel_station=fuel_station,
+        flashlights=flashlights,
+        shoes=shoes,
+    )
+    _draw_overview_humanoids(
+        surface,
+        assets=assets,
+        player=player,
+        survivors=survivors,
+        buddies=buddies,
+        car=car,
+        waiting_cars=waiting_cars,
+        patrol_bots=patrol_bots,
+        spiky_plants=spiky_plants,
+    )
+    _draw_overview_zombies(
+        surface,
+        assets=assets,
+        zombies=zombies,
+        lineformer_trains=lineformer_trains,
+    )
 
 
 def draw_debug_overview(
@@ -488,84 +546,6 @@ def draw_debug_overview(
     except pygame.error as e:
         print(f"Error loading overview font: {e}")
         return
-    scale_x = scaled_w / max(1, level_rect.width)
-    scale_y = scaled_h / max(1, level_rect.height)
-
-    def _scaled_rect(rect: pygame.Rect) -> pygame.Rect:
-        return pygame.Rect(
-            int(scaled_rect.left + rect.left * scale_x),
-            int(scaled_rect.top + rect.top * scale_y),
-            max(1, int(rect.width * scale_x)),
-            max(1, int(rect.height * scale_y)),
-        )
-
-    if game_data.car and game_data.car.alive():
-        _draw_overview_tag(
-            screen,
-            label_font,
-            "C",
-            _scaled_rect(game_data.car.rect),
-            line_height_scale=font_settings.line_height_scale,
-        )
-    for parked in game_data.waiting_cars:
-        if parked.alive():
-            _draw_overview_tag(
-                screen,
-                label_font,
-                "C",
-                _scaled_rect(parked.rect),
-                line_height_scale=font_settings.line_height_scale,
-            )
-    if game_data.fuel and game_data.fuel.alive():
-        _draw_overview_tag(
-            screen,
-            label_font,
-            "F",
-            _scaled_rect(game_data.fuel.rect),
-            line_height_scale=font_settings.line_height_scale,
-        )
-    if game_data.empty_fuel_can and game_data.empty_fuel_can.alive():
-        _draw_overview_tag(
-            screen,
-            label_font,
-            "E",
-            _scaled_rect(game_data.empty_fuel_can.rect),
-            line_height_scale=font_settings.line_height_scale,
-        )
-    if game_data.fuel_station and game_data.fuel_station.alive():
-        _draw_overview_tag(
-            screen,
-            label_font,
-            "G",
-            _scaled_rect(game_data.fuel_station.rect),
-            line_height_scale=font_settings.line_height_scale,
-        )
-    if game_data.flashlights:
-        for flashlight in game_data.flashlights:
-            if flashlight.alive():
-                _draw_overview_tag(
-                    screen,
-                    label_font,
-                    "L",
-                    _scaled_rect(flashlight.rect),
-                    line_height_scale=font_settings.line_height_scale,
-                )
-    if game_data.shoes:
-        for item in game_data.shoes:
-            if item.alive():
-                _draw_overview_tag(
-                    screen,
-                    label_font,
-                    "S",
-                    _scaled_rect(item.rect),
-                    line_height_scale=font_settings.line_height_scale,
-                )
-    if game_data.layout.puddle_cells:
-        for x, y in game_data.layout.puddle_cells:
-            # Only draw tags for some or centered in zones?
-            # For simplicity, just draw tags if they are within the view and spread out a bit
-            pass  # Puddles are floor tiles, 'W' tags on every cell would be too noisy.
-            # Minimap color is already updated.
 
     debug_counts = build_zombie_debug_counts_text(
         zombie_group=game_data.groups.zombie_group,
