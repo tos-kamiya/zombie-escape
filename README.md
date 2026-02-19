@@ -32,7 +32,6 @@ This game is a simple 2D top-down action game where the player aims to escape by
 -   **Restart:** `R` key (on Game Over/Clear screen)
 -   **Window/Fullscreen:** `[` to shrink by one step (400x300), `]` to enlarge by one step, `F` to toggle fullscreen
     -   After any of these operations, gameplay is forced into pause so input/focus state stays explicit.
--   **FPS Overlay:** Launch with `--show-fps` (implied by `--debug`)
 -   **Time Acceleration:** Hold either `Shift` key or `R1` to run the entire world 4x faster; release to return to normal speed.
 
 **Mouse**
@@ -226,6 +225,11 @@ Launch using the following command line:
 ```sh
 zombie-escape
 ```
+
+Optional flags:
+
+- `--show-fps`: show FPS overlay.
+- `--debug`: enable debug aids (also implies `--show-fps`).
 
 ## License
 
