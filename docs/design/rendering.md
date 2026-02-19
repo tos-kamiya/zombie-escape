@@ -52,11 +52,15 @@ Supporting modules:
 ## HUD
 
 - Status bar shows settings flags, stage index, and seed.
+- Zombie debug summary is built once (`build_zombie_debug_counts_text`) and rendered
+  via `_draw_status_bar` in both gameplay and overview paths.
 - Debug lineformer display includes real-entity and marker totals.
 - Lineformer train markers use cached directional sprites and are blitted per marker (instead of rebuilding arm lines every frame).
 - Timed messages support alignment mode and stay readable during fade transitions.
 
 ## Overviews (`overview.py`)
 
-- `draw_level_overview()`: game-over map overview cache.
-- `draw_debug_overview()`: full-map debug visualization with camera frame.
+- `draw_level_overview()`: core full-map drawing pass (terrain, entities, zombies).
+- `draw_debug_overview()`: scaled full-map visualization with camera frame and status bar.
+- Game-over overview and debug overview share the same `draw_debug_overview()`
+  rendering path.
