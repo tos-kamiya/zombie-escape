@@ -31,6 +31,10 @@
 - `generate_level_from_blueprint(game_data, config)` builds map structures and connectivity metadata.
 - `setup_player_and_cars(...)` places player and initial cars on valid reachable tiles.
 - `spawn_initial_zombies(...)` seeds initial zombie populations.
+- On first gameplay entry in a process, fog overlays are prewarmed for all
+  flashlight profiles and cached for reuse.
+- While that prewarm runs, the loading still shows localized progress text for
+  gameplay image-cache preparation.
 
 Key implementation files:
 - `src/zombie_escape/stage_constants.py` (stage feature flags and progression defaults consumed by init/spawn)

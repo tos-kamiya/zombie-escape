@@ -31,6 +31,15 @@ Supporting modules:
 9. Draw fog (`hard` mask + `soft` hatch overlay).
 10. Draw HUD/status/objective text.
 
+### Fog Notes
+
+- Fog overlay generation (`render/fog.py`) now uses a 16x16 Bayer matrix for
+  hatch thresholding.
+- Fog edge quality is improved by rendering fog overlays at
+  `FOG_LAYER_AA_SCALE` resolution, then downsampling to gameplay resolution.
+- Fade, hatch, and edge-feather alpha generation are numpy-based for faster
+  precomputation.
+
 `core.py` delegates concrete rendering work to split modules:
 - `render/world_tiles.py`
 - `render/entity_layer.py`
@@ -57,6 +66,8 @@ Supporting modules:
 - Debug lineformer display includes real-entity and marker totals.
 - Lineformer train markers use cached directional sprites and are blitted per marker (instead of rebuilding arm lines every frame).
 - Timed messages support alignment mode and stay readable during fade transitions.
+- During fog-overlay prewarm, a localized loading status is drawn at the bottom
+  of the loading still (separate from intro text area).
 
 ## Overviews (`overview.py`)
 
