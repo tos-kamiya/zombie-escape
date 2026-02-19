@@ -17,6 +17,20 @@ from ..windowing import adjust_menu_logical_size, present, sync_window_size
 from ..screens import ScreenID, ScreenTransition
 
 
+def _measure_text_block(
+    text: str,
+    font: pygame.font.Font,
+    max_width: int,
+    *,
+    line_height_scale: float,
+) -> tuple[int, int, int]:
+    lines = wrap_text(text, font, max_width)
+    line_height = int(round(font.get_linesize() * line_height_scale))
+    height = max(1, len(lines)) * line_height
+    width = max((font.size(line)[0] for line in lines if line), default=0)
+    return width, height, line_height
+
+
 def startup_check_screen(
     screen: surface.Surface,
     clock: time.Clock,
@@ -64,27 +78,25 @@ def startup_check_screen(
         try:
             font_settings = get_font_settings()
 
-            def _get_font(size: int) -> pygame.font.Font:
-                return load_font(font_settings.resource, size)
-
-            def _measure_text(
-                text: str, font: pygame.font.Font, max_width: int
-            ) -> tuple[int, int, int]:
-                lines = wrap_text(text, font, max_width)
-                line_height = int(
-                    round(font.get_linesize() * font_settings.line_height_scale)
-                )
-                height = max(1, len(lines)) * line_height
-                width = max((font.size(line)[0] for line in lines if line), default=0)
-                return width, height, line_height
-
             message = tr("menu.startup.release_confirm")
             sub_message = tr("menu.startup.waiting")
-            message_font = _get_font(font_settings.scaled_size(20))
-            sub_font = _get_font(font_settings.scaled_size(11))
+            message_font = load_font(
+                font_settings.resource, font_settings.scaled_size(20)
+            )
+            sub_font = load_font(font_settings.resource, font_settings.scaled_size(11))
             max_width = max(1, width - 48)
-            msg_width, msg_height, _ = _measure_text(message, message_font, max_width)
-            sub_width, sub_height, _ = _measure_text(sub_message, sub_font, max_width)
+            msg_width, msg_height, _ = _measure_text_block(
+                message,
+                message_font,
+                max_width,
+                line_height_scale=font_settings.line_height_scale,
+            )
+            sub_width, sub_height, _ = _measure_text_block(
+                sub_message,
+                sub_font,
+                max_width,
+                line_height_scale=font_settings.line_height_scale,
+            )
             total_height = msg_height + 8 + sub_height
             top = max(24, height // 2 - total_height // 2)
             left = max(24, width // 2 - msg_width // 2)
