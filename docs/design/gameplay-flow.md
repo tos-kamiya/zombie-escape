@@ -84,11 +84,10 @@ Initial placement policy:
 - Hovering the cursor over the player (without pressing left button) displays static `>> 4x` near the player.
 - `check_interactions(...)`
   - Handles pickups, rescue boarding, car destruction, and win/loss logic.
-  - Handles houseplant trap overflow conversion into zombie-contaminated tiles.
 - `update_survivors(...)`
   - Survivor/buddy following and obstacle-aware movement.
 - `handle_survivor_zombie_collisions(...)`
-  - Survivor-zombie contact outcomes and contamination-tile infection conversion.
+  - Survivor-zombie contact outcomes and conversion handling.
 - `update_footprints(...)`
   - Footprint recording and expiration.
 

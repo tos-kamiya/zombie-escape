@@ -192,7 +192,7 @@ def _render_studio_snapshot(
                 continue
             shadow_radius_raw = getattr(sprite, "shadow_radius", None)
             if shadow_radius_raw is not None:
-                shadow_radius = max(1, int(shadow_radius_raw))
+                shadow_radius = max(0, int(shadow_radius_raw))
             else:
                 collision_radius = getattr(sprite, "collision_radius", None)
                 if collision_radius is not None:

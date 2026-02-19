@@ -473,6 +473,19 @@ def update_entities(
         config=config,
         now_ms=current_time,
     )
+    trapped_houseplant_counts: dict[tuple[int, int], int] = {}
+    cell_size = game_data.cell_size
+    houseplants = game_data.houseplants
+    if cell_size > 0 and houseplants:
+        for zombie in zombie_group:
+            if not zombie.alive() or not getattr(zombie, "is_trapped", False):
+                continue
+            cell = (int(zombie.x // cell_size), int(zombie.y // cell_size))
+            hp = houseplants.get(cell)
+            if hp and hp.alive():
+                trapped_houseplant_counts[cell] = (
+                    trapped_houseplant_counts.get(cell, 0) + 1
+                )
     zombies_sorted: list[Zombie | ZombieDog] = sorted(
         list(zombie_group), key=lambda z: z.x
     )
@@ -639,6 +652,8 @@ def update_entities(
             layout=game_data.layout,
             now_ms=game_data.state.clock.elapsed_ms,
             drift=(floor_dx, floor_dy),
+            houseplants=houseplants,
+            trapped_houseplant_counts=trapped_houseplant_counts,
         )
         if not zombie.alive():
             last_damage_ms = getattr(zombie, "last_damage_ms", None)

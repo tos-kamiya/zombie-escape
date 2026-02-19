@@ -37,12 +37,16 @@ from ..entities_constants import (
     PATROL_BOT_PARALYZE_BLINK_MS,
     PATROL_BOT_PARALYZE_MARKER_COLOR,
     PUDDLE_SPEED_FACTOR,
+    TRAPPED_ZOMBIE_SLOW_FACTOR,
+    TRAPPED_ZOMBIE_REPEL_MAX_MULT,
+    TRAPPED_ZOMBIE_REPEL_PER_STACK,
+    TRAPPED_ZOMBIE_REPEL_RADIUS_CELLS,
     ZOMBIE_CONTAMINATED_SPEED_FACTOR,
     ZOMBIE_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
 )
 from ..rng import get_rng
-from ..surface_effects import is_in_contaminated_cell, is_in_puddle_cell
+from ..surface_effects import HouseplantLike, is_in_contaminated_cell, is_in_puddle_cell
 from ..render.entity_overlays import draw_paralyze_marker_overlay
 from ..render_constants import ENTITY_SHADOW_RADIUS_MULT
 from ..render_assets import (
@@ -428,6 +432,8 @@ class ZombieDog(pygame.sprite.Sprite):
         for other in zombies:
             if other is self or not other.alive():
                 continue
+            if getattr(other, "is_trapped", False):
+                continue
 
             ox = other.x  # type: ignore[attr-defined]
             oy = other.y  # type: ignore[attr-defined]
@@ -461,6 +467,77 @@ class ZombieDog(pygame.sprite.Sprite):
         move_x = (away_dx / away_dist) * speed
         move_y = (away_dy / away_dist) * speed
         return move_x, move_y
+
+    def _slow_near_trapped_zombies(
+        self: Self,
+        move_x: float,
+        move_y: float,
+        zombies: list[pygame.sprite.Sprite],
+    ) -> tuple[float, float]:
+        next_x = self.x + move_x
+        next_y = self.y + move_y
+        for other in zombies:
+            if other is self or not other.alive():
+                continue
+            if not getattr(other, "is_trapped", False):
+                continue
+            ox = float(getattr(other, "x", other.rect.centerx))
+            oy = float(getattr(other, "y", other.rect.centery))
+            other_radius = float(getattr(other, "collision_radius", 0.0))
+            dx = ox - next_x
+            dy = oy - next_y
+            touch_radius = self.collision_radius + other_radius
+            if dx * dx + dy * dy <= touch_radius * touch_radius:
+                return (
+                    move_x * TRAPPED_ZOMBIE_SLOW_FACTOR,
+                    move_y * TRAPPED_ZOMBIE_SLOW_FACTOR,
+                )
+        return move_x, move_y
+
+    def _repel_from_loaded_houseplants(
+        self: Self,
+        move_x: float,
+        move_y: float,
+        *,
+        cell_size: int,
+        houseplants: dict[tuple[int, int], HouseplantLike] | None,
+        trapped_houseplant_counts: dict[tuple[int, int], int] | None,
+    ) -> tuple[float, float]:
+        if cell_size <= 0 or not houseplants or not trapped_houseplant_counts:
+            return move_x, move_y
+        next_x = self.x + move_x
+        next_y = self.y + move_y
+        effect_radius = max(
+            self.collision_radius * 2.0,
+            float(cell_size) * TRAPPED_ZOMBIE_REPEL_RADIUS_CELLS,
+        )
+        repel_x = 0.0
+        repel_y = 0.0
+        for cell, trapped_count in trapped_houseplant_counts.items():
+            if trapped_count <= 0:
+                continue
+            hp = houseplants.get(cell)
+            if hp is None or not hp.alive():
+                continue
+            dx = next_x - hp.x
+            dy = next_y - hp.y
+            dist = math.hypot(dx, dy)
+            if dist > effect_radius:
+                continue
+            if dist <= 0.001:
+                angle = RNG.uniform(0.0, math.tau)
+                dx = math.cos(angle)
+                dy = math.sin(angle)
+                dist = 1.0
+            falloff = 1.0 - (dist / effect_radius)
+            count_mult = min(
+                TRAPPED_ZOMBIE_REPEL_MAX_MULT,
+                trapped_count * TRAPPED_ZOMBIE_REPEL_PER_STACK,
+            )
+            repel_mag = self.speed_patrol * count_mult * falloff
+            repel_x += (dx / dist) * repel_mag
+            repel_y += (dy / dist) * repel_mag
+        return move_x + repel_x, move_y + repel_y
 
     def _apply_decay(self: Self) -> None:
         self.vitals.apply_decay()
@@ -545,6 +622,8 @@ class ZombieDog(pygame.sprite.Sprite):
         layout,
         now_ms: int,
         drift: tuple[float, float] = (0.0, 0.0),
+        houseplants: dict[tuple[int, int], HouseplantLike] | None = None,
+        trapped_houseplant_counts: dict[tuple[int, int], int] | None = None,
     ) -> None:
         if self.vitals.carbonized:
             self._apply_decay()
@@ -605,6 +684,17 @@ class ZombieDog(pygame.sprite.Sprite):
         ):
             move_x *= ZOMBIE_CONTAMINATED_SPEED_FACTOR
             move_y *= ZOMBIE_CONTAMINATED_SPEED_FACTOR
+        if nearby_zombies:
+            move_x, move_y = self._slow_near_trapped_zombies(
+                move_x, move_y, list(nearby_zombies)
+            )
+        move_x, move_y = self._repel_from_loaded_houseplants(
+            move_x,
+            move_y,
+            cell_size=cell_size,
+            houseplants=houseplants,
+            trapped_houseplant_counts=trapped_houseplant_counts,
+        )
 
         if nearby_zombies:
             move_x, move_y = self._avoid_other_zombies(

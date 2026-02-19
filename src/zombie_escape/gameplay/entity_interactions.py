@@ -28,12 +28,10 @@ from ..entities_constants import (
 )
 from .constants import (
     FUEL_HINT_DURATION_MS,
-    LAYER_HOUSEPLANTS,
     LAYER_PLAYERS,
     SURVIVOR_OVERLOAD_DAMAGE_RATIO,
 )
 from ..colors import BLUE, YELLOW
-from ..colors import ambient_palette_key_for_flashlights, get_environment_palette
 from ..localization import translate as tr
 from ..models import ContactHintRecord, FuelMode, FuelProgress, GameData
 from ..rng import get_rng
@@ -74,19 +72,6 @@ RNG = get_rng()
 CAR_ZOMBIE_RAM_DAMAGE = 6
 CAR_ZOMBIE_CONTACT_DAMAGE = 2
 CAR_ZOMBIE_HIT_DAMAGE = 20
-HOUSEPLANT_CONTAMINATION_TRAPPED_ZOMBIES = 3
-CONTAMINATED_FLOOR_OVERLAY_COLOR = (210, 72, 72)
-CONTAMINATED_FLOOR_OVERLAY_ALPHA = 32
-CONTAMINATED_FLOOR_BORDER_ALPHA = 180
-
-
-class _StaticCellOverlay(pygame.sprite.Sprite):
-    """Static cell overlay used for frozen contamination snapshots."""
-
-    def __init__(self, *, image: pygame.Surface, left: int, top: int) -> None:
-        super().__init__()
-        self.image = image
-        self.rect = self.image.get_rect(topleft=(left, top))
 
 
 def _remember_contact_hint(
@@ -130,66 +115,6 @@ def _forget_contact_hint(
     ]
 
 
-def _grayscale_preserve_luma(surface_in: pygame.Surface) -> pygame.Surface:
-    out = surface_in.copy()
-    width, height = out.get_size()
-    for y in range(height):
-        for x in range(width):
-            r, g, b, a = out.get_at((x, y))
-            # Perceived luma, keep alpha unchanged.
-            gray = int(round((0.299 * r) + (0.587 * g) + (0.114 * b)))
-            out.set_at((x, y), (gray, gray, gray, a))
-    return out
-
-
-def _capture_contaminated_cell_snapshot(
-    *,
-    hp: pygame.sprite.Sprite,
-    trapped_zombies: list[pygame.sprite.Sprite],
-    cell: tuple[int, int],
-    cell_size: int,
-) -> pygame.Surface:
-    palette = get_environment_palette(ambient_palette_key_for_flashlights(0))
-    use_secondary = ((cell[0] // 2) + (cell[1] // 2)) % 2 == 0
-    base_color = palette.floor_secondary if use_secondary else palette.floor_primary
-    snapshot = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
-    snapshot.fill(base_color)
-    cell_left = cell[0] * cell_size
-    cell_top = cell[1] * cell_size
-    for sprite_obj in [hp, *trapped_zombies]:
-        if not sprite_obj.alive():
-            continue
-        rel_rect = sprite_obj.rect.move(-cell_left, -cell_top)
-        source_image = (
-            _grayscale_preserve_luma(sprite_obj.image)
-            if sprite_obj is hp
-            else sprite_obj.image
-        )
-        snapshot.blit(source_image, rel_rect)
-    overlay = pygame.Surface((cell_size, cell_size), pygame.SRCALPHA)
-    overlay.fill(
-        (
-            CONTAMINATED_FLOOR_OVERLAY_COLOR[0],
-            CONTAMINATED_FLOOR_OVERLAY_COLOR[1],
-            CONTAMINATED_FLOOR_OVERLAY_COLOR[2],
-            CONTAMINATED_FLOOR_OVERLAY_ALPHA,
-        )
-    )
-    snapshot.blit(overlay, (0, 0))
-    pygame.draw.rect(
-        snapshot,
-        (
-            CONTAMINATED_FLOOR_OVERLAY_COLOR[0],
-            CONTAMINATED_FLOOR_OVERLAY_COLOR[1],
-            CONTAMINATED_FLOOR_OVERLAY_COLOR[2],
-            CONTAMINATED_FLOOR_BORDER_ALPHA,
-        ),
-        snapshot.get_rect(),
-        width=1,
-    )
-    return snapshot
-
-
 def _handle_houseplant_trapping(game_data: GameData) -> None:
     """Check if any zombies should be trapped by houseplants."""
     houseplants = game_data.houseplants
@@ -228,41 +153,6 @@ def _handle_houseplant_trapping(game_data: GameData) -> None:
                 zombie.kill()
                 zombie_group.add(trapped)
                 all_sprites.add(trapped, layer=LAYER_ZOMBIES)
-
-    contaminated_cells = game_data.layout.zombie_contaminated_cells
-    trapped_by_cell: dict[tuple[int, int], list[pygame.sprite.Sprite]] = {}
-    for zombie in zombie_group:
-        if not zombie.alive() or not getattr(zombie, "is_trapped", False):
-            continue
-        cell = (int(zombie.x // cell_size), int(zombie.y // cell_size))
-        if cell in contaminated_cells:
-            continue
-        trapped_by_cell.setdefault(cell, []).append(zombie)
-
-    for cell, trapped_here in trapped_by_cell.items():
-        if len(trapped_here) < HOUSEPLANT_CONTAMINATION_TRAPPED_ZOMBIES:
-            continue
-        hp = houseplants.get(cell)
-        if not hp or not hp.alive():
-            continue
-        snapshot = _capture_contaminated_cell_snapshot(
-            hp=hp,
-            trapped_zombies=trapped_here,
-            cell=cell,
-            cell_size=cell_size,
-        )
-        overlay = _StaticCellOverlay(
-            image=snapshot,
-            left=cell[0] * cell_size,
-            top=cell[1] * cell_size,
-        )
-        all_sprites.add(overlay, layer=LAYER_HOUSEPLANTS)
-        contaminated_cells.add(cell)
-        game_data.layout.houseplant_cells.discard(cell)
-        hp.kill()
-        houseplants.pop(cell, None)
-        for trapped in trapped_here:
-            trapped.kill()
 
 
 def _handle_fuel_pickup(
