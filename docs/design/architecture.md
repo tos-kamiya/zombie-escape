@@ -59,6 +59,8 @@
 - `ScreenID` has six states: `STARTUP_CHECK`, `TITLE`, `SETTINGS`, `GAMEPLAY`, `GAME_OVER`, `EXIT`.
 - `main()` handles transitions via `ScreenTransition`.
 - Boot guard (`STARTUP_CHECK`) waits for release of held confirm input plus a short delay.
+- Boot guard also validates bundled/runtime fog cache availability for all used
+  cell sizes before allowing transition to `TITLE`.
 - Main gameplay runs in `screens/gameplay.py:gameplay_screen()`.
 
 ## Rendering/Collision Policy Notes

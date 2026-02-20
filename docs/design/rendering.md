@@ -73,8 +73,6 @@ Supporting modules:
 - Tracker zombie dogs use a baked nose-line marker in their directional sprites
   (not a separate post-sprite overlay pass).
 - Timed messages support alignment mode and stay readable during fade transitions.
-- During fog-overlay prewarm, a localized loading status is drawn at the bottom
-  of the loading still (separate from intro text area).
 
 ## Variant Marker Sprite Strategy
 
@@ -89,15 +87,17 @@ Supporting modules:
 
 ## Fog Cache File
 
-INPROGRESS:
 - Add an offline fog-cache tool that precomputes data close to runtime fog
   overlays and writes it to a file.
 - Target profiles are `DARK0`, `DARK1`, and `DARK2`.
 - Cache payload stores alpha planes as `numpy.uint8` arrays (not pygame surface
   binary) so runtime reconstructs `Surface` objects from stable numeric data.
 - Runtime first tries bundled resource cache files
-  (`assets/fog_cache/*.npz`) for each profile, then user cache; on
-  mismatch/missing file it falls back to normal fog generation.
+  (`assets/fog_cache/*.npz`) for each profile, then user cache.
+- Startup check requires all fog cache profiles to load successfully before
+  entering the title screen.
+- In normal game execution, fog overlays are expected to come from loaded cache
+  files; no title/gameplay prewarm generation path is used.
 - Cache-key metadata includes rendering parameters and runtime version info so
   incompatible cache files are ignored safely.
 
