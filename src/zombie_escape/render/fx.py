@@ -7,12 +7,13 @@ import pygame
 from pygame import surface
 
 from ..entities_constants import INTERNAL_WALL_BEVEL_DEPTH, ZOMBIE_RADIUS
-from ..models import DustRing, FallingEntity, GameData
+from ..models import DustRing, FallingEntity, GameData, PuddleSplash
 from ..render_constants import (
     FADE_IN_DURATION_MS,
     FALLING_DUST_COLOR,
     FALLING_WHIRLWIND_COLOR,
     FALLING_ZOMBIE_COLOR,
+    PUDDLE_SPLASH_COLOR,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -158,3 +159,33 @@ def _draw_decay_fx(
     for effect in decay_effects:
         draw_surface = effect.build_draw_surface()
         screen.blit(draw_surface, apply_rect(effect.rect))
+
+
+def _draw_puddle_splash_fx(
+    screen: surface.Surface,
+    apply_rect: Callable[[pygame.Rect], pygame.Rect],
+    splashes: list[PuddleSplash],
+    now_ms: int,
+) -> None:
+    if not splashes:
+        return
+    for splash in list(splashes):
+        elapsed = now_ms - splash.started_at_ms
+        if elapsed >= splash.duration_ms:
+            splashes.remove(splash)
+            continue
+        progress = max(0.0, min(1.0, elapsed / max(1, splash.duration_ms)))
+        alpha = int(max(0, min(255, PUDDLE_SPLASH_COLOR[3] * (1.0 - progress))))
+        if alpha <= 0:
+            continue
+        color = (
+            PUDDLE_SPLASH_COLOR[0],
+            PUDDLE_SPLASH_COLOR[1],
+            PUDDLE_SPLASH_COLOR[2],
+            alpha,
+        )
+        world_rect = pygame.Rect(0, 0, 1, 1)
+        world_rect.center = splash.pos
+        center = apply_rect(world_rect).center
+        radius = max(1, int(2 + progress * 7))
+        pygame.draw.circle(screen, color, center, radius, width=1)

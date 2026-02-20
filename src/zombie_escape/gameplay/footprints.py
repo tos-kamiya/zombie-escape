@@ -4,8 +4,8 @@ from typing import Any
 
 import pygame
 
-from .constants import FOOTPRINT_MAX, FOOTPRINT_STEP_DISTANCE
-from ..models import Footprint, GameData
+from .constants import FOOTPRINT_MAX, FOOTPRINT_STEP_DISTANCE, PUDDLE_SPLASH_DURATION_MS
+from ..models import Footprint, GameData, PuddleSplash
 from ..surface_effects import is_in_puddle_cell
 
 
@@ -51,12 +51,34 @@ def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
         cell_size=game_data.cell_size,
         puddle_cells=game_data.layout.puddle_cells,
     )
-    if player.in_car or in_puddle:
+    step_distance = FOOTPRINT_STEP_DISTANCE * 0.5
+    step_distance_sq = step_distance * step_distance
+    if player.in_car:
+        state.last_puddle_splash_pos = None
+        state.last_footprint_pos = None
+    elif in_puddle:
+        last_splash_pos = state.last_puddle_splash_pos
+        splash_dist_sq = (
+            (player.x - last_splash_pos[0]) ** 2 + (player.y - last_splash_pos[1]) ** 2
+            if last_splash_pos
+            else None
+        )
+        if last_splash_pos is None or (
+            splash_dist_sq is not None and splash_dist_sq >= step_distance_sq
+        ):
+            pos = (int(player.x), int(player.y))
+            state.puddle_splashes.append(
+                PuddleSplash(
+                    pos=pos,
+                    started_at_ms=now,
+                    duration_ms=PUDDLE_SPLASH_DURATION_MS,
+                )
+            )
+            state.last_puddle_splash_pos = pos
         state.last_footprint_pos = None
     else:
+        state.last_puddle_splash_pos = None
         last_pos = state.last_footprint_pos
-        step_distance = FOOTPRINT_STEP_DISTANCE * 0.5
-        step_distance_sq = step_distance * step_distance
         dist_sq = (
             (player.x - last_pos[0]) ** 2 + (player.y - last_pos[1]) ** 2
             if last_pos

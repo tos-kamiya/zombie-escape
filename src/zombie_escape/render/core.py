@@ -10,7 +10,12 @@ from ..models import FuelProgress, GameData
 from ..render_assets import RenderAssets
 from .entity_layer import _draw_entities, _draw_lineformer_train_markers
 from .fog import _draw_fog_of_war, prewarm_fog_overlays
-from .fx import _draw_decay_fx, _draw_fade_in_overlay, _draw_falling_fx
+from .fx import (
+    _draw_decay_fx,
+    _draw_fade_in_overlay,
+    _draw_falling_fx,
+    _draw_puddle_splash_fx,
+)
 from .hud import (
     _build_objective_lines,
     _draw_endurance_timer,
@@ -144,6 +149,12 @@ def draw(
         state.footprints,
         config=config,
         now_ms=state.clock.elapsed_ms,
+    )
+    _draw_puddle_splash_fx(
+        screen,
+        camera.apply_rect,
+        state.puddle_splashes,
+        state.clock.elapsed_ms,
     )
     _draw_entities(
         screen,

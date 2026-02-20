@@ -113,6 +113,15 @@ class DustRing:
 
 
 @dataclass
+class PuddleSplash:
+    """Short-lived splash ring spawned while walking through a puddle."""
+
+    pos: tuple[int, int]
+    started_at_ms: int
+    duration_ms: int
+
+
+@dataclass
 class GameClock:
     """Frame-driven gameplay clock with time scaling."""
 
@@ -146,9 +155,11 @@ class ProgressState:
     scaled_overview: surface.Surface | None
     overview_created: bool
     footprints: list[Footprint]
+    puddle_splashes: list[PuddleSplash]
     spatial_index: "SpatialIndex"
     decay_effects: list["DecayingEntityEffect"]
     last_footprint_pos: tuple[int, int] | None
+    last_puddle_splash_pos: tuple[int, int] | None
     footprint_visible_toggle: bool
     clock: GameClock
     fuel_progress: FuelProgress
