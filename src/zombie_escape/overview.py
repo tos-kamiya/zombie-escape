@@ -42,7 +42,7 @@ from .render_constants import (
 )
 from .entities_constants import PATROL_BOT_COLLISION_RADIUS
 from .render.hud import _draw_status_bar, _get_fog_scale
-from .render.puddle import draw_puddle_rings, get_puddle_wave_color
+from .render.puddle import get_puddle_wave_color
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from .gameplay.lineformer_trains import LineformerTrainManager
@@ -134,15 +134,11 @@ def _draw_overview_floor_layers(
             ]
             pygame.draw.polygon(surface, fire_diamond, diamond)
     if puddle_cells:
-        puddle_wave_color = get_puddle_wave_color(alpha=None)
+        puddle_color = get_puddle_wave_color(alpha=120)
+        radius = max(1, int(cell_size * 0.28))
         for x, y in puddle_cells:
-            draw_puddle_rings(
-                surface,
-                rect=_cell_rect(x, y),
-                phase=0,
-                color=puddle_wave_color,
-                width=1,
-            )
+            cell_rect = _cell_rect(x, y)
+            pygame.draw.circle(surface, puddle_color, cell_rect.center, radius, width=1)
     if zombie_contaminated_cells:
         for x, y in zombie_contaminated_cells:
             inset = max(1, int(cell_size * 0.05))

@@ -1239,6 +1239,9 @@ STAGES: list[Stage] = [
         puddle_zones=[
             (2, 7, 26, 1),
         ],
+        fire_floor_zones=[
+            (5, 6, 10, 1),
+        ],
         puddle_density=0.02,
     ),
 ]

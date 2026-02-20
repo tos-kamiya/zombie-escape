@@ -23,7 +23,13 @@ from ..render_constants import (
     PITFALL_EDGE_STRIPE_SPACING,
 )
 from ..screen_constants import FPS
-from .puddle import draw_puddle_rings, get_puddle_phase, get_puddle_wave_color
+from .puddle import (
+    PUDDLE_MOONLIGHT_ALPHA,
+    PUDDLE_MOONLIGHT_CYCLE_MS,
+    draw_puddle_rings,
+    get_puddle_phase,
+    get_puddle_wave_color,
+)
 
 ELECTRIFIED_FLOOR_ACCENT_COLOR = (216, 200, 90)
 ELECTRIFIED_FLOOR_OVERLAY_ALPHA = 26
@@ -118,7 +124,7 @@ def _get_puddle_tile_surface(
     key = (
         max(1, int(cell_size)),
         (int(base_color[0]), int(base_color[1]), int(base_color[2])),
-        int(phase) % 4,
+        int(phase) % 12,
         bool(fall_spawn),
     )
     cached = _PUDDLE_TILE_CACHE.get(key)
@@ -130,13 +136,19 @@ def _get_puddle_tile_surface(
     tile_rect = puddle_tile.get_rect()
 
     pygame.draw.rect(puddle_tile, key[1], tile_rect)
+    pygame.draw.rect(
+        puddle_tile,
+        get_puddle_wave_color(alpha=50),
+        tile_rect,
+        width=2,
+    )
 
     draw_puddle_rings(
         puddle_tile,
         rect=tile_rect,
         phase=key[2],
-        color=get_puddle_wave_color(alpha=140),
-        width=1,
+        color=get_puddle_wave_color(alpha=PUDDLE_MOONLIGHT_ALPHA),
+        width=2,
     )
 
     _PUDDLE_TILE_CACHE[key] = puddle_tile
@@ -526,7 +538,12 @@ def _draw_play_area(
                     puddle_tile = _get_puddle_tile_surface(
                         cell_size=grid_snap,
                         base_color=base_color,
-                        phase=get_puddle_phase(elapsed_ms, x, y, cycle_ms=400),
+                        phase=get_puddle_phase(
+                            elapsed_ms,
+                            x,
+                            y,
+                            cycle_ms=PUDDLE_MOONLIGHT_CYCLE_MS,
+                        ),
                         fall_spawn=((x, y) in fall_spawn_cells),
                     )
                     screen.blit(puddle_tile, sr.topleft)
