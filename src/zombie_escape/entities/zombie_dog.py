@@ -18,6 +18,7 @@ from ..entities_constants import (
     ZOMBIE_DOG_CHARGE_COOLDOWN_MS_NORMAL,
     ZOMBIE_DOG_CHARGE_DISTANCE_NIMBLE,
     ZOMBIE_DOG_CHARGE_DISTANCE_NORMAL,
+    ZOMBIE_DOG_CHARGE_WINDUP_FRAMES,
     ZOMBIE_DOG_CHARGE_OFFSET_MAX_NIMBLE,
     ZOMBIE_DOG_CHARGE_OFFSET_MAX_NORMAL,
     ZOMBIE_DOG_CHARGE_OFFSET_MIN_NIMBLE,
@@ -30,6 +31,8 @@ from ..entities_constants import (
     ZOMBIE_DOG_PACK_CHASE_RANGE,
     ZOMBIE_DOG_SHORT_AXIS_RATIO,
     ZOMBIE_DOG_SIGHT_RANGE,
+    ZOMBIE_DOG_TRACKER_FOLLOW_SPEED_MULTIPLIER,
+    ZOMBIE_DOG_TRACKER_SIGHT_RANGE,
     ZOMBIE_DOG_WANDER_INTERVAL_MS,
     ZOMBIE_DOG_WANDER_HEADING_PLAYER_RANGE,
     PATROL_BOT_ZOMBIE_DAMAGE,
@@ -57,6 +60,7 @@ from ..render_assets import (
 from ..world_grid import apply_cell_edge_nudge
 from .zombie import Zombie
 from .movement import _circle_rect_collision
+from .tracker_scent import TrackerScentState, update_tracker_target_from_footprints
 from .zombie_visuals import build_grayscale_image
 from .zombie_vitals import ZombieVitals
 
@@ -73,6 +77,7 @@ class ZombieDogMode(Enum):
 class ZombieDogVariant(str, Enum):
     NORMAL = "normal"
     NIMBLE = "nimble"
+    TRACKER = "tracker"
 
 
 class MovementStrategy(Protocol):
@@ -153,17 +158,11 @@ def _zombie_dog_default_movement(
     ):
         candidate = _pick_charge_target()
         if candidate is not None:
-            zombie_dog._set_mode(ZombieDogMode.CHARGE)
-            zombie_dog.wander_change_time = now_ms
-            zombie_dog.charge_target = candidate
-            dir_dx = candidate[0] - zombie_dog.x
-            dir_dy = candidate[1] - zombie_dog.y
-            dir_dist = math.hypot(dir_dx, dir_dy)
-            if dir_dist > 1e-6:
-                zombie_dog.charge_direction = (dir_dx / dir_dist, dir_dy / dir_dist)
-            else:
-                zombie_dog.charge_direction = None
-            zombie_dog.charge_distance_remaining = zombie_dog.charge_distance_max
+            zombie_dog._enter_charge(
+                candidate=candidate,
+                player_center=player_center,
+                now_ms=now_ms,
+            )
     elif zombie_dog.mode == ZombieDogMode.CHARGE and not zombie_dog._in_sight(
         player_center
     ):
@@ -198,6 +197,9 @@ def _zombie_dog_default_movement(
                     return (0.0, 0.0)
         return (move_x, move_y)
     if zombie_dog.mode == ZombieDogMode.CHARGE:
+        if zombie_dog.charge_windup_frames_remaining > 0:
+            zombie_dog.charge_windup_frames_remaining -= 1
+            return (0.0, 0.0)
         if zombie_dog.charge_target is None:
             zombie_dog._set_mode(ZombieDogMode.WANDER)
             zombie_dog.next_charge_available_ms = now_ms + zombie_dog.charge_cooldown_ms
@@ -249,6 +251,157 @@ def _zombie_dog_default_movement(
     )
 
 
+def _zombie_dog_move_toward(
+    zombie_dog: "ZombieDog",
+    target: tuple[float, float],
+    *,
+    speed_multiplier: float = 1.0,
+) -> tuple[float, float]:
+    dx = target[0] - zombie_dog.x
+    dy = target[1] - zombie_dog.y
+    dist = math.hypot(dx, dy)
+    if dist <= 1e-6:
+        return (0.0, 0.0)
+    speed = zombie_dog.speed_patrol * max(0.0, speed_multiplier)
+    return (
+        (dx / dist) * speed,
+        (dy / dist) * speed,
+    )
+
+
+def _zombie_dog_tracker_movement(
+    zombie_dog: "ZombieDog",
+    cell_size: int,
+    layout,
+    player_center: tuple[float, float],
+    nearby_zombies: list[pygame.sprite.Sprite],
+    footprints: list,
+    *,
+    now_ms: int,
+) -> tuple[float, float]:
+    _ = nearby_zombies
+
+    def _pick_charge_target() -> tuple[float, float] | None:
+        for _ in range(8):
+            angle = RNG.uniform(0.0, math.tau)
+            offset = RNG.uniform(
+                zombie_dog.charge_offset_min, zombie_dog.charge_offset_max
+            )
+            tx = player_center[0] + math.cos(angle) * offset
+            ty = player_center[1] + math.sin(angle) * offset
+            if not (
+                0 <= tx < layout.field_rect.width and 0 <= ty < layout.field_rect.height
+            ):
+                continue
+            if cell_size > 0:
+                target_cell = (int(tx // cell_size), int(ty // cell_size))
+                if target_cell in layout.wall_cells:
+                    continue
+            if (
+                math.hypot(tx - zombie_dog.x, ty - zombie_dog.y)
+                < zombie_dog.speed_assault * 6.0
+            ):
+                continue
+            return (tx, ty)
+        return None
+
+    in_sight = zombie_dog._in_sight(player_center)
+    if (
+        zombie_dog.mode == ZombieDogMode.WANDER
+        and in_sight
+        and now_ms >= zombie_dog.next_charge_available_ms
+    ):
+        candidate = _pick_charge_target()
+        if candidate is not None:
+            zombie_dog._enter_charge(
+                candidate=candidate,
+                player_center=player_center,
+                now_ms=now_ms,
+            )
+    elif zombie_dog.mode == ZombieDogMode.CHARGE and not in_sight:
+        zombie_dog._set_mode(ZombieDogMode.WANDER)
+        zombie_dog.next_charge_available_ms = now_ms + zombie_dog.charge_cooldown_ms
+        zombie_dog.charge_direction = None
+
+    if zombie_dog.mode == ZombieDogMode.CHARGE:
+        if zombie_dog.charge_windup_frames_remaining > 0:
+            zombie_dog.charge_windup_frames_remaining -= 1
+            return (0.0, 0.0)
+        if zombie_dog.charge_target is None:
+            zombie_dog._set_mode(ZombieDogMode.WANDER)
+            zombie_dog.next_charge_available_ms = now_ms + zombie_dog.charge_cooldown_ms
+            zombie_dog.charge_direction = None
+            return (0.0, 0.0)
+        if zombie_dog.charge_distance_remaining <= 0.0:
+            zombie_dog._set_mode(ZombieDogMode.WANDER)
+            zombie_dog.next_charge_available_ms = now_ms + zombie_dog.charge_cooldown_ms
+            zombie_dog.charge_direction = None
+            return (0.0, 0.0)
+        charge_direction = zombie_dog.charge_direction
+        if charge_direction is None:
+            dx = zombie_dog.charge_target[0] - zombie_dog.x
+            dy = zombie_dog.charge_target[1] - zombie_dog.y
+            dist = math.hypot(dx, dy)
+            if dist <= 1e-6:
+                zombie_dog._set_mode(ZombieDogMode.WANDER)
+                zombie_dog.next_charge_available_ms = (
+                    now_ms + zombie_dog.charge_cooldown_ms
+                )
+                return (0.0, 0.0)
+            charge_direction = (dx / dist, dy / dist)
+            zombie_dog.charge_direction = charge_direction
+        step = min(zombie_dog.speed_assault, zombie_dog.charge_distance_remaining)
+        zombie_dog.charge_distance_remaining = max(
+            0.0, zombie_dog.charge_distance_remaining - step
+        )
+        return (charge_direction[0] * step, charge_direction[1] * step)
+
+    update_tracker_target_from_footprints(
+        zombie_dog.tracker_state,
+        origin=(zombie_dog.x, zombie_dog.y),
+        footprints=footprints or [],
+        layout=layout,
+        cell_size=cell_size,
+        now_ms=now_ms,
+    )
+    if zombie_dog.tracker_target_pos is not None:
+        zombie_dog._set_mode(ZombieDogMode.WANDER)
+        zombie_dog.just_entered_wander = False
+        zombie_dog.wander_change_time = now_ms
+        return _zombie_dog_move_toward(
+            zombie_dog,
+            zombie_dog.tracker_target_pos,
+            speed_multiplier=ZOMBIE_DOG_TRACKER_FOLLOW_SPEED_MULTIPLIER,
+        )
+
+    zombie_dog._set_mode(ZombieDogMode.WANDER)
+    if zombie_dog.just_entered_wander:
+        _set_wander_heading_toward_player_if_close(zombie_dog, player_center)
+        zombie_dog.just_entered_wander = False
+        zombie_dog.wander_change_time = now_ms
+    elif now_ms - zombie_dog.wander_change_time > ZOMBIE_DOG_WANDER_INTERVAL_MS:
+        zombie_dog.wander_change_time = now_ms
+        zombie_dog.wander_angle = RNG.uniform(0.0, math.tau)
+    move_x = math.cos(zombie_dog.wander_angle) * zombie_dog.speed_patrol
+    move_y = math.sin(zombie_dog.wander_angle) * zombie_dog.speed_patrol
+    if cell_size > 0 and layout.fire_floor_cells:
+        next_cell = (
+            int((zombie_dog.x + move_x) // cell_size),
+            int((zombie_dog.y + move_y) // cell_size),
+        )
+        if next_cell in layout.fire_floor_cells:
+            zombie_dog.wander_angle = (zombie_dog.wander_angle + math.pi) % math.tau
+            move_x = math.cos(zombie_dog.wander_angle) * zombie_dog.speed_patrol
+            move_y = math.sin(zombie_dog.wander_angle) * zombie_dog.speed_patrol
+            retry_cell = (
+                int((zombie_dog.x + move_x) // cell_size),
+                int((zombie_dog.y + move_y) // cell_size),
+            )
+            if retry_cell in layout.fire_floor_cells:
+                return (0.0, 0.0)
+    return (move_x, move_y)
+
+
 class ZombieDog(pygame.sprite.Sprite):
     def __init__(
         self: Self,
@@ -272,27 +425,37 @@ class ZombieDog(pygame.sprite.Sprite):
         self.just_entered_wander = True
         self.charge_target: tuple[float, float] | None = None
         self.charge_direction: tuple[float, float] | None = None
+        self.charge_windup_frames_remaining = 0
         self.charge_distance_remaining = 0.0
         self.next_charge_available_ms = 0
         self.wander_angle = RNG.uniform(0.0, math.tau)
         self.wander_change_time = 0
-        self.movement_strategy = movement_strategy or _zombie_dog_default_movement
         self.variant = (
             variant
             if isinstance(variant, ZombieDogVariant)
             else ZombieDogVariant(str(variant))
         )
+        self.tracker_state = TrackerScentState()
         self.nimble_tail_side = RNG.choice([-1.0, 1.0])
         if self.variant == ZombieDogVariant.NIMBLE:
             self.charge_offset_min = ZOMBIE_DOG_CHARGE_OFFSET_MIN_NIMBLE
             self.charge_offset_max = ZOMBIE_DOG_CHARGE_OFFSET_MAX_NIMBLE
             self.charge_distance_max = ZOMBIE_DOG_CHARGE_DISTANCE_NIMBLE
             self.charge_cooldown_ms = ZOMBIE_DOG_CHARGE_COOLDOWN_MS_NIMBLE
+            self.movement_strategy = movement_strategy or _zombie_dog_default_movement
+        elif self.variant == ZombieDogVariant.TRACKER:
+            self.charge_offset_min = ZOMBIE_DOG_CHARGE_OFFSET_MIN_NORMAL
+            self.charge_offset_max = ZOMBIE_DOG_CHARGE_OFFSET_MAX_NORMAL
+            self.charge_distance_max = ZOMBIE_DOG_CHARGE_DISTANCE_NORMAL
+            self.charge_cooldown_ms = ZOMBIE_DOG_CHARGE_COOLDOWN_MS_NORMAL
+            self.sight_range = ZOMBIE_DOG_TRACKER_SIGHT_RANGE
+            self.movement_strategy = movement_strategy or _zombie_dog_tracker_movement
         else:
             self.charge_offset_min = ZOMBIE_DOG_CHARGE_OFFSET_MIN_NORMAL
             self.charge_offset_max = ZOMBIE_DOG_CHARGE_OFFSET_MAX_NORMAL
             self.charge_distance_max = ZOMBIE_DOG_CHARGE_DISTANCE_NORMAL
             self.charge_cooldown_ms = ZOMBIE_DOG_CHARGE_COOLDOWN_MS_NORMAL
+            self.movement_strategy = movement_strategy or _zombie_dog_default_movement
         self.kind = ZombieKind.DOG
         self.facing_bin = 0
         self.directional_images = build_zombie_dog_directional_surfaces(
@@ -382,6 +545,22 @@ class ZombieDog(pygame.sprite.Sprite):
     def patrol_damage_frame_counter(self: Self) -> int:
         return self.vitals.patrol_damage_frame_counter
 
+    @property
+    def tracker_target_pos(self: Self) -> tuple[float, float] | None:
+        return self.tracker_state.target_pos
+
+    @tracker_target_pos.setter
+    def tracker_target_pos(self: Self, value: tuple[float, float] | None) -> None:
+        self.tracker_state.target_pos = value
+
+    @property
+    def tracker_target_time(self: Self) -> int | None:
+        return self.tracker_state.target_time
+
+    @tracker_target_time.setter
+    def tracker_target_time(self: Self, value: int | None) -> None:
+        self.tracker_state.target_time = value
+
     def _apply_speed_ratio(self: Self, ratio: float) -> None:
         self.speed_patrol = self.initial_speed_patrol * ratio
         self.speed_assault = self.initial_speed_assault * ratio
@@ -397,6 +576,31 @@ class ZombieDog(pygame.sprite.Sprite):
         elif self.mode == ZombieDogMode.WANDER:
             self.just_entered_wander = False
         self.mode = new_mode
+
+    def _enter_charge(
+        self: Self,
+        *,
+        candidate: tuple[float, float],
+        player_center: tuple[float, float],
+        now_ms: int,
+    ) -> None:
+        self._set_mode(ZombieDogMode.CHARGE)
+        self.wander_change_time = now_ms
+        self.charge_target = candidate
+        dir_dx = candidate[0] - self.x
+        dir_dy = candidate[1] - self.y
+        dir_dist = math.hypot(dir_dx, dir_dy)
+        if dir_dist > 1e-6:
+            self.charge_direction = (dir_dx / dir_dist, dir_dy / dir_dist)
+        else:
+            self.charge_direction = None
+        self.charge_distance_remaining = self.charge_distance_max
+        self.charge_windup_frames_remaining = ZOMBIE_DOG_CHARGE_WINDUP_FRAMES
+        # Telegraph charge intent: face toward player before starting movement.
+        self._update_facing_from_movement(
+            player_center[0] - self.x,
+            player_center[1] - self.y,
+        )
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
         if new_bin == self.facing_bin:

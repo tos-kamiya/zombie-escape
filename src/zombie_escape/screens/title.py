@@ -221,6 +221,9 @@ class TitleScreenController:
             pygame.draw.line(surf, color, (ox, oy + 4), (ox, oy))
             pygame.draw.line(surf, color, (ox, oy), (ox + 4, oy + 4))
             pygame.draw.line(surf, color, (ox + 4, oy + 4), (ox + 4, oy))
+        elif letter == "T":
+            pygame.draw.line(surf, color, (ox, oy), (ox + 4, oy))
+            pygame.draw.line(surf, color, (ox + 2, oy), (ox + 2, oy + 4))
         return surf
 
     def _build_forbidden_icon(self, base_icon: pygame.Surface) -> pygame.Surface:
@@ -250,6 +253,7 @@ class TitleScreenController:
             "zombie_solitary": self._create_lettered_zombie("S"),
             "zombie_dog": get_character_icon("zombie_dog", self.icon_radius),
             "zombie_dog_nimble": self._create_lettered_zombie_dog("N"),
+            "zombie_dog_tracker": self._create_lettered_zombie_dog("T"),
             "patrol_bot": get_character_icon("patrol_bot", self.icon_radius),
             "car": pygame.transform.rotate(
                 get_character_icon("car", self.icon_radius), -90
@@ -314,6 +318,8 @@ class TitleScreenController:
             icons.append(self.icon_surfaces["zombie_dog"])
         if stage.zombie_nimble_dog_ratio > 0:
             icons.append(self.icon_surfaces["zombie_dog_nimble"])
+        if stage.zombie_tracker_dog_ratio > 0:
+            icons.append(self.icon_surfaces["zombie_dog_tracker"])
         if stage.spiky_plant_density > 0 or stage.spiky_plant_zones:
             icons.append(self.icon_surfaces["spiky_plant"])
 

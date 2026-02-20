@@ -23,6 +23,8 @@ Icon order is fixed by category:
 - `zombie_wall` when that ratio is present.
 - `zombie_line` when that ratio is present.
 - `zombie_dog` when that ratio is present.
+- `zombie_dog_nimble` when nimble dog ratio is present.
+- `zombie_dog_tracker` when tracker dog ratio is present.
 - `spiky_plant` when spiky-plant hazard settings are present.
 
 3. Environment (floor)

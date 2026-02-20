@@ -132,7 +132,13 @@ def build_zombie_debug_counts_text(
         if getattr(z, "kind", None) == ZombieKind.DOG
         and str(getattr(z, "variant", "")) in {"nimble", "ZombieDogVariant.NIMBLE"}
     )
-    dog_normal_count = max(0, dog_count - nimble_dog_count)
+    tracker_dog_count = sum(
+        1
+        for z in zombies
+        if getattr(z, "kind", None) == ZombieKind.DOG
+        and str(getattr(z, "variant", "")) in {"tracker", "ZombieDogVariant.TRACKER"}
+    )
+    dog_normal_count = max(0, dog_count - nimble_dog_count - tracker_dog_count)
     trapped_count = sum(1 for z in zombies if isinstance(z, TrappedZombie))
     normal = max(
         0,
@@ -155,6 +161,7 @@ def build_zombie_debug_counts_text(
         "s": True,
         "d": True,
         "dn": True,
+        "dt": True,
         "p": True,
     }
     if stage is not None:
@@ -166,6 +173,9 @@ def build_zombie_debug_counts_text(
         allowed["d"] = stage.zombie_dog_ratio > 0.0
         allowed["dn"] = (
             stage.zombie_dog_ratio > 0.0 and stage.zombie_nimble_dog_ratio > 0.0
+        )
+        allowed["dt"] = (
+            stage.zombie_dog_ratio > 0.0 and stage.zombie_tracker_dog_ratio > 0.0
         )
         allowed["p"] = (
             stage.spiky_plant_density > 0.0 or bool(stage.spiky_plant_zones)
@@ -186,6 +196,8 @@ def build_zombie_debug_counts_text(
         detail_parts.append(f"d:{dog_normal_count}")
     if allowed["dn"] or nimble_dog_count > 0:
         detail_parts.append(f"dn:{nimble_dog_count}")
+    if allowed["dt"] or tracker_dog_count > 0:
+        detail_parts.append(f"dt:{tracker_dog_count}")
     if allowed["p"] or trapped_count > 0:
         detail_parts.append(f"p:{trapped_count}")
 

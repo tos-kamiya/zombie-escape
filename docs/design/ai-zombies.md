@@ -34,6 +34,28 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
 - Uses straight-line reachability checks (wall blocking avoidance).
 - If target is reached and no better target exists, retarget by freshness rules.
 
+## INPROGRESS: Tracker Zombie Dog (Tentative)
+
+- Status: INPROGRESS (spec draft before implementation).
+- New dog sub-variant (working name: `tracker`) will be added under zombie-dog
+  variant selection.
+- Out-of-sight behavior:
+  - Follow footprints using the same tracker scent/loss/re-lock rules as tracker zombies.
+  - Trail-loss behavior should match tracker zombies (including boundary-time based re-lock gate).
+- In-sight behavior:
+  - Switch to dog `CHARGE` behavior when player enters sight range.
+  - `CHASE` behavior is disabled for this variant (no dog-pack zombie chasing).
+- Sight range:
+  - Smaller than normal zombie-dog sight.
+  - Larger than nimble-oriented close-range feel.
+  - Initial target band: `ZOMBIE_TRACKER_SIGHT_RANGE < tracker_dog_sight_range < ZOMBIE_DOG_SIGHT_RANGE`.
+- Charge tuning:
+  - Use normal dog charge distance/cooldown (same as existing normal zombie dog).
+- Implementation direction:
+  - First extract reusable tracker state + helper API from current tracker-zombie logic.
+  - Then wire tracker zombie dog to the shared API.
+  - If extraction API is insufficient for dog usage, adjust API before adding behavior-specific branching.
+
 ## Tracker Loss and Trail Gap Behavior
 - Goal: prevent tracker zombies from permanently stacking at the latest footprint
   when footprint generation stops (for example, while player is in car).
@@ -53,6 +75,8 @@ Re-acquisition boundary rule:
   timestamp (not current game time).
 - Future scent scans must ignore footprints with `time <= ignore_boundary`.
 - Only footprints with `time > ignore_boundary` can be used for re-lock.
+- Current implementation does not apply an additional fixed re-lock delay window;
+  boundary-time filtering is the active gate.
 - This allows accidental re-acquisition of trail points that are ahead of the
   broken segment, while permanently excluding already-lost older points.
 
@@ -94,7 +118,10 @@ Puddle interaction with footprints:
   - `zombie_lineformer_ratio`
   - `zombie_solitary_ratio` (solitary)
   - `zombie_dog_ratio`
-- Nimble dog spawn share is controlled by `zombie_nimble_dog_ratio` (applied only when dog variant is chosen).
+- Dog sub-variant shares are controlled by:
+  - `zombie_nimble_dog_ratio`
+  - `zombie_tracker_dog_ratio`
+  - Both are applied only when dog variant is chosen.
 
 ## Pitfall Interaction
 

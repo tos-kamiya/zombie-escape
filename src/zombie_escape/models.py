@@ -325,6 +325,7 @@ class Stage:
     zombie_normal_ratio: float = 0.0
     zombie_dog_ratio: float = 0.0
     zombie_nimble_dog_ratio: float = 0.0
+    zombie_tracker_dog_ratio: float = 0.0
     zombie_decay_duration_frames: int = ZOMBIE_DECAY_DURATION_FRAMES
 
     # Patrol bot spawning
@@ -361,6 +362,7 @@ class Stage:
             + float(self.zombie_solitary_ratio)
             + float(self.zombie_dog_ratio)
             + float(self.zombie_nimble_dog_ratio)
+            + float(self.zombie_tracker_dog_ratio)
         )
         assert total_zombie_ratio > 0.0, (
             f"Stage {self.id}: at least one zombie ratio must be > 0"

@@ -62,6 +62,7 @@ from .zombie_movement import (
     _zombie_tracker_movement,
     _zombie_wall_hug_movement,
 )
+from .tracker_scent import TrackerScentState
 from .walls import Wall
 from .zombie_visuals import build_grayscale_image
 from .zombie_vitals import ZombieVitals
@@ -140,14 +141,10 @@ class Zombie(pygame.sprite.Sprite):
         self.lineformer_follow_target_id: int | None = None
         self.lineformer_target_pos: tuple[float, float] | None = None
         self.lineformer_last_target_seen_ms: int | None = None
-        self.tracker_target_pos: tuple[float, float] | None = None
-        self.tracker_target_time: int | None = None
-        self.tracker_last_scan_time = 0
-        self.tracker_scan_interval_ms = ZOMBIE_TRACKER_SCAN_INTERVAL_MS
-        self.tracker_lost_timeout_ms = ZOMBIE_TRACKER_LOST_TIMEOUT_MS
-        self.tracker_last_progress_ms: int | None = None
-        self.tracker_ignore_before_or_at_time: int | None = None
-        self.tracker_relock_after_time: int | None = None
+        self.tracker_state = TrackerScentState(
+            scan_interval_ms=ZOMBIE_TRACKER_SCAN_INTERVAL_MS,
+            lost_timeout_ms=ZOMBIE_TRACKER_LOST_TIMEOUT_MS,
+        )
         if self.kind == ZombieKind.WALL_HUGGER:
             self.wall_hug_side = RNG.choice([-1.0, 1.0])
             self.wall_hug_angle = RNG.uniform(0, math.tau)
@@ -211,6 +208,70 @@ class Zombie(pygame.sprite.Sprite):
     @property
     def patrol_damage_frame_counter(self: Self) -> int:
         return self.vitals.patrol_damage_frame_counter
+
+    @property
+    def tracker_target_pos(self: Self) -> tuple[float, float] | None:
+        return self.tracker_state.target_pos
+
+    @tracker_target_pos.setter
+    def tracker_target_pos(self: Self, value: tuple[float, float] | None) -> None:
+        self.tracker_state.target_pos = value
+
+    @property
+    def tracker_target_time(self: Self) -> int | None:
+        return self.tracker_state.target_time
+
+    @tracker_target_time.setter
+    def tracker_target_time(self: Self, value: int | None) -> None:
+        self.tracker_state.target_time = value
+
+    @property
+    def tracker_last_scan_time(self: Self) -> int:
+        return self.tracker_state.last_scan_time
+
+    @tracker_last_scan_time.setter
+    def tracker_last_scan_time(self: Self, value: int) -> None:
+        self.tracker_state.last_scan_time = value
+
+    @property
+    def tracker_scan_interval_ms(self: Self) -> int:
+        return self.tracker_state.scan_interval_ms
+
+    @tracker_scan_interval_ms.setter
+    def tracker_scan_interval_ms(self: Self, value: int) -> None:
+        self.tracker_state.scan_interval_ms = value
+
+    @property
+    def tracker_lost_timeout_ms(self: Self) -> int:
+        return self.tracker_state.lost_timeout_ms
+
+    @tracker_lost_timeout_ms.setter
+    def tracker_lost_timeout_ms(self: Self, value: int) -> None:
+        self.tracker_state.lost_timeout_ms = value
+
+    @property
+    def tracker_last_progress_ms(self: Self) -> int | None:
+        return self.tracker_state.last_progress_ms
+
+    @tracker_last_progress_ms.setter
+    def tracker_last_progress_ms(self: Self, value: int | None) -> None:
+        self.tracker_state.last_progress_ms = value
+
+    @property
+    def tracker_ignore_before_or_at_time(self: Self) -> int | None:
+        return self.tracker_state.ignore_before_or_at_time
+
+    @tracker_ignore_before_or_at_time.setter
+    def tracker_ignore_before_or_at_time(self: Self, value: int | None) -> None:
+        self.tracker_state.ignore_before_or_at_time = value
+
+    @property
+    def tracker_relock_after_time(self: Self) -> int | None:
+        return self.tracker_state.relock_after_time
+
+    @tracker_relock_after_time.setter
+    def tracker_relock_after_time(self: Self, value: int | None) -> None:
+        self.tracker_state.relock_after_time = value
 
     def _apply_speed_ratio(self: Self, ratio: float) -> None:
         self.speed = self.initial_speed * ratio

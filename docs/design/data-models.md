@@ -43,7 +43,7 @@ Per-stage tunables and feature toggles.
   - intervals, interior/exterior/fall weights, counts per interval
 - Variant ratios:
   - normal/tracker/wall-hugger/lineformer/solitary/dog ratios
-  - nimble-dog ratio (`zombie_nimble_dog_ratio`) within dog spawns
+  - nimble/tracker-dog ratios (`zombie_nimble_dog_ratio`, `zombie_tracker_dog_ratio`) within dog spawns
 - Terrain features:
   - wall algorithm, rubble ratio, pitfall/spiky-plant/puddle settings
   - moving-floor and fall-spawn zone controls

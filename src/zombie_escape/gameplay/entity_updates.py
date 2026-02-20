@@ -539,17 +539,22 @@ def update_entities(
                 continue
         if isinstance(zombie, ZombieDog):
             target = player.rect.center
+            is_tracker_dog = str(getattr(zombie, "variant", "")) in {
+                "tracker",
+                "ZombieDogVariant.TRACKER",
+            }
             closest_survivor: Survivor | None = None
             closest_dist_sq = dog_survivor_range_sq
-            for survivor in survivor_candidates:
-                dx = survivor.rect.centerx - zombie.x
-                dy = survivor.rect.centery - zombie.y
-                dist_sq = dx * dx + dy * dy
-                if dist_sq <= closest_dist_sq:
-                    closest_survivor = survivor
-                    closest_dist_sq = dist_sq
-            if closest_survivor is not None:
-                target = closest_survivor.rect.center
+            if not is_tracker_dog:
+                for survivor in survivor_candidates:
+                    dx = survivor.rect.centerx - zombie.x
+                    dy = survivor.rect.centery - zombie.y
+                    dist_sq = dx * dx + dy * dy
+                    if dist_sq <= closest_dist_sq:
+                        closest_survivor = survivor
+                        closest_dist_sq = dist_sq
+                if closest_survivor is not None:
+                    target = closest_survivor.rect.center
         if buddies_on_screen and not isinstance(zombie, ZombieDog):
             dist_to_target_sq = (target_center[0] - zombie.x) ** 2 + (
                 target_center[1] - zombie.y

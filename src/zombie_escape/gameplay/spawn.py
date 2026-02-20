@@ -108,10 +108,12 @@ def _pick_zombie_variant(stage: Stage | None) -> ZombieKind:
         wall_hugging_ratio = max(0.0, float(stage.zombie_wall_hugging_ratio))
         lineformer_ratio = max(0.0, float(stage.zombie_lineformer_ratio))
         solitary_ratio = max(0.0, float(stage.zombie_solitary_ratio))
-        # Nimble dogs are a dog sub-variant; include them in the dog weight so
+        # Dog sub-variants are part of dog weight so total type weights normalize.
+        tracker_dog_ratio = max(0.0, float(stage.zombie_tracker_dog_ratio))
+        # Nimble and tracker dogs are dog sub-variants; include them in dog weight.
         # total zombie-type weights can always be normalized.
         nimble_ratio = max(0.0, float(stage.zombie_nimble_dog_ratio))
-        dog_ratio = max(0.0, float(stage.zombie_dog_ratio)) + nimble_ratio
+        dog_ratio = max(0.0, float(stage.zombie_dog_ratio)) + nimble_ratio + tracker_dog_ratio
     total_ratio = (
         normal_ratio
         + tracker_ratio
@@ -160,7 +162,12 @@ def _build_initial_zombie_kind_plan(
         lineformer_ratio = max(0.0, float(stage.zombie_lineformer_ratio))
         solitary_ratio = max(0.0, float(stage.zombie_solitary_ratio))
         nimble_ratio = max(0.0, float(stage.zombie_nimble_dog_ratio))
-        dog_ratio = max(0.0, float(stage.zombie_dog_ratio)) + nimble_ratio
+        tracker_dog_ratio = max(0.0, float(stage.zombie_tracker_dog_ratio))
+        dog_ratio = (
+            max(0.0, float(stage.zombie_dog_ratio))
+            + nimble_ratio
+            + tracker_dog_ratio
+        )
     weighted_kinds = [
         (ZombieKind.NORMAL, normal_ratio),
         (ZombieKind.TRACKER, tracker_ratio),
@@ -406,17 +413,27 @@ def _create_zombie(
         else:
             start_pos = random_position_outside_building(level_width, level_height)
     if kind == ZombieKind.DOG:
-        nimble_ratio = 0.0
+        normal_weight = 1.0
+        nimble_weight = 0.0
+        tracker_dog_weight = 0.0
         if stage is not None:
-            dog_weight = max(0.0, float(stage.zombie_dog_ratio))
+            normal_weight = max(0.0, float(stage.zombie_dog_ratio))
             nimble_weight = max(0.0, float(stage.zombie_nimble_dog_ratio))
-            total_dog_weight = dog_weight + nimble_weight
-            if total_dog_weight > 0.0:
-                nimble_ratio = nimble_weight / total_dog_weight
+            tracker_dog_weight = max(0.0, float(stage.zombie_tracker_dog_ratio))
+        total_dog_weight = normal_weight + nimble_weight + tracker_dog_weight
+        variant = "normal"
+        if total_dog_weight > 0.0:
+            pick = RNG.random() * total_dog_weight
+            if pick < normal_weight:
+                variant = "normal"
+            elif pick < normal_weight + nimble_weight:
+                variant = "nimble"
+            else:
+                variant = "tracker"
         return ZombieDog(
             x=float(start_pos[0]),
             y=float(start_pos[1]),
-            variant="nimble" if RNG.random() < nimble_ratio else "normal",
+            variant=variant,
         )
     movement_strategy = None
     if kind == ZombieKind.LINEFORMER:

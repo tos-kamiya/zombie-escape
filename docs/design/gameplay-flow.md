@@ -106,6 +106,8 @@ Initial placement policy:
   - On loss, tracker stores ignore boundary at the last tracked footprint
     timestamp.
   - Future re-lock must satisfy `footprint.time > ignore_boundary`.
+  - No extra fixed re-lock delay is currently applied beyond the
+    `ignore_boundary` time gate.
   - This prevents returning to already-lost older trail while allowing
     accidental re-acquisition ahead of the gap.
   - On wander entry, nearby player context can set initial wander heading
