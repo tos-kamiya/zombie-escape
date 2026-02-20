@@ -157,6 +157,13 @@ Notes:
 - Title-screen `Display Mode/Window Size` row left-right resize behavior.
 - Screen-specific utility keys (for example, settings reset).
 
+### 5.5 Title-Specific Combo
+
+- On title screen only:
+  - If `CommonAction.BACK` is held (gamepad `Select/Back`),
+    `CommonAction.CONFIRM` press toggles fullscreen.
+- This combo takes precedence over normal title left/right handling for that frame.
+
 ### 5.4 Planned KeyboardShortcut Mapping
 
 - `RETRY` -> `R`

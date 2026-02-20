@@ -74,3 +74,9 @@ Icon order is fixed by category:
   2. `Settings`
   3. `README/LICENSE` (or stage-group guide row on later pages)
   4. `Quit`
+
+## Hidden Pad Combo
+
+- Title screen supports a gamepad-only hidden combo:
+  - Hold `Select/Back` and press `South (A)` to toggle fullscreen.
+- This combo is handled before normal left/right page navigation logic.
