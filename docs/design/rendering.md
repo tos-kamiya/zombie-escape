@@ -98,8 +98,8 @@ Supporting modules:
   entering the title screen.
 - In normal game execution, fog overlays are expected to come from loaded cache
   files; no title/gameplay prewarm generation path is used.
-- Cache-key metadata includes rendering parameters and runtime version info so
-  incompatible cache files are ignored safely.
+- Cache-key metadata includes rendering parameters needed to reconstruct fog
+  overlays, so incompatible cache files are ignored safely.
 
 ## Overviews (`overview.py`)
 

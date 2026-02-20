@@ -108,8 +108,6 @@ def _fog_cache_key_data(assets: RenderAssets, profile: _FogProfile) -> dict[str,
         "fog_hatch_density_ramps": [
             [float(a), float(b)] for a, b in assets.fog_hatch_density_ramps
         ],
-        "pygame_version": pygame.version.ver,
-        "numpy_version": np.__version__,
     }
 
 

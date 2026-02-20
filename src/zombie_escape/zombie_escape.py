@@ -78,12 +78,6 @@ def _parse_cli_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:
         dest="build_fog_cache",
         help="Precompute and save fog cache files for all darkness profiles, then exit",
     )
-    parser.add_argument(
-        "--build-fog-cache-dark0",
-        action="store_true",
-        dest="build_fog_cache_dark0_deprecated",
-        help=argparse.SUPPRESS,
-    )
     parser.add_argument("--seed")
     return parser.parse_known_args(argv)
 
@@ -154,12 +148,7 @@ def main() -> None:
         print(f"Exported {len(saved)} images to {output_dir}")
         pygame.quit()
         return
-    if args.build_fog_cache_dark0_deprecated:
-        print(
-            "Warning: --build-fog-cache-dark0 is deprecated; "
-            "use --build-fog-cache."
-        )
-    if args.build_fog_cache or args.build_fog_cache_dark0_deprecated:
+    if args.build_fog_cache:
         from .render.fog import save_all_fog_caches
 
         output_dir = Path(__file__).resolve().parent / "assets" / "fog_cache"

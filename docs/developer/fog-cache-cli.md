@@ -12,14 +12,6 @@ profiles (`DARK0`, `DARK1`, `DARK2`):
 uv run -p .venv/bin/python -m zombie_escape --build-fog-cache
 ```
 
-Backward-compatible alias:
-
-```bash
-uv run -p .venv/bin/python -m zombie_escape --build-fog-cache-dark0
-```
-
-The alias is deprecated and prints a warning.
-
 ## Output
 
 - Output directory: `src/zombie_escape/assets/fog_cache/`
