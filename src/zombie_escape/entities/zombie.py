@@ -44,7 +44,7 @@ from ..render.entity_overlays import (
     apply_zombie_kind_overlay,
     draw_paralyze_marker_overlay,
 )
-from ..render_constants import ENTITY_SHADOW_RADIUS_MULT
+from ..render_constants import ANGLE_BINS, ENTITY_SHADOW_RADIUS_MULT
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_directional_surfaces,
@@ -99,12 +99,18 @@ class Zombie(pygame.sprite.Sprite):
     ) -> None:
         super().__init__()
         self.radius = ZOMBIE_RADIUS
+        self.collision_radius = float(self.radius)
         self.facing_bin = 0
         self.kind = kind
         self.directional_images = build_zombie_directional_surfaces(
             self.radius,
             draw_hands=False,
         )
+        if self.kind in (ZombieKind.TRACKER, ZombieKind.SOLITARY):
+            self.directional_images = self._build_static_variant_directional_images(
+                self.directional_images
+            )
+        self._dynamic_variant_image_cache: dict[tuple[int, int], pygame.Surface] = {}
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(x, y))
         jitter_base = FAST_ZOMBIE_BASE_SPEED if speed > ZOMBIE_SPEED else ZOMBIE_SPEED
@@ -168,7 +174,6 @@ class Zombie(pygame.sprite.Sprite):
         )
         self.last_move_dx = 0.0
         self.last_move_dy = 0.0
-        self.collision_radius = float(self.radius)
         self.shadow_radius = max(
             1, int(self.collision_radius * ENTITY_SHADOW_RADIUS_MULT)
         )
@@ -176,6 +181,7 @@ class Zombie(pygame.sprite.Sprite):
         self.solitary_eval_frame_counter = 0
         self.solitary_committed_move: tuple[int, int] | None = None
         self.solitary_previous_move: tuple[int, int] | None = None
+        self._apply_render_overlays()
 
     @property
     def max_health(self: Self) -> int:
@@ -501,7 +507,7 @@ class Zombie(pygame.sprite.Sprite):
             return
         center = self.rect.center
         self.facing_bin = new_bin
-        self.image = self.directional_images[self.facing_bin]
+        self._apply_render_overlays()
         self.rect = self.image.get_rect(center=center)
 
     def _update_facing_from_movement(self: Self, dx: float, dy: float) -> None:
@@ -510,18 +516,99 @@ class Zombie(pygame.sprite.Sprite):
             return
         self._set_facing_bin(new_bin)
 
+    def _build_static_variant_directional_images(
+        self: Self, base_images: list[pygame.Surface]
+    ) -> list[pygame.Surface]:
+        baked_images: list[pygame.Surface] = []
+        for facing_bin, base_surface in enumerate(base_images):
+            baked_images.append(
+                apply_zombie_kind_overlay(
+                    base_surface=base_surface,
+                    kind=self.kind,
+                    facing_bin=facing_bin,
+                    collision_radius=int(self.collision_radius),
+                    wall_hug_side=0.0,
+                    wall_hug_last_side_has_wall=False,
+                    lineformer_target_pos=None,
+                    zombie_pos=(0.0, 0.0),
+                )
+            )
+        return baked_images
+
+    def _wall_hugger_hand_state(self: Self) -> int:
+        if (
+            self.kind != ZombieKind.WALL_HUGGER
+            or self.wall_hug_side == 0
+            or not self.wall_hug_last_side_has_wall
+        ):
+            return 0
+        return 1 if self.wall_hug_side > 0 else 2
+
+    def _lineformer_target_bin16(self: Self) -> int:
+        if self.kind != ZombieKind.LINEFORMER or self.lineformer_target_pos is None:
+            return self.facing_bin
+        target_dx = self.lineformer_target_pos[0] - self.x
+        target_dy = self.lineformer_target_pos[1] - self.y
+        target_bin = angle_bin_from_vector(target_dx, target_dy)
+        if target_bin is None:
+            return self.facing_bin
+        return target_bin % ANGLE_BINS
+
+    def _build_dynamic_variant_image(
+        self: Self,
+        *,
+        facing_bin: int,
+        state: int,
+    ) -> pygame.Surface:
+        base_surface = self.directional_images[facing_bin]
+        if self.kind == ZombieKind.WALL_HUGGER:
+            side_map: dict[int, float] = {0: 0.0, 1: 1.0, 2: -1.0}
+            side = side_map.get(state, 0.0)
+            return apply_zombie_kind_overlay(
+                base_surface=base_surface,
+                kind=self.kind,
+                facing_bin=facing_bin,
+                collision_radius=int(self.collision_radius),
+                wall_hug_side=side,
+                wall_hug_last_side_has_wall=(state != 0),
+                lineformer_target_pos=None,
+                zombie_pos=(0.0, 0.0),
+            )
+        if self.kind == ZombieKind.LINEFORMER:
+            angle_rad = (state % ANGLE_BINS) * (math.tau / ANGLE_BINS)
+            quantized_target = (math.cos(angle_rad), math.sin(angle_rad))
+            return apply_zombie_kind_overlay(
+                base_surface=base_surface,
+                kind=self.kind,
+                facing_bin=facing_bin,
+                collision_radius=int(self.collision_radius),
+                wall_hug_side=0.0,
+                wall_hug_last_side_has_wall=False,
+                lineformer_target_pos=quantized_target,
+                zombie_pos=(0.0, 0.0),
+            )
+        return base_surface
+
     def _apply_render_overlays(self: Self) -> None:
-        base_surface = self.directional_images[self.facing_bin]
-        self.image = apply_zombie_kind_overlay(
-            base_surface=base_surface,
-            kind=self.kind,
-            facing_bin=self.facing_bin,
-            collision_radius=self.collision_radius,
-            wall_hug_side=self.wall_hug_side,
-            wall_hug_last_side_has_wall=self.wall_hug_last_side_has_wall,
-            lineformer_target_pos=self.lineformer_target_pos,
-            zombie_pos=(self.x, self.y),
-        )
+        if self.kind in (ZombieKind.TRACKER, ZombieKind.SOLITARY):
+            self.image = self.directional_images[self.facing_bin]
+            return
+        if self.kind == ZombieKind.WALL_HUGGER:
+            state = self._wall_hugger_hand_state()
+        elif self.kind == ZombieKind.LINEFORMER:
+            state = self._lineformer_target_bin16()
+        else:
+            self.image = self.directional_images[self.facing_bin]
+            return
+        key = (self.facing_bin, state)
+        image = self._dynamic_variant_image_cache.get(key)
+        if image is None:
+            image = self._build_dynamic_variant_image(
+                facing_bin=self.facing_bin,
+                state=state,
+            )
+            self._dynamic_variant_image_cache[key] = image
+        self.image = image
 
     def _apply_paralyze_overlay(self: Self, now_ms: int) -> None:
         self._apply_render_overlays()
