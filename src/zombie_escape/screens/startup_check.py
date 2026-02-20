@@ -61,7 +61,7 @@ def startup_check_screen(
         if load_shared_fog_cache_from_files(assets) is None:
             fog_cache_error = (
                 "Fog cache load failed. "
-                "Run --build-fog-cache-dark0 and restart."
+                "Run --build-fog-cache and restart."
             )
             break
 
