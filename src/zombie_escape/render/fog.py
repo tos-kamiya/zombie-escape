@@ -5,7 +5,7 @@ import os
 from enum import Enum
 from importlib import resources
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np  # type: ignore
 import pygame
@@ -19,8 +19,6 @@ from ..render_assets import RenderAssets
 from .hud import _get_fog_scale
 
 _SHARED_FOG_CACHE_BY_CELL_SIZE: dict[int, dict[str, Any]] = {}
-_SHARED_FOG_PREWARM_WORKING_BY_CELL_SIZE: dict[int, dict[str, Any]] = {}
-_SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE: dict[int, int] = {}
 _FOG_CACHE_FORMAT_VERSION = 1
 _FOG_CACHE_APP_NAME = "ZombieEscape"
 
@@ -57,7 +55,7 @@ class _FogProfile(Enum):
         self.flashlight_count = flashlight_count
         self.color = color
 
-    def _scale(self, assets: RenderAssets, _stage: Stage | None) -> float:
+    def _scale(self, assets: RenderAssets) -> float:
         count = max(0, min(self.flashlight_count, _max_flashlight_pickups()))
         return _get_fog_scale(assets, count)
 
@@ -78,10 +76,8 @@ def _fog_cell_size_key(assets: RenderAssets) -> int:
 def _overlay_canvas_size(
     assets: RenderAssets,
     profile: _FogProfile,
-    *,
-    stage: Stage | None = None,
 ) -> tuple[int, int]:
-    scale = profile._scale(assets, stage)
+    scale = profile._scale(assets)
     max_radius = int(assets.fov_radius * scale)
     padding = 32
     coverage_width = max(assets.screen_width * 2, max_radius * 2)
@@ -205,7 +201,6 @@ def save_fog_cache_profile(
     assets: RenderAssets,
     profile: _FogProfile,
     *,
-    stage: Stage | None = None,
     output_dir: Path | None = None,
 ) -> Path:
     fog_data: dict[str, Any] = {"hatch_patterns": {}, "overlays": {}}
@@ -213,7 +208,6 @@ def save_fog_cache_profile(
         fog_data,
         assets,
         profile,
-        stage=stage,
         use_disk_cache=False,
     )
     hard_alpha = pg_surfarray.array_alpha(overlay_entry["hard"]).T.astype(np.uint8)
@@ -235,26 +229,23 @@ def save_fog_cache_profile(
 def save_all_fog_caches(
     assets: RenderAssets,
     *,
-    stage: Stage | None = None,
     output_dir: Path | None = None,
 ) -> list[Path]:
     return [
-        save_fog_cache_profile(assets, profile, stage=stage, output_dir=output_dir)
+        save_fog_cache_profile(assets, profile, output_dir=output_dir)
         for profile in _FogProfile
     ]
 
 
-def save_dark0_fog_cache(assets: RenderAssets, *, stage: Stage | None = None) -> Path:
-    return save_fog_cache_profile(assets, _FogProfile.DARK0, stage=stage)
+def save_dark0_fog_cache(assets: RenderAssets) -> Path:
+    return save_fog_cache_profile(assets, _FogProfile.DARK0)
 
 
 def get_shared_fog_cache(assets: RenderAssets) -> dict[str, Any] | None:
     return _SHARED_FOG_CACHE_BY_CELL_SIZE.get(_fog_cell_size_key(assets))
 
 
-def load_shared_fog_cache_from_files(
-    assets: RenderAssets, *, stage: Stage | None = None
-) -> dict[str, Any] | None:
+def load_shared_fog_cache_from_files(assets: RenderAssets) -> dict[str, Any] | None:
     """Load shared fog cache from bundled/user cache files only (no generation)."""
 
     key = _fog_cell_size_key(assets)
@@ -265,7 +256,7 @@ def load_shared_fog_cache_from_files(
     fog_data: dict[str, Any] = {"hatch_patterns": {}, "overlays": {}}
     overlays = fog_data["overlays"]
     for profile in _FogProfile:
-        width, height = _overlay_canvas_size(assets, profile, stage=stage)
+        width, height = _overlay_canvas_size(assets, profile)
         loaded = _load_cached_overlay_entry(
             assets,
             profile,
@@ -276,109 +267,7 @@ def load_shared_fog_cache_from_files(
         overlays[profile] = loaded
 
     _SHARED_FOG_CACHE_BY_CELL_SIZE[key] = fog_data
-    _SHARED_FOG_PREWARM_WORKING_BY_CELL_SIZE.pop(key, None)
-    _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE.pop(key, None)
     return fog_data
-
-
-def get_shared_fog_prewarm_progress(assets: RenderAssets) -> tuple[int, int]:
-    key = _fog_cell_size_key(assets)
-    total = len(_FogProfile)
-    if key in _SHARED_FOG_CACHE_BY_CELL_SIZE:
-        return total, total
-    current = _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE.get(key, 0)
-    return current, total
-
-
-def prewarm_shared_fog_cache_step(
-    assets: RenderAssets,
-    *,
-    stage: Stage | None = None,
-) -> tuple[int, int]:
-    """Build one fog profile step for the shared cache for the given cell-size."""
-
-    key = _fog_cell_size_key(assets)
-    profiles = list(_FogProfile)
-    total = len(profiles)
-    if key in _SHARED_FOG_CACHE_BY_CELL_SIZE:
-        return total, total
-
-    fog_data = _SHARED_FOG_PREWARM_WORKING_BY_CELL_SIZE.setdefault(
-        key,
-        {"hatch_patterns": {}, "overlays": {}},
-    )
-    index = _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE.get(key, 0)
-    if index >= total:
-        _SHARED_FOG_CACHE_BY_CELL_SIZE[key] = fog_data
-        _SHARED_FOG_PREWARM_WORKING_BY_CELL_SIZE.pop(key, None)
-        _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE.pop(key, None)
-        return total, total
-
-    profile = profiles[index]
-    _get_fog_overlay_surfaces(
-        fog_data,
-        assets,
-        profile,
-        stage=stage,
-    )
-    index += 1
-    if index >= total:
-        _SHARED_FOG_CACHE_BY_CELL_SIZE[key] = fog_data
-        _SHARED_FOG_PREWARM_WORKING_BY_CELL_SIZE.pop(key, None)
-        _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE.pop(key, None)
-    else:
-        _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE[key] = index
-    return index, total
-
-
-def prewarm_shared_fog_cache(
-    assets: RenderAssets,
-    *,
-    stage: Stage | None = None,
-    progress_callback: Callable[[int, int], None] | None = None,
-) -> dict[str, Any]:
-    """Ensure shared fog cache for the given cell-size is fully built."""
-
-    cached = get_shared_fog_cache(assets)
-    profiles = list(_FogProfile)
-    total = len(profiles)
-    if cached is not None:
-        if progress_callback is not None:
-            progress_callback(total, total)
-        return cached
-
-    while True:
-        current, total = prewarm_shared_fog_cache_step(assets, stage=stage)
-        if progress_callback is not None:
-            progress_callback(current, total)
-        if current >= total:
-            break
-    cached = get_shared_fog_cache(assets)
-    if cached is None:
-        raise RuntimeError("shared fog cache build failed")
-    return cached
-
-
-def prewarm_fog_overlays(
-    fog_data: dict[str, Any],
-    assets: RenderAssets,
-    *,
-    stage: Stage | None = None,
-    progress_callback: Callable[[int, int], None] | None = None,
-) -> None:
-    """Populate fog overlay cache for each reachable flashlight count."""
-
-    profiles = list(_FogProfile)
-    total = len(profiles)
-    for index, profile in enumerate(profiles, start=1):
-        _get_fog_overlay_surfaces(
-            fog_data,
-            assets,
-            profile,
-            stage=stage,
-        )
-        if progress_callback is not None:
-            progress_callback(index, total)
 
 
 def _soften_surface(
@@ -481,7 +370,6 @@ def _get_fog_overlay_surfaces(
     assets: RenderAssets,
     profile: _FogProfile,
     *,
-    stage: Stage | None = None,
     use_disk_cache: bool = True,
 ) -> dict[str, Any]:
     overlays = fog_data.setdefault("overlays", {})
@@ -489,13 +377,9 @@ def _get_fog_overlay_surfaces(
     if key in overlays:
         return overlays[key]
 
-    scale = profile._scale(assets, stage)
+    width, height = _overlay_canvas_size(assets, profile)
+    scale = profile._scale(assets)
     max_radius = int(assets.fov_radius * scale)
-    padding = 32
-    coverage_width = max(assets.screen_width * 2, max_radius * 2)
-    coverage_height = max(assets.screen_height * 2, max_radius * 2)
-    width = coverage_width + padding * 2
-    height = coverage_height + padding * 2
 
     if use_disk_cache:
         cached = _load_cached_overlay_entry(
@@ -621,7 +505,6 @@ def _draw_fog_of_war(
         fog_surfaces,
         assets,
         profile,
-        stage=stage,
     )
     combined_surface: surface.Surface = overlay["combined"]
     screen.blit(

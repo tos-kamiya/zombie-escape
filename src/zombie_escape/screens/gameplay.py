@@ -442,10 +442,7 @@ class GameplayScreenRunner:
 
         shared_fog_cache = get_shared_fog_cache(self.render_assets)
         if shared_fog_cache is None:
-            shared_fog_cache = load_shared_fog_cache_from_files(
-                self.render_assets,
-                stage=self.stage,
-            )
+            shared_fog_cache = load_shared_fog_cache_from_files(self.render_assets)
         if shared_fog_cache is None:
             raise RuntimeError("Fog cache unavailable")
         self.game_data.fog = shared_fog_cache

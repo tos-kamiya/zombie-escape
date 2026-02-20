@@ -9,7 +9,7 @@ from ..colors import YELLOW, get_environment_palette
 from ..models import FuelProgress, GameData
 from ..render_assets import RenderAssets
 from .entity_layer import _draw_entities, _draw_lineformer_train_markers
-from .fog import _draw_fog_of_war, prewarm_fog_overlays
+from .fog import _draw_fog_of_war
 from .fx import (
     _draw_decay_fx,
     _draw_fade_in_overlay,
@@ -47,7 +47,6 @@ __all__ = [
     "blit_text_wrapped",
     "draw",
     "draw_pause_overlay",
-    "prewarm_fog_overlays",
     "wrap_text",
 ]
 
