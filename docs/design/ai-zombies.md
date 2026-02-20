@@ -96,16 +96,6 @@ Puddle interaction with footprints:
   - `zombie_dog_ratio`
 - Nimble dog spawn share is controlled by `zombie_nimble_dog_ratio` (applied only when dog variant is chosen).
 
-## Congestion Mitigation for Trackers
-
-To avoid over-stacking on the same footprint lane:
-
-- Tracker -> wander fallback:
-  - Count trackers by `(32px grid cell, 8-direction bin)`.
-  - If the local lane count reaches threshold, force one tracker to wander.
-- Wander -> tracker relock control:
-  - After forced fallback, trackers ignore older footprints until relock delay elapses.
-
 ## Pitfall Interaction
 
 - Zombies can fall and be removed when entering pitfall cells.
