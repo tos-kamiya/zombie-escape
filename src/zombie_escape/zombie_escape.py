@@ -218,6 +218,7 @@ def main() -> None:
                 config,
                 FPS,
                 screen_size=menu_screen.get_size(),
+                stages=STAGES,
             )
         elif next_screen == ScreenID.TITLE:
             adjust_menu_logical_size()

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Sequence
 
 import pygame
 from pygame import surface, time
@@ -9,6 +9,10 @@ from ..colors import BLACK, LIGHT_GRAY, WHITE
 from ..font_utils import load_font
 from ..localization import get_font_settings
 from ..localization import translate as tr
+from ..level_constants import DEFAULT_CELL_SIZE
+from ..models import Stage
+from ..render_constants import build_render_assets
+from ..render.fog import load_shared_fog_cache_from_files
 from ..input_utils import (
     InputHelper,
 )
@@ -38,6 +42,7 @@ def startup_check_screen(
     fps: int,
     *,
     screen_size: tuple[int, int],
+    stages: Sequence[Stage],
 ) -> ScreenTransition:
     """Gate entry to title screen if confirm is held on startup."""
     width, height = screen.get_size()
@@ -46,6 +51,79 @@ def startup_check_screen(
 
     input_helper = InputHelper()
     pygame.event.pump()
+
+    unique_cell_sizes = sorted({int(stage.cell_size) for stage in stages if stage.available})
+    if not unique_cell_sizes:
+        unique_cell_sizes = [DEFAULT_CELL_SIZE]
+    fog_cache_error: str | None = None
+    for cell_size in unique_cell_sizes:
+        assets = build_render_assets(cell_size)
+        if load_shared_fog_cache_from_files(assets) is None:
+            fog_cache_error = (
+                "Fog cache load failed. "
+                "Run --build-fog-cache-dark0 and restart."
+            )
+            break
+
+    if fog_cache_error is not None:
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return ScreenTransition(ScreenID.EXIT)
+                if event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE):
+                    sync_window_size(event)
+                    adjust_menu_logical_size()
+                    width, height = screen.get_size()
+
+            screen.fill(BLACK)
+            try:
+                font_settings = get_font_settings()
+                message_font = load_font(
+                    font_settings.resource, font_settings.scaled_size(20)
+                )
+                sub_font = load_font(
+                    font_settings.resource, font_settings.scaled_size(11)
+                )
+                max_width = max(1, width - 48)
+                message = "Startup error"
+                sub_message = fog_cache_error
+                msg_width, msg_height, _ = _measure_text_block(
+                    message,
+                    message_font,
+                    max_width,
+                    line_height_scale=font_settings.line_height_scale,
+                )
+                _, sub_height, _ = _measure_text_block(
+                    sub_message,
+                    sub_font,
+                    max_width,
+                    line_height_scale=font_settings.line_height_scale,
+                )
+                total_height = msg_height + 8 + sub_height
+                top = max(24, height // 2 - total_height // 2)
+                left = max(24, width // 2 - msg_width // 2)
+                blit_text_wrapped(
+                    screen,
+                    message,
+                    message_font,
+                    WHITE,
+                    (left, top),
+                    max_width,
+                    line_height_scale=font_settings.line_height_scale,
+                )
+                blit_text_wrapped(
+                    screen,
+                    sub_message,
+                    sub_font,
+                    LIGHT_GRAY,
+                    (24, top + msg_height + 8),
+                    max_width,
+                    line_height_scale=font_settings.line_height_scale,
+                )
+            except pygame.error as exc:
+                print(f"Error rendering startup check screen: {exc}")
+            present(screen)
+            clock.tick(fps)
 
     if not input_helper.is_confirm_held():
         return ScreenTransition(ScreenID.TITLE)

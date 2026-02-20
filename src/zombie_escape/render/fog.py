@@ -75,6 +75,22 @@ def _fog_cell_size_key(assets: RenderAssets) -> int:
     return int(assets.internal_wall_grid_snap)
 
 
+def _overlay_canvas_size(
+    assets: RenderAssets,
+    profile: _FogProfile,
+    *,
+    stage: Stage | None = None,
+) -> tuple[int, int]:
+    scale = profile._scale(assets, stage)
+    max_radius = int(assets.fov_radius * scale)
+    padding = 32
+    coverage_width = max(assets.screen_width * 2, max_radius * 2)
+    coverage_height = max(assets.screen_height * 2, max_radius * 2)
+    width = coverage_width + padding * 2
+    height = coverage_height + padding * 2
+    return width, height
+
+
 def _fog_cache_dir() -> Path:
     override = os.environ.get("ZOMBIE_ESCAPE_FOG_CACHE_DIR")
     if override:
@@ -234,6 +250,35 @@ def save_dark0_fog_cache(assets: RenderAssets, *, stage: Stage | None = None) ->
 
 def get_shared_fog_cache(assets: RenderAssets) -> dict[str, Any] | None:
     return _SHARED_FOG_CACHE_BY_CELL_SIZE.get(_fog_cell_size_key(assets))
+
+
+def load_shared_fog_cache_from_files(
+    assets: RenderAssets, *, stage: Stage | None = None
+) -> dict[str, Any] | None:
+    """Load shared fog cache from bundled/user cache files only (no generation)."""
+
+    key = _fog_cell_size_key(assets)
+    cached = _SHARED_FOG_CACHE_BY_CELL_SIZE.get(key)
+    if cached is not None:
+        return cached
+
+    fog_data: dict[str, Any] = {"hatch_patterns": {}, "overlays": {}}
+    overlays = fog_data["overlays"]
+    for profile in _FogProfile:
+        width, height = _overlay_canvas_size(assets, profile, stage=stage)
+        loaded = _load_cached_overlay_entry(
+            assets,
+            profile,
+            expected_size=(width, height),
+        )
+        if loaded is None:
+            return None
+        overlays[profile] = loaded
+
+    _SHARED_FOG_CACHE_BY_CELL_SIZE[key] = fog_data
+    _SHARED_FOG_PREWARM_WORKING_BY_CELL_SIZE.pop(key, None)
+    _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE.pop(key, None)
+    return fog_data
 
 
 def get_shared_fog_prewarm_progress(assets: RenderAssets) -> tuple[int, int]:

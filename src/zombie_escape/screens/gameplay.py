@@ -67,7 +67,7 @@ from ..render import (
     draw_pause_overlay,
     blit_message_wrapped,
 )
-from ..render.fog import get_shared_fog_cache, prewarm_shared_fog_cache
+from ..render.fog import get_shared_fog_cache, load_shared_fog_cache_from_files
 from ..render.hud import build_time_accel_text
 from ..render_constants import (
     GAMEPLAY_FONT_SIZE,
@@ -442,10 +442,12 @@ class GameplayScreenRunner:
 
         shared_fog_cache = get_shared_fog_cache(self.render_assets)
         if shared_fog_cache is None:
-            shared_fog_cache = prewarm_shared_fog_cache(
+            shared_fog_cache = load_shared_fog_cache_from_files(
                 self.render_assets,
                 stage=self.stage,
             )
+        if shared_fog_cache is None:
+            raise RuntimeError("Fog cache unavailable")
         self.game_data.fog = shared_fog_cache
 
         if self.stage.intro_key and self.game_data.state.timed_message:
