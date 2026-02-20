@@ -491,7 +491,7 @@ class ZombieDog(pygame.sprite.Sprite):
             1, int(self.collision_radius * ENTITY_SHADOW_RADIUS_MULT)
         )
         self.shadow_offset_scale = 1.0
-        self._apply_render_overlays()
+        self._refresh_variant_image()
 
     def _build_nimble_directional_images(
         self: Self, base_images: list[pygame.Surface]
@@ -633,7 +633,7 @@ class ZombieDog(pygame.sprite.Sprite):
             return
         center = self.rect.center
         self.facing_bin = new_bin
-        self._apply_render_overlays()
+        self._refresh_variant_image()
         self.rect = self.image.get_rect(center=center)
 
     def _update_facing_from_movement(self: Self, dx: float, dy: float) -> None:
@@ -847,11 +847,14 @@ class ZombieDog(pygame.sprite.Sprite):
             final_y = next_y
         return final_x, final_y, hit_x, hit_y
 
-    def _apply_render_overlays(self: Self) -> None:
+    def _refresh_variant_image(self: Self) -> None:
         self.image = self.directional_images[self.facing_bin]
 
+    def refresh_image(self: Self) -> None:
+        self._refresh_variant_image()
+
     def _apply_paralyze_overlay(self: Self, now_ms: int) -> None:
-        self._apply_render_overlays()
+        self._refresh_variant_image()
         image = self.image.copy()
         center = image.get_rect().center
         marker_size = max(6, int(self.short_axis * 0.8))
@@ -969,7 +972,7 @@ class ZombieDog(pygame.sprite.Sprite):
         if self.patrol_paralyze_until_ms > now:
             self._apply_paralyze_overlay(now)
         else:
-            self._apply_render_overlays()
+            self._refresh_variant_image()
         self.last_move_dx = move_x
         self.last_move_dy = move_y
 

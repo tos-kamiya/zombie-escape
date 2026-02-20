@@ -181,7 +181,7 @@ class Zombie(pygame.sprite.Sprite):
         self.solitary_eval_frame_counter = 0
         self.solitary_committed_move: tuple[int, int] | None = None
         self.solitary_previous_move: tuple[int, int] | None = None
-        self._apply_render_overlays()
+        self._refresh_variant_image()
 
     @property
     def max_health(self: Self) -> int:
@@ -507,7 +507,7 @@ class Zombie(pygame.sprite.Sprite):
             return
         center = self.rect.center
         self.facing_bin = new_bin
-        self._apply_render_overlays()
+        self._refresh_variant_image()
         self.rect = self.image.get_rect(center=center)
 
     def _update_facing_from_movement(self: Self, dx: float, dy: float) -> None:
@@ -589,7 +589,7 @@ class Zombie(pygame.sprite.Sprite):
             )
         return base_surface
 
-    def _apply_render_overlays(self: Self) -> None:
+    def _refresh_variant_image(self: Self) -> None:
         if self.kind in (ZombieKind.TRACKER, ZombieKind.SOLITARY):
             self.image = self.directional_images[self.facing_bin]
             return
@@ -610,8 +610,11 @@ class Zombie(pygame.sprite.Sprite):
             self._dynamic_variant_image_cache[key] = image
         self.image = image
 
+    def refresh_image(self: Self) -> None:
+        self._refresh_variant_image()
+
     def _apply_paralyze_overlay(self: Self, now_ms: int) -> None:
-        self._apply_render_overlays()
+        self._refresh_variant_image()
         self.image = self.image.copy()
         center = self.image.get_rect().center
         marker_size = max(6, int(self.radius * 0.8))
@@ -759,7 +762,7 @@ class Zombie(pygame.sprite.Sprite):
             cell_size=cell_size,
         )
         self._update_facing_from_movement(move_x, move_y)
-        self._apply_render_overlays()
+        self._refresh_variant_image()
         self.last_move_dx = move_x
         self.last_move_dy = move_y
         possible_walls = [

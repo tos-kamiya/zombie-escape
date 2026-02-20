@@ -280,7 +280,7 @@ def export_images(
     saved.append(zombie_normal_path)
 
     tracker = Zombie(center_x, center_y, kind=ZombieKind.TRACKER)
-    tracker._apply_render_overlays()
+    tracker.refresh_image()
     tracker_surface = _render_studio_snapshot(
         cell_size=cell_size,
         target_rect=tracker.rect,
@@ -294,7 +294,7 @@ def export_images(
     wall_hugging = Zombie(center_x, center_y, kind=ZombieKind.WALL_HUGGER)
     wall_hugging.wall_hug_side = 1.0
     wall_hugging.wall_hug_last_side_has_wall = True
-    wall_hugging._apply_render_overlays()
+    wall_hugging.refresh_image()
     wall_surface = _render_studio_snapshot(
         cell_size=cell_size,
         target_rect=wall_hugging.rect,
@@ -307,7 +307,7 @@ def export_images(
 
     lineformer = Zombie(center_x, center_y, kind=ZombieKind.LINEFORMER)
     lineformer.lineformer_target_pos = (center_x + cell_size, center_y)
-    lineformer._apply_render_overlays()
+    lineformer.refresh_image()
     lineformer_surface = _render_studio_snapshot(
         cell_size=cell_size,
         target_rect=lineformer.rect,
@@ -319,7 +319,7 @@ def export_images(
     saved.append(lineformer_path)
 
     solitary = Zombie(center_x, center_y, kind=ZombieKind.SOLITARY)
-    solitary._apply_render_overlays()
+    solitary.refresh_image()
     solitary_surface = _render_studio_snapshot(
         cell_size=cell_size,
         target_rect=solitary.rect,

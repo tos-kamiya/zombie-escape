@@ -182,8 +182,8 @@ def test_tracker_dog_draws_nose_marker_overlay() -> None:
 
     tracker._set_facing_bin(0)
     normal._set_facing_bin(0)
-    tracker._apply_render_overlays()
-    normal._apply_render_overlays()
+    tracker.refresh_image()
+    normal.refresh_image()
 
     tracker_nose_pixels = _count_rgb_pixels(tracker.image, ZOMBIE_NOSE_COLOR)
     normal_nose_pixels = _count_rgb_pixels(normal.image, ZOMBIE_NOSE_COLOR)
