@@ -4,13 +4,18 @@
 
 - Fire floor visual:
   - Fire floor tiles are rendered as an animated floor feature.
-  - Animation uses a small loop (about 3 frames) with slow phase progression.
+  - Animation uses a 3-frame loop.
 - Metal floor visual:
   - `metal_floor_cells` are rendered as a distinct industrial floor tile.
   - Behavior remains identical to normal floor; this is a visual transition layer
     around fire floor regions.
+- Puddle floor visual:
+  - Puddle tiles render additive ripple rings.
+  - Puddle animation uses a 12-frame loop.
+  - Timing is aligned so one puddle loop matches four fire-floor loops
+    (fire: `3 frames x 4`, puddle: `12 frames x 1`).
 - Draw-order intent:
-  - Fire/metal floor rendering is handled in world-tile pass, before entities and fog.
+  - Fire/metal/puddle floor rendering is handled in world-tile pass, before entities and fog.
 
 Supporting modules:
 - `src/zombie_escape/render_assets.py` (procedural sprite/icon construction used by renderers and UI)
@@ -75,3 +80,5 @@ Supporting modules:
 - `draw_debug_overview()`: scaled full-map visualization with camera frame and status bar.
 - Game-over overview and debug overview share the same `draw_debug_overview()`
   rendering path.
+- Puddle cells are drawn as simple circular markers (not animated ripple rings)
+  for readability at reduced scale.

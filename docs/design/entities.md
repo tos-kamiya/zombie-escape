@@ -70,6 +70,7 @@
 - Terrain-only slow tile (`w`), not a sprite.
 - Applies movement speed factor while on puddle cells.
 - Spiky plant slow has higher priority than puddle slow.
-- Visualized with animated ripple rings in normal and overview renders.
+- In gameplay render, visualized with animated ripple-ring tiles.
+- In overview render, visualized as a simple circle marker for readability.
 - Puddle cells suppress footprint recording, so long puddle crossings
   can create scent gaps for tracker zombies.
