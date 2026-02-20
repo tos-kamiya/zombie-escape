@@ -1272,13 +1272,15 @@ def get_character_icon(kind: str, size: int) -> pygame.Surface:
         )[0]
     elif kind == "patrol_bot":
         # Patrol bot size in build_patrol_bot_directional_surfaces is total diameter.
-        # Humanoids use 'size' as radius, so their diameter is ~2*size.
-        # Robot is significantly larger than humanoids in-game, so we use 4*size.
-        return build_patrol_bot_directional_surfaces(size * 4)[0]
+        # Match icon-vs-gameplay scale closer to the player icon ratio.
+        # For title icon_radius=3, this yields 11px (vs prior 12px).
+        icon_size = max(1, int(round(size * (11.0 / 3.0))))
+        return build_patrol_bot_directional_surfaces(icon_size)[0]
     elif kind == "car":
-        # Create a small car icon.
-        width = size * 2
-        height = int(width * 1.4)
+        # Match icon-vs-gameplay scale closer to the player icon ratio.
+        # For title icon_radius=3, this yields 9x13 before title rotation.
+        width = max(1, int(round(size * 3.0)))
+        height = max(1, int(round(size * (13.0 / 3.0))))
         surf = pygame.Surface((width, height), pygame.SRCALPHA)
         paint_car_surface(
             surf,
