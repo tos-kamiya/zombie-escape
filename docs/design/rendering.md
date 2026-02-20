@@ -70,6 +70,8 @@ Supporting modules:
   via `_draw_status_bar` in both gameplay and overview paths.
 - Debug lineformer display includes real-entity and marker totals.
 - Lineformer train markers use cached directional sprites and are blitted per marker (instead of rebuilding arm lines every frame).
+- Tracker zombie dogs use a baked nose-line marker in their directional sprites
+  (not a separate post-sprite overlay pass).
 - Timed messages support alignment mode and stay readable during fade transitions.
 - During fog-overlay prewarm, a localized loading status is drawn at the bottom
   of the loading still (separate from intro text area).

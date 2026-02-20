@@ -38,6 +38,7 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
 ## Tracker Zombie Dog
 
 - Dog sub-variant `tracker` follows footprints while the player is out of sight.
+- Tracker dog has a nose-line visual marker for identification (same style family as tracker zombie).
 - Trail-loss and re-lock behavior matches tracker zombies:
   - same loss timeout progression rule,
   - same boundary-time based re-lock gate (`time > ignore_boundary`),
