@@ -20,7 +20,7 @@ uv run -p .venv/bin/python -m zombie_escape --build-fog-cache
   - Example: `fog_dark0_cell16_hard.v1.png`
   - Example: `fog_dark0_cell16_combined.v1.png`
 
-## INPROGRESS: Bundled Fog Asset Format (PNG + Filename Version)
+## Bundled Fog Asset Format (PNG + Filename Version)
 
 Bundled fog files are now PNG release assets (not runtime-generated cache
 files).
@@ -35,7 +35,7 @@ files).
 - Validation policy: on mismatch/missing assets, fail startup with explicit error
 
 Notes:
-- This is an in-progress spec and may still be refined.
+- Bundled fog files are treated as release assets, not runtime-generated cache.
 
 ## Runtime Behavior
 

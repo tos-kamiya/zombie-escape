@@ -30,6 +30,7 @@ This file is the main documentation index.
 - `docs/developer/zone-from-ascii.md`: ASCII map to zone settings tool.
 - `docs/developer/wall-hug-optimization.md`: Wall-hug AI tuning notes.
 - `docs/developer/user-input-spec.md`: Input normalization spec.
+- `docs/developer/fog-cache-cli.md`: Fog asset build command and runtime expectations.
 
 ## Other
 
