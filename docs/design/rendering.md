@@ -76,6 +76,17 @@ Supporting modules:
 - During fog-overlay prewarm, a localized loading status is drawn at the bottom
   of the loading still (separate from intro text area).
 
+## Variant Marker Sprite Strategy
+
+- Zombie variant markers are selected from prebuilt directional sprite caches
+  (instead of per-frame overlay drawing).
+- Wall-hugger marker states are modeled as three discrete states:
+  `none`, `right-hand`, `left-hand`.
+- Lineformer arm direction is quantized to 16 bins and selected by
+  `(facing_bin, target_bin16)` key.
+- Tracker/solitary markers are treated as static per-facing overlays and baked
+  into directional images.
+
 ## Overviews (`overview.py`)
 
 - `draw_level_overview()`: core full-map drawing pass (terrain, entities, zombies).
