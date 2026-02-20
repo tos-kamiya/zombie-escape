@@ -271,6 +271,10 @@ class InputHelper:
             return True
         return self._held_confirm_button()
 
+    def is_select_held(self) -> bool:
+        """Return True if gamepad Select/Back is currently held."""
+        return self._held_select_button()
+
     def _mark_keyboard_action(self, target: dict[CommonAction, bool], key: int) -> None:
         for action, action_keys in self._KEYBOARD_ACTION_KEYS.items():
             if key in action_keys:

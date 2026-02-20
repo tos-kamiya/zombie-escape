@@ -969,6 +969,12 @@ class TitleScreenController:
         if snapshot.shortcut_pressed(KeyboardShortcut.TOGGLE_FULLSCREEN):
             toggle_fullscreen()
             adjust_menu_logical_size()
+        # Secret pad gesture: hold Select/Back + South(A) to toggle fullscreen.
+        if self.input_helper.is_select_held():
+            if snapshot.pressed(CommonAction.CONFIRM):
+                toggle_fullscreen()
+                adjust_menu_logical_size()
+                return None
         if snapshot.pressed(CommonAction.LEFT):
             if self._current_option_is_fullscreen():
                 nudge_menu_window_scale(0.5)
