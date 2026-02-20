@@ -260,11 +260,19 @@ def _zombie_update_tracker_target(
     *,
     cell_size: int,
     now_ms: int,
+    player_center: tuple[float, float] | None = None,
 ) -> None:
     """Compatibility shim for tests; implementation lives in zombie_movement."""
     from .zombie_movement import _zombie_update_tracker_target as _impl
 
-    _impl(zombie, footprints, layout, cell_size=cell_size, now_ms=now_ms)
+    _impl(
+        zombie,
+        footprints,
+        layout,
+        cell_size=cell_size,
+        now_ms=now_ms,
+        player_center=player_center,
+    )
 
 
 def _zombie_wall_hug_movement(

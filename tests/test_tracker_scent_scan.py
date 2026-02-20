@@ -1,8 +1,11 @@
+import math
+
 import pygame
 
 from zombie_escape.entities import Zombie
-from zombie_escape.entities_constants import ZombieKind
+from zombie_escape.entities_constants import ZombieKind, ZOMBIE_TRACKER_LOST_TIMEOUT_MS
 from zombie_escape.entities.movement import _zombie_update_tracker_target
+from zombie_escape.entities.zombie_movement import _zombie_tracker_movement
 from zombie_escape.level_constants import (
     DEFAULT_CELL_SIZE,
     DEFAULT_GRID_COLS,
@@ -101,3 +104,110 @@ def test_tracker_limits_to_top_k_candidates() -> None:
         now_ms=0,
     )
     assert zombie.tracker_target_pos is None
+
+
+def test_tracker_marks_trail_lost_after_timeout_without_newer_footprint() -> None:
+    zombie = Zombie(10, 10, kind=ZombieKind.TRACKER)
+    _force_scan(zombie)
+    layout = _make_layout(wall_cells=set())
+    zombie.tracker_target_pos = (40, 10)
+    zombie.tracker_target_time = 2000
+    zombie.tracker_last_progress_ms = 0
+    footprints = [
+        _make_footprint((30, 10), 1000),
+        _make_footprint((40, 10), 2000),
+    ]
+
+    _zombie_update_tracker_target(
+        zombie,
+        footprints,
+        layout,
+        cell_size=DEFAULT_CELL_SIZE,
+        now_ms=ZOMBIE_TRACKER_LOST_TIMEOUT_MS - 1,
+    )
+    assert zombie.tracker_target_time == 2000
+
+    _zombie_update_tracker_target(
+        zombie,
+        footprints,
+        layout,
+        cell_size=DEFAULT_CELL_SIZE,
+        now_ms=ZOMBIE_TRACKER_LOST_TIMEOUT_MS,
+    )
+    assert zombie.tracker_target_pos is None
+    assert zombie.tracker_target_time is None
+    assert zombie.tracker_ignore_before_or_at_time == 2000
+
+
+def test_tracker_reacquires_only_newer_than_lost_boundary() -> None:
+    zombie = Zombie(10, 10, kind=ZombieKind.TRACKER)
+    _force_scan(zombie)
+    layout = _make_layout(wall_cells=set())
+    zombie.tracker_ignore_before_or_at_time = 2000
+    footprints = [
+        _make_footprint((30, 10), 1000),
+        _make_footprint((40, 10), 2000),
+        _make_footprint((50, 10), 2500),
+    ]
+    _zombie_update_tracker_target(
+        zombie,
+        footprints,
+        layout,
+        cell_size=DEFAULT_CELL_SIZE,
+        now_ms=0,
+    )
+    assert zombie.tracker_target_time == 2500
+    assert zombie.tracker_target_pos == (50, 10)
+
+
+def test_tracker_loss_sets_wander_heading_toward_near_player() -> None:
+    zombie = Zombie(110, 110, kind=ZombieKind.TRACKER)
+    zombie.tracker_scan_interval_ms = 0
+    zombie.tracker_last_scan_time = -999999
+    layout = _make_layout(wall_cells=set())
+    zombie.tracker_target_pos = (140, 110)
+    zombie.tracker_target_time = 2000
+    zombie.tracker_last_progress_ms = 0
+    footprints = [
+        _make_footprint((120, 110), 1000),
+        _make_footprint((140, 110), 2000),
+    ]
+    near_player = (150.0, 110.0)
+
+    move_x, move_y = _zombie_tracker_movement(
+        zombie,
+        DEFAULT_CELL_SIZE,
+        layout,
+        near_player,
+        [],
+        footprints,
+        now_ms=ZOMBIE_TRACKER_LOST_TIMEOUT_MS,
+    )
+
+    assert zombie.tracker_target_time is None
+    assert move_x > 0
+    expected = math.atan2(near_player[1] - zombie.y, near_player[0] - zombie.x)
+    actual = math.atan2(move_y, move_x)
+    assert abs(actual - expected) < 1e-6
+
+
+def test_tracker_force_wander_sets_initial_wander_heading_toward_near_player() -> None:
+    zombie = Zombie(110, 110, kind=ZombieKind.TRACKER)
+    zombie.tracker_force_wander = True
+    layout = _make_layout(wall_cells=set())
+    near_player = (150.0, 110.0)
+
+    move_x, move_y = _zombie_tracker_movement(
+        zombie,
+        DEFAULT_CELL_SIZE,
+        layout,
+        near_player,
+        [],
+        [],
+        now_ms=0,
+    )
+
+    assert move_x > 0
+    expected = math.atan2(near_player[1] - zombie.y, near_player[0] - zombie.x)
+    actual = math.atan2(move_y, move_x)
+    assert abs(actual - expected) < 1e-6

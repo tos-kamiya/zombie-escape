@@ -6,6 +6,7 @@ import pygame
 
 from .constants import FOOTPRINT_MAX, FOOTPRINT_STEP_DISTANCE
 from ..models import Footprint, GameData
+from ..surface_effects import is_in_puddle_cell
 
 
 def get_shrunk_sprite(
@@ -44,7 +45,15 @@ def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
     now = state.clock.elapsed_ms
 
     footprints = state.footprints
-    if not player.in_car:
+    in_puddle = is_in_puddle_cell(
+        player.x,
+        player.y,
+        cell_size=game_data.cell_size,
+        puddle_cells=game_data.layout.puddle_cells,
+    )
+    if player.in_car or in_puddle:
+        state.last_footprint_pos = None
+    else:
         last_pos = state.last_footprint_pos
         step_distance = FOOTPRINT_STEP_DISTANCE * 0.5
         step_distance_sq = step_distance * step_distance

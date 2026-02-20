@@ -1217,6 +1217,30 @@ STAGES: list[Stage] = [
         endurance_stage=True,
         endurance_goal_ms=600_000,
     ),
+    Stage(
+        id="stage36",
+        name_key="stages.stage36.name",
+        description_key="stages.stage36.description",
+        available=True,
+        cell_size=50,
+        grid_cols=30,
+        grid_rows=15,
+        wall_algorithm="sparse_ortho.20%",
+        fuel_mode=FuelMode.FUEL_CAN,
+        initial_interior_spawn_rate=0.005,
+        exterior_spawn_weight=0.6,
+        interior_spawn_weight=0.4,
+        zombie_normal_ratio=0.2,
+        zombie_tracker_ratio=0.8,
+        zombie_wall_hugging_ratio=0.0,
+        zombie_lineformer_ratio=0.0,
+        zombie_dog_ratio=0.0,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
+        puddle_zones=[
+            (2, 7, 26, 1),
+        ],
+        puddle_density=0.02,
+    ),
 ]
 DEFAULT_STAGE_ID = "stage1"
 

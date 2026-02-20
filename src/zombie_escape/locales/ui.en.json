@@ -224,6 +224,10 @@
         "name": "#35 Spiky Plant",
         "description": "Use the spiky plants to block the zombies.",
         "intro": "(The spiky plants...\nLet's survive here until dawn.)"
+      },
+      "stage36": {
+        "name": "#36 Tracker + Puddle Test",
+        "description": "A verification stage with many tracker zombies and broad puddle lanes."
       }
     },
     "status": {

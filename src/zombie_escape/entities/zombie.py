@@ -25,6 +25,7 @@ from ..entities_constants import (
     ZOMBIE_SEPARATION_DISTANCE,
     ZOMBIE_SPEED,
     ZOMBIE_TRACKER_SCAN_INTERVAL_MS,
+    ZOMBIE_TRACKER_LOST_TIMEOUT_MS,
     ZOMBIE_TRACKER_WANDER_INTERVAL_MS,
     ZOMBIE_WALL_DAMAGE,
     ZOMBIE_WANDER_INTERVAL_MS,
@@ -143,6 +144,9 @@ class Zombie(pygame.sprite.Sprite):
         self.tracker_target_time: int | None = None
         self.tracker_last_scan_time = 0
         self.tracker_scan_interval_ms = ZOMBIE_TRACKER_SCAN_INTERVAL_MS
+        self.tracker_lost_timeout_ms = ZOMBIE_TRACKER_LOST_TIMEOUT_MS
+        self.tracker_last_progress_ms: int | None = None
+        self.tracker_ignore_before_or_at_time: int | None = None
         self.tracker_relock_after_time: int | None = None
         self.tracker_force_wander = False
         if self.kind == ZombieKind.WALL_HUGGER:
@@ -155,6 +159,8 @@ class Zombie(pygame.sprite.Sprite):
         self.wall_hug_last_side_has_wall = False
         self.wall_hug_stuck_flag = False
         self.wander_angle = RNG.uniform(0, math.tau)
+        self.is_wandering = False
+        self.just_entered_wander = False
         self.wander_interval_ms = (
             ZOMBIE_TRACKER_WANDER_INTERVAL_MS
             if self.kind == ZombieKind.TRACKER

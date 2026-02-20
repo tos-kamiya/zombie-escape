@@ -31,6 +31,7 @@ from ..entities_constants import (
     ZOMBIE_DOG_SHORT_AXIS_RATIO,
     ZOMBIE_DOG_SIGHT_RANGE,
     ZOMBIE_DOG_WANDER_INTERVAL_MS,
+    ZOMBIE_DOG_WANDER_HEADING_PLAYER_RANGE,
     PATROL_BOT_ZOMBIE_DAMAGE,
     PATROL_BOT_ZOMBIE_DAMAGE_INTERVAL_FRAMES,
     PATROL_BOT_PARALYZE_MS,
@@ -85,7 +86,20 @@ class MovementStrategy(Protocol):
         footprints: list,
         *,
         now_ms: int,
-    ) -> tuple[float, float]: ...
+) -> tuple[float, float]: ...
+
+
+def _set_wander_heading_toward_player_if_close(
+    zombie_dog: "ZombieDog",
+    player_center: tuple[float, float],
+) -> None:
+    dx = player_center[0] - zombie_dog.x
+    dy = player_center[1] - zombie_dog.y
+    dist_sq = dx * dx + dy * dy
+    threshold = ZOMBIE_DOG_WANDER_HEADING_PLAYER_RANGE
+    if dist_sq > threshold * threshold or dist_sq <= 1e-6:
+        return
+    zombie_dog.wander_angle = math.atan2(dy, dx)
 
 
 def _zombie_dog_default_movement(
@@ -155,11 +169,14 @@ def _zombie_dog_default_movement(
     ):
         zombie_dog._set_mode(ZombieDogMode.WANDER)
         zombie_dog.next_charge_available_ms = now_ms + zombie_dog.charge_cooldown_ms
-        zombie_dog.wander_change_time = now_ms
         zombie_dog.charge_direction = None
 
     if zombie_dog.mode == ZombieDogMode.WANDER:
-        if now_ms - zombie_dog.wander_change_time > ZOMBIE_DOG_WANDER_INTERVAL_MS:
+        if zombie_dog.just_entered_wander:
+            _set_wander_heading_toward_player_if_close(zombie_dog, player_center)
+            zombie_dog.just_entered_wander = False
+            zombie_dog.wander_change_time = now_ms
+        elif now_ms - zombie_dog.wander_change_time > ZOMBIE_DOG_WANDER_INTERVAL_MS:
             zombie_dog.wander_change_time = now_ms
             zombie_dog.wander_angle = RNG.uniform(0.0, math.tau)
         move_x = math.cos(zombie_dog.wander_angle) * zombie_dog.speed_patrol
@@ -184,13 +201,11 @@ def _zombie_dog_default_movement(
         if zombie_dog.charge_target is None:
             zombie_dog._set_mode(ZombieDogMode.WANDER)
             zombie_dog.next_charge_available_ms = now_ms + zombie_dog.charge_cooldown_ms
-            zombie_dog.wander_change_time = now_ms
             zombie_dog.charge_direction = None
             return (0.0, 0.0)
         if zombie_dog.charge_distance_remaining <= 0.0:
             zombie_dog._set_mode(ZombieDogMode.WANDER)
             zombie_dog.next_charge_available_ms = now_ms + zombie_dog.charge_cooldown_ms
-            zombie_dog.wander_change_time = now_ms
             zombie_dog.charge_direction = None
             return (0.0, 0.0)
         charge_direction = zombie_dog.charge_direction
@@ -203,7 +218,6 @@ def _zombie_dog_default_movement(
                 zombie_dog.next_charge_available_ms = (
                     now_ms + zombie_dog.charge_cooldown_ms
                 )
-                zombie_dog.wander_change_time = now_ms
                 return (0.0, 0.0)
             charge_direction = (dx / dist, dy / dist)
             zombie_dog.charge_direction = charge_direction
@@ -222,8 +236,13 @@ def _zombie_dog_default_movement(
                 (dy / dist) * zombie_dog.speed_patrol,
             )
     zombie_dog._set_mode(ZombieDogMode.WANDER)
-    zombie_dog.wander_angle = RNG.uniform(0.0, math.tau)
-    zombie_dog.wander_change_time = now_ms
+    if zombie_dog.just_entered_wander:
+        _set_wander_heading_toward_player_if_close(zombie_dog, player_center)
+        zombie_dog.just_entered_wander = False
+        zombie_dog.wander_change_time = now_ms
+    if zombie_dog.wander_change_time != now_ms:
+        zombie_dog.wander_angle = RNG.uniform(0.0, math.tau)
+        zombie_dog.wander_change_time = now_ms
     return (
         math.cos(zombie_dog.wander_angle) * zombie_dog.speed_patrol,
         math.sin(zombie_dog.wander_angle) * zombie_dog.speed_patrol,
@@ -250,6 +269,7 @@ class ZombieDog(pygame.sprite.Sprite):
         self.initial_speed_assault = self.speed_assault
         self.sight_range = ZOMBIE_DOG_SIGHT_RANGE
         self.mode = ZombieDogMode.WANDER
+        self.just_entered_wander = True
         self.charge_target: tuple[float, float] | None = None
         self.charge_direction: tuple[float, float] | None = None
         self.charge_distance_remaining = 0.0
@@ -372,6 +392,10 @@ class ZombieDog(pygame.sprite.Sprite):
     def _set_mode(self: Self, new_mode: ZombieDogMode) -> None:
         if self.mode == new_mode:
             return
+        if new_mode == ZombieDogMode.WANDER:
+            self.just_entered_wander = True
+        elif self.mode == ZombieDogMode.WANDER:
+            self.just_entered_wander = False
         self.mode = new_mode
 
     def _set_facing_bin(self: Self, new_bin: int) -> None:
@@ -735,7 +759,8 @@ class ZombieDog(pygame.sprite.Sprite):
             if was_charge:
                 self.next_charge_available_ms = now + self.charge_cooldown_ms
                 self.charge_direction = None
-            self.wander_angle = RNG.uniform(0.0, math.tau)
+            _set_wander_heading_toward_player_if_close(self, player_center)
+            self.just_entered_wander = False
             self.wander_change_time = now
 
         if (

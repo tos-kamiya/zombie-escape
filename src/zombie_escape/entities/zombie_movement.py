@@ -24,6 +24,7 @@ from ..entities_constants import (
     ZOMBIE_WALL_HUG_PROBE_ANGLE_PERP_DEG,
     ZOMBIE_WALL_HUG_TARGET_GAP,
     ZOMBIE_WALL_HUG_TURN_STEP_DEG,
+    ZOMBIE_WANDER_HEADING_PLAYER_RANGE,
 )
 from ..gameplay.constants import FOOTPRINT_STEP_DISTANCE
 from ..rng import get_rng
@@ -36,11 +37,38 @@ if TYPE_CHECKING:
 RNG = get_rng()
 
 
+def _set_wander_heading_toward_player_if_close(
+    zombie: "Zombie",
+    player_center: tuple[float, float] | None,
+) -> None:
+    if player_center is None:
+        return
+    dx = player_center[0] - zombie.x
+    dy = player_center[1] - zombie.y
+    dist_sq = dx * dx + dy * dy
+    threshold = ZOMBIE_WANDER_HEADING_PLAYER_RANGE
+    if dist_sq > threshold * threshold or dist_sq <= 1e-6:
+        return
+    zombie.wander_angle = math.atan2(dy, dx)
+
+
+def _enter_wander(zombie: "Zombie") -> None:
+    if zombie.is_wandering:
+        return
+    zombie.is_wandering = True
+    zombie.just_entered_wander = True
+
+
+def _leave_wander(zombie: "Zombie") -> None:
+    zombie.is_wandering = False
+    zombie.just_entered_wander = False
+
+
 def _zombie_lineformer_train_head_movement(
     zombie: "Zombie",
     cell_size: int,
     layout: "LevelLayout",
-    _player_center: tuple[float, float],
+    player_center: tuple[float, float],
     nearby_zombies: Iterable["Zombie"],
     _footprints: list["Footprint"],
     *,
@@ -48,12 +76,15 @@ def _zombie_lineformer_train_head_movement(
 ) -> tuple[float, float]:
     target_pos = zombie.lineformer_target_pos
     if target_pos is None:
+        _enter_wander(zombie)
         return _zombie_wander_movement(
             zombie,
             cell_size,
             layout,
             now_ms=now_ms,
+            player_center=player_center,
         )
+    _leave_wander(zombie)
     dx = target_pos[0] - zombie.x
     dy = target_pos[1] - zombie.y
     distance_sq = dx * dx + dy * dy
@@ -120,11 +151,13 @@ def _zombie_tracker_movement(
                 last_target_time + ZOMBIE_TRACKER_RELOCK_DELAY_MS
             )
             zombie.tracker_target_pos = None
+            _enter_wander(zombie)
             return _zombie_wander_movement(
                 zombie,
                 cell_size,
                 layout,
                 now_ms=now,
+                player_center=player_center,
             )
         _zombie_update_tracker_target(
             zombie,
@@ -132,15 +165,20 @@ def _zombie_tracker_movement(
             layout,
             cell_size=cell_size,
             now_ms=now,
+            player_center=player_center,
         )
         if zombie.tracker_target_pos is not None:
+            _leave_wander(zombie)
             return _zombie_move_toward(zombie, zombie.tracker_target_pos)
+        _enter_wander(zombie)
         return _zombie_wander_movement(
             zombie,
             cell_size,
             layout,
             now_ms=now,
+            player_center=player_center,
         )
+    _leave_wander(zombie)
     return _zombie_move_toward(zombie, player_center)
 
 
@@ -283,7 +321,9 @@ def _zombie_wall_hug_movement(
             zombie.wall_hug_last_wall_time = now
         else:
             if is_in_sight:
+                _leave_wander(zombie)
                 return _zombie_move_toward(zombie, player_center)
+            _enter_wander(zombie)
             return _zombie_wander_movement(zombie, cell_size, layout, now_ms=now_ms)
 
     # Asymmetrical Probing while following
@@ -327,6 +367,7 @@ def _zombie_wall_hug_movement(
         and now - zombie.wall_hug_last_wall_time <= ZOMBIE_WALL_HUG_LOST_WALL_MS
     )
     if is_in_sight:
+        _leave_wander(zombie)
         return _zombie_move_toward(zombie, player_center)
 
     turn_step = math.radians(ZOMBIE_WALL_HUG_TURN_STEP_DEG * speed_ratio)
@@ -368,6 +409,7 @@ def _zombie_wall_hug_movement(
 
     move_x = math.cos(zombie.wall_hug_angle) * zombie.speed
     move_y = math.sin(zombie.wall_hug_angle) * zombie.speed
+    _leave_wander(zombie)
     return move_x, move_y
 
 
@@ -382,12 +424,15 @@ def _zombie_normal_movement(
 ) -> tuple[float, float]:
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_SIGHT_RANGE)
     if not is_in_sight:
+        _enter_wander(zombie)
         return _zombie_wander_movement(
             zombie,
             cell_size,
             layout,
             now_ms=now_ms,
+            player_center=player_center,
         )
+    _leave_wander(zombie)
     return _zombie_move_toward(zombie, player_center)
 
 
@@ -498,20 +543,59 @@ def _zombie_update_tracker_target(
     *,
     cell_size: int,
     now_ms: int,
+    player_center: tuple[float, float] | None = None,
 ) -> None:
     # footprints are ordered oldest -> newest by time.
+    def _mark_tracker_lost(boundary_time: int | None) -> None:
+        if boundary_time is not None:
+            current_boundary = zombie.tracker_ignore_before_or_at_time
+            if current_boundary is None or boundary_time > current_boundary:
+                zombie.tracker_ignore_before_or_at_time = boundary_time
+        zombie.tracker_target_pos = None
+        zombie.tracker_target_time = None
+        zombie.tracker_last_progress_ms = None
+
+    def _is_eligible_time(fp_time: int) -> bool:
+        ignore_before_or_at = zombie.tracker_ignore_before_or_at_time
+        if ignore_before_or_at is not None and fp_time <= ignore_before_or_at:
+            return False
+        if relock_after is not None and fp_time < relock_after:
+            return False
+        return True
+
     now = now_ms
     if now - zombie.tracker_last_scan_time < zombie.tracker_scan_interval_ms:
         return
     zombie.tracker_last_scan_time = now
-    if not footprints:
-        zombie.tracker_target_pos = None
-        return
     last_target_time = zombie.tracker_target_time
-    far_radius_sq = ZOMBIE_TRACKER_FAR_SCENT_RADIUS * ZOMBIE_TRACKER_FAR_SCENT_RADIUS
+    if last_target_time is not None and zombie.tracker_last_progress_ms is None:
+        zombie.tracker_last_progress_ms = now
+
     relock_after = zombie.tracker_relock_after_time
+
+    has_newer_footprint = False
+    if last_target_time is not None:
+        has_newer_footprint = any(
+            fp.time > last_target_time and _is_eligible_time(fp.time) for fp in footprints
+        )
+        if has_newer_footprint:
+            zombie.tracker_last_progress_ms = now
+        else:
+            last_progress_ms = zombie.tracker_last_progress_ms
+            if last_progress_ms is not None and (
+                now - last_progress_ms >= zombie.tracker_lost_timeout_ms
+            ):
+                _mark_tracker_lost(last_target_time)
+                return
+
+    if not footprints:
+        return
+
+    far_radius_sq = ZOMBIE_TRACKER_FAR_SCENT_RADIUS * ZOMBIE_TRACKER_FAR_SCENT_RADIUS
     far_candidates: list[tuple[float, Footprint]] = []
     for fp in footprints:
+        if not _is_eligible_time(fp.time):
+            continue
         dx = fp.pos[0] - zombie.x
         dy = fp.pos[1] - zombie.y
         d2 = dx * dx + dy * dy
@@ -534,8 +618,6 @@ def _zombie_update_tracker_target(
     for d2, fp in far_candidates:
         pos = fp.pos
         fp_time = fp.time
-        if relock_after is not None and fp_time < relock_after:
-            continue
         if d2 <= min_target_dist_sq:
             continue
         if d2 <= scent_radius_sq:
@@ -569,8 +651,11 @@ def _zombie_update_tracker_target(
             grid_cols=layout.grid_cols,
             grid_rows=layout.grid_rows,
         ):
+            old_target_time = zombie.tracker_target_time
             zombie.tracker_target_pos = pos
             zombie.tracker_target_time = fp_time
+            if old_target_time is None or fp_time > old_target_time:
+                zombie.tracker_last_progress_ms = now
             if relock_after is not None and fp_time >= relock_after:
                 zombie.tracker_relock_after_time = None
             return
@@ -587,8 +672,11 @@ def _zombie_update_tracker_target(
         return
 
     next_fp = newer[0]
+    old_target_time = zombie.tracker_target_time
     zombie.tracker_target_pos = next_fp.pos
     zombie.tracker_target_time = next_fp.time
+    if old_target_time is None or next_fp.time > old_target_time:
+        zombie.tracker_last_progress_ms = now
     if relock_after is not None and next_fp.time >= relock_after:
         zombie.tracker_relock_after_time = None
     return
@@ -638,6 +726,7 @@ def _zombie_wander_movement(
     layout: "LevelLayout",
     *,
     now_ms: int,
+    player_center: tuple[float, float] | None = None,
 ) -> None:
     grid_cols = layout.grid_cols
     grid_rows = layout.grid_rows
@@ -646,7 +735,11 @@ def _zombie_wander_movement(
     fire_floor_cells = layout.fire_floor_cells
     now = now_ms
     changed_angle = False
-    if now - zombie.last_wander_change_time > zombie.wander_change_interval:
+    if zombie.just_entered_wander:
+        _set_wander_heading_toward_player_if_close(zombie, player_center)
+        zombie.just_entered_wander = False
+        zombie.last_wander_change_time = now
+    elif now - zombie.last_wander_change_time > zombie.wander_change_interval:
         zombie.wander_angle = RNG.uniform(0, math.tau)
         zombie.last_wander_change_time = now
         jitter = RNG.randint(-500, 500)
