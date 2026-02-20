@@ -8,7 +8,7 @@ from pygame import surface
 from ..entities_constants import ZombieKind
 from ..render_assets import (
     draw_humanoid_hand,
-    draw_humanoid_nose,
+    draw_tracker_nose,
     draw_lightning_marker,
     draw_lineformer_direction_arm,
 )
@@ -42,7 +42,7 @@ def apply_zombie_kind_overlay(
     image = base_surface.copy()
     angle_rad = (facing_bin % ANGLE_BINS) * (math.tau / ANGLE_BINS)
     if kind == ZombieKind.TRACKER:
-        draw_humanoid_nose(
+        draw_tracker_nose(
             image,
             radius=collision_radius,
             angle_rad=angle_rad,

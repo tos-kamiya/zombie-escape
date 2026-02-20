@@ -52,10 +52,11 @@ from ..entities_constants import (
 from ..rng import get_rng
 from ..surface_effects import SpikyPlantLike, is_in_contaminated_cell, is_in_puddle_cell
 from ..render.entity_overlays import draw_paralyze_marker_overlay
-from ..render_constants import ENTITY_SHADOW_RADIUS_MULT
+from ..render_constants import ENTITY_SHADOW_RADIUS_MULT, ZOMBIE_NOSE_COLOR
 from ..render_assets import (
     angle_bin_from_vector,
     build_zombie_dog_directional_surfaces,
+    draw_tracker_nose,
 )
 from ..world_grid import apply_cell_edge_nudge
 from .zombie import Zombie
@@ -466,6 +467,10 @@ class ZombieDog(pygame.sprite.Sprite):
             self.directional_images = self._build_nimble_directional_images(
                 self.directional_images
             )
+        elif self.variant == ZombieDogVariant.TRACKER:
+            self.directional_images = self._build_tracker_directional_images(
+                self.directional_images
+            )
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(x, y))
         self.x = float(self.rect.centerx)
@@ -486,6 +491,7 @@ class ZombieDog(pygame.sprite.Sprite):
             1, int(self.collision_radius * ENTITY_SHADOW_RADIUS_MULT)
         )
         self.shadow_offset_scale = 1.0
+        self._apply_render_overlays()
 
     def _build_nimble_directional_images(
         self: Self, base_images: list[pygame.Surface]
@@ -512,6 +518,26 @@ class ZombieDog(pygame.sprite.Sprite):
             pygame.draw.circle(surf, tail_fill, tail_pos, tail_radius)
             nimble_images.append(surf)
         return nimble_images
+
+    def _build_tracker_directional_images(
+        self: Self, base_images: list[pygame.Surface]
+    ) -> list[pygame.Surface]:
+        if not base_images:
+            return base_images
+        bins = max(1, len(base_images))
+        tracker_images: list[pygame.Surface] = []
+        for idx, image in enumerate(base_images):
+            surf = image.copy()
+            angle_rad = (idx % bins) * (math.tau / bins)
+            draw_tracker_nose(
+                surf,
+                radius=max(1, int(round(self.radius))),
+                angle_rad=angle_rad,
+                color=ZOMBIE_NOSE_COLOR,
+                offset_scale=0.55,
+            )
+            tracker_images.append(surf)
+        return tracker_images
 
     @property
     def max_health(self: Self) -> int:
@@ -607,7 +633,7 @@ class ZombieDog(pygame.sprite.Sprite):
             return
         center = self.rect.center
         self.facing_bin = new_bin
-        self.image = self.directional_images[self.facing_bin]
+        self._apply_render_overlays()
         self.rect = self.image.get_rect(center=center)
 
     def _update_facing_from_movement(self: Self, dx: float, dy: float) -> None:
@@ -821,9 +847,12 @@ class ZombieDog(pygame.sprite.Sprite):
             final_y = next_y
         return final_x, final_y, hit_x, hit_y
 
+    def _apply_render_overlays(self: Self) -> None:
+        self.image = self.directional_images[self.facing_bin]
+
     def _apply_paralyze_overlay(self: Self, now_ms: int) -> None:
-        base_surface = self.directional_images[self.facing_bin]
-        image = base_surface.copy()
+        self._apply_render_overlays()
+        image = self.image.copy()
         center = image.get_rect().center
         marker_size = max(6, int(self.short_axis * 0.8))
         draw_paralyze_marker_overlay(
@@ -940,7 +969,7 @@ class ZombieDog(pygame.sprite.Sprite):
         if self.patrol_paralyze_until_ms > now:
             self._apply_paralyze_overlay(now)
         else:
-            self.image = self.directional_images[self.facing_bin]
+            self._apply_render_overlays()
         self.last_move_dx = move_x
         self.last_move_dy = move_y
 

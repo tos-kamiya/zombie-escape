@@ -17,6 +17,7 @@ from zombie_escape.level_constants import (
 )
 from zombie_escape.models import Footprint, LevelLayout
 from zombie_escape.render_assets import angle_bin_from_vector
+from zombie_escape.render_constants import ZOMBIE_NOSE_COLOR
 
 
 def _init_pygame() -> None:
@@ -160,3 +161,30 @@ def test_normal_dog_charge_has_two_frame_windup_and_faces_player() -> None:
         now_ms=2,
     )
     assert math.hypot(move_3[0], move_3[1]) > 0.0
+
+
+def _count_rgb_pixels(
+    surface: pygame.Surface, rgb: tuple[int, int, int]
+) -> int:
+    width, height = surface.get_size()
+    count = 0
+    for y in range(height):
+        for x in range(width):
+            if surface.get_at((x, y))[:3] == rgb:
+                count += 1
+    return count
+
+
+def test_tracker_dog_draws_nose_marker_overlay() -> None:
+    _init_pygame()
+    tracker = ZombieDog(50, 50, variant="tracker")
+    normal = ZombieDog(50, 50, variant="normal")
+
+    tracker._set_facing_bin(0)
+    normal._set_facing_bin(0)
+    tracker._apply_render_overlays()
+    normal._apply_render_overlays()
+
+    tracker_nose_pixels = _count_rgb_pixels(tracker.image, ZOMBIE_NOSE_COLOR)
+    normal_nose_pixels = _count_rgb_pixels(normal.image, ZOMBIE_NOSE_COLOR)
+    assert tracker_nose_pixels > normal_nose_pixels

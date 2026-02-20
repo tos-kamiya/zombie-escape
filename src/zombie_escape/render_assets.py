@@ -469,16 +469,18 @@ def draw_humanoid_hand(
     pygame.draw.circle(surface, color, (hand_x, hand_y), hand_radius)
 
 
-def draw_humanoid_nose(
+def draw_tracker_nose(
     surface: pygame.Surface,
     *,
     radius: int,
     angle_rad: float,
     color: tuple[int, int, int],
+    length_scale: float = 0.45,
+    offset_scale: float = 0.35,
 ) -> None:
     center_x, center_y = surface.get_rect().center
-    nose_length = max(2, int(radius * 0.45))
-    nose_offset = max(1, int(radius * 0.35))
+    nose_length = max(2, int(radius * length_scale))
+    nose_offset = max(1, int(radius * offset_scale))
     start_x = center_x + math.cos(angle_rad) * nose_offset
     start_y = center_y + math.sin(angle_rad) * nose_offset
     end_x = center_x + math.cos(angle_rad) * (nose_offset + nose_length)
@@ -1402,7 +1404,7 @@ __all__ = [
     "resolve_steel_beam_colors",
     "build_player_directional_surfaces",
     "draw_humanoid_hand",
-    "draw_humanoid_nose",
+    "draw_tracker_nose",
     "draw_lineformer_direction_arm",
     "draw_lightning_marker",
     "build_survivor_directional_surfaces",
