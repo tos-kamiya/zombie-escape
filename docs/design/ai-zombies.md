@@ -34,6 +34,36 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
 - Uses straight-line reachability checks (wall blocking avoidance).
 - If target is reached and no better target exists, retarget by freshness rules.
 
+## Tracker Loss and Trail Gap Behavior
+- Goal: prevent tracker zombies from permanently stacking at the latest footprint
+  when footprint generation stops (for example, while player is in car).
+
+Tracker loss rule (out-of-sight mode):
+
+- Trackers treat the currently targeted footprint time as the "progress point".
+- If no footprint newer than that progress point is found for a continuous timeout
+  window, the tracker marks the trail as lost.
+- On loss, the tracker drops active target and switches to wander behavior.
+- When entering wander, if the player is close, the initial wander heading is
+  nudged toward the player (uses dedicated range constants for zombie and dog).
+
+Re-acquisition boundary rule:
+
+- On loss, tracker stores an ignore boundary using the last tracked footprint
+  timestamp (not current game time).
+- Future scent scans must ignore footprints with `time <= ignore_boundary`.
+- Only footprints with `time > ignore_boundary` can be used for re-lock.
+- This allows accidental re-acquisition of trail points that are ahead of the
+  broken segment, while permanently excluding already-lost older points.
+
+Puddle interaction with footprints:
+
+- While the player is inside puddle cells, footprint recording is disabled.
+- Entering a no-footprint segment (in-car or puddle) breaks the continuous trail
+  segment for tracker progression purposes.
+- As a result, crossing consecutive puddle cells can naturally cause trackers to
+  lose the trail unless they later discover a newer post-gap footprint.
+
 ## Wall-Hugger Stability Tuning
 
 - Probe length scales with cell size.

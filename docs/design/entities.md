@@ -35,6 +35,10 @@
 
 - Stored as pixel coordinates plus visibility/lifetime fields.
 - Tracking zombies can use invisible footprints for scent-following.
+- Footprint generation is disabled while player is in car and while player is
+  inside puddle cells.
+- Entering those no-footprint segments is treated as trail-segment
+  break for tracker progression.
 
 ## PatrolBot
 
@@ -67,3 +71,5 @@
 - Applies movement speed factor while on puddle cells.
 - Spiky plant slow has higher priority than puddle slow.
 - Visualized with animated ripple rings in normal and overview renders.
+- Puddle cells suppress footprint recording, so long puddle crossings
+  can create scent gaps for tracker zombies.

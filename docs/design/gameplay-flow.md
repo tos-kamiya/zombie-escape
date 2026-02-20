@@ -95,6 +95,21 @@ Initial placement policy:
   - Survivor-zombie contact outcomes and conversion handling.
 - `update_footprints(...)`
   - Footprint recording and expiration.
+  - No footprints are recorded while player is in-car or inside
+    puddle cells.
+  - Entering a no-footprint segment resets trail continuity
+    (`last_footprint_pos` break), so a later footprint starts a new segment.
+
+- Tracker loss handling:
+  - In out-of-sight tracking, if no footprint newer than current tracked
+    timestamp appears within timeout, tracker marks trail as lost and wanders.
+  - On loss, tracker stores ignore boundary at the last tracked footprint
+    timestamp.
+  - Future re-lock must satisfy `footprint.time > ignore_boundary`.
+  - This prevents returning to already-lost older trail while allowing
+    accidental re-acquisition ahead of the gap.
+  - On wander entry, nearby player context can set initial wander heading
+    toward player within configured wander-heading ranges.
 
 ## Fuel Mode Flows
 
