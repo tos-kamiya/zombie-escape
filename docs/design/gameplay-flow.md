@@ -100,7 +100,7 @@ Initial placement policy:
   - Entering a no-footprint segment resets trail continuity
     (`last_footprint_pos` break), so a later footprint starts a new segment.
 
-- Tracker loss handling:
+- Tracker loss handling (tracker zombies and tracker dogs):
   - In out-of-sight tracking, if no footprint newer than current tracked
     timestamp appears within timeout, tracker marks trail as lost and wanders.
   - On loss, tracker stores ignore boundary at the last tracked footprint

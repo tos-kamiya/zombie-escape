@@ -23,8 +23,9 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
   - Excludes trapped zombies and zombie dogs from its local counting.
   - Does not switch to direct chase; player context is treated as another local-spacing input.
 - Zombie dog
-  - State-based behavior (`WANDER`, `CHARGE`, `CHASE`).
-  - When `friendliness_max > 0`, can run friendly-orbit behavior and later fall back to feral states.
+  - Sub-variants: `normal`, `nimble`, `tracker`.
+  - State-based behavior (`WANDER`, `CHARGE`, `CHASE`) for normal/nimble variants.
+  - Charge start includes a short windup (face player direction, then pause for 2 frames).
 
 ## Tracker Details
 
@@ -34,33 +35,24 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
 - Uses straight-line reachability checks (wall blocking avoidance).
 - If target is reached and no better target exists, retarget by freshness rules.
 
-## INPROGRESS: Tracker Zombie Dog (Tentative)
+## Tracker Zombie Dog
 
-- Status: INPROGRESS (spec draft before implementation).
-- New dog sub-variant (working name: `tracker`) will be added under zombie-dog
-  variant selection.
-- Out-of-sight behavior:
-  - Follow footprints using the same tracker scent/loss/re-lock rules as tracker zombies.
-  - Trail-loss behavior should match tracker zombies (including boundary-time based re-lock gate).
-- In-sight behavior:
-  - Switch to dog `CHARGE` behavior when player enters sight range.
-  - `CHASE` behavior is disabled for this variant (no dog-pack zombie chasing).
-- Sight range:
-  - Smaller than normal zombie-dog sight.
-  - Larger than nimble-oriented close-range feel.
-  - Initial target band: `ZOMBIE_TRACKER_SIGHT_RANGE < tracker_dog_sight_range < ZOMBIE_DOG_SIGHT_RANGE`.
-- Charge tuning:
-  - Use normal dog charge distance/cooldown (same as existing normal zombie dog).
-- Implementation direction:
-  - First extract reusable tracker state + helper API from current tracker-zombie logic.
-  - Then wire tracker zombie dog to the shared API.
-  - If extraction API is insufficient for dog usage, adjust API before adding behavior-specific branching.
+- Dog sub-variant `tracker` follows footprints while the player is out of sight.
+- Trail-loss and re-lock behavior matches tracker zombies:
+  - same loss timeout progression rule,
+  - same boundary-time based re-lock gate (`time > ignore_boundary`),
+  - no extra fixed re-lock delay window in current implementation.
+- On player sight, tracker dog switches to `CHARGE`.
+- Tracker dog disables `CHASE` (no dog-pack zombie chasing).
+- Tracker dog sight range is between tracker-zombie sight and normal dog sight.
+- Tracker dog uses normal dog charge distance/cooldown.
+- Tracker dog footprint-follow movement speed is `1.2x` patrol speed.
 
 ## Tracker Loss and Trail Gap Behavior
 - Goal: prevent tracker zombies from permanently stacking at the latest footprint
   when footprint generation stops (for example, while player is in car).
 
-Tracker loss rule (out-of-sight mode):
+Tracker loss rule (out-of-sight mode for tracker zombies and tracker dogs):
 
 - Trackers treat the currently targeted footprint time as the "progress point".
 - If no footprint newer than that progress point is found for a continuous timeout
