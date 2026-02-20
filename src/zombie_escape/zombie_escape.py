@@ -72,6 +72,11 @@ def _parse_cli_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:
         action="store_true",
         help="Export documentation images to imgs/exports at 4x size and exit",
     )
+    parser.add_argument(
+        "--build-fog-cache-dark0",
+        action="store_true",
+        help="Precompute and save fog cache files for all darkness profiles, then exit",
+    )
     parser.add_argument("--seed")
     return parser.parse_known_args(argv)
 
@@ -140,6 +145,21 @@ def main() -> None:
         output_dir = Path.cwd() / "imgs" / "exports"
         saved = export_images(output_dir, cell_size=DEFAULT_CELL_SIZE)
         print(f"Exported {len(saved)} images to {output_dir}")
+        pygame.quit()
+        return
+    if args.build_fog_cache_dark0:
+        from .render.fog import save_all_fog_caches
+
+        output_dir = Path(__file__).resolve().parent / "assets" / "fog_cache"
+        cell_sizes = sorted({int(stage.cell_size) for stage in STAGES if stage.available})
+        if not cell_sizes:
+            cell_sizes = [DEFAULT_CELL_SIZE]
+        saved_paths: list[Path] = []
+        for cell_size in cell_sizes:
+            assets = build_render_assets(cell_size)
+            saved_paths.extend(save_all_fog_caches(assets, output_dir=output_dir))
+        for path in saved_paths:
+            print(f"Saved fog cache: {path}")
         pygame.quit()
         return
 

@@ -1,16 +1,28 @@
 from __future__ import annotations
+import hashlib
+import json
+import os
 from enum import Enum
+from importlib import resources
+from pathlib import Path
 from typing import Any, Callable
 
 import numpy as np  # type: ignore
 import pygame
 import pygame.surfarray as pg_surfarray  # type: ignore
+from platformdirs import user_cache_dir
 from pygame import surface
 
 from ..gameplay_constants import DEFAULT_FLASHLIGHT_SPAWN_COUNT
 from ..models import Stage
 from ..render_assets import RenderAssets
 from .hud import _get_fog_scale
+
+_SHARED_FOG_CACHE_BY_CELL_SIZE: dict[int, dict[str, Any]] = {}
+_SHARED_FOG_PREWARM_WORKING_BY_CELL_SIZE: dict[int, dict[str, Any]] = {}
+_SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE: dict[int, int] = {}
+_FOG_CACHE_FORMAT_VERSION = 1
+_FOG_CACHE_APP_NAME = "ZombieEscape"
 
 
 def _build_bayer_matrix(size: int) -> np.ndarray:
@@ -57,6 +69,249 @@ class _FogProfile(Enum):
         if safe_count == 1:
             return _FogProfile.DARK1
         return _FogProfile.DARK0
+
+
+def _fog_cell_size_key(assets: RenderAssets) -> int:
+    return int(assets.internal_wall_grid_snap)
+
+
+def _fog_cache_dir() -> Path:
+    override = os.environ.get("ZOMBIE_ESCAPE_FOG_CACHE_DIR")
+    if override:
+        return Path(override)
+    return Path(user_cache_dir(_FOG_CACHE_APP_NAME, _FOG_CACHE_APP_NAME)) / "fog"
+
+
+def _fog_cache_key_data(assets: RenderAssets, profile: _FogProfile) -> dict[str, Any]:
+    return {
+        "format": _FOG_CACHE_FORMAT_VERSION,
+        "profile": profile.name,
+        "cell_size": int(assets.internal_wall_grid_snap),
+        "screen_width": int(assets.screen_width),
+        "screen_height": int(assets.screen_height),
+        "fov_radius": int(assets.fov_radius),
+        "fog_layer_aa_scale": int(assets.fog_layer_aa_scale),
+        "fog_edge_softness_px": int(assets.fog_edge_softness_px),
+        "fog_hatch_soften_scale": float(assets.fog_hatch_soften_scale),
+        "fog_hatch_density_ramps": [
+            [float(a), float(b)] for a, b in assets.fog_hatch_density_ramps
+        ],
+        "pygame_version": pygame.version.ver,
+        "numpy_version": np.__version__,
+    }
+
+
+def _fog_cache_filename(assets: RenderAssets, profile: _FogProfile) -> str:
+    key_data = _fog_cache_key_data(assets, profile)
+    key_json = json.dumps(key_data, sort_keys=True, separators=(",", ":"))
+    digest = hashlib.sha256(key_json.encode("utf-8")).hexdigest()[:16]
+    return f"fog-{profile.name.lower()}-{digest}.npz"
+
+
+def _fog_cache_file_path(assets: RenderAssets, profile: _FogProfile) -> Path:
+    return _fog_cache_dir() / _fog_cache_filename(assets, profile)
+
+
+def _fog_resource_cache_path(assets: RenderAssets, profile: _FogProfile) -> Path | None:
+    filename = _fog_cache_filename(assets, profile)
+    try:
+        base = resources.files("zombie_escape").joinpath("assets").joinpath("fog_cache")
+        target = base.joinpath(filename)
+        with resources.as_file(target) as path:
+            if path.exists():
+                return path
+    except (FileNotFoundError, ModuleNotFoundError):
+        return None
+    return None
+
+
+def _surface_with_alpha_from_array(
+    alpha: np.ndarray, color: tuple[int, int, int, int]
+) -> surface.Surface:
+    if alpha.ndim != 2:
+        raise ValueError("alpha must be 2D")
+    h, w = alpha.shape
+    out = pygame.Surface((int(w), int(h)), pygame.SRCALPHA)
+    out.fill(color)
+    alpha_view = pg_surfarray.pixels_alpha(out)
+    alpha_view[:, :] = alpha.T
+    del alpha_view
+    return out
+
+
+def _load_cached_overlay_entry(
+    assets: RenderAssets,
+    profile: _FogProfile,
+    *,
+    expected_size: tuple[int, int],
+) -> dict[str, Any] | None:
+    def _try_load(path: Path) -> dict[str, Any] | None:
+        try:
+            with np.load(path) as data:
+                hard_alpha = data["hard_alpha"]
+                combined_alpha = data["combined_alpha"]
+            if (
+                hard_alpha.dtype != np.uint8
+                or combined_alpha.dtype != np.uint8
+                or hard_alpha.shape != combined_alpha.shape
+            ):
+                return None
+            expected_w, expected_h = expected_size
+            if hard_alpha.shape != (expected_h, expected_w):
+                return None
+            hard_surface = _surface_with_alpha_from_array(hard_alpha, profile.color)
+            combined_surface = _surface_with_alpha_from_array(
+                combined_alpha, profile.color
+            )
+            return {
+                "hard": hard_surface,
+                "rings": [],
+                "combined": combined_surface,
+            }
+        except Exception:
+            return None
+
+    resource_path = _fog_resource_cache_path(assets, profile)
+    if resource_path is not None:
+        loaded = _try_load(resource_path)
+        if loaded is not None:
+            return loaded
+
+    cache_path = _fog_cache_file_path(assets, profile)
+    if cache_path.exists():
+        loaded = _try_load(cache_path)
+        if loaded is not None:
+            return loaded
+    return None
+
+
+def save_fog_cache_profile(
+    assets: RenderAssets,
+    profile: _FogProfile,
+    *,
+    stage: Stage | None = None,
+    output_dir: Path | None = None,
+) -> Path:
+    fog_data: dict[str, Any] = {"hatch_patterns": {}, "overlays": {}}
+    overlay_entry = _get_fog_overlay_surfaces(
+        fog_data,
+        assets,
+        profile,
+        stage=stage,
+        use_disk_cache=False,
+    )
+    hard_alpha = pg_surfarray.array_alpha(overlay_entry["hard"]).T.astype(np.uint8)
+    combined_alpha = pg_surfarray.array_alpha(overlay_entry["combined"]).T.astype(
+        np.uint8
+    )
+    out_base = output_dir if output_dir is not None else _fog_cache_dir()
+    out_path = out_base / _fog_cache_filename(assets, profile)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        out_path,
+        hard_alpha=hard_alpha,
+        combined_alpha=combined_alpha,
+        meta_json=json.dumps(_fog_cache_key_data(assets, profile)),
+    )
+    return out_path
+
+
+def save_all_fog_caches(
+    assets: RenderAssets,
+    *,
+    stage: Stage | None = None,
+    output_dir: Path | None = None,
+) -> list[Path]:
+    return [
+        save_fog_cache_profile(assets, profile, stage=stage, output_dir=output_dir)
+        for profile in _FogProfile
+    ]
+
+
+def save_dark0_fog_cache(assets: RenderAssets, *, stage: Stage | None = None) -> Path:
+    return save_fog_cache_profile(assets, _FogProfile.DARK0, stage=stage)
+
+
+def get_shared_fog_cache(assets: RenderAssets) -> dict[str, Any] | None:
+    return _SHARED_FOG_CACHE_BY_CELL_SIZE.get(_fog_cell_size_key(assets))
+
+
+def get_shared_fog_prewarm_progress(assets: RenderAssets) -> tuple[int, int]:
+    key = _fog_cell_size_key(assets)
+    total = len(_FogProfile)
+    if key in _SHARED_FOG_CACHE_BY_CELL_SIZE:
+        return total, total
+    current = _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE.get(key, 0)
+    return current, total
+
+
+def prewarm_shared_fog_cache_step(
+    assets: RenderAssets,
+    *,
+    stage: Stage | None = None,
+) -> tuple[int, int]:
+    """Build one fog profile step for the shared cache for the given cell-size."""
+
+    key = _fog_cell_size_key(assets)
+    profiles = list(_FogProfile)
+    total = len(profiles)
+    if key in _SHARED_FOG_CACHE_BY_CELL_SIZE:
+        return total, total
+
+    fog_data = _SHARED_FOG_PREWARM_WORKING_BY_CELL_SIZE.setdefault(
+        key,
+        {"hatch_patterns": {}, "overlays": {}},
+    )
+    index = _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE.get(key, 0)
+    if index >= total:
+        _SHARED_FOG_CACHE_BY_CELL_SIZE[key] = fog_data
+        _SHARED_FOG_PREWARM_WORKING_BY_CELL_SIZE.pop(key, None)
+        _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE.pop(key, None)
+        return total, total
+
+    profile = profiles[index]
+    _get_fog_overlay_surfaces(
+        fog_data,
+        assets,
+        profile,
+        stage=stage,
+    )
+    index += 1
+    if index >= total:
+        _SHARED_FOG_CACHE_BY_CELL_SIZE[key] = fog_data
+        _SHARED_FOG_PREWARM_WORKING_BY_CELL_SIZE.pop(key, None)
+        _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE.pop(key, None)
+    else:
+        _SHARED_FOG_PREWARM_INDEX_BY_CELL_SIZE[key] = index
+    return index, total
+
+
+def prewarm_shared_fog_cache(
+    assets: RenderAssets,
+    *,
+    stage: Stage | None = None,
+    progress_callback: Callable[[int, int], None] | None = None,
+) -> dict[str, Any]:
+    """Ensure shared fog cache for the given cell-size is fully built."""
+
+    cached = get_shared_fog_cache(assets)
+    profiles = list(_FogProfile)
+    total = len(profiles)
+    if cached is not None:
+        if progress_callback is not None:
+            progress_callback(total, total)
+        return cached
+
+    while True:
+        current, total = prewarm_shared_fog_cache_step(assets, stage=stage)
+        if progress_callback is not None:
+            progress_callback(current, total)
+        if current >= total:
+            break
+    cached = get_shared_fog_cache(assets)
+    if cached is None:
+        raise RuntimeError("shared fog cache build failed")
+    return cached
 
 
 def prewarm_fog_overlays(
@@ -182,6 +437,7 @@ def _get_fog_overlay_surfaces(
     profile: _FogProfile,
     *,
     stage: Stage | None = None,
+    use_disk_cache: bool = True,
 ) -> dict[str, Any]:
     overlays = fog_data.setdefault("overlays", {})
     key = profile
@@ -195,6 +451,16 @@ def _get_fog_overlay_surfaces(
     coverage_height = max(assets.screen_height * 2, max_radius * 2)
     width = coverage_width + padding * 2
     height = coverage_height + padding * 2
+
+    if use_disk_cache:
+        cached = _load_cached_overlay_entry(
+            assets,
+            profile,
+            expected_size=(width, height),
+        )
+        if cached is not None:
+            overlays[key] = cached
+            return cached
 
     aa_scale = max(1, int(assets.fog_layer_aa_scale))
     render_width = max(1, width * aa_scale)

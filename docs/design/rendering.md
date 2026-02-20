@@ -87,6 +87,20 @@ Supporting modules:
 - Tracker/solitary markers are treated as static per-facing overlays and baked
   into directional images.
 
+## Fog Cache File
+
+INPROGRESS:
+- Add an offline fog-cache tool that precomputes data close to runtime fog
+  overlays and writes it to a file.
+- Target profiles are `DARK0`, `DARK1`, and `DARK2`.
+- Cache payload stores alpha planes as `numpy.uint8` arrays (not pygame surface
+  binary) so runtime reconstructs `Surface` objects from stable numeric data.
+- Runtime first tries bundled resource cache files
+  (`assets/fog_cache/*.npz`) for each profile, then user cache; on
+  mismatch/missing file it falls back to normal fog generation.
+- Cache-key metadata includes rendering parameters and runtime version info so
+  incompatible cache files are ignored safely.
+
 ## Overviews (`overview.py`)
 
 - `draw_level_overview()`: core full-map drawing pass (terrain, entities, zombies).

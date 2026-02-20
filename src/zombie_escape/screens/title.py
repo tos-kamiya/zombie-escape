@@ -13,11 +13,17 @@ from ..localization import translate as tr
 from ..models import Stage
 from ..progress import load_progress
 from ..render import blit_text_wrapped, wrap_text
+from ..render.fog import (
+    get_shared_fog_cache,
+    get_shared_fog_prewarm_progress,
+    prewarm_shared_fog_cache_step,
+)
 from ..render_assets import (
     build_flashlight_surface,
     get_character_icon,
     get_tile_icon,
 )
+from ..render_constants import RenderAssets, build_render_assets
 from ..rng import generate_seed
 from ..input_utils import (
     ClickTarget,
@@ -148,6 +154,7 @@ class TitleScreenController:
 
         self.icon_radius = 3
         self.icon_surfaces = self._build_icon_surfaces()
+        self._fog_prewarm_assets: dict[int, RenderAssets] = {}
 
         self.current_page = 0
         if self.stage_options_all:
@@ -429,6 +436,43 @@ class TitleScreenController:
 
     def _current_option_is_fullscreen(self) -> bool:
         return self.options[self.selected].get("type") == "fullscreen"
+
+    def _stage_for_fog_prewarm(self) -> Stage | None:
+        if self.options:
+            current = self.options[self.selected]
+            if current.get("type") == "stage":
+                stage = current.get("stage")
+                if isinstance(stage, Stage):
+                    return stage
+        if self.stage_options:
+            stage = self.stage_options[0].get("stage")
+            if isinstance(stage, Stage):
+                return stage
+        return None
+
+    def _prewarm_fog_cache_background(self) -> None:
+        stage = self._stage_for_fog_prewarm()
+        if stage is None:
+            return
+        cell_size = int(stage.cell_size)
+        assets = self._fog_prewarm_assets.get(cell_size)
+        if assets is None:
+            assets = build_render_assets(cell_size)
+            self._fog_prewarm_assets[cell_size] = assets
+        if get_shared_fog_cache(assets) is not None:
+            return
+        prewarm_shared_fog_cache_step(assets, stage=stage)
+
+    def _current_fog_prewarm_progress(self) -> tuple[int, int]:
+        stage = self._stage_for_fog_prewarm()
+        if stage is None:
+            return 0, 1
+        cell_size = int(stage.cell_size)
+        assets = self._fog_prewarm_assets.get(cell_size)
+        if assets is None:
+            assets = build_render_assets(cell_size)
+            self._fog_prewarm_assets[cell_size] = assets
+        return get_shared_fog_prewarm_progress(assets)
 
     def _render_frame(self) -> None:
         self.screen.fill(BLACK)
@@ -891,6 +935,24 @@ class TitleScreenController:
                 self.width - version_topleft[0],
                 line_height_scale=font_settings.line_height_scale,
             )
+            progress_current, progress_total = self._current_fog_prewarm_progress()
+            total = max(1, progress_total)
+            clamped = max(0, min(progress_current, total))
+            if clamped < total:
+                ratio = clamped / total
+                width = max(0, self.width - 1)
+                y_bottom = max(0, self.height - 1)
+                y_top = max(0, y_bottom - 1)
+                pygame.draw.line(self.screen, GRAY, (0, y_top), (width, y_top), 1)
+                pygame.draw.line(self.screen, GRAY, (0, y_bottom), (width, y_bottom), 1)
+                fill_x = int(round(width * ratio))
+                if fill_x > 0:
+                    pygame.draw.line(
+                        self.screen, LIGHT_GRAY, (0, y_top), (fill_x, y_top), 1
+                    )
+                    pygame.draw.line(
+                        self.screen, LIGHT_GRAY, (0, y_bottom), (fill_x, y_bottom), 1
+                    )
             self.option_click_map.set_targets(option_targets)
             self.page_button_click_map.set_targets(page_targets)
         except pygame.error as exc:
@@ -1003,6 +1065,7 @@ class TitleScreenController:
 
             self._render_frame()
             present(self.screen)
+            self._prewarm_fog_cache_background()
             self.clock.tick(self.fps)
             self.mouse_ui_guard.end_frame()
 

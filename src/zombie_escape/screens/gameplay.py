@@ -65,9 +65,9 @@ from ..overview import draw_debug_overview
 from ..render import (
     draw,
     draw_pause_overlay,
-    prewarm_fog_overlays,
     blit_message_wrapped,
 )
+from ..render.fog import get_shared_fog_cache, prewarm_shared_fog_cache
 from ..render.hud import build_time_accel_text
 from ..render_constants import (
     GAMEPLAY_FONT_SIZE,
@@ -83,7 +83,6 @@ if TYPE_CHECKING:
     from ..render import RenderAssets
 
 
-_SHARED_FOG_CACHE: dict[str, Any] | None = None
 _MOUSE_STEERING_DEADZONE_SCALE = 2.0
 _MOUSE_ACCEL_HOLD_SCALE = 1.2
 _MOUSE_CURSOR_SHOW_MS = 1500
@@ -441,27 +440,13 @@ class GameplayScreenRunner:
         self.game_data.state.debug_mode = self.debug_mode
         self.game_data.state.show_fps = self.show_fps
 
-        global _SHARED_FOG_CACHE
-        if _SHARED_FOG_CACHE is None:
-            def _render_prewarm_progress(current: int, total: int) -> None:
-                self._show_loading_still(
-                    loading_status_text=tr(
-                        "hud.loading_prewarm_cache",
-                        current=str(current),
-                        total=str(total),
-                    )
-                )
-
-            _render_prewarm_progress(0, 3)
-            prewarm_fog_overlays(
-                self.game_data.fog,
+        shared_fog_cache = get_shared_fog_cache(self.render_assets)
+        if shared_fog_cache is None:
+            shared_fog_cache = prewarm_shared_fog_cache(
                 self.render_assets,
                 stage=self.stage,
-                progress_callback=_render_prewarm_progress,
             )
-            _SHARED_FOG_CACHE = self.game_data.fog
-        else:
-            self.game_data.fog = _SHARED_FOG_CACHE
+        self.game_data.fog = shared_fog_cache
 
         if self.stage.intro_key and self.game_data.state.timed_message:
             loading_elapsed_ms = max(0, pygame.time.get_ticks() - loading_started_ms)
