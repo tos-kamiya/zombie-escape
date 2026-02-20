@@ -294,6 +294,7 @@
   - 視界範囲 `ZOMBIE_SIGHT_RANGE` でプレイヤーを検知したら直進追尾。
   - 視界外は `zombie_wander_move` で徘徊移動。
 - 追跡移動 (`zombie_tracker_movement`)
+  - ※注記: この節の内容は現在の実装仕様と乖離しています（legacy記録）。
   - 視界範囲 `ZOMBIE_TRACKER_SIGHT_RANGE` でプレイヤーを検知したら直進追尾。
   - 視界外は足跡 (`footprints`) を追跡する。
     - 足跡探索は約30フレームに1回だけ実施。
