@@ -22,15 +22,20 @@ def test_fog_cache_save_and_load_for_all_profiles(tmp_path, monkeypatch) -> None
     assets = build_render_assets(DEFAULT_CELL_SIZE)
 
     for profile in _FogProfile:
-        cache_path = save_fog_cache_profile(assets, profile)
-        assert cache_path.exists()
+        cache_paths = save_fog_cache_profile(assets, profile)
+        assert len(cache_paths) == 2
+        for cache_path in cache_paths:
+            assert cache_path.exists()
+            assert cache_path.suffix == ".png"
+            assert ".v1.png" in cache_path.name
 
         fog_data: dict[str, object] = {"hatch_patterns": {}, "overlays": {}}
         loaded = _get_fog_overlay_surfaces(fog_data, assets, profile)
 
-        with np.load(cache_path) as data:
-            hard_alpha = data["hard_alpha"]
-            combined_alpha = data["combined_alpha"]
+        hard_path = next(path for path in cache_paths if "_hard." in path.name)
+        combined_path = next(path for path in cache_paths if "_combined." in path.name)
+        hard_alpha = pg_surfarray.array_alpha(pygame.image.load(str(hard_path))).T
+        combined_alpha = pg_surfarray.array_alpha(pygame.image.load(str(combined_path))).T
         loaded_hard_alpha = pg_surfarray.array_alpha(loaded["hard"]).T
         loaded_combined_alpha = pg_surfarray.array_alpha(loaded["combined"]).T
 

@@ -90,16 +90,17 @@ Supporting modules:
 - Add an offline fog-cache tool that precomputes data close to runtime fog
   overlays and writes it to a file.
 - Target profiles are `DARK0`, `DARK1`, and `DARK2`.
-- Cache payload stores alpha planes as `numpy.uint8` arrays (not pygame surface
-  binary) so runtime reconstructs `Surface` objects from stable numeric data.
+- Cache payload stores alpha planes as PNG files per layer (`hard`, `combined`);
+  runtime reconstructs `Surface` objects from loaded alpha data.
 - Runtime first tries bundled resource cache files
-  (`assets/fog_cache/*.npz`) for each profile, then user cache.
+  (`assets/fog_cache/fog_<profile>_cell<cell_size>_<layer>.v<format>.png`) for
+  each profile, then user cache.
 - Startup check requires all fog cache profiles to load successfully before
   entering the title screen.
 - In normal game execution, fog overlays are expected to come from loaded cache
   files; no title/gameplay prewarm generation path is used.
-- Cache-key metadata includes rendering parameters needed to reconstruct fog
-  overlays, so incompatible cache files are ignored safely.
+- Format/version compatibility is controlled by versioned filenames
+  (e.g. `.v1.png`).
 
 ## Overviews (`overview.py`)
 

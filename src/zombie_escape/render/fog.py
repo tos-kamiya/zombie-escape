@@ -1,6 +1,4 @@
 from __future__ import annotations
-import hashlib
-import json
 import os
 from enum import Enum
 from importlib import resources
@@ -94,36 +92,22 @@ def _fog_cache_dir() -> Path:
     return Path(user_cache_dir(_FOG_CACHE_APP_NAME, _FOG_CACHE_APP_NAME)) / "fog"
 
 
-def _fog_cache_key_data(assets: RenderAssets, profile: _FogProfile) -> dict[str, Any]:
-    return {
-        "format": _FOG_CACHE_FORMAT_VERSION,
-        "profile": profile.name,
-        "cell_size": int(assets.internal_wall_grid_snap),
-        "screen_width": int(assets.screen_width),
-        "screen_height": int(assets.screen_height),
-        "fov_radius": int(assets.fov_radius),
-        "fog_layer_aa_scale": int(assets.fog_layer_aa_scale),
-        "fog_edge_softness_px": int(assets.fog_edge_softness_px),
-        "fog_hatch_soften_scale": float(assets.fog_hatch_soften_scale),
-        "fog_hatch_density_ramps": [
-            [float(a), float(b)] for a, b in assets.fog_hatch_density_ramps
-        ],
-    }
+def _fog_cache_filename(assets: RenderAssets, profile: _FogProfile, layer: str) -> str:
+    cell_size = int(assets.internal_wall_grid_snap)
+    return (
+        f"fog_{profile.name.lower()}_cell{cell_size}_{layer}"
+        f".v{_FOG_CACHE_FORMAT_VERSION}.png"
+    )
 
 
-def _fog_cache_filename(assets: RenderAssets, profile: _FogProfile) -> str:
-    key_data = _fog_cache_key_data(assets, profile)
-    key_json = json.dumps(key_data, sort_keys=True, separators=(",", ":"))
-    digest = hashlib.sha256(key_json.encode("utf-8")).hexdigest()[:16]
-    return f"fog-{profile.name.lower()}-{digest}.npz"
+def _fog_cache_file_path(assets: RenderAssets, profile: _FogProfile, layer: str) -> Path:
+    return _fog_cache_dir() / _fog_cache_filename(assets, profile, layer)
 
 
-def _fog_cache_file_path(assets: RenderAssets, profile: _FogProfile) -> Path:
-    return _fog_cache_dir() / _fog_cache_filename(assets, profile)
-
-
-def _fog_resource_cache_path(assets: RenderAssets, profile: _FogProfile) -> Path | None:
-    filename = _fog_cache_filename(assets, profile)
+def _fog_resource_cache_path(
+    assets: RenderAssets, profile: _FogProfile, layer: str
+) -> Path | None:
+    filename = _fog_cache_filename(assets, profile, layer)
     try:
         base = resources.files("zombie_escape").joinpath("assets").joinpath("fog_cache")
         target = base.joinpath(filename)
@@ -149,25 +133,49 @@ def _surface_with_alpha_from_array(
     return out
 
 
+def _load_alpha_from_png(
+    path: Path,
+    *,
+    expected_size: tuple[int, int],
+) -> np.ndarray | None:
+    try:
+        image = pygame.image.load(str(path))
+    except Exception:
+        return None
+    if image.get_size() != expected_size:
+        return None
+    alpha = pg_surfarray.array_alpha(image).T
+    if alpha.dtype != np.uint8:
+        alpha = alpha.astype(np.uint8)
+    return alpha
+
+
+def _save_alpha_to_png(
+    alpha: np.ndarray,
+    path: Path,
+    *,
+    color: tuple[int, int, int, int],
+) -> None:
+    surface_for_save = _surface_with_alpha_from_array(alpha, color)
+    pygame.image.save(surface_for_save, str(path))
+
+
 def _load_cached_overlay_entry(
     assets: RenderAssets,
     profile: _FogProfile,
     *,
     expected_size: tuple[int, int],
 ) -> dict[str, Any] | None:
-    def _try_load(path: Path) -> dict[str, Any] | None:
+    def _try_load(hard_path: Path, combined_path: Path) -> dict[str, Any] | None:
         try:
-            with np.load(path) as data:
-                hard_alpha = data["hard_alpha"]
-                combined_alpha = data["combined_alpha"]
-            if (
-                hard_alpha.dtype != np.uint8
-                or combined_alpha.dtype != np.uint8
-                or hard_alpha.shape != combined_alpha.shape
-            ):
+            hard_alpha = _load_alpha_from_png(hard_path, expected_size=expected_size)
+            combined_alpha = _load_alpha_from_png(
+                combined_path,
+                expected_size=expected_size,
+            )
+            if hard_alpha is None or combined_alpha is None:
                 return None
-            expected_w, expected_h = expected_size
-            if hard_alpha.shape != (expected_h, expected_w):
+            if hard_alpha.shape != combined_alpha.shape:
                 return None
             hard_surface = _surface_with_alpha_from_array(hard_alpha, profile.color)
             combined_surface = _surface_with_alpha_from_array(
@@ -181,15 +189,17 @@ def _load_cached_overlay_entry(
         except Exception:
             return None
 
-    resource_path = _fog_resource_cache_path(assets, profile)
-    if resource_path is not None:
-        loaded = _try_load(resource_path)
+    hard_resource_path = _fog_resource_cache_path(assets, profile, "hard")
+    combined_resource_path = _fog_resource_cache_path(assets, profile, "combined")
+    if hard_resource_path is not None and combined_resource_path is not None:
+        loaded = _try_load(hard_resource_path, combined_resource_path)
         if loaded is not None:
             return loaded
 
-    cache_path = _fog_cache_file_path(assets, profile)
-    if cache_path.exists():
-        loaded = _try_load(cache_path)
+    hard_cache_path = _fog_cache_file_path(assets, profile, "hard")
+    combined_cache_path = _fog_cache_file_path(assets, profile, "combined")
+    if hard_cache_path.exists() and combined_cache_path.exists():
+        loaded = _try_load(hard_cache_path, combined_cache_path)
         if loaded is not None:
             return loaded
     return None
@@ -200,7 +210,7 @@ def save_fog_cache_profile(
     profile: _FogProfile,
     *,
     output_dir: Path | None = None,
-) -> Path:
+) -> list[Path]:
     fog_data: dict[str, Any] = {"hatch_patterns": {}, "overlays": {}}
     overlay_entry = _get_fog_overlay_surfaces(
         fog_data,
@@ -213,15 +223,12 @@ def save_fog_cache_profile(
         np.uint8
     )
     out_base = output_dir if output_dir is not None else _fog_cache_dir()
-    out_path = out_base / _fog_cache_filename(assets, profile)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(
-        out_path,
-        hard_alpha=hard_alpha,
-        combined_alpha=combined_alpha,
-        meta_json=json.dumps(_fog_cache_key_data(assets, profile)),
-    )
-    return out_path
+    out_base.mkdir(parents=True, exist_ok=True)
+    hard_path = out_base / _fog_cache_filename(assets, profile, "hard")
+    combined_path = out_base / _fog_cache_filename(assets, profile, "combined")
+    _save_alpha_to_png(hard_alpha, hard_path, color=profile.color)
+    _save_alpha_to_png(combined_alpha, combined_path, color=profile.color)
+    return [hard_path, combined_path]
 
 
 def save_all_fog_caches(
@@ -229,13 +236,13 @@ def save_all_fog_caches(
     *,
     output_dir: Path | None = None,
 ) -> list[Path]:
-    return [
-        save_fog_cache_profile(assets, profile, output_dir=output_dir)
-        for profile in _FogProfile
-    ]
+    saved_paths: list[Path] = []
+    for profile in _FogProfile:
+        saved_paths.extend(save_fog_cache_profile(assets, profile, output_dir=output_dir))
+    return saved_paths
 
 
-def save_dark0_fog_cache(assets: RenderAssets) -> Path:
+def save_dark0_fog_cache(assets: RenderAssets) -> list[Path]:
     return save_fog_cache_profile(assets, _FogProfile.DARK0)
 
 
