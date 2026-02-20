@@ -189,25 +189,3 @@ def test_tracker_loss_sets_wander_heading_toward_near_player() -> None:
     expected = math.atan2(near_player[1] - zombie.y, near_player[0] - zombie.x)
     actual = math.atan2(move_y, move_x)
     assert abs(actual - expected) < 1e-6
-
-
-def test_tracker_force_wander_sets_initial_wander_heading_toward_near_player() -> None:
-    zombie = Zombie(110, 110, kind=ZombieKind.TRACKER)
-    zombie.tracker_force_wander = True
-    layout = _make_layout(wall_cells=set())
-    near_player = (150.0, 110.0)
-
-    move_x, move_y = _zombie_tracker_movement(
-        zombie,
-        DEFAULT_CELL_SIZE,
-        layout,
-        near_player,
-        [],
-        [],
-        now_ms=0,
-    )
-
-    assert move_x > 0
-    expected = math.atan2(near_player[1] - zombie.y, near_player[0] - zombie.x)
-    actual = math.atan2(move_y, move_x)
-    assert abs(actual - expected) < 1e-6

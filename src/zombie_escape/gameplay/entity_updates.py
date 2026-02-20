@@ -26,8 +26,6 @@ from ..entities_constants import (
     ZOMBIE_DOG_SURVIVOR_SIGHT_RANGE,
     ZOMBIE_LINEFORMER_JOIN_RADIUS,
     ZOMBIE_SEPARATION_DISTANCE,
-    ZOMBIE_TRACKER_CROWD_BAND_WIDTH,
-    ZOMBIE_TRACKER_GRID_CROWD_COUNT,
     ZOMBIE_WALL_HUG_SENSOR_DISTANCE,
 )
 from ..gameplay_constants import (
@@ -508,35 +506,10 @@ def update_entities(
                 electrified_cells.add(cell)
     game_data.state.electrified_cells = electrified_cells
 
-    tracker_buckets: dict[tuple[int, int, int], list[Zombie]] = {}
-    tracker_cell_size = ZOMBIE_TRACKER_CROWD_BAND_WIDTH
-    angle_step = math.pi / 4.0
     zombie_kinds = (
         SpatialKind.ZOMBIE | SpatialKind.ZOMBIE_DOG | SpatialKind.TRAPPED_ZOMBIE
     )
     base_radius = ZOMBIE_SEPARATION_DISTANCE + PLAYER_SPEED
-    for zombie in zombies_sorted:
-        if (
-            not zombie.alive()
-            or not isinstance(zombie, Zombie)
-            or zombie.kind != ZombieKind.TRACKER
-        ):
-            continue
-        zombie.tracker_force_wander = False
-        dx = zombie.last_move_dx
-        dy = zombie.last_move_dy
-        if abs(dx) <= 0.001 and abs(dy) <= 0.001:
-            continue
-        angle = math.atan2(dy, dx)
-        angle_bin = int(round(angle / angle_step)) % 8
-        cell_x = int(zombie.x // tracker_cell_size)
-        cell_y = int(zombie.y // tracker_cell_size)
-        tracker_buckets.setdefault((cell_x, cell_y, angle_bin), []).append(zombie)
-
-    for bucket in tracker_buckets.values():
-        if len(bucket) < ZOMBIE_TRACKER_GRID_CROWD_COUNT:
-            continue
-        RNG.choice(bucket).tracker_force_wander = True
 
     survivor_candidates = [
         survivor

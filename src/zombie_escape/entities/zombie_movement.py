@@ -15,7 +15,6 @@ from ..entities_constants import (
     ZOMBIE_SPEED,
     ZOMBIE_TRACKER_FAR_SCENT_RADIUS,
     ZOMBIE_TRACKER_NEWER_FOOTPRINT_MS,
-    ZOMBIE_TRACKER_RELOCK_DELAY_MS,
     ZOMBIE_TRACKER_SCENT_RADIUS,
     ZOMBIE_TRACKER_SCENT_TOP_K,
     ZOMBIE_TRACKER_SIGHT_RANGE,
@@ -143,22 +142,6 @@ def _zombie_tracker_movement(
     now = now_ms
     is_in_sight = zombie._update_mode(player_center, ZOMBIE_TRACKER_SIGHT_RANGE)
     if not is_in_sight:
-        if zombie.tracker_force_wander:
-            last_target_time = zombie.tracker_target_time
-            if last_target_time is None:
-                last_target_time = now
-            zombie.tracker_relock_after_time = (
-                last_target_time + ZOMBIE_TRACKER_RELOCK_DELAY_MS
-            )
-            zombie.tracker_target_pos = None
-            _enter_wander(zombie)
-            return _zombie_wander_movement(
-                zombie,
-                cell_size,
-                layout,
-                now_ms=now,
-                player_center=player_center,
-            )
         _zombie_update_tracker_target(
             zombie,
             footprints,

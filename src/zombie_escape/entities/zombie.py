@@ -148,7 +148,6 @@ class Zombie(pygame.sprite.Sprite):
         self.tracker_last_progress_ms: int | None = None
         self.tracker_ignore_before_or_at_time: int | None = None
         self.tracker_relock_after_time: int | None = None
-        self.tracker_force_wander = False
         if self.kind == ZombieKind.WALL_HUGGER:
             self.wall_hug_side = RNG.choice([-1.0, 1.0])
             self.wall_hug_angle = RNG.uniform(0, math.tau)
