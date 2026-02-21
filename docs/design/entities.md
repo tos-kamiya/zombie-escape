@@ -81,5 +81,7 @@
 - This is a floor-render decoration feature, not an entity type.
 - Visuals (`dust`, `debris`, `screw/metal bits`) are documented in
   `docs/design/rendering.md`.
+- Stage-number barcode marks on normal/fall-spawn floor tiles are part of the same
+  visual-only floor dressing layer.
 - Scope is visual-only; no collision, movement, or gameplay-state behavior
   changes.

@@ -38,6 +38,15 @@ Supporting modules:
 - Overlay tiles are prebuilt/cached by size/base-color/tier/variant key.
 - Clutter density is intentionally higher near outer edges and lower toward central walk lanes.
 - Runtime rendering path only checks precomputed decoration cells and blits overlays.
+- Normal floor and fall-spawn floor tiles also draw a subtle stage-number barcode marker.
+- Barcode format is a compact 1D custom pattern:
+  - Start marker: `**_`
+  - End marker: `_**`
+  - Data bits: `0 -> _*`, `1 -> *_`
+  - One parity bit is appended at the end.
+- Barcode is drawn at the tile's lower-right corner with low alpha and short height (2px),
+  intended as a quiet decorative cue rather than a dominant UI element.
+- Very bright white tiles used in export/studio contexts are skipped for barcode overlay.
 
 ## Render Pipeline (`render/core.py`)
 
