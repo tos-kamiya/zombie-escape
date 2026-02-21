@@ -69,6 +69,7 @@ class Survivor(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
+        self.mounted_vehicle: pygame.sprite.Sprite | None = None
         self.following = False
         self.rescued = False
         self.jump_start_at = 0

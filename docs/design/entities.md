@@ -51,6 +51,26 @@
   its direction only after a neutral-input frame and then a directional input.
 - Turn pattern cycles through right/left blocks (`TF`, `TTFF`, ...).
 
+## Transport Bot (INPROGRESS)
+
+- New transport-only vehicle entity (temporary visual: plain white rectangle).
+- Boarding capacity is exactly one passenger.
+- Boardable targets are `Player`, `Buddy`, and `Survivor` only.
+- Zombies cannot board.
+- Activation is automatic: while stopped, if a boardable target enters the
+  center activation area, it starts (no explicit player confirm required).
+- On start, doors close and passenger lock is taken before movement.
+- Movement path is a stage-defined polyline and runs in round-trip mode.
+- Bot can wait at both polyline endpoints before the next run.
+- While moving, if the forward path is blocked by wall or pitfall, it reverses
+  travel direction.
+- While moving, the bot keeps moving even when colliding with outside entities;
+  outside entities are pushed away using patrol-bot-like push behavior.
+- While moving, onboard passenger has no interaction with outside world
+  (collision/combat/rescue/infection/hazard interaction disabled).
+- At destination endpoint, doors open and passenger is released, then normal
+  interactions resume.
+
 ## Moving Floor
 
 - Four fixed directions (`^`, `v`, `<`, `>`).

@@ -10,6 +10,7 @@ from ..entities import (
     Player,
     PatrolBot,
     Survivor,
+    TransportBot,
     Wall,
     Zombie,
     ZombieDog,
@@ -154,6 +155,7 @@ def update_entities(
     zombie_group = game_data.groups.zombie_group
     survivor_group = game_data.groups.survivor_group
     patrol_bot_group = game_data.groups.patrol_bot_group
+    transport_bot_group = game_data.groups.transport_bot_group
     spatial_index = game_data.state.spatial_index
     camera = game_data.camera
     stage = game_data.stage
@@ -518,6 +520,9 @@ def update_entities(
     patrol_bots_sorted: list[PatrolBot] = sorted(
         list(patrol_bot_group), key=lambda b: b.x
     )
+    transport_bots_sorted: list[TransportBot] = sorted(
+        list(transport_bot_group), key=lambda b: b.x
+    )
     electrified_cells: set[tuple[int, int]] = set()
     if game_data.cell_size > 0:
         for bot in patrol_bots_sorted:
@@ -759,6 +764,23 @@ def update_entities(
             drift=(floor_dx, floor_dy),
             now_ms=game_data.state.clock.elapsed_ms,
             spiky_plants=game_data.spiky_plants,
+        )
+
+    for bot in transport_bots_sorted:
+        if not bot.alive():
+            continue
+        bot_search_radius = bot.collision_radius + 120
+        nearby_walls = _walls_near((bot.x, bot.y), bot_search_radius)
+        bot.update(
+            nearby_walls,
+            player=player,
+            survivor_group=survivor_group,
+            zombie_group=zombie_group,
+            all_sprites=all_sprites,
+            layout=game_data.layout,
+            cell_size=game_data.cell_size,
+            pitfall_cells=pitfall_cells,
+            now_ms=game_data.state.clock.elapsed_ms,
         )
 
     update_decay_effects(game_data.state.decay_effects, frames=1)

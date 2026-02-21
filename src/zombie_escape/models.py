@@ -225,6 +225,7 @@ class Groups:
     zombie_group: sprite.Group
     survivor_group: sprite.Group
     patrol_bot_group: sprite.Group
+    transport_bot_group: sprite.Group
 
 
 @dataclass
@@ -334,6 +335,11 @@ class Stage:
 
     # Survivor spawning
     survivor_spawn_rate: float = 0.0
+    # Transport bot routes (world-space polylines)
+    transport_bot_paths: list[list[tuple[int, int]]] = field(default_factory=list)
+    transport_bot_speed: float = 0.0
+    transport_bot_activation_radius: float = 0.0
+    transport_bot_end_wait_ms: int = 0
 
     def __post_init__(self) -> None:
         mode_raw = self.fuel_mode
@@ -368,6 +374,10 @@ class Stage:
         assert total_zombie_ratio > 0.0, (
             f"Stage {self.id}: at least one zombie ratio must be > 0"
         )
+        for idx, path in enumerate(self.transport_bot_paths):
+            assert len(path) >= 2, (
+                f"Stage {self.id}: transport_bot_paths[{idx}] requires at least 2 points"
+            )
 
         # Exclusivity validation for zone-based gimmicks
         self._validate_zone_exclusivity()

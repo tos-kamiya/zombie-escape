@@ -15,6 +15,7 @@ from ..entities import (
     Shoes,
     SpikyPlant,
     Survivor,
+    TransportBot,
     Zombie,
     ZombieDog,
     random_position_outside_building,
@@ -27,6 +28,9 @@ from ..entities.zombie_movement import (
 from ..entities_constants import (
     FAST_ZOMBIE_BASE_SPEED,
     PLAYER_SPEED,
+    TRANSPORT_BOT_ACTIVATION_RADIUS,
+    TRANSPORT_BOT_END_WAIT_MS,
+    TRANSPORT_BOT_SPEED,
     ZombieKind,
     ZOMBIE_DECAY_DURATION_FRAMES,
     ZOMBIE_SPEED,
@@ -74,6 +78,7 @@ __all__ = [
     "setup_player_and_cars",
     "spawn_initial_zombies",
     "spawn_initial_patrol_bots",
+    "spawn_initial_transport_bots",
     "spawn_spiky_plants",
     "spawn_waiting_car",
     "maintain_waiting_car_supply",
@@ -1085,6 +1090,43 @@ def spawn_initial_patrol_bots(
         if not _is_patrol_spawn_position_clear(game_data, bot):
             continue
         patrol_group.add(bot)
+        all_sprites.add(bot, layer=LAYER_VEHICLES)
+
+
+def spawn_initial_transport_bots(game_data: GameData) -> None:
+    """Spawn transport bots from stage-defined polyline paths."""
+    stage = game_data.stage
+    if not stage.transport_bot_paths:
+        return
+    transport_group = game_data.groups.transport_bot_group
+    all_sprites = game_data.groups.all_sprites
+    speed = (
+        float(stage.transport_bot_speed)
+        if stage.transport_bot_speed > 0.0
+        else float(TRANSPORT_BOT_SPEED)
+    )
+    activation_radius = (
+        float(stage.transport_bot_activation_radius)
+        if stage.transport_bot_activation_radius > 0.0
+        else float(TRANSPORT_BOT_ACTIVATION_RADIUS)
+    )
+    end_wait_ms = (
+        int(stage.transport_bot_end_wait_ms)
+        if stage.transport_bot_end_wait_ms > 0
+        else int(TRANSPORT_BOT_END_WAIT_MS)
+    )
+    for path in stage.transport_bot_paths:
+        if len(path) < 2:
+            continue
+        bot = TransportBot(
+            [(int(x), int(y)) for x, y in path],
+            speed=speed,
+            activation_radius=activation_radius,
+            end_wait_ms=end_wait_ms,
+        )
+        if spritecollideany_walls(bot, game_data.groups.wall_group):
+            continue
+        transport_group.add(bot)
         all_sprites.add(bot, layer=LAYER_VEHICLES)
 
 

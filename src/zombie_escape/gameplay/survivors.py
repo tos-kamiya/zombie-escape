@@ -74,7 +74,11 @@ def update_survivors(
     target_rect = mounted_target.rect if mounted_target is not None else player.rect
     target_pos = target_rect.center
     spatial_index = game_data.state.spatial_index
-    survivors = [s for s in survivor_group if s.alive()]
+    survivors = [
+        s
+        for s in survivor_group
+        if s.alive() and getattr(s, "mounted_vehicle", None) is None
+    ]
     player_on_moving_floor = is_entity_on_moving_floor(player)
     moving_floor_survivors: list[Survivor] = []
 
@@ -432,6 +436,8 @@ def handle_survivor_zombie_collisions(
 
     for survivor in list(survivor_group):
         if not survivor.alive():
+            continue
+        if getattr(survivor, "mounted_vehicle", None) is not None:
             continue
         if _is_on_contaminated_cell(survivor):
             _convert_survivor_to_zombie(survivor, zombie_kind=ZombieKind.NORMAL)

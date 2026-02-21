@@ -389,8 +389,6 @@ class PatrolBot(pygame.sprite.Sprite):
 
         hit_pitfall = False
         blocked_hazard_cells = set(pitfall_cells)
-        if fire_floor_cells:
-            blocked_hazard_cells.update(fire_floor_cells)
         if blocked_hazard_cells and cell_size > 0:
             lead_x = next_x + float(self.direction[0]) * collision_radius
             lead_y = next_y + float(self.direction[1]) * collision_radius

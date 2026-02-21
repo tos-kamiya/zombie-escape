@@ -226,8 +226,8 @@
         "intro": "(The spiky plants...\nLet's survive here until dawn.)"
       },
       "stage36": {
-        "name": "#36 Tracker + Puddle Test",
-        "description": "A verification stage with many tracker zombies and broad puddle lanes."
+        "name": "#36 Transport Bot Proving Ground",
+        "description": "Verify safe transfers by loading characters onto transport bots."
       }
     },
     "status": {

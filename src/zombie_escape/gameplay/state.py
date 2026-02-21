@@ -146,6 +146,7 @@ def initialize_game_state(stage: Stage) -> GameData:
     zombie_group = pygame.sprite.Group()
     survivor_group = pygame.sprite.Group()
     patrol_bot_group = pygame.sprite.Group()
+    transport_bot_group = pygame.sprite.Group()
 
     # Create camera
     cell_size = stage.cell_size
@@ -164,6 +165,7 @@ def initialize_game_state(stage: Stage) -> GameData:
             zombie_group=zombie_group,
             survivor_group=survivor_group,
             patrol_bot_group=patrol_bot_group,
+            transport_bot_group=transport_bot_group,
         ),
         camera=camera,
         layout=LevelLayout(
