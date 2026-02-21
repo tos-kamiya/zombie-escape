@@ -75,3 +75,12 @@
 - In overview render, visualized as a simple circle marker for readability.
 - Puddle cells suppress footprint recording, so long puddle crossings
   can create scent gaps for tracker zombies.
+
+## Floor Ruin Dressing (INPROGRESS)
+
+- Status: `INPROGRESS` (design/prototype only).
+- This is a floor-render decoration concept, not an entity type.
+- Candidate visuals (`dust`, `debris`, `screw/metal bits`) are documented in
+  `docs/design/rendering.md`.
+- Intended scope is visual-only; no collision, movement, or gameplay-state
+  behavior changes.
