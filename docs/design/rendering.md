@@ -33,10 +33,11 @@ Supporting modules:
 ## Floor Ruin Dressing
 
 - Normal floor tiles render subtle ruin dressing overlays (dust specks, debris chips, rare screw/metal bits).
-- Placement uses runtime random sampling (`random`) and is cached per cell profile.
-- Overlay tiles are prebuilt/cached by size/base-color/seed/tier/variant key.
+- Placement is precomputed once at stage/layout generation time and stored per cell.
+- Cell density is `0.15 * Stage.wall_rubble_ratio` (0% when ratio is `0`, 15% when ratio is `1.0`).
+- Overlay tiles are prebuilt/cached by size/base-color/tier/variant key.
 - Clutter density is intentionally higher near outer edges and lower toward central walk lanes.
-- Spawn rate is scaled by `Stage.wall_rubble_ratio`; when ratio is `0`, floor ruin dressing does not appear.
+- Runtime rendering path only checks precomputed decoration cells and blits overlays.
 
 ## Render Pipeline (`render/core.py`)
 
