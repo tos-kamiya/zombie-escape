@@ -770,7 +770,7 @@ def _draw_play_area(
                 if use_secondary or (x, y) in fall_spawn_cells:
                     pygame.draw.rect(screen, color, sr)
                 # Skip very bright white tiles (studio/export margins) to avoid noisy overlays.
-                if min(color) < 245:
+                if ((x + y) % 2 == 0) and min(color) < 245:
                     barcode_overlay = _get_floor_barcode_overlay_tile(
                         cell_size=grid_snap,
                         base_color=(
