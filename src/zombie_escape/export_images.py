@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import random
 from pathlib import Path
 
 import pygame
@@ -246,7 +247,211 @@ def _render_studio_snapshot(
     )
 
     screen_rect = game_data.camera.apply_rect(framing_rect)
-    return screen.subsurface(screen_rect).copy()
+    clipped = screen_rect.clip(pygame.Rect(0, 0, assets.screen_width, assets.screen_height))
+    if clipped.width <= 0 or clipped.height <= 0:
+        return screen.copy()
+    return screen.subsurface(clipped).copy()
+
+
+def _center_target_rect(*, cell_size: int, cols: int, rows: int) -> pygame.Rect:
+    studio_cols, studio_rows = _studio_grid_size(cell_size)
+    center_cell_x = studio_cols // 2
+    center_cell_y = studio_rows // 2
+    left = (center_cell_x - cols // 2) * cell_size
+    top = (center_cell_y - rows // 2) * cell_size
+    return pygame.Rect(left, top, cols * cell_size, rows * cell_size)
+
+
+def _build_fall_spawn_cells_for_rect(
+    target_rect: pygame.Rect, *, cell_size: int
+) -> set[tuple[int, int]]:
+    x0 = target_rect.left // cell_size
+    y0 = target_rect.top // cell_size
+    x1 = target_rect.right // cell_size
+    y1 = target_rect.bottom // cell_size
+
+    cells: set[tuple[int, int]] = set()
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            local_x = x - x0
+            local_y = y - y0
+            # Sparse pattern so floor decoration differences are visible.
+            if (local_x + local_y) % 5 == 0:
+                cells.add((x, y))
+            elif local_x % 7 == 0 and (local_y % 3) == 1:
+                cells.add((x, y))
+    return cells
+
+
+def _render_floor_ruin_explainer(*, cell_size: int) -> pygame.Surface:
+    cols = max(8, int((SCREEN_WIDTH * 0.55) // cell_size))
+    rows = max(6, int((SCREEN_HEIGHT * 0.55) // cell_size))
+    target_rect = _center_target_rect(cell_size=cell_size, cols=cols, rows=rows)
+
+    normal = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=target_rect,
+        fall_spawn_cells=set(),
+        ambient_palette_key=None,
+        wall_rubble_ratio=0.5,
+    )
+    with_fall_spawn = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=target_rect,
+        fall_spawn_cells=_build_fall_spawn_cells_for_rect(target_rect, cell_size=cell_size),
+        ambient_palette_key=None,
+        wall_rubble_ratio=0.5,
+    )
+
+    crop_w = max(8, int(round(normal.get_width() / 1.3)))
+    crop_h = max(8, int(round(normal.get_height() / 1.3)))
+    crop_rect = pygame.Rect(0, 0, crop_w, crop_h)
+    crop_rect.center = normal.get_rect().center
+    normal = normal.subsurface(crop_rect).copy()
+    with_fall_spawn = with_fall_spawn.subsurface(crop_rect).copy()
+
+    pygame.font.init()
+    font = pygame.font.Font(None, 24)
+    label_color = (220, 220, 220)
+    bg = (24, 24, 24, 255)
+    panel = (38, 38, 38, 255)
+
+    margin = 12
+    gap = 10
+    label_h = 22
+    width = margin * 2 + normal.get_width() * 2 + gap
+    height = margin * 2 + label_h + normal.get_height()
+    out = pygame.Surface((width, height), pygame.SRCALPHA)
+    out.fill(bg)
+
+    left_x = margin
+    right_x = margin + normal.get_width() + gap
+    image_y = margin + label_h
+
+    pygame.draw.rect(
+        out,
+        panel,
+        pygame.Rect(left_x - 1, image_y - 1, normal.get_width() + 2, normal.get_height() + 2),
+        width=1,
+    )
+    pygame.draw.rect(
+        out,
+        panel,
+        pygame.Rect(
+            right_x - 1,
+            image_y - 1,
+            with_fall_spawn.get_width() + 2,
+            with_fall_spawn.get_height() + 2,
+        ),
+        width=1,
+    )
+
+    out.blit(normal, (left_x, image_y))
+    out.blit(with_fall_spawn, (right_x, image_y))
+
+    out.blit(font.render("Normal Floor", True, label_color), (left_x, margin))
+    out.blit(font.render("Fall Spawn + Floor", True, label_color), (right_x, margin))
+    return out
+
+
+def _draw_t_screw(
+    target: pygame.Surface,
+    *,
+    x: int,
+    y: int,
+    color: tuple[int, int, int, int],
+    orientation: int,
+) -> None:
+    direction = orientation % 4
+    if direction == 0:  # up
+        pygame.draw.line(target, color, (x - 2, y - 2), (x + 2, y - 2), width=1)
+        pygame.draw.line(target, color, (x, y - 2), (x, y + 2), width=1)
+    elif direction == 1:  # right
+        pygame.draw.line(target, color, (x + 2, y - 2), (x + 2, y + 2), width=1)
+        pygame.draw.line(target, color, (x - 2, y), (x + 2, y), width=1)
+    elif direction == 2:  # down
+        pygame.draw.line(target, color, (x - 2, y + 2), (x + 2, y + 2), width=1)
+        pygame.draw.line(target, color, (x, y - 2), (x, y + 2), width=1)
+    else:  # left
+        pygame.draw.line(target, color, (x - 2, y - 2), (x - 2, y + 2), width=1)
+        pygame.draw.line(target, color, (x - 2, y), (x + 2, y), width=1)
+
+
+def _render_floor_ruin_decorations_sample(*, cell_size: int) -> pygame.Surface:
+    cols, rows = _studio_grid_size(cell_size)
+    cell_x = cols // 2
+    cell_y = rows // 2
+    target_rect = pygame.Rect(
+        max(0, cell_x - 2) * cell_size,
+        max(0, cell_y - 2) * cell_size,
+        cell_size * 4,
+        cell_size * 4,
+    )
+    surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=target_rect,
+        ambient_palette_key=None,
+        wall_rubble_ratio=0.0,
+    )
+    rng = random.Random(20260301)
+    palette = get_environment_palette(None)
+    floor = palette.floor_primary
+    wall = palette.inner_wall
+
+    w, h = surface.get_size()
+    pad = max(6, int(round(min(w, h) * 0.08)))
+    draw_rect = pygame.Rect(pad, pad, max(8, w - pad * 2), max(8, h - pad * 2))
+
+    dark_dust = (
+        max(0, floor[0] - 26),
+        max(0, floor[1] - 26),
+        max(0, floor[2] - 26),
+        44,
+    )
+    light_dust = (
+        min(255, floor[0] + 12),
+        min(255, floor[1] + 12),
+        min(255, floor[2] + 12),
+        34,
+    )
+    for _ in range(10):
+        px = rng.randrange(draw_rect.left, draw_rect.right)
+        py = rng.randrange(draw_rect.top, draw_rect.bottom)
+        surface.set_at((px, py), dark_dust if rng.random() < 0.68 else light_dust)
+
+    for _ in range(3):
+        cx = rng.randrange(draw_rect.left + 4, draw_rect.right - 4)
+        cy = rng.randrange(draw_rect.top + 4, draw_rect.bottom - 4)
+        chip_color = (
+            max(0, int(wall[0] * rng.uniform(0.70, 0.90))),
+            max(0, int(wall[1] * rng.uniform(0.70, 0.90))),
+            max(0, int(wall[2] * rng.uniform(0.70, 0.90))),
+            140,
+        )
+        base = rng.random() * math.tau
+        angles = [
+            base,
+            base + rng.uniform(0.85, 2.15),
+            base + rng.uniform(2.2, 4.7),
+        ]
+        radii = [rng.uniform(2.2, 5.2), rng.uniform(1.7, 4.9), rng.uniform(2.5, 5.8)]
+        points = [
+            (
+                int(round(cx + math.cos(angle) * radius)),
+                int(round(cy + math.sin(angle) * radius)),
+            )
+            for angle, radius in zip(angles, radii)
+        ]
+        if len({points[0], points[1], points[2]}) == 3:
+            pygame.draw.polygon(surface, chip_color, points)
+
+    screw_color = (140, 148, 160, 196)
+    for i in range(2):
+        sx = rng.randrange(draw_rect.left + 4, draw_rect.right - 4)
+        sy = rng.randrange(draw_rect.top + 4, draw_rect.bottom - 4)
+        _draw_t_screw(surface, x=sx, y=sy, color=screw_color, orientation=i + rng.randrange(0, 4))
+
+    return surface
 
 
 def export_images(
@@ -670,5 +875,15 @@ def export_images(
     spiky_plant_path = out / "spiky_plant.png"
     _save_surface(spiky_plant_surface, spiky_plant_path, scale=output_scale)
     saved.append(spiky_plant_path)
+
+    floor_ruin_surface = _render_floor_ruin_explainer(cell_size=cell_size)
+    floor_ruin_path = out / "floor-ruin-preview.png"
+    _save_surface(floor_ruin_surface, floor_ruin_path, scale=1)
+    saved.append(floor_ruin_path)
+
+    floor_ruin_decorations = _render_floor_ruin_decorations_sample(cell_size=cell_size)
+    floor_ruin_decorations_path = out / "floor-ruin-decorations.png"
+    _save_surface(floor_ruin_decorations, floor_ruin_decorations_path, scale=output_scale)
+    saved.append(floor_ruin_decorations_path)
 
     return saved
