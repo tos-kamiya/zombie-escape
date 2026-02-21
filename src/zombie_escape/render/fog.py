@@ -16,7 +16,7 @@ from ..models import Stage
 from ..render_assets import RenderAssets
 from .hud import _get_fog_scale
 
-_SHARED_FOG_CACHE_BY_CELL_SIZE: dict[int, dict[str, Any]] = {}
+_SHARED_FOG_CACHE: dict[str, Any] | None = None
 _FOG_CACHE_FORMAT_VERSION = 1
 _FOG_CACHE_APP_NAME = "ZombieEscape"
 
@@ -67,10 +67,6 @@ class _FogProfile(Enum):
         return _FogProfile.DARK0
 
 
-def _fog_cell_size_key(assets: RenderAssets) -> int:
-    return int(assets.internal_wall_grid_snap)
-
-
 def _overlay_canvas_size(
     assets: RenderAssets,
     profile: _FogProfile,
@@ -92,22 +88,16 @@ def _fog_cache_dir() -> Path:
     return Path(user_cache_dir(_FOG_CACHE_APP_NAME, _FOG_CACHE_APP_NAME)) / "fog"
 
 
-def _fog_cache_filename(assets: RenderAssets, profile: _FogProfile, layer: str) -> str:
-    cell_size = int(assets.internal_wall_grid_snap)
-    return (
-        f"fog_{profile.name.lower()}_cell{cell_size}_{layer}"
-        f".v{_FOG_CACHE_FORMAT_VERSION}.png"
-    )
+def _fog_cache_filename(profile: _FogProfile, layer: str) -> str:
+    return f"fog_{profile.name.lower()}_{layer}.v{_FOG_CACHE_FORMAT_VERSION}.png"
 
 
-def _fog_cache_file_path(assets: RenderAssets, profile: _FogProfile, layer: str) -> Path:
-    return _fog_cache_dir() / _fog_cache_filename(assets, profile, layer)
+def _fog_cache_file_path(profile: _FogProfile, layer: str) -> Path:
+    return _fog_cache_dir() / _fog_cache_filename(profile, layer)
 
 
-def _fog_resource_cache_path(
-    assets: RenderAssets, profile: _FogProfile, layer: str
-) -> Path | None:
-    filename = _fog_cache_filename(assets, profile, layer)
+def _fog_resource_cache_path(profile: _FogProfile, layer: str) -> Path | None:
+    filename = _fog_cache_filename(profile, layer)
     try:
         base = resources.files("zombie_escape").joinpath("assets").joinpath("fog_cache")
         target = base.joinpath(filename)
@@ -183,13 +173,13 @@ def _load_cached_overlay_entry(
         except Exception:
             return None
 
-    combined_resource_path = _fog_resource_cache_path(assets, profile, "combined")
+    combined_resource_path = _fog_resource_cache_path(profile, "combined")
     if combined_resource_path is not None:
         loaded = _try_load(combined_resource_path)
         if loaded is not None:
             return loaded
 
-    combined_cache_path = _fog_cache_file_path(assets, profile, "combined")
+    combined_cache_path = _fog_cache_file_path(profile, "combined")
     if combined_cache_path.exists():
         loaded = _try_load(combined_cache_path)
         if loaded is not None:
@@ -215,7 +205,7 @@ def save_fog_cache_profile(
     )
     out_base = output_dir if output_dir is not None else _fog_cache_dir()
     out_base.mkdir(parents=True, exist_ok=True)
-    combined_path = out_base / _fog_cache_filename(assets, profile, "combined")
+    combined_path = out_base / _fog_cache_filename(profile, "combined")
     _save_alpha_to_png(combined_alpha, combined_path, color=profile.color)
     return [combined_path]
 
@@ -236,14 +226,14 @@ def save_dark0_fog_cache(assets: RenderAssets) -> list[Path]:
 
 
 def get_shared_fog_cache(assets: RenderAssets) -> dict[str, Any] | None:
-    return _SHARED_FOG_CACHE_BY_CELL_SIZE.get(_fog_cell_size_key(assets))
+    del assets  # cache no longer varies by cell size
+    return _SHARED_FOG_CACHE
 
 
 def load_shared_fog_cache_from_files(assets: RenderAssets) -> dict[str, Any] | None:
     """Load shared fog cache from bundled/user cache files only (no generation)."""
-
-    key = _fog_cell_size_key(assets)
-    cached = _SHARED_FOG_CACHE_BY_CELL_SIZE.get(key)
+    global _SHARED_FOG_CACHE
+    cached = _SHARED_FOG_CACHE
     if cached is not None:
         return cached
 
@@ -260,7 +250,7 @@ def load_shared_fog_cache_from_files(assets: RenderAssets) -> dict[str, Any] | N
             return None
         overlays[profile] = loaded
 
-    _SHARED_FOG_CACHE_BY_CELL_SIZE[key] = fog_data
+    _SHARED_FOG_CACHE = fog_data
     return fog_data
 
 

@@ -93,7 +93,7 @@ Supporting modules:
 - Cache payload stores a PNG alpha plane for the `combined` fog layer;
   runtime reconstructs `Surface` objects from loaded alpha data.
 - Runtime first tries bundled resource cache files
-  (`assets/fog_cache/fog_<profile>_cell<cell_size>_combined.v<format>.png`) for
+  (`assets/fog_cache/fog_<profile>_combined.v<format>.png`) for
   each profile, then user cache.
 - Startup check requires all fog cache profiles to load successfully before
   entering the title screen.

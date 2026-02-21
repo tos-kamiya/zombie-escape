@@ -1244,6 +1244,7 @@ STAGES: list[Stage] = [
             (5, 6, 10, 1),
         ],
         puddle_density=0.02,
+        initial_flashlight_count=4,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

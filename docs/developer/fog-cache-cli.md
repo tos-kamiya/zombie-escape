@@ -5,8 +5,7 @@ This project ships fog overlay cache files as bundled resources in
 
 ## Build Command
 
-Generate fog cache files for all available stage cell sizes and all fog
-profiles (`DARK0`, `DARK1`, `DARK2`):
+Generate fog cache files for all fog profiles (`DARK0`, `DARK1`, `DARK2`):
 
 ```bash
 uv run -p .venv/bin/python -m zombie_escape --build-fog-cache
@@ -16,8 +15,8 @@ uv run -p .venv/bin/python -m zombie_escape --build-fog-cache
 
 - Output directory: `src/zombie_escape/assets/fog_cache/`
 - Output format: PNG file (`combined` layer)
-- Filename rule: `fog_<profile>_cell<cell_size>_<layer>.v<format>.png`
-  - Example: `fog_dark0_cell16_combined.v1.png`
+- Filename rule: `fog_<profile>_<layer>.v<format>.png`
+  - Example: `fog_dark0_combined.v1.png`
 
 ## Bundled Fog Asset Format (PNG + Filename Version)
 
@@ -28,7 +27,7 @@ files).
 - Target format: 8-bit grayscale PNG alpha-mask images
 - Layer split: single file (`combined`)
 - Versioning rule: embed format version in filename
-  - Example: `fog_dark0_cell16_combined.v1.png`
+  - Example: `fog_dark0_combined.v1.png`
 - Runtime policy: load bundled files only; do not regenerate at user runtime
 - Validation policy: on mismatch/missing assets, fail startup with explicit error
 

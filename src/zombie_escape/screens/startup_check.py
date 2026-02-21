@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import Any
 
 import pygame
 from pygame import surface, time
@@ -10,7 +10,6 @@ from ..font_utils import load_font
 from ..localization import get_font_settings
 from ..localization import translate as tr
 from ..level_constants import DEFAULT_CELL_SIZE
-from ..models import Stage
 from ..render_constants import build_render_assets
 from ..render.fog import load_shared_fog_cache_from_files
 from ..input_utils import (
@@ -42,7 +41,6 @@ def startup_check_screen(
     fps: int,
     *,
     screen_size: tuple[int, int],
-    stages: Sequence[Stage],
 ) -> ScreenTransition:
     """Gate entry to title screen if confirm is held on startup."""
     width, height = screen.get_size()
@@ -52,18 +50,13 @@ def startup_check_screen(
     input_helper = InputHelper()
     pygame.event.pump()
 
-    unique_cell_sizes = sorted({int(stage.cell_size) for stage in stages if stage.available})
-    if not unique_cell_sizes:
-        unique_cell_sizes = [DEFAULT_CELL_SIZE]
     fog_cache_error: str | None = None
-    for cell_size in unique_cell_sizes:
-        assets = build_render_assets(cell_size)
-        if load_shared_fog_cache_from_files(assets) is None:
-            fog_cache_error = (
-                "Fog cache load failed. "
-                "Run --build-fog-cache and restart."
-            )
-            break
+    assets = build_render_assets(DEFAULT_CELL_SIZE)
+    if load_shared_fog_cache_from_files(assets) is None:
+        fog_cache_error = (
+            "Fog cache load failed. "
+            "Run --build-fog-cache and restart."
+        )
 
     if fog_cache_error is not None:
         while True:

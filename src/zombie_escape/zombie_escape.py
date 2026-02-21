@@ -152,13 +152,8 @@ def main() -> None:
         from .render.fog import save_all_fog_caches
 
         output_dir = Path(__file__).resolve().parent / "assets" / "fog_cache"
-        cell_sizes = sorted({int(stage.cell_size) for stage in STAGES if stage.available})
-        if not cell_sizes:
-            cell_sizes = [DEFAULT_CELL_SIZE]
-        saved_paths: list[Path] = []
-        for cell_size in cell_sizes:
-            assets = build_render_assets(cell_size)
-            saved_paths.extend(save_all_fog_caches(assets, output_dir=output_dir))
+        assets = build_render_assets(DEFAULT_CELL_SIZE)
+        saved_paths = save_all_fog_caches(assets, output_dir=output_dir)
         for path in saved_paths:
             print(f"Saved fog cache: {path}")
         pygame.quit()
@@ -219,7 +214,6 @@ def main() -> None:
                 config,
                 FPS,
                 screen_size=menu_screen.get_size(),
-                stages=STAGES,
             )
         elif next_screen == ScreenID.TITLE:
             adjust_menu_logical_size()
