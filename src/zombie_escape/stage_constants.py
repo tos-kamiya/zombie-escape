@@ -902,6 +902,7 @@ STAGES: list[Stage] = [
             (37, 39, 2, 2),
         ],
         puddle_density=0.05,
+        wall_rubble_ratio=0.3,
     ),
     Stage(
         id="stage30",

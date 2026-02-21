@@ -55,6 +55,10 @@ _FLOOR_RUIN_TILE_CACHE: dict[
     tuple[int, tuple[int, int, int], tuple[int, int, int], int, int],
     surface.Surface,
 ] = {}
+_FLOOR_BARCODE_TILE_CACHE: dict[
+    tuple[int, tuple[int, int, int], int],
+    surface.Surface,
+] = {}
 
 _FLOOR_RUIN_VARIANTS = 8
 
@@ -87,6 +91,64 @@ def _floor_clutter_tier_for_cell(*, x: int, y: int, xs: int, ys: int, xe: int, y
     if edge_distance <= 3:
         return 1
     return 0
+
+
+def _encode_stage_barcode_pattern(stage_number: int) -> str:
+    value = max(0, int(stage_number))
+    bits = bin(value)[2:]
+    parity_bit = "0" if (bits.count("1") % 2 == 0) else "1"
+    start = "**_"
+    end = "_**"
+    encoded_bits = "".join("_*" if bit == "0" else "*_" for bit in bits)
+    encoded_parity = "_*" if parity_bit == "0" else "*_"
+    return start + encoded_bits + encoded_parity + end
+
+
+def _get_floor_barcode_overlay_tile(
+    *,
+    cell_size: int,
+    base_color: tuple[int, int, int],
+    stage_number: int,
+) -> surface.Surface:
+    key = (
+        max(1, int(cell_size)),
+        (int(base_color[0]), int(base_color[1]), int(base_color[2])),
+        max(0, int(stage_number)),
+    )
+    cached = _FLOOR_BARCODE_TILE_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    size = key[0]
+    overlay = pygame.Surface((size, size), pygame.SRCALPHA)
+    pattern = _encode_stage_barcode_pattern(key[2])
+    module_width = 1
+    bar_height = 2
+    pattern_width = len(pattern) * module_width
+    pad_x = 1
+    pad_y = 1
+    x0 = max(0, size - pattern_width - pad_x)
+    y0 = max(0, size - bar_height - pad_y)
+    alpha = 44
+    color = (
+        max(0, min(255, int(base_color[0] * 0.35))),
+        max(0, min(255, int(base_color[1] * 0.35))),
+        max(0, min(255, int(base_color[2] * 0.35))),
+        alpha,
+    )
+    for i, symbol in enumerate(pattern):
+        if symbol != "*":
+            continue
+        x = x0 + i * module_width
+        if x >= size:
+            continue
+        bar_width = min(module_width, size - x)
+        if bar_width <= 0:
+            continue
+        pygame.draw.rect(overlay, color, pygame.Rect(x, y0, bar_width, bar_height))
+
+    _FLOOR_BARCODE_TILE_CACHE[key] = overlay
+    return overlay
 
 
 def _get_floor_ruin_overlay_tile(
@@ -447,6 +509,7 @@ def _draw_play_area(
     floor_ruin_cells: dict[tuple[int, int], int],
     electrified_cells: set[tuple[int, int]],
     cell_size: int,
+    stage_number: int,
     *,
     elapsed_ms: int,
 ) -> tuple[int, int, int, int, set[tuple[int, int]]]:
@@ -706,6 +769,18 @@ def _draw_play_area(
             if sr.colliderect(screen_rect):
                 if use_secondary or (x, y) in fall_spawn_cells:
                     pygame.draw.rect(screen, color, sr)
+                # Skip very bright white tiles (studio/export margins) to avoid noisy overlays.
+                if min(color) < 245:
+                    barcode_overlay = _get_floor_barcode_overlay_tile(
+                        cell_size=grid_snap,
+                        base_color=(
+                            int(color[0]),
+                            int(color[1]),
+                            int(color[2]),
+                        ),
+                        stage_number=stage_number,
+                    )
+                    screen.blit(barcode_overlay, sr.topleft)
                 # Floor ruin dressing: visual-only overlay for normal/fall-spawn floor tiles.
                 variant = floor_ruin_cells.get((x, y))
                 if variant is not None:

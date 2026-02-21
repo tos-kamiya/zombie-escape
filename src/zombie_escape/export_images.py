@@ -123,6 +123,7 @@ def _render_studio_snapshot(
     enable_shadows: bool = False,
     ambient_palette_key: str | None = STUDIO_AMBIENT_PALETTE_KEY,
     wall_rubble_ratio: float | None = None,
+    stage_number: int = 0,
 ) -> pygame.Surface:
     game_data = _build_studio_game_data(cell_size)
     game_data.state.ambient_palette_key = ambient_palette_key
@@ -199,6 +200,7 @@ def _render_studio_snapshot(
         layout.floor_ruin_cells,
         set(),
         game_data.cell_size,
+        max(0, int(stage_number)),
         elapsed_ms=int(game_data.state.clock.elapsed_ms),
     )
     if enable_shadows:
@@ -892,11 +894,6 @@ def export_images(
     spiky_plant_path = out / "spiky_plant.png"
     _save_surface(spiky_plant_surface, spiky_plant_path, scale=output_scale)
     saved.append(spiky_plant_path)
-
-    floor_ruin_surface = _render_floor_ruin_explainer(cell_size=cell_size)
-    floor_ruin_path = out / "floor-ruin-preview.png"
-    _save_surface(floor_ruin_surface, floor_ruin_path, scale=1)
-    saved.append(floor_ruin_path)
 
     floor_ruin_decorations = _render_floor_ruin_decorations_sample(cell_size=cell_size)
     floor_ruin_decorations_path = out / "floor-ruin-decorations.png"

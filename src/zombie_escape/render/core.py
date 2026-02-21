@@ -83,6 +83,11 @@ def draw(
 
     palette = get_environment_palette(state.ambient_palette_key)
     screen.fill(palette.outside)
+    stage_number = 0
+    if stage is not None:
+        digits = "".join(ch for ch in stage.id if ch.isdigit())
+        if digits:
+            stage_number = int(digits)
 
     _draw_play_area(
         screen,
@@ -106,6 +111,7 @@ def draw(
         game_data.layout.floor_ruin_cells,
         state.electrified_cells,
         game_data.cell_size,
+        stage_number,
         elapsed_ms=int(state.clock.elapsed_ms),
     )
     shadows_enabled = config.get("visual", {}).get("shadows", {}).get("enabled", True)
