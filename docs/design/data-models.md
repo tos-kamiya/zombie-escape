@@ -60,6 +60,7 @@ Generated map surface and cell sets.
 
 - `field_rect`
 - `outside_cells`, `walkable_cells`, `wall_cells`, `outer_wall_cells`, `steel_beam_cells`
+- `car_walkable_cells`, `car_spawn_cells`
 - `pitfall_cells`, `fall_spawn_cells`
 - `spiky_plant_cells`, `puddle_cells`
 - `floor_ruin_cells` (precomputed floor-decoration placement map: `(x, y) -> variant`)

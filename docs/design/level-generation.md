@@ -16,7 +16,8 @@
   - Fire floor cells are reserved against spawn/item candidate placement.
   - Stage-defined metal floor cells are placed before other hazards and are kept
     from being replaced by pitfall/puddle/spiky-plant/reinforced-wall placement.
-  - Item spawn candidates must exclude fire floor cells.
+  - Runtime spawn candidates (`item_spawn_cells`, `car_spawn_cells`, filtered `car_cells`)
+    exclude transport-path cells, fire floors, moving floors, and spiky-plant cells.
 - Adjacency decoration:
   - Orthogonally adjacent normal floor cells next to fire floors are converted to
     `metal_floor_cells` for visual transition.
@@ -115,7 +116,10 @@ Reserved cells are protected from incompatible terrain placement.
 ## Fall Spawn and Overlap Policy
 
 - `fall_spawn_zones` expands to `fall_spawn_cells`.
-- `fall_spawn_cell_ratio` can add interior cells by ratio.
+- `fall_spawn_cell_ratio` adds interior cells by fixed-count sampling:
+  - candidate list from interior walkable cells
+  - shuffle + `round(len(candidates) * ratio)` selection
+  - if `ratio > 0`, minimum selection count is `1` (when candidates exist)
 - `fall_spawn_cells` is a spawn-tag attribute (not a terrain tile type).
 - Fall-spawn designation can overlap with other floor features.
 
@@ -125,7 +129,8 @@ Two BFS checks gate acceptance:
 
 1. Car connectivity (`validate_car_connectivity`)
    - 4-direction traversal from car candidate to at least one exit.
-   - Produces reachable cell set used as `car_walkable_cells`.
+   - Produces reachable cell set used as `car_walkable_cells` (pathing domain).
+   - Runtime placement uses filtered `car_spawn_cells` (spawn-safe subset).
    - Skipped for endurance stages (on-foot objective validation is used instead).
 2. Humanoid objective connectivity (`validate_humanoid_objective_connectivity`)
    - 8-direction traversal with moving-floor directional constraints.

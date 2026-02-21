@@ -14,8 +14,9 @@
     each tone (`grayscale` / `burned`), then one variant is chosen per effect via
     Python's `random` module (separate from deterministic gameplay RNG).
 - Spawn/item rule:
-  - Runtime item placement candidates are derived from `item_spawn_cells`, which
-    will already exclude fire floor cells.
+  - Runtime item and car placement candidates (`item_spawn_cells`, `car_spawn_cells`,
+    filtered `car_cells`) already exclude transport-path cells, fire floors,
+    moving floors, and spiky-plant cells.
 
 ## Pitfalls and Jumping
 
