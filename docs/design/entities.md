@@ -60,7 +60,8 @@
 - Activation is automatic: while stopped, if a boardable target enters the
   center activation area, it starts (no explicit player confirm required).
 - On start, doors close and passenger lock is taken before movement.
-- Movement path is a stage-defined polyline and runs in round-trip mode.
+- Movement path is a stage-defined polyline in cell coordinates and runs in
+  round-trip mode.
 - Bot can wait at both polyline endpoints before the next run.
 - While moving, if the forward path is blocked by wall or pitfall, it reverses
   travel direction.

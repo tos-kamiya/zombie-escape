@@ -51,6 +51,31 @@ __all__ = [
 ]
 
 
+def _draw_transport_path_markers(
+    screen: surface.Surface,
+    camera,
+    transport_bots: list[pygame.sprite.Sprite],
+) -> None:
+    if not transport_bots:
+        return
+    # Draw over floor tiles but below entities.
+    line_color = (205, 205, 205)
+    node_color = (245, 245, 245)
+    for bot in transport_bots:
+        points = getattr(bot, "path_points", None)
+        if not points or len(points) < 2:
+            continue
+        screen_points = []
+        for wx, wy in points:
+            rect = pygame.Rect(int(round(wx)), int(round(wy)), 0, 0)
+            sx, sy = camera.apply_rect(rect).topleft
+            screen_points.append((sx, sy))
+        if len(screen_points) >= 2:
+            pygame.draw.lines(screen, line_color, False, screen_points, width=2)
+        for sx, sy in screen_points:
+            pygame.draw.circle(screen, node_color, (sx, sy), 2)
+
+
 def draw(
     assets: RenderAssets,
     screen: surface.Surface,
@@ -119,6 +144,11 @@ def draw(
         game_data.cell_size,
         stage_number,
         elapsed_ms=int(state.clock.elapsed_ms),
+    )
+    _draw_transport_path_markers(
+        screen,
+        camera,
+        list(game_data.groups.transport_bot_group),
     )
     shadows_enabled = config.get("visual", {}).get("shadows", {}).get("enabled", True)
     if shadows_enabled:

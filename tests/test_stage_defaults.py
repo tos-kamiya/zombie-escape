@@ -101,3 +101,14 @@ def test_stage_zone_exclusivity_assertion() -> None:
             reinforced_wall_zones=[(2, 2, 1, 1)],
             zombie_normal_ratio=1.0,
         )
+
+
+def test_stage_transport_path_cannot_cross_outer_band() -> None:
+    with pytest.raises(AssertionError, match="outside/outer-wall band"):
+        Stage(
+            id="transport_bad_outer_band",
+            name_key="n",
+            description_key="d",
+            transport_bot_paths=[[(1, 3), (10, 3)]],
+            zombie_normal_ratio=1.0,
+        )

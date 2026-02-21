@@ -1100,11 +1100,7 @@ def spawn_initial_transport_bots(game_data: GameData) -> None:
         return
     transport_group = game_data.groups.transport_bot_group
     all_sprites = game_data.groups.all_sprites
-    speed = (
-        float(stage.transport_bot_speed)
-        if stage.transport_bot_speed > 0.0
-        else float(TRANSPORT_BOT_SPEED)
-    )
+    speed = float(TRANSPORT_BOT_SPEED)
     activation_radius = (
         float(stage.transport_bot_activation_radius)
         if stage.transport_bot_activation_radius > 0.0
@@ -1118,8 +1114,9 @@ def spawn_initial_transport_bots(game_data: GameData) -> None:
     for path in stage.transport_bot_paths:
         if len(path) < 2:
             continue
+        world_path = [_cell_center((int(cx), int(cy)), game_data.cell_size) for cx, cy in path]
         bot = TransportBot(
-            [(int(x), int(y)) for x, y in path],
+            world_path,
             speed=speed,
             activation_radius=activation_radius,
             end_wait_ms=end_wait_ms,

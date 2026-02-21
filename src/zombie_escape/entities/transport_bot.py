@@ -93,13 +93,44 @@ class TransportBot(pygame.sprite.Sprite):
         *,
         all_sprites: pygame.sprite.LayeredUpdates,
         survivor_group: pygame.sprite.Group,
+        layout,
     ) -> None:
         passenger = self.passenger
         if passenger is None:
             return
+        drop_vec_x = 1.0
+        drop_vec_y = 0.0
+        next_target_idx = self._target_index
+        if 0 <= next_target_idx < len(self.path_points):
+            target_x, target_y = self.path_points[next_target_idx]
+            seg_x = target_x - self.x
+            seg_y = target_y - self.y
+            seg_len = math.hypot(seg_x, seg_y)
+            if seg_len > 1e-6:
+                # Drop passenger to a side of the path so they don't re-trigger boarding.
+                drop_vec_x = -seg_y / seg_len
+                drop_vec_y = seg_x / seg_len
+        entity_radius = float(
+            getattr(
+                passenger,
+                "collision_radius",
+                getattr(passenger, "radius", max(passenger.rect.width, passenger.rect.height) / 2),
+            )
+        )
+        drop_dist = self.activation_radius + entity_radius + 4.0
+        candidate_positions = [
+            (self.x + drop_vec_x * drop_dist, self.y + drop_vec_y * drop_dist),
+            (self.x - drop_vec_x * drop_dist, self.y - drop_vec_y * drop_dist),
+            (self.x - drop_vec_y * drop_dist, self.y + drop_vec_x * drop_dist),
+        ]
+        final_x, final_y = self.x, self.y
+        for cand_x, cand_y in candidate_positions:
+            if 0 <= cand_x < layout.field_rect.width and 0 <= cand_y < layout.field_rect.height:
+                final_x, final_y = cand_x, cand_y
+                break
         if hasattr(passenger, "mounted_vehicle"):
             passenger.mounted_vehicle = None
-        passenger.rect.center = (int(self.x), int(self.y))
+        passenger.rect.center = (int(final_x), int(final_y))
         if hasattr(passenger, "x"):
             passenger.x = float(passenger.rect.centerx)
         if hasattr(passenger, "y"):
@@ -125,7 +156,16 @@ class TransportBot(pygame.sprite.Sprite):
             return
 
         candidate: pygame.sprite.Sprite | None = None
-        if (
+        for survivor in survivor_group:
+            if not survivor.alive() or getattr(survivor, "mounted_vehicle", None):
+                continue
+            dx = survivor.x - self.x
+            dy = survivor.y - self.y
+            if dx * dx + dy * dy <= self.activation_radius * self.activation_radius:
+                candidate = survivor
+                break
+
+        if candidate is None and (
             player is not None
             and player.alive()
             and getattr(player, "mounted_vehicle", None) is None
@@ -134,15 +174,6 @@ class TransportBot(pygame.sprite.Sprite):
             dy = player.y - self.y
             if dx * dx + dy * dy <= self.activation_radius * self.activation_radius:
                 candidate = player
-        if candidate is None:
-            for survivor in survivor_group:
-                if not survivor.alive() or getattr(survivor, "mounted_vehicle", None):
-                    continue
-                dx = survivor.x - self.x
-                dy = survivor.y - self.y
-                if dx * dx + dy * dy <= self.activation_radius * self.activation_radius:
-                    candidate = survivor
-                    break
 
         if candidate is None:
             return
@@ -187,6 +218,7 @@ class TransportBot(pygame.sprite.Sprite):
         now_ms: int,
         all_sprites: pygame.sprite.LayeredUpdates,
         survivor_group: pygame.sprite.Group,
+        layout,
     ) -> None:
         idx = self._target_index
         last = len(self.path_points) - 1
@@ -203,6 +235,7 @@ class TransportBot(pygame.sprite.Sprite):
             self._disembark_passenger(
                 all_sprites=all_sprites,
                 survivor_group=survivor_group,
+                layout=layout,
             )
             return
         self._target_index = idx + self._direction
@@ -298,6 +331,7 @@ class TransportBot(pygame.sprite.Sprite):
                     now_ms=now_ms,
                     all_sprites=all_sprites,
                     survivor_group=survivor_group,
+                    layout=layout,
                 )
             else:
                 step = min(self.speed, dist)
@@ -324,6 +358,7 @@ class TransportBot(pygame.sprite.Sprite):
                             now_ms=now_ms,
                             all_sprites=all_sprites,
                             survivor_group=survivor_group,
+                            layout=layout,
                         )
 
         self.rect.center = (int(self.x), int(self.y))

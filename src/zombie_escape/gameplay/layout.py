@@ -23,7 +23,7 @@ from ..level_blueprints import (
     generate_random_blueprint,
     validate_connectivity,
 )
-from ..models import LevelLayout, Stage
+from ..models import LevelLayout, Stage, transport_path_cells
 from ..models import FuelMode
 from ..rng import get_rng, seed_rng
 
@@ -104,6 +104,14 @@ def _expand_moving_floor_cells(
     return moving_floor_cells
 
 
+def _filter_spawn_cells(
+    cells: list[tuple[int, int]],
+    *,
+    blocked_cells: set[tuple[int, int]],
+) -> list[tuple[int, int]]:
+    return [cell for cell in cells if cell not in blocked_cells]
+
+
 def generate_level_from_blueprint(
     stage: Stage,
     config: dict[str, Any],
@@ -125,6 +133,7 @@ def generate_level_from_blueprint(
     steel_enabled = steel_conf.get("enabled", False)
 
     base_moving_floor_cells = _expand_moving_floor_cells(stage)
+    transport_reserved_cells = transport_path_cells(stage.transport_bot_paths)
     fuel_count = 0
     empty_fuel_can_count = 0
     fuel_station_count = 0
@@ -176,6 +185,28 @@ def generate_level_from_blueprint(
             )
         except MapGenerationError:
             continue
+        if transport_reserved_cells:
+            grid_rows = len(blueprint.grid)
+            grid_cols = len(blueprint.grid[0]) if grid_rows > 0 else 0
+            if any(
+                cell[0] < 0
+                or cell[1] < 0
+                or cell[0] >= grid_cols
+                or cell[1] >= grid_rows
+                for cell in transport_reserved_cells
+            ):
+                continue
+            editable = [list(row) for row in blueprint.grid]
+            for cell_x, cell_y in transport_reserved_cells:
+                ch = editable[cell_y][cell_x]
+                if ch not in {"P", "C", "E"}:
+                    editable[cell_y][cell_x] = "."
+            blueprint.grid = ["".join(row) for row in editable]
+            blueprint.steel_cells = {
+                (x, y)
+                for (x, y) in blueprint.steel_cells
+                if (x, y) not in transport_reserved_cells
+            }
         require_car_spawn = not stage.endurance_stage
         car_reachable = validate_connectivity(
             blueprint.grid,
@@ -564,19 +595,20 @@ def generate_level_from_blueprint(
     )
 
     moving_floor_set = set(moving_floor_cells)
-    item_spawn_cells = (
-        [
-            cell
-            for cell in walkable_cells
-            if cell not in moving_floor_set and cell not in fire_floor_cells
-        ]
-        if moving_floor_set
-        else [cell for cell in walkable_cells if cell not in fire_floor_cells]
+    blocked_spawn_cells = (
+        set(transport_reserved_cells) | set(fire_floor_cells) | moving_floor_set
     )
-    car_spawn_cells = (
-        [cell for cell in car_reachable_cells if cell not in moving_floor_set]
-        if moving_floor_set
-        else list(car_reachable_cells)
+    item_spawn_cells = _filter_spawn_cells(
+        walkable_cells,
+        blocked_cells=blocked_spawn_cells,
+    )
+    car_spawn_cells = _filter_spawn_cells(
+        list(car_reachable_cells),
+        blocked_cells=blocked_spawn_cells,
+    )
+    filtered_car_cells = _filter_spawn_cells(
+        list(car_cells),
+        blocked_cells=blocked_spawn_cells,
     )
     layout.car_spawn_cells = car_spawn_cells
 
@@ -584,12 +616,26 @@ def generate_level_from_blueprint(
         layout,
         {
             "player_cells": player_cells,
-            "car_cells": list(car_cells),
-            "fuel_cells": list(fuel_cells),
-            "empty_fuel_can_cells": list(empty_fuel_can_cells),
-            "fuel_station_cells": list(fuel_cells),
-            "flashlight_cells": list(flashlight_cells),
-            "shoes_cells": list(shoes_cells),
+            "car_cells": filtered_car_cells,
+            "fuel_cells": [
+                cell for cell in fuel_cells if cell not in transport_reserved_cells
+            ],
+            "empty_fuel_can_cells": [
+                cell
+                for cell in empty_fuel_can_cells
+                if cell not in transport_reserved_cells
+            ],
+            "fuel_station_cells": [
+                cell for cell in fuel_cells if cell not in transport_reserved_cells
+            ],
+            "flashlight_cells": [
+                cell
+                for cell in flashlight_cells
+                if cell not in transport_reserved_cells
+            ],
+            "shoes_cells": [
+                cell for cell in shoes_cells if cell not in transport_reserved_cells
+            ],
             "spiky_plant_cells": list(spiky_plant_cells),
             "fire_floor_cells": list(fire_floor_cells),
             "metal_floor_cells": list(metal_floor_cells),

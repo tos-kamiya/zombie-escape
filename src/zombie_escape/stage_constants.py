@@ -1243,15 +1243,14 @@ STAGES: list[Stage] = [
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
         transport_bot_paths=[
             [
-                (200, 160),
-                (1300, 160),
+                (4, 3),
+                (25, 3),
             ],
             [
-                (200, 590),
-                (1300, 590),
+                (4, 11),
+                (25, 11),
             ],
         ],
-        transport_bot_speed=1.4,
         transport_bot_activation_radius=10.0,
         transport_bot_end_wait_ms=900,
         flashlight_spawn_count=1,

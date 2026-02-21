@@ -142,3 +142,39 @@ def test_transport_bot_disembarks_survivor_at_endpoint() -> None:
     assert survivor in survivor_group
     assert survivor in all_sprites
     assert bot.moving is False
+
+
+def test_transport_bot_prefers_survivor_over_player() -> None:
+    _init_pygame()
+    layout = _make_layout()
+    bot = TransportBot(
+        [(100, 100), (140, 100)],
+        speed=5.0,
+        activation_radius=12.0,
+        door_close_ms=0,
+        end_wait_ms=0,
+    )
+    player = Player(100, 100)
+    survivor = Survivor(100, 100)
+    survivor_group = pygame.sprite.Group()
+    survivor_group.add(survivor)
+    zombie_group = pygame.sprite.Group()
+    all_sprites = pygame.sprite.LayeredUpdates()
+    all_sprites.add(player)
+    all_sprites.add(survivor)
+    all_sprites.add(bot)
+
+    bot.update(
+        [],
+        player=player,
+        survivor_group=survivor_group,
+        zombie_group=zombie_group,
+        all_sprites=all_sprites,
+        layout=layout,
+        cell_size=DEFAULT_CELL_SIZE,
+        pitfall_cells=set(),
+        now_ms=0,
+    )
+
+    assert survivor.mounted_vehicle is bot
+    assert player.mounted_vehicle is None

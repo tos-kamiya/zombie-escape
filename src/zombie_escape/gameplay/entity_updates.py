@@ -166,6 +166,7 @@ def update_entities(
     mounted_car = player.mounted_car if mounted_vehicle is not None else None
     active_car = mounted_car if mounted_car is not None else None
     player_mounted = mounted_vehicle is not None
+    player_hidden_from_zombies = isinstance(mounted_vehicle, TransportBot)
     if not player_mounted and player.in_car and car and car.alive():
         # Legacy fallback while call sites migrate from `in_car` to `mounted_vehicle`.
         active_car = car
@@ -475,11 +476,15 @@ def update_entities(
             game_data.state.last_zombie_spawn_time = current_time
 
     # Update zombies
-    target_center = (
-        mounted_vehicle.rect.center
-        if player_mounted and mounted_vehicle
-        else player.rect.center
-    )
+    target_center: tuple[int, int] | None
+    if player_hidden_from_zombies:
+        target_center = None
+    else:
+        target_center = (
+            mounted_vehicle.rect.center
+            if player_mounted and mounted_vehicle
+            else player.rect.center
+        )
     buddies = [
         survivor
         for survivor in survivor_group
@@ -554,7 +559,7 @@ def update_entities(
     )
 
     for zombie in zombies_sorted:
-        target = target_center
+        target = target_center if target_center is not None else (int(zombie.x), int(zombie.y))
         if getattr(zombie, "carbonized", False):
             zombie.on_moving_floor = False
 
@@ -571,7 +576,8 @@ def update_entities(
             if not zombie.alive():
                 continue
         if isinstance(zombie, ZombieDog):
-            target = player.rect.center
+            if not player_hidden_from_zombies:
+                target = player.rect.center
             is_tracker_dog = str(getattr(zombie, "variant", "")) in {
                 "tracker",
                 "ZombieDogVariant.TRACKER",
@@ -588,7 +594,11 @@ def update_entities(
                         closest_dist_sq = dist_sq
                 if closest_survivor is not None:
                     target = closest_survivor.rect.center
-        if buddies_on_screen and not isinstance(zombie, ZombieDog):
+        if (
+            target_center is not None
+            and buddies_on_screen
+            and not isinstance(zombie, ZombieDog)
+        ):
             dist_to_target_sq = (target_center[0] - zombie.x) ** 2 + (
                 target_center[1] - zombie.y
             ) ** 2
@@ -613,7 +623,8 @@ def update_entities(
                     candidate_positions.append(survivor.rect.center)
                 for buddy in buddies_on_screen:
                     candidate_positions.append(buddy.rect.center)
-                candidate_positions.append(player.rect.center)
+                if not player_hidden_from_zombies:
+                    candidate_positions.append(player.rect.center)
                 if candidate_positions:
                     target = min(
                         candidate_positions,
