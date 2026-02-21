@@ -188,7 +188,7 @@ def _get_wall_damage_overlays(
     scale = max(0.4, ratio_milli / 300.0)
     outer_width = max(1, int(round(min(low_w, low_h) * 0.075 * scale)))
     inner_width = max(1, int(round(outer_width * 0.5)))
-    total_strokes = max(6, int(round(min(len(shared_strokes), 50 * scale))))
+    total_strokes = max(6, int(round(min(len(shared_strokes), 50 * scale) * (2.0 / 3.0))))
 
     stroke_masks: list[pygame.Surface] = []
     for sx, sy, ex, ey, strength in shared_strokes[:total_strokes]:
