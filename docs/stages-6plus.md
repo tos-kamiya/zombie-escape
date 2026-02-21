@@ -10,6 +10,6 @@ For later pages:
 | --- | --- | --- | --- |
 | Zombie (Tracker) | <img src="../imgs/exports/zombie-tracker.png" width="80"> | Stage 6 | Follows footprints. |
 | Zombie (Wall-Hugging) | <img src="../imgs/exports/zombie-wall.png" width="80"> | Stage 7 | Stays along walls. |
-| Shoes | <img src="../imgs/exports/shoes.png" width="80"> | Stage 11 | Increases movement speed. |
+| Shoes | <img src="../imgs/exports/shoes.png" width="80"> | Stage 11 | Increases movement speed (up to 2 levels). |
 | Falling Spawn Floor | <img src="../imgs/exports/fall-zone.png" width="80"> | Stage 12 | Rusted-iron-looking floor; zombies drop from above here. |
 | Wall Rubble | <img src="../imgs/exports/wall-rubble.png" width="80"> | Stage 14 | Variant of inner wall with a collapsed look. |

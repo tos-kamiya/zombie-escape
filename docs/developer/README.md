@@ -68,3 +68,12 @@ PY_VERSIONS="3.10 3.12" ./scripts/check-multi-py.sh
 - `docs/README.md`: top-level docs index.
 - `docs/design/README.md`: index of detailed design chapters.
 - `docs/developer/user-input-spec.md`: user input normalization spec (keyboard/gamepad).
+
+## Documentation Checklist for Spec Changes
+
+When you change gameplay specs/parameters (e.g., item effects, caps, progression values),
+also review and update these docs as needed:
+
+- `README.md`
+- `README-ja_JP.md`
+- `docs/stages-*plus*.md`
