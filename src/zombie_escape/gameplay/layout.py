@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import random
 from typing import Any
 
@@ -30,6 +31,28 @@ from ..rng import get_rng, seed_rng
 __all__ = ["generate_level_from_blueprint", "MapGenerationError"]
 
 RNG = get_rng()
+
+
+@dataclass
+class _WorldBuildResult:
+    outer_wall_cells: set[tuple[int, int]]
+    wall_cells: set[tuple[int, int]]
+    steel_beam_cells: set[tuple[int, int]]
+    outside_cells: set[tuple[int, int]]
+    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection]
+    walkable_cells: list[tuple[int, int]]
+    pitfall_cells: set[tuple[int, int]]
+    fire_floor_cells: set[tuple[int, int]]
+    metal_floor_cells: set[tuple[int, int]]
+    spiky_plant_cells: set[tuple[int, int]]
+    puddle_cells: set[tuple[int, int]]
+    player_cells: list[tuple[int, int]]
+    car_cells: list[tuple[int, int]]
+    fuel_cells: list[tuple[int, int]]
+    empty_fuel_can_cells: list[tuple[int, int]]
+    flashlight_cells: list[tuple[int, int]]
+    shoes_cells: list[tuple[int, int]]
+    bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]]
 
 
 def _rect_for_cell(x_idx: int, y_idx: int, cell_size: int) -> pygame.Rect:
@@ -352,65 +375,16 @@ def _generate_valid_blueprint_with_retries(
     )
 
 
-def generate_level_from_blueprint(
-    stage: Stage,
-    config: dict[str, Any],
+def _build_world_from_blueprint(
     *,
-    seed: int | None,
+    stage: Stage,
+    blueprint: list[str],
+    wall_group: pygame.sprite.Group,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    steel_enabled: bool,
+    steel_cells: set[tuple[int, int]],
     ambient_palette_key: str | None,
-) -> tuple[
-    LevelLayout,
-    dict[str, list[tuple[int, int]]],
-    pygame.sprite.Group,
-    pygame.sprite.LayeredUpdates,
-    Blueprint,
-]:
-    """Build walls/spawn candidates/outside area from a blueprint grid."""
-    wall_group = pygame.sprite.Group()
-    all_sprites = pygame.sprite.LayeredUpdates()
-
-    steel_conf = config.get("steel_beams", {})
-    steel_enabled = steel_conf.get("enabled", False)
-
-    base_moving_floor_cells = _expand_moving_floor_cells(stage)
-    transport_reserved_cells = transport_path_cells(stage.transport_bot_paths)
-    fuel_count = 0
-    empty_fuel_can_count = 0
-    fuel_station_count = 0
-    if stage.fuel_mode < FuelMode.START_FULL and not stage.endurance_stage:
-        if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
-            empty_fuel_can_count = max(1, int(stage.empty_fuel_can_spawn_count))
-            fuel_station_count = max(1, int(stage.fuel_station_spawn_count))
-        else:
-            fuel_count = max(0, int(stage.fuel_spawn_count))
-    flashlight_count = max(0, int(stage.flashlight_spawn_count))
-    shoes_count = max(0, int(stage.shoes_spawn_count))
-
-    steel_conf = config.get("steel_beams", {})
-    try:
-        steel_chance = float(steel_conf.get("chance", DEFAULT_STEEL_BEAM_CHANCE))
-    except (TypeError, ValueError):
-        steel_chance = DEFAULT_STEEL_BEAM_CHANCE
-
-    blueprint_data = _generate_valid_blueprint_with_retries(
-        stage=stage,
-        seed=seed,
-        steel_chance=steel_chance,
-        moving_floor_cells=base_moving_floor_cells,
-        transport_reserved_cells=transport_reserved_cells,
-        fuel_count=fuel_count,
-        empty_fuel_can_count=empty_fuel_can_count,
-        fuel_station_count=fuel_station_count,
-        flashlight_count=flashlight_count,
-        shoes_count=shoes_count,
-    )
-    blueprint = blueprint_data.grid
-    steel_cells_raw = blueprint_data.steel_cells
-    car_reachable_cells = blueprint_data.car_reachable_cells
-
-    steel_cells = (
-        {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
-    )
+) -> _WorldBuildResult:
     cell_size = stage.cell_size
     outer_wall_cells = {
         (x, y)
@@ -425,12 +399,6 @@ def generate_level_from_blueprint(
         if ch in {"B", "1", "R"}
     }
     steel_beam_cells: set[tuple[int, int]] = set()
-
-    def _has_wall(nx: int, ny: int) -> bool:
-        if nx < 0 or ny < 0 or nx >= stage.grid_cols or ny >= stage.grid_rows:
-            return True
-        return (nx, ny) in wall_cells
-
     outside_cells: set[tuple[int, int]] = set()
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = {}
     walkable_cells: list[tuple[int, int]] = []
@@ -445,13 +413,14 @@ def generate_level_from_blueprint(
     empty_fuel_can_cells: list[tuple[int, int]] = []
     flashlight_cells: list[tuple[int, int]] = []
     shoes_cells: list[tuple[int, int]] = []
-    interior_min_x = 2
-    interior_max_x = stage.grid_cols - 3
-    interior_min_y = 2
-    interior_max_y = stage.grid_rows - 3
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] = {}
     palette = get_environment_palette(ambient_palette_key)
     rubble_ratio = max(0.0, min(1.0, stage.wall_rubble_ratio))
+
+    def _has_wall(nx: int, ny: int) -> bool:
+        if nx < 0 or ny < 0 or nx >= stage.grid_cols or ny >= stage.grid_rows:
+            return True
+        return (nx, ny) in wall_cells
 
     def remove_steel_beam_cell(cell: tuple[int, int]) -> None:
         if cell in steel_beam_cells:
@@ -687,6 +656,122 @@ def generate_level_from_blueprint(
                     on_destroy=(lambda _b, cell=(x, y): remove_steel_beam_cell(cell)),
                 )
                 add_beam_to_groups(beam, cell=(x, y))
+
+    return _WorldBuildResult(
+        outer_wall_cells=outer_wall_cells,
+        wall_cells=wall_cells,
+        steel_beam_cells=steel_beam_cells,
+        outside_cells=outside_cells,
+        moving_floor_cells=moving_floor_cells,
+        walkable_cells=walkable_cells,
+        pitfall_cells=pitfall_cells,
+        fire_floor_cells=fire_floor_cells,
+        metal_floor_cells=metal_floor_cells,
+        spiky_plant_cells=spiky_plant_cells,
+        puddle_cells=puddle_cells,
+        player_cells=player_cells,
+        car_cells=car_cells,
+        fuel_cells=fuel_cells,
+        empty_fuel_can_cells=empty_fuel_can_cells,
+        flashlight_cells=flashlight_cells,
+        shoes_cells=shoes_cells,
+        bevel_corners=bevel_corners,
+    )
+
+
+def generate_level_from_blueprint(
+    stage: Stage,
+    config: dict[str, Any],
+    *,
+    seed: int | None,
+    ambient_palette_key: str | None,
+) -> tuple[
+    LevelLayout,
+    dict[str, list[tuple[int, int]]],
+    pygame.sprite.Group,
+    pygame.sprite.LayeredUpdates,
+    Blueprint,
+]:
+    """Build walls/spawn candidates/outside area from a blueprint grid."""
+    wall_group = pygame.sprite.Group()
+    all_sprites = pygame.sprite.LayeredUpdates()
+
+    steel_conf = config.get("steel_beams", {})
+    steel_enabled = steel_conf.get("enabled", False)
+
+    base_moving_floor_cells = _expand_moving_floor_cells(stage)
+    transport_reserved_cells = transport_path_cells(stage.transport_bot_paths)
+    fuel_count = 0
+    empty_fuel_can_count = 0
+    fuel_station_count = 0
+    if stage.fuel_mode < FuelMode.START_FULL and not stage.endurance_stage:
+        if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
+            empty_fuel_can_count = max(1, int(stage.empty_fuel_can_spawn_count))
+            fuel_station_count = max(1, int(stage.fuel_station_spawn_count))
+        else:
+            fuel_count = max(0, int(stage.fuel_spawn_count))
+    flashlight_count = max(0, int(stage.flashlight_spawn_count))
+    shoes_count = max(0, int(stage.shoes_spawn_count))
+
+    steel_conf = config.get("steel_beams", {})
+    try:
+        steel_chance = float(steel_conf.get("chance", DEFAULT_STEEL_BEAM_CHANCE))
+    except (TypeError, ValueError):
+        steel_chance = DEFAULT_STEEL_BEAM_CHANCE
+
+    blueprint_data = _generate_valid_blueprint_with_retries(
+        stage=stage,
+        seed=seed,
+        steel_chance=steel_chance,
+        moving_floor_cells=base_moving_floor_cells,
+        transport_reserved_cells=transport_reserved_cells,
+        fuel_count=fuel_count,
+        empty_fuel_can_count=empty_fuel_can_count,
+        fuel_station_count=fuel_station_count,
+        flashlight_count=flashlight_count,
+        shoes_count=shoes_count,
+    )
+    blueprint = blueprint_data.grid
+    steel_cells_raw = blueprint_data.steel_cells
+    car_reachable_cells = blueprint_data.car_reachable_cells
+
+    steel_cells = (
+        {(int(x), int(y)) for x, y in steel_cells_raw} if steel_enabled else set()
+    )
+    world = _build_world_from_blueprint(
+        stage=stage,
+        blueprint=blueprint,
+        wall_group=wall_group,
+        all_sprites=all_sprites,
+        steel_enabled=steel_enabled,
+        steel_cells=steel_cells,
+        ambient_palette_key=ambient_palette_key,
+    )
+
+    outside_cells = world.outside_cells
+    outer_wall_cells = world.outer_wall_cells
+    wall_cells = world.wall_cells
+    steel_beam_cells = world.steel_beam_cells
+    moving_floor_cells = world.moving_floor_cells
+    walkable_cells = world.walkable_cells
+    pitfall_cells = world.pitfall_cells
+    fire_floor_cells = world.fire_floor_cells
+    metal_floor_cells = world.metal_floor_cells
+    spiky_plant_cells = world.spiky_plant_cells
+    puddle_cells = world.puddle_cells
+    player_cells = world.player_cells
+    car_cells = world.car_cells
+    fuel_cells = world.fuel_cells
+    empty_fuel_can_cells = world.empty_fuel_can_cells
+    flashlight_cells = world.flashlight_cells
+    shoes_cells = world.shoes_cells
+    bevel_corners = world.bevel_corners
+
+    interior_min_x = 2
+    interior_max_x = stage.grid_cols - 3
+    interior_min_y = 2
+    interior_max_y = stage.grid_rows - 3
+    cell_size = stage.cell_size
 
     layout = LevelLayout(
         field_rect=pygame.Rect(
