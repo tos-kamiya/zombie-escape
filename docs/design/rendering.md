@@ -33,7 +33,7 @@ Supporting modules:
 6. Draw sprites with camera transforms.
 7. Draw variant markers (tracker/wall-hugger/lineformer/solitary visuals).
 8. Draw hint arrow.
-9. Draw fog (`hard` mask + `soft` hatch overlay).
+9. Draw fog (`combined` overlay).
 10. Draw HUD/status/objective text.
 
 ### Fog Notes
@@ -90,10 +90,10 @@ Supporting modules:
 - Add an offline fog-cache tool that precomputes data close to runtime fog
   overlays and writes it to a file.
 - Target profiles are `DARK0`, `DARK1`, and `DARK2`.
-- Cache payload stores alpha planes as PNG files per layer (`hard`, `combined`);
+- Cache payload stores a PNG alpha plane for the `combined` fog layer;
   runtime reconstructs `Surface` objects from loaded alpha data.
 - Runtime first tries bundled resource cache files
-  (`assets/fog_cache/fog_<profile>_cell<cell_size>_<layer>.v<format>.png`) for
+  (`assets/fog_cache/fog_<profile>_cell<cell_size>_combined.v<format>.png`) for
   each profile, then user cache.
 - Startup check requires all fog cache profiles to load successfully before
   entering the title screen.

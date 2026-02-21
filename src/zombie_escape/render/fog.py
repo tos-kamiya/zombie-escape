@@ -166,40 +166,32 @@ def _load_cached_overlay_entry(
     *,
     expected_size: tuple[int, int],
 ) -> dict[str, Any] | None:
-    def _try_load(hard_path: Path, combined_path: Path) -> dict[str, Any] | None:
+    def _try_load(combined_path: Path) -> dict[str, Any] | None:
         try:
-            hard_alpha = _load_alpha_from_png(hard_path, expected_size=expected_size)
             combined_alpha = _load_alpha_from_png(
                 combined_path,
                 expected_size=expected_size,
             )
-            if hard_alpha is None or combined_alpha is None:
+            if combined_alpha is None:
                 return None
-            if hard_alpha.shape != combined_alpha.shape:
-                return None
-            hard_surface = _surface_with_alpha_from_array(hard_alpha, profile.color)
             combined_surface = _surface_with_alpha_from_array(
                 combined_alpha, profile.color
             )
             return {
-                "hard": hard_surface,
-                "rings": [],
                 "combined": combined_surface,
             }
         except Exception:
             return None
 
-    hard_resource_path = _fog_resource_cache_path(assets, profile, "hard")
     combined_resource_path = _fog_resource_cache_path(assets, profile, "combined")
-    if hard_resource_path is not None and combined_resource_path is not None:
-        loaded = _try_load(hard_resource_path, combined_resource_path)
+    if combined_resource_path is not None:
+        loaded = _try_load(combined_resource_path)
         if loaded is not None:
             return loaded
 
-    hard_cache_path = _fog_cache_file_path(assets, profile, "hard")
     combined_cache_path = _fog_cache_file_path(assets, profile, "combined")
-    if hard_cache_path.exists() and combined_cache_path.exists():
-        loaded = _try_load(hard_cache_path, combined_cache_path)
+    if combined_cache_path.exists():
+        loaded = _try_load(combined_cache_path)
         if loaded is not None:
             return loaded
     return None
@@ -218,17 +210,14 @@ def save_fog_cache_profile(
         profile,
         use_disk_cache=False,
     )
-    hard_alpha = pg_surfarray.array_alpha(overlay_entry["hard"]).T.astype(np.uint8)
     combined_alpha = pg_surfarray.array_alpha(overlay_entry["combined"]).T.astype(
         np.uint8
     )
     out_base = output_dir if output_dir is not None else _fog_cache_dir()
     out_base.mkdir(parents=True, exist_ok=True)
-    hard_path = out_base / _fog_cache_filename(assets, profile, "hard")
     combined_path = out_base / _fog_cache_filename(assets, profile, "combined")
-    _save_alpha_to_png(hard_alpha, hard_path, color=profile.color)
     _save_alpha_to_png(combined_alpha, combined_path, color=profile.color)
-    return [hard_path, combined_path]
+    return [combined_path]
 
 
 def save_all_fog_caches(
@@ -407,8 +396,6 @@ def _get_fog_overlay_surfaces(
     hard_surface_render.fill(base_color)
     pygame.draw.circle(hard_surface_render, (0, 0, 0, 0), render_center, render_radius)
 
-    ring_surfaces: list[surface.Surface] = []
-
     combined_surface_render = hard_surface_render.copy()
     edge_feather = _build_edge_feather_surface(
         (render_width, render_height),
@@ -440,17 +427,13 @@ def _get_fog_overlay_surfaces(
     )
     combined_surface_render.blit(visible_fade_surface, (0, 0))
     if aa_scale > 1:
-        hard_surface = pygame.transform.smoothscale(hard_surface_render, (width, height))
         combined_surface = pygame.transform.smoothscale(
             combined_surface_render, (width, height)
         )
     else:
-        hard_surface = hard_surface_render
         combined_surface = combined_surface_render
 
     overlay_entry = {
-        "hard": hard_surface,
-        "rings": ring_surfaces,
         "combined": combined_surface,
     }
     overlays[key] = overlay_entry

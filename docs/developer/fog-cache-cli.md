@@ -15,9 +15,8 @@ uv run -p .venv/bin/python -m zombie_escape --build-fog-cache
 ## Output
 
 - Output directory: `src/zombie_escape/assets/fog_cache/`
-- Output format: PNG files (`hard` and `combined` layers saved separately)
+- Output format: PNG file (`combined` layer)
 - Filename rule: `fog_<profile>_cell<cell_size>_<layer>.v<format>.png`
-  - Example: `fog_dark0_cell16_hard.v1.png`
   - Example: `fog_dark0_cell16_combined.v1.png`
 
 ## Bundled Fog Asset Format (PNG + Filename Version)
@@ -27,9 +26,8 @@ files).
 
 - Target output directory: `src/zombie_escape/assets/fog_cache/`
 - Target format: 8-bit grayscale PNG alpha-mask images
-- Layer split: one file per layer (`hard`, `combined`)
+- Layer split: single file (`combined`)
 - Versioning rule: embed format version in filename
-  - Example: `fog_dark0_cell16_hard.v1.png`
   - Example: `fog_dark0_cell16_combined.v1.png`
 - Runtime policy: load bundled files only; do not regenerate at user runtime
 - Validation policy: on mismatch/missing assets, fail startup with explicit error
