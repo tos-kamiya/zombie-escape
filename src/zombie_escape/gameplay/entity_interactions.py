@@ -242,7 +242,7 @@ def _handle_fuel_station_refuel(
     schedule_timed_message(
         state,
         tr("hud.fuel_refilled"),
-        duration_frames=_ms_to_frames(400),
+        duration_frames=_ms_to_frames(FUEL_HINT_DURATION_MS),
         clear_on_input=False,
         color=YELLOW,
         now_ms=state.clock.elapsed_ms,

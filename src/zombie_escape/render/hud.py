@@ -39,6 +39,7 @@ from ..render_constants import (
     FLASHLIGHT_FOG_SCALE_TWO,
     GAMEPLAY_FONT_SIZE,
     HUD_ICON_SIZE,
+    SURVIVOR_MESSAGE_ALPHA,
     TIMED_MESSAGE_BAND_ALPHA,
     TIMED_MESSAGE_LEFT_X,
     TIMED_MESSAGE_TOP_Y,
@@ -544,6 +545,7 @@ def _draw_survivor_messages(
             msg_surface = render_text_surface(
                 font, text, ORANGE, line_height_scale=font_settings.line_height_scale
             )
+            msg_surface.set_alpha(SURVIVOR_MESSAGE_ALPHA)
             msg_rect = msg_surface.get_rect(
                 center=(assets.screen_width // 2, base_y + idx * line_height)
             )
