@@ -186,6 +186,7 @@ def initialize_game_state(stage: Stage) -> GameData:
             puddle_cells=set(),
             bevel_corners={},
             moving_floor_cells={},
+            floor_ruin_cells={},
         ),
         fog={
             "hatch_patterns": {},

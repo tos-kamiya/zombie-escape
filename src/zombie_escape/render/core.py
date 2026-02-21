@@ -103,9 +103,9 @@ def draw(
         game_data.layout.metal_floor_cells,
         game_data.layout.puddle_cells,
         game_data.layout.moving_floor_cells,
+        game_data.layout.floor_ruin_cells,
         state.electrified_cells,
         game_data.cell_size,
-        float(stage.wall_rubble_ratio) if stage else 0.0,
         elapsed_ms=int(state.clock.elapsed_ms),
     )
     shadows_enabled = config.get("visual", {}).get("shadows", {}).get("enabled", True)

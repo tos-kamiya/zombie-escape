@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 import pygame
 from pygame import surface
@@ -55,37 +55,25 @@ _FLOOR_RUIN_TILE_CACHE: dict[
     tuple[int, tuple[int, int, int], tuple[int, int, int], int, int],
     surface.Surface,
 ] = {}
-_FLOOR_RUIN_CELL_CHOICE_CACHE: dict[
-    tuple[int, int, int, bool, int], tuple[bool, int]
-] = {}
 
 _FLOOR_RUIN_VARIANTS = 8
 
 
-def _floor_ruin_cell_choice(
+def build_floor_ruin_cells(
     *,
-    x: int,
-    y: int,
-    tier: int,
-    is_fall_spawn: bool,
+    candidate_cells: Iterable[tuple[int, int]],
     rubble_ratio: float,
-) -> tuple[bool, int]:
+) -> dict[tuple[int, int], int]:
     if rubble_ratio <= 0.0:
-        return False, 0
-    rubble_key = int(max(0.0, min(1.0, rubble_ratio)) * 1000)
-    cache_key = (x, y, max(0, min(2, tier)), bool(is_fall_spawn), rubble_key)
-    cached = _FLOOR_RUIN_CELL_CHOICE_CACHE.get(cache_key)
-    if cached is not None:
-        return cached
-    base_prob = (0.18, 0.26, 0.34)[max(0, min(2, tier))]
-    if is_fall_spawn:
-        base_prob += 0.08
-    base_prob *= max(0.0, min(1.0, rubble_ratio))
-    enabled = random.random() <= max(0.0, min(1.0, base_prob))
-    variant = random.randrange(0, _FLOOR_RUIN_VARIANTS) if enabled else 0
-    choice = (enabled, variant)
-    _FLOOR_RUIN_CELL_CHOICE_CACHE[cache_key] = choice
-    return choice
+        return {}
+    density = max(0.0, min(1.0, rubble_ratio)) * 0.15
+    if density <= 0.0:
+        return {}
+    chosen: dict[tuple[int, int], int] = {}
+    for cell in candidate_cells:
+        if random.random() < density:
+            chosen[cell] = random.randrange(0, _FLOOR_RUIN_VARIANTS)
+    return chosen
 
 
 def _floor_clutter_tier_for_cell(*, x: int, y: int, xs: int, ys: int, xe: int, ye: int) -> int:
@@ -456,9 +444,9 @@ def _draw_play_area(
     metal_floor_cells: set[tuple[int, int]],
     puddle_cells: set[tuple[int, int]],
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection],
+    floor_ruin_cells: dict[tuple[int, int], int],
     electrified_cells: set[tuple[int, int]],
     cell_size: int,
-    wall_rubble_ratio: float,
     *,
     elapsed_ms: int,
 ) -> tuple[int, int, int, int, set[tuple[int, int]]]:
@@ -719,18 +707,11 @@ def _draw_play_area(
                 if use_secondary or (x, y) in fall_spawn_cells:
                     pygame.draw.rect(screen, color, sr)
                 # Floor ruin dressing: visual-only overlay for normal/fall-spawn floor tiles.
-                is_fall_spawn = (x, y) in fall_spawn_cells
-                clutter_tier = _floor_clutter_tier_for_cell(
-                    x=x, y=y, xs=xs, ys=ys, xe=xe, ye=ye
-                )
-                enabled, variant = _floor_ruin_cell_choice(
-                    x=x,
-                    y=y,
-                    tier=clutter_tier,
-                    is_fall_spawn=is_fall_spawn,
-                    rubble_ratio=wall_rubble_ratio,
-                )
-                if enabled:
+                variant = floor_ruin_cells.get((x, y))
+                if variant is not None:
+                    clutter_tier = _floor_clutter_tier_for_cell(
+                        x=x, y=y, xs=xs, ys=ys, xe=xe, ye=ye
+                    )
                     ruin_overlay = _get_floor_ruin_overlay_tile(
                         cell_size=grid_snap,
                         base_color=(

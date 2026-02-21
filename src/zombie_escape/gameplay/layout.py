@@ -15,6 +15,7 @@ from ..entities_constants import (
 )
 from ..level_constants import DEFAULT_STEEL_BEAM_CHANCE
 from ..render_assets import RUBBLE_ROTATION_DEG
+from ..render.world_tiles import build_floor_ruin_cells
 from .constants import LAYER_WALLS, OUTER_WALL_HEALTH
 from ..level_blueprints import (
     Blueprint,
@@ -501,6 +502,7 @@ def generate_level_from_blueprint(
         puddle_cells=puddle_cells,
         bevel_corners=bevel_corners,
         moving_floor_cells={},
+        floor_ruin_cells={},
     )
     if moving_floor_cells:
         pitfall_cells.difference_update(moving_floor_cells.keys())
@@ -546,6 +548,20 @@ def generate_level_from_blueprint(
                 fall_spawn_cells.add(RNG.choice(candidates))
     layout.fall_spawn_cells = fall_spawn_cells
     layout.bevel_corners = bevel_corners
+    floor_ruin_candidates = [
+        cell
+        for cell in walkable_set
+        if cell not in pitfall_cells
+        and cell not in fire_floor_cells
+        and cell not in metal_floor_cells
+        and cell not in puddle_cells
+        and cell not in moving_floor_cells
+        and cell not in spiky_plant_cells
+    ]
+    layout.floor_ruin_cells = build_floor_ruin_cells(
+        candidate_cells=floor_ruin_candidates,
+        rubble_ratio=float(stage.wall_rubble_ratio),
+    )
 
     moving_floor_set = set(moving_floor_cells)
     item_spawn_cells = (

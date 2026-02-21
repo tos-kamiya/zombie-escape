@@ -87,6 +87,7 @@ class LevelLayout:
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] = field(
         default_factory=dict
     )
+    floor_ruin_cells: dict[tuple[int, int], int] = field(default_factory=dict)
 
 @dataclass
 class FallingEntity:

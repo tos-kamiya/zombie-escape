@@ -39,6 +39,7 @@ from .render.core import _draw_entities, _draw_falling_fx, _draw_play_area
 from .render_constants import build_render_assets
 from .render_constants import ENTITY_SHADOW_ALPHA, ENTITY_SHADOW_EDGE_SOFTNESS
 from .render.shadows import _get_shadow_layer, draw_single_entity_shadow_by_mode
+from .render.world_tiles import build_floor_ruin_cells
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
 __all__ = ["export_images"]
@@ -137,6 +138,26 @@ def _render_studio_snapshot(
     layout.fall_spawn_cells = fall_spawn_cells or set()
     layout.moving_floor_cells = moving_floor_cells or {}
     layout.puddle_cells = puddle_cells or set()
+    resolved_rubble_ratio = (
+        float(wall_rubble_ratio)
+        if wall_rubble_ratio is not None
+        else float(game_data.stage.wall_rubble_ratio)
+    )
+    floor_ruin_candidates = [
+        (x, y)
+        for y in range(layout.grid_rows)
+        for x in range(layout.grid_cols)
+        if (x, y) not in layout.outside_cells
+        and (x, y) not in layout.pitfall_cells
+        and (x, y) not in layout.fire_floor_cells
+        and (x, y) not in layout.metal_floor_cells
+        and (x, y) not in layout.puddle_cells
+        and (x, y) not in layout.moving_floor_cells
+    ]
+    layout.floor_ruin_cells = build_floor_ruin_cells(
+        candidate_cells=floor_ruin_candidates,
+        rubble_ratio=resolved_rubble_ratio,
+    )
 
     sprites = sprites or []
     player = None
@@ -175,13 +196,9 @@ def _render_studio_snapshot(
         layout.metal_floor_cells,
         layout.puddle_cells,
         layout.moving_floor_cells,
+        layout.floor_ruin_cells,
         set(),
         game_data.cell_size,
-        (
-            float(wall_rubble_ratio)
-            if wall_rubble_ratio is not None
-            else float(game_data.stage.wall_rubble_ratio)
-        ),
         elapsed_ms=int(game_data.state.clock.elapsed_ms),
     )
     if enable_shadows:
