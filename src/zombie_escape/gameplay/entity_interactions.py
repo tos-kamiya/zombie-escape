@@ -770,6 +770,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     ):
         _remember_contact_hint(game_data, kind="car", target=active_car)
         if state.fuel_progress >= FuelProgress.FULL_CAN:
+            _forget_contact_hint(game_data, kind="car", target=active_car)
             player.mounted_vehicle = active_car
             mounted_vehicle = active_car
             player_mounted = True
@@ -807,6 +808,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         if claimed_car:
             _remember_contact_hint(game_data, kind="car", target=claimed_car)
             if state.fuel_progress >= FuelProgress.FULL_CAN:
+                _forget_contact_hint(game_data, kind="car", target=claimed_car)
                 try:
                     game_data.waiting_cars.remove(claimed_car)
                 except ValueError:

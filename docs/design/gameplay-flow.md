@@ -153,7 +153,8 @@ Initial placement policy:
 - Invalidation:
   - Remove record when the corresponding target is removed/replaced (despawn, death,
     respawn replacement).
-  - Buddy records are also removed when buddy is force-relocated.
+  - Car records are removed when that car is successfully boarded/claimed.
+  - Buddy offscreen-rescue relocation keeps the existing record.
 - Reset scope:
   - Reset all records on game over.
   - Retry starts fresh (no carry-over).
