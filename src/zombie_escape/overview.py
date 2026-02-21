@@ -163,6 +163,16 @@ def _draw_overview_walls(
     floor_color: tuple[int, int, int],
     palette: object,
 ) -> None:
+    def _fade_to_floor(
+        color: tuple[int, int, int], health_ratio: float
+    ) -> tuple[int, int, int]:
+        ratio = max(0.0, min(1.0, health_ratio))
+        return (
+            int(floor_color[0] + (color[0] - floor_color[0]) * ratio),
+            int(floor_color[1] + (color[1] - floor_color[1]) * ratio),
+            int(floor_color[2] + (color[2] - floor_color[2]) * ratio),
+        )
+
     for wall in wall_group:
         if wall.max_health > 0:
             health_ratio = max(0.0, min(1.0, wall.health / wall.max_health))
@@ -177,7 +187,11 @@ def _draw_overview_walls(
                     palette_category=wall.palette_category,
                     palette=palette,
                 )
-                pygame.draw.rect(surface, fill_color, wall.rect)
+                pygame.draw.rect(
+                    surface,
+                    _fade_to_floor(fill_color, health_ratio),
+                    wall.rect,
+                )
         elif isinstance(wall, SteelBeam):
             if health_ratio <= 0.0:
                 pygame.draw.rect(surface, floor_color, wall.rect)
@@ -186,7 +200,11 @@ def _draw_overview_walls(
                     health_ratio=health_ratio,
                     palette=palette,
                 )
-                pygame.draw.rect(surface, fill_color, wall.rect)
+                pygame.draw.rect(
+                    surface,
+                    _fade_to_floor(fill_color, health_ratio),
+                    wall.rect,
+                )
 
 
 def _draw_overview_footprints(
