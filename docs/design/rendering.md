@@ -80,8 +80,8 @@ Supporting modules:
   (instead of per-frame overlay drawing).
 - Wall-hugger marker states are modeled as three discrete states:
   `none`, `right-hand`, `left-hand`.
-- Lineformer arm direction is quantized to 16 bins and selected by
-  `(facing_bin, target_bin16)` key.
+- Lineformer arm direction is quantized to 32 bins and selected by
+  `(facing_bin, target_bin)` key.
 - Tracker/solitary markers are treated as static per-facing overlays and baked
   into directional images.
 
