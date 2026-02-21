@@ -413,6 +413,7 @@ def update_entities(
                 print("Survivor burned on fire floor!")
             continue
         if getattr(survivor, "pending_pitfall_fall", False):
+            is_buddy = bool(getattr(survivor, "is_buddy", False))
             visible = rect_visible_on_screen(camera, survivor.rect)
             fov_target = mounted_vehicle if player_mounted and mounted_vehicle else player
             in_fov = is_entity_in_fov(
@@ -420,7 +421,7 @@ def update_entities(
                 fov_target=fov_target,
                 flashlight_count=game_data.state.flashlight_count,
             )
-            if not (visible and in_fov):
+            if (not is_buddy) and not (visible and in_fov):
                 spawn_pos = find_nearby_offscreen_spawn_position(
                     game_data.layout.walkable_cells,
                     game_data.cell_size,
@@ -451,7 +452,10 @@ def update_entities(
                 )
             )
             survivor.kill()
-            if getattr(survivor, "is_buddy", False):
+            if is_buddy:
+                game_data.state.game_over = True
+                if game_data.state.game_over_at is None:
+                    game_data.state.game_over_at = game_data.state.clock.elapsed_ms
                 print("Buddy fell into pitfall!")
             else:
                 print("Survivor fell into pitfall!")
