@@ -160,7 +160,7 @@
     <tr>
       <td>懐中電灯</td>
       <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/flashlight.png" width="64"></td>
-      <td>拾うたびに視界が約20%ずつ拡大。</td>
+      <td>拾うたびに視界が約20%ずつ拡大（最大3段階）。</td>
     </tr>
     <tr>
       <td>燃料缶 (Stage 2/3)</td>

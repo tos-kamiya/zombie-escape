@@ -161,7 +161,7 @@ Open **Settings** from the title to toggle gameplay assists:
     <tr>
       <td>Flashlight</td>
       <td><img src="https://raw.githubusercontent.com/tos-kamiya/zombie-escape/main/imgs/exports/flashlight.png" width="64"></td>
-      <td>Each pickup expands your visible radius by about 20%.</td>
+      <td>Each pickup expands your visible radius by about 20%, up to 3 levels.</td>
     </tr>
     <tr>
       <td>Fuel Can (Stages 2 & 3)</td>
