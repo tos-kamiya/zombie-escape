@@ -112,6 +112,94 @@ def _filter_spawn_cells(
     return [cell for cell in cells if cell not in blocked_cells]
 
 
+def _generate_valid_blueprint_with_retries(
+    *,
+    stage: Stage,
+    seed: int | None,
+    steel_chance: float,
+    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection],
+    transport_reserved_cells: set[tuple[int, int]],
+    fuel_count: int,
+    empty_fuel_can_count: int,
+    fuel_station_count: int,
+    flashlight_count: int,
+    shoes_count: int,
+) -> Blueprint:
+    for attempt in range(20):
+        if seed is not None:
+            seed_rng(seed + attempt)
+        try:
+            blueprint = generate_random_blueprint(
+                steel_chance=steel_chance,
+                cols=stage.grid_cols,
+                rows=stage.grid_rows,
+                exit_sides=stage.exit_sides,
+                wall_algo=stage.wall_algorithm,
+                pitfall_density=stage.pitfall_density,
+                pitfall_zones=stage.pitfall_zones,
+                fire_floor_density=stage.fire_floor_density,
+                fire_floor_zones=stage.fire_floor_zones,
+                metal_floor_density=stage.metal_floor_density,
+                metal_floor_zones=stage.metal_floor_zones,
+                reinforced_wall_density=stage.reinforced_wall_density,
+                reinforced_wall_zones=stage.reinforced_wall_zones,
+                moving_floor_cells=moving_floor_cells,
+                fuel_count=fuel_count,
+                empty_fuel_can_count=empty_fuel_can_count,
+                fuel_station_count=fuel_station_count,
+                flashlight_count=flashlight_count,
+                shoes_count=shoes_count,
+                spiky_plant_density=stage.spiky_plant_density,
+                spiky_plant_zones=stage.spiky_plant_zones,
+                puddle_density=stage.puddle_density,
+                puddle_zones=stage.puddle_zones,
+            )
+        except MapGenerationError:
+            continue
+
+        if transport_reserved_cells:
+            grid_rows = len(blueprint.grid)
+            grid_cols = len(blueprint.grid[0]) if grid_rows > 0 else 0
+            if any(
+                cell[0] < 0
+                or cell[1] < 0
+                or cell[0] >= grid_cols
+                or cell[1] >= grid_rows
+                for cell in transport_reserved_cells
+            ):
+                continue
+            editable = [list(row) for row in blueprint.grid]
+            for cell_x, cell_y in transport_reserved_cells:
+                ch = editable[cell_y][cell_x]
+                if ch not in {"P", "C", "E"}:
+                    editable[cell_y][cell_x] = "."
+            blueprint.grid = ["".join(row) for row in editable]
+            blueprint.steel_cells = {
+                (x, y)
+                for (x, y) in blueprint.steel_cells
+                if (x, y) not in transport_reserved_cells
+            }
+
+        require_car_spawn = not stage.endurance_stage
+        car_reachable = validate_connectivity(
+            blueprint.grid,
+            fuel_mode=(
+                stage.fuel_mode if not stage.endurance_stage else FuelMode.START_FULL
+            ),
+            require_player_exit_path=stage.endurance_stage,
+            require_car_spawn=require_car_spawn,
+        )
+        if car_reachable is None:
+            continue
+
+        blueprint.car_reachable_cells = car_reachable
+        return blueprint
+
+    raise MapGenerationError(
+        "Blueprint generation/connectivity validation failed after 20 attempts"
+    )
+
+
 def generate_level_from_blueprint(
     stage: Stage,
     config: dict[str, Any],
@@ -152,78 +240,18 @@ def generate_level_from_blueprint(
     except (TypeError, ValueError):
         steel_chance = DEFAULT_STEEL_BEAM_CHANCE
 
-    # Connectivity validation and retries live here to keep generation shallow.
-    blueprint_data = None
-    for attempt in range(20):
-        if seed is not None:
-            seed_rng(seed + attempt)
-        try:
-            blueprint = generate_random_blueprint(
-                steel_chance=steel_chance,
-                cols=stage.grid_cols,
-                rows=stage.grid_rows,
-                exit_sides=stage.exit_sides,
-                wall_algo=stage.wall_algorithm,
-                pitfall_density=stage.pitfall_density,
-                pitfall_zones=stage.pitfall_zones,
-                fire_floor_density=stage.fire_floor_density,
-                fire_floor_zones=stage.fire_floor_zones,
-                metal_floor_density=stage.metal_floor_density,
-                metal_floor_zones=stage.metal_floor_zones,
-                reinforced_wall_density=stage.reinforced_wall_density,
-                reinforced_wall_zones=stage.reinforced_wall_zones,
-                moving_floor_cells=base_moving_floor_cells,
-                fuel_count=fuel_count,
-                empty_fuel_can_count=empty_fuel_can_count,
-                fuel_station_count=fuel_station_count,
-                flashlight_count=flashlight_count,
-                shoes_count=shoes_count,
-                spiky_plant_density=stage.spiky_plant_density,
-                spiky_plant_zones=stage.spiky_plant_zones,
-                puddle_density=stage.puddle_density,
-                puddle_zones=stage.puddle_zones,
-            )
-        except MapGenerationError:
-            continue
-        if transport_reserved_cells:
-            grid_rows = len(blueprint.grid)
-            grid_cols = len(blueprint.grid[0]) if grid_rows > 0 else 0
-            if any(
-                cell[0] < 0
-                or cell[1] < 0
-                or cell[0] >= grid_cols
-                or cell[1] >= grid_rows
-                for cell in transport_reserved_cells
-            ):
-                continue
-            editable = [list(row) for row in blueprint.grid]
-            for cell_x, cell_y in transport_reserved_cells:
-                ch = editable[cell_y][cell_x]
-                if ch not in {"P", "C", "E"}:
-                    editable[cell_y][cell_x] = "."
-            blueprint.grid = ["".join(row) for row in editable]
-            blueprint.steel_cells = {
-                (x, y)
-                for (x, y) in blueprint.steel_cells
-                if (x, y) not in transport_reserved_cells
-            }
-        require_car_spawn = not stage.endurance_stage
-        car_reachable = validate_connectivity(
-            blueprint.grid,
-            fuel_mode=(
-                stage.fuel_mode if not stage.endurance_stage else FuelMode.START_FULL
-            ),
-            require_player_exit_path=stage.endurance_stage,
-            require_car_spawn=require_car_spawn,
-        )
-        if car_reachable is not None:
-            blueprint.car_reachable_cells = car_reachable
-            blueprint_data = blueprint
-            break
-    if blueprint_data is None:
-        raise MapGenerationError(
-            "Blueprint generation/connectivity validation failed after 20 attempts"
-        )
+    blueprint_data = _generate_valid_blueprint_with_retries(
+        stage=stage,
+        seed=seed,
+        steel_chance=steel_chance,
+        moving_floor_cells=base_moving_floor_cells,
+        transport_reserved_cells=transport_reserved_cells,
+        fuel_count=fuel_count,
+        empty_fuel_can_count=empty_fuel_can_count,
+        fuel_station_count=fuel_station_count,
+        flashlight_count=flashlight_count,
+        shoes_count=shoes_count,
+    )
     blueprint = blueprint_data.grid
     steel_cells_raw = blueprint_data.steel_cells
     car_reachable_cells = blueprint_data.car_reachable_cells
