@@ -13,14 +13,19 @@ def _init_pygame() -> None:
         pygame.init()
 
 
-def test_resolve_wall_colors_stays_visible_when_heavily_damaged() -> None:
-    fill_color, border_color = resolve_wall_colors(
+def test_resolve_wall_colors_gets_significantly_darker_with_damage() -> None:
+    healthy_fill, healthy_border = resolve_wall_colors(
+        health_ratio=1.0,
+        palette_category="inner_wall",
+        palette=None,
+    )
+    damaged_fill, damaged_border = resolve_wall_colors(
         health_ratio=0.0,
         palette_category="inner_wall",
         palette=None,
     )
-    assert min(fill_color) >= 60
-    assert min(border_color) >= 60
+    assert sum(damaged_fill) < sum(healthy_fill)
+    assert sum(damaged_border) < sum(healthy_border)
 
 
 def test_wall_damage_overlay_is_deterministic_for_same_seed() -> None:

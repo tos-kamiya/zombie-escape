@@ -60,8 +60,7 @@ _ZOMBIE_DOG_DIRECTIONAL_CACHE: dict[tuple[float, float, int], list[pygame.Surfac
 _PATROL_BOT_DIRECTIONAL_CACHE: dict[tuple[int, int], list[pygame.Surface]] = {}
 _RUBBLE_SURFACE_CACHE: dict[tuple, pygame.Surface] = {}
 _HUMANOID_SURFACE_EXTENT_RATIO = 2.0
-_PIXEL_ORDER_CACHE: dict[int, tuple[tuple[int, int], ...]] = {}
-_WALL_DAMAGE_MASK_BASE_SIZE = 128
+_CRACK_STROKES_CACHE: dict[int, tuple[tuple[float, float, float, float, float], ...]] = {}
 _WALL_DAMAGE_OVERLAY_CACHE: dict[
     tuple[int, int, int, int, int],
     tuple[pygame.Surface, ...],
@@ -345,14 +344,14 @@ def resolve_wall_colors(
         border_base_color = palette.inner_wall_border
 
     ratio = max(0.0, min(1.0, health_ratio))
-    # Keep wall tone mostly stable and rely on impact marks for damage readability.
-    mix = 0.9 + 0.1 * ratio
+    # Apply the same "damage darkening" direction as steel beams.
+    mix = 0.25 + 0.75 * ratio
     fill_color = (
         int(base_color[0] * mix),
         int(base_color[1] * mix),
         int(base_color[2] * mix),
     )
-    border_mix = 0.9 + 0.1 * ratio
+    border_mix = 0.3 + 0.7 * ratio
     border_color = (
         int(border_base_color[0] * border_mix),
         int(border_base_color[1] * border_mix),
@@ -382,52 +381,89 @@ def paint_wall_damage_overlay(
     width, height = surface.get_size()
     if width <= 0 or height <= 0:
         return
-    radius = max(2, int(round(min(width, height) * max(0.05, circle_size_ratio) * 0.5)))
-    if radius <= 0:
-        return
-
-    alpha = 100
+    alpha = 140
     ratio_milli = max(1, int(round(circle_size_ratio * 1000)))
     overlays = _get_wall_damage_overlays(
         width=width,
         height=height,
         seed=seed,
         steps=resolved_steps,
-        radius=radius,
         alpha=alpha,
         ratio_milli=ratio_milli,
     )
     surface.blit(overlays[level], (0, 0))
 
 
-def _damage_mark_count_for_level(level: int) -> int:
-    if level <= 0:
-        return 0
-    if level == 1:
-        return 1
-    if level == 2:
-        return 2
-    prev, cur = 1, 2
-    for _ in range(3, level + 1):
-        prev, cur = cur, prev + cur
-    return cur
+def _shared_crack_strokes(seed: int) -> tuple[tuple[float, float, float, float, float], ...]:
+    cached = _CRACK_STROKES_CACHE.get(seed)
+    if cached is not None:
+        return cached
 
-
-def _shared_damage_positions(seed: int) -> tuple[tuple[int, int], ...]:
-    positions = _PIXEL_ORDER_CACHE.get(seed)
-    if positions is not None:
-        return positions
-    shuffled_positions = [
-        (x, y)
-        for y in range(_WALL_DAMAGE_MASK_BASE_SIZE)
-        for x in range(_WALL_DAMAGE_MASK_BASE_SIZE)
-        if (x % 3 == 0 and y % 3 == 0)
-    ]
     rng = random.Random(seed)
-    rng.shuffle(shuffled_positions)
-    positions = tuple(shuffled_positions)
-    _PIXEL_ORDER_CACHE[seed] = positions
-    return positions
+    strokes: list[tuple[float, float, float, float, float]] = []
+    endpoints: list[tuple[float, float]] = [(0.5, 0.5)]
+    target_count = 120
+
+    def _clamp_uv(x: float, y: float) -> tuple[float, float]:
+        return max(0.01, min(0.99, x)), max(0.01, min(0.99, y))
+
+    def _edge_point() -> tuple[float, float]:
+        side = rng.randrange(0, 4)
+        t = rng.uniform(0.05, 0.95)
+        if side == 0:
+            return 0.01, t
+        if side == 1:
+            return 0.99, t
+        if side == 2:
+            return t, 0.01
+        return t, 0.99
+
+    for i in range(target_count):
+        if i == 0:
+            sx, sy = 0.5, 0.5
+            base_angle = rng.random() * math.tau
+            length = rng.uniform(0.30, 0.45)
+        else:
+            connect_existing = bool(endpoints) and (rng.random() < (2.0 / 3.0))
+            if connect_existing:
+                sx, sy = endpoints[rng.randrange(0, len(endpoints))]
+                base_angle = rng.random() * math.tau
+                length = rng.uniform(0.09, 0.24)
+            else:
+                sx, sy = _edge_point()
+                to_center = math.atan2(0.5 - sy, 0.5 - sx)
+                base_angle = to_center + rng.uniform(-0.55, 0.55)
+                length = rng.uniform(0.10, 0.20)
+
+        ex = sx + math.cos(base_angle) * length
+        ey = sy + math.sin(base_angle) * length
+        ex, ey = _clamp_uv(ex, ey)
+        strength = rng.uniform(0.75, 1.0)
+        strokes.append((sx, sy, ex, ey, strength))
+        endpoints.append((ex, ey))
+
+        # Add short branch for more natural fracture networks.
+        if i > 0 and rng.random() < 0.42:
+            bx_angle = base_angle + rng.uniform(-1.1, 1.1)
+            bx_len = length * rng.uniform(0.38, 0.62)
+            bx = sx + math.cos(bx_angle) * bx_len
+            by = sy + math.sin(bx_angle) * bx_len
+            bx, by = _clamp_uv(bx, by)
+            b_strength = rng.uniform(0.65, 0.95)
+            strokes.append((sx, sy, bx, by, b_strength))
+            endpoints.append((bx, by))
+
+    result = tuple(strokes)
+    _CRACK_STROKES_CACHE[seed] = result
+    return result
+
+
+def _stroke_count_for_level(*, level: int, steps: int, total_strokes: int) -> int:
+    if level <= 0 or steps <= 1 or total_strokes <= 0:
+        return 0
+    progress = level / max(1, steps - 1)
+    eased = progress**0.6
+    return max(1, min(total_strokes, int(round(total_strokes * eased))))
 
 
 def _get_wall_damage_overlays(
@@ -436,7 +472,6 @@ def _get_wall_damage_overlays(
     height: int,
     seed: int,
     steps: int,
-    radius: int,
     alpha: int,
     ratio_milli: int,
 ) -> tuple[pygame.Surface, ...]:
@@ -445,47 +480,55 @@ def _get_wall_damage_overlays(
     if cached is not None:
         return cached
 
-    shared_positions = _shared_damage_positions(seed)
-    positions = [(x, y) for x, y in shared_positions if (x < width and y < height)]
     empty = pygame.Surface((width, height), pygame.SRCALPHA)
-    if not positions:
+    shared_strokes = _shared_crack_strokes(seed)
+    if not shared_strokes:
         overlays = tuple(empty.copy() for _ in range(steps))
         _WALL_DAMAGE_OVERLAY_CACHE[cache_key] = overlays
         return overlays
 
-    mark_radius = max(1, radius - 1)
-    diameter = (mark_radius * 2) + 1
-    mark_surface = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-    center = mark_radius
-    radius_sq = max(1.0, float(mark_radius * mark_radius))
-    core_radius_sq = radius_sq * 0.36
-    for py in range(diameter):
-        dy = py - center
-        for px in range(diameter):
-            dx = px - center
-            dist_sq = float(dx * dx + dy * dy)
-            if dist_sq > radius_sq:
-                continue
-            # Two-step mask: darker core + lighter ring.
-            local_alpha = 255 if dist_sq <= core_radius_sq else 140
-            if local_alpha <= 0:
-                continue
-            mark_surface.set_at((px, py), (255, 255, 255, local_alpha))
+    low_w = max(2, width // 2)
+    low_h = max(2, height // 2)
+    scale = max(0.4, ratio_milli / 300.0)
+    outer_width = max(1, int(round(min(low_w, low_h) * 0.075 * scale)))
+    inner_width = max(1, int(round(outer_width * 0.5)))
+    total_strokes = max(6, int(round(min(len(shared_strokes), 50 * scale))))
+
+    stroke_masks: list[pygame.Surface] = []
+    for sx, sy, ex, ey, strength in shared_strokes[:total_strokes]:
+        x0 = int(round(sx * (low_w - 1)))
+        y0 = int(round(sy * (low_h - 1)))
+        x1 = int(round(ex * (low_w - 1)))
+        y1 = int(round(ey * (low_h - 1)))
+        low_mask = pygame.Surface((low_w, low_h), pygame.SRCALPHA)
+        outer_a = max(110, min(230, int(round(195 * strength))))
+        inner_a = max(160, min(255, int(round(255 * strength))))
+        pygame.draw.line(
+            low_mask, (255, 255, 255, outer_a), (x0, y0), (x1, y1), outer_width
+        )
+        pygame.draw.line(
+            low_mask, (255, 255, 255, inner_a), (x0, y0), (x1, y1), inner_width
+        )
+        mask = pygame.transform.scale(low_mask, (width, height))
+        stroke_masks.append(mask)
+
     overlay_base = pygame.Surface((width, height), pygame.SRCALPHA)
     overlay_base.fill((0, 0, 0, alpha))
 
     coverage_mask = pygame.Surface((width, height), pygame.SRCALPHA)
     built: list[pygame.Surface] = []
-    prev_mark_count = 0
+    prev_count = 0
     for level in range(steps):
-        target_count = min(len(positions), _damage_mark_count_for_level(level))
-        for cx, cy in positions[prev_mark_count:target_count]:
+        target_count = _stroke_count_for_level(
+            level=level, steps=steps, total_strokes=len(stroke_masks)
+        )
+        for mask in stroke_masks[prev_count:target_count]:
             coverage_mask.blit(
-                mark_surface,
-                (cx - mark_radius, cy - mark_radius),
+                mask,
+                (0, 0),
                 special_flags=pygame.BLEND_RGBA_MAX,
             )
-        prev_mark_count = target_count
+        prev_count = target_count
         if target_count <= 0:
             built.append(empty.copy())
             continue
