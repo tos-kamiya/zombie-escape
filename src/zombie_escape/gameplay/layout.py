@@ -112,6 +112,109 @@ def _filter_spawn_cells(
     return [cell for cell in cells if cell not in blocked_cells]
 
 
+def _finalize_layout_cells(
+    *,
+    stage: Stage,
+    layout: LevelLayout,
+    walkable_cells: list[tuple[int, int]],
+    pitfall_cells: set[tuple[int, int]],
+    fire_floor_cells: set[tuple[int, int]],
+    metal_floor_cells: set[tuple[int, int]],
+    puddle_cells: set[tuple[int, int]],
+    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection],
+    spiky_plant_cells: set[tuple[int, int]],
+    car_reachable_cells: set[tuple[int, int]],
+    car_cells: list[tuple[int, int]],
+    transport_reserved_cells: set[tuple[int, int]],
+    interior_min_x: int,
+    interior_max_x: int,
+    interior_min_y: int,
+    interior_max_y: int,
+) -> tuple[
+    list[tuple[int, int]],
+    list[tuple[int, int]],
+    list[tuple[int, int]],
+    list[tuple[int, int]],
+]:
+    if moving_floor_cells:
+        pitfall_cells.difference_update(moving_floor_cells.keys())
+        for cell in moving_floor_cells:
+            if cell not in walkable_cells:
+                walkable_cells.append(cell)
+    if pitfall_cells:
+        walkable_cells = [cell for cell in walkable_cells if cell not in pitfall_cells]
+    if fire_floor_cells:
+        walkable_cells = [cell for cell in walkable_cells if cell not in fire_floor_cells]
+    layout.walkable_cells = walkable_cells
+    layout.pitfall_cells = pitfall_cells
+    layout.car_walkable_cells = set(car_reachable_cells)
+    layout.moving_floor_cells = moving_floor_cells
+
+    fall_spawn_cells = _expand_zone_cells(
+        stage.fall_spawn_zones,
+        grid_cols=stage.grid_cols,
+        grid_rows=stage.grid_rows,
+    )
+    walkable_set = set(walkable_cells)
+    floor_ratio = max(0.0, min(1.0, stage.fall_spawn_cell_ratio))
+    if floor_ratio > 0.0 and interior_min_x <= interior_max_x:
+        for y in range(interior_min_y, interior_max_y + 1):
+            for x in range(interior_min_x, interior_max_x + 1):
+                cell = (x, y)
+                if cell not in walkable_set:
+                    continue
+                if RNG.random() < floor_ratio:
+                    fall_spawn_cells.add(cell)
+        if not fall_spawn_cells:
+            candidates = [
+                cell
+                for cell in walkable_set
+                if (
+                    interior_min_x <= cell[0] <= interior_max_x
+                    and interior_min_y <= cell[1] <= interior_max_y
+                )
+            ]
+            if candidates:
+                fall_spawn_cells.add(RNG.choice(candidates))
+    layout.fall_spawn_cells = fall_spawn_cells
+
+    floor_ruin_candidates = [
+        cell
+        for cell in walkable_set
+        if cell not in pitfall_cells
+        and cell not in fire_floor_cells
+        and cell not in metal_floor_cells
+        and cell not in puddle_cells
+        and cell not in moving_floor_cells
+        and cell not in spiky_plant_cells
+    ]
+    layout.floor_ruin_cells = build_floor_ruin_cells(
+        candidate_cells=floor_ruin_candidates,
+        rubble_ratio=float(stage.wall_rubble_ratio),
+    )
+
+    blocked_spawn_cells = (
+        set(transport_reserved_cells)
+        | set(fire_floor_cells)
+        | set(moving_floor_cells)
+        | set(spiky_plant_cells)
+    )
+    item_spawn_cells = _filter_spawn_cells(
+        walkable_cells,
+        blocked_cells=blocked_spawn_cells,
+    )
+    car_spawn_cells = _filter_spawn_cells(
+        list(car_reachable_cells),
+        blocked_cells=blocked_spawn_cells,
+    )
+    filtered_car_cells = _filter_spawn_cells(
+        list(car_cells),
+        blocked_cells=blocked_spawn_cells,
+    )
+    layout.car_spawn_cells = list(car_spawn_cells)
+    return walkable_cells, item_spawn_cells, car_spawn_cells, filtered_car_cells
+
+
 def _generate_valid_blueprint_with_retries(
     *,
     stage: Stage,
@@ -563,85 +666,33 @@ def generate_level_from_blueprint(
         moving_floor_cells={},
         floor_ruin_cells={},
     )
-    if moving_floor_cells:
-        pitfall_cells.difference_update(moving_floor_cells.keys())
-        for cell in moving_floor_cells:
-            if cell not in walkable_cells:
-                walkable_cells.append(cell)
-    if pitfall_cells:
-        walkable_cells = [cell for cell in walkable_cells if cell not in pitfall_cells]
-    if fire_floor_cells:
-        walkable_cells = [cell for cell in walkable_cells if cell not in fire_floor_cells]
-    layout.walkable_cells = walkable_cells
+    (
+        walkable_cells,
+        item_spawn_cells,
+        car_spawn_cells,
+        filtered_car_cells,
+    ) = _finalize_layout_cells(
+        stage=stage,
+        layout=layout,
+        walkable_cells=walkable_cells,
+        pitfall_cells=pitfall_cells,
+        fire_floor_cells=fire_floor_cells,
+        metal_floor_cells=metal_floor_cells,
+        puddle_cells=puddle_cells,
+        moving_floor_cells=moving_floor_cells,
+        spiky_plant_cells=spiky_plant_cells,
+        car_reachable_cells=car_reachable_cells,
+        car_cells=car_cells,
+        transport_reserved_cells=transport_reserved_cells,
+        interior_min_x=interior_min_x,
+        interior_max_x=interior_max_x,
+        interior_min_y=interior_min_y,
+        interior_max_y=interior_max_y,
+    )
     layout.outer_wall_cells = outer_wall_cells
     layout.wall_cells = wall_cells
     layout.steel_beam_cells = steel_beam_cells
-    layout.pitfall_cells = pitfall_cells
-    layout.car_walkable_cells = car_reachable_cells
-    layout.moving_floor_cells = moving_floor_cells
-    fall_spawn_cells = _expand_zone_cells(
-        stage.fall_spawn_zones,
-        grid_cols=stage.grid_cols,
-        grid_rows=stage.grid_rows,
-    )
-    walkable_set = set(walkable_cells)
-    floor_ratio = max(0.0, min(1.0, stage.fall_spawn_cell_ratio))
-    if floor_ratio > 0.0 and interior_min_x <= interior_max_x:
-        for y in range(interior_min_y, interior_max_y + 1):
-            for x in range(interior_min_x, interior_max_x + 1):
-                cell = (x, y)
-                if cell not in walkable_set:
-                    continue
-                if RNG.random() < floor_ratio:
-                    fall_spawn_cells.add(cell)
-        if not fall_spawn_cells:
-            candidates = [
-                cell
-                for cell in walkable_set
-                if (
-                    interior_min_x <= cell[0] <= interior_max_x
-                    and interior_min_y <= cell[1] <= interior_max_y
-                )
-            ]
-            if candidates:
-                fall_spawn_cells.add(RNG.choice(candidates))
-    layout.fall_spawn_cells = fall_spawn_cells
     layout.bevel_corners = bevel_corners
-    floor_ruin_candidates = [
-        cell
-        for cell in walkable_set
-        if cell not in pitfall_cells
-        and cell not in fire_floor_cells
-        and cell not in metal_floor_cells
-        and cell not in puddle_cells
-        and cell not in moving_floor_cells
-        and cell not in spiky_plant_cells
-    ]
-    layout.floor_ruin_cells = build_floor_ruin_cells(
-        candidate_cells=floor_ruin_candidates,
-        rubble_ratio=float(stage.wall_rubble_ratio),
-    )
-
-    blocked_spawn_cells = (
-        set(transport_reserved_cells) | set(fire_floor_cells) | set(moving_floor_cells) | set(spiky_plant_cells)
-    )
-    item_spawn_cells = _filter_spawn_cells(
-        walkable_cells,
-        blocked_cells=blocked_spawn_cells,
-    )
-    car_spawn_cells = _filter_spawn_cells(
-        list(car_reachable_cells),
-        blocked_cells=blocked_spawn_cells,
-    )
-    filtered_car_cells = _filter_spawn_cells(
-        list(car_cells),
-        blocked_cells=blocked_spawn_cells,
-    )
-    # Keep reachable cells and spawn candidates separate:
-    # - car_walkable_cells: pathing/reachability domain
-    # - car_spawn_cells: spawn-safe subset with extra placement bans
-    layout.car_walkable_cells = set(car_reachable_cells)
-    layout.car_spawn_cells = list(car_spawn_cells)
 
     return (
         layout,
