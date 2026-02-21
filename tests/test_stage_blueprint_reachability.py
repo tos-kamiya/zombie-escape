@@ -157,8 +157,8 @@ def _build_valid_blueprint_grid(stage: object, *, base_seed: int) -> list[str]:
             fuel_count=fuel_count,
             empty_fuel_can_count=empty_fuel_can_count,
             fuel_station_count=fuel_station_count,
-            flashlight_count=int(stage.initial_flashlight_count),
-            shoes_count=int(stage.initial_shoes_count),
+            flashlight_count=int(stage.flashlight_spawn_count),
+            shoes_count=int(stage.shoes_spawn_count),
         )
         if validate_car_connectivity(blueprint.grid) is not None:
             return blueprint.grid

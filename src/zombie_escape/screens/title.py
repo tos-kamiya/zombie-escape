@@ -338,9 +338,9 @@ class TitleScreenController:
         if stage.puddle_density > 0 or stage.puddle_zones:
             icons.append(self.icon_surfaces["puddle"])
 
-        if stage.initial_flashlight_count <= 0:
+        if stage.flashlight_spawn_count <= 0:
             icons.append(self.icon_surfaces["flashlight_forbidden"])
-        if stage.initial_shoes_count > 0:
+        if stage.shoes_spawn_count > 0:
             icons.append(self.icon_surfaces["shoes"])
         if stage.patrol_bot_spawn_rate > 0:
             icons.append(self.icon_surfaces["patrol_bot"])

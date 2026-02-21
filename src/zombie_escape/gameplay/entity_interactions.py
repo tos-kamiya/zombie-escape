@@ -32,6 +32,7 @@ from .constants import (
     SURVIVOR_OVERLOAD_DAMAGE_RATIO,
 )
 from ..colors import BLUE, YELLOW
+from ..gameplay_constants import MAX_FLASHLIGHT_EFFECT_LEVEL, MAX_SHOES_EFFECT_LEVEL
 from ..localization import translate as tr
 from ..models import ContactHintRecord, FuelMode, FuelProgress, GameData
 from ..rng import get_rng
@@ -291,6 +292,8 @@ def _handle_player_item_pickups(
     shoes_list: list[pygame.sprite.Sprite],
     flashlight_interaction_radius: float,
     shoes_interaction_radius: float,
+    flashlight_full_text: str,
+    shoes_full_text: str,
     player_near_point: callable,
 ) -> None:
     state = game_data.state
@@ -301,6 +304,16 @@ def _handle_player_item_pickups(
             continue
         if not player_near_point(flashlight.rect.center, flashlight_interaction_radius):
             continue
+        if state.flashlight_count >= MAX_FLASHLIGHT_EFFECT_LEVEL:
+            schedule_timed_message(
+                state,
+                flashlight_full_text,
+                duration_frames=_ms_to_frames(400),
+                clear_on_input=False,
+                color=YELLOW,
+                now_ms=state.clock.elapsed_ms,
+            )
+            break
         state.flashlight_count += 1
         state.hint_expires_at = 0
         state.hint_target_type = None
@@ -317,6 +330,16 @@ def _handle_player_item_pickups(
             continue
         if not player_near_point(shoes.rect.center, shoes_interaction_radius):
             continue
+        if state.shoes_count >= MAX_SHOES_EFFECT_LEVEL:
+            schedule_timed_message(
+                state,
+                shoes_full_text,
+                duration_frames=_ms_to_frames(400),
+                clear_on_input=False,
+                color=YELLOW,
+                now_ms=state.clock.elapsed_ms,
+            )
+            break
         state.shoes_count += 1
         state.hint_expires_at = 0
         state.hint_target_type = None
@@ -592,6 +615,8 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     contaminated_cells = game_data.layout.zombie_contaminated_cells
     need_fuel_text = tr("hud.need_fuel")
     need_empty_can_text = tr("hud.need_empty_fuel_can")
+    flashlight_full_text = tr("hud.flashlight_full")
+    shoes_full_text = tr("hud.shoes_full")
     survivor_boarding_enabled = (
         stage.survivor_rescue_stage or stage.survivor_spawn_rate > 0.0
     )
@@ -692,6 +717,8 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         shoes_list=shoes_list,
         flashlight_interaction_radius=flashlight_interaction_radius,
         shoes_interaction_radius=shoes_interaction_radius,
+        flashlight_full_text=flashlight_full_text,
+        shoes_full_text=shoes_full_text,
         player_near_point=_player_near_point,
     )
 

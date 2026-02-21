@@ -241,6 +241,8 @@
     "hud": {
       "need_fuel": "燃料が必要です！",
       "need_empty_fuel_can": "燃料缶が必要です！",
+      "flashlight_full": "懐中電灯はこれ以上持てない！",
+      "shoes_full": "シューズは上限に達している！",
       "internal_error": "内部エラー",
       "paused": "一時停止",
       "pause_menu_resume": "ゲーム再開 (P/START)",

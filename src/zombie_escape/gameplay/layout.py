@@ -133,8 +133,8 @@ def generate_level_from_blueprint(
             fuel_station_count = max(1, int(stage.fuel_station_spawn_count))
         else:
             fuel_count = max(0, int(stage.fuel_spawn_count))
-    flashlight_count = max(0, int(stage.initial_flashlight_count))
-    shoes_count = max(0, int(stage.initial_shoes_count))
+    flashlight_count = max(0, int(stage.flashlight_spawn_count))
+    shoes_count = max(0, int(stage.shoes_spawn_count))
 
     steel_conf = config.get("steel_beams", {})
     try:

@@ -290,7 +290,7 @@ def _spawn_stage_items(
                 game_data.groups.all_sprites.add(fuel_can, layer=LAYER_ITEMS)
                 occupied_centers.add(fuel_can.rect.center)
 
-    flashlight_count = stage.initial_flashlight_count
+    flashlight_count = stage.flashlight_spawn_count
     flashlights = place_flashlights(
         layout_data["flashlight_cells"],
         cell_size,
@@ -304,7 +304,7 @@ def _spawn_stage_items(
     for flashlight in flashlights:
         occupied_centers.add(flashlight.rect.center)
 
-    shoes_count = stage.initial_shoes_count
+    shoes_count = stage.shoes_spawn_count
     shoes_list = place_shoes(
         layout_data["shoes_cells"],
         cell_size,

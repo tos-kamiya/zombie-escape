@@ -241,6 +241,8 @@
     "hud": {
       "need_fuel": "Need fuel to drive!",
       "need_empty_fuel_can": "Need an empty fuel can first!",
+      "flashlight_full": "Flashlight is full!",
+      "shoes_full": "Shoes are maxed!",
       "internal_error": "Internal error",
       "paused": "PAUSED",
       "pause_menu_resume": "RESUME (P/START)",

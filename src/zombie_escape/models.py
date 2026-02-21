@@ -304,8 +304,8 @@ class Stage:
     fuel_spawn_count: int = 1
     empty_fuel_can_spawn_count: int = 1
     fuel_station_spawn_count: int = 1
-    initial_flashlight_count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT
-    initial_shoes_count: int = DEFAULT_SHOES_SPAWN_COUNT
+    flashlight_spawn_count: int = DEFAULT_FLASHLIGHT_SPAWN_COUNT
+    shoes_spawn_count: int = DEFAULT_SHOES_SPAWN_COUNT
     waiting_car_target_count: int = 1
 
     # Zombie spawning/aging

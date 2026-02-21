@@ -34,8 +34,8 @@ Icon order is fixed by category:
 - `puddle` when puddle settings are present.
 
 4. Helper signals
-- `flashlight_forbidden` only when `initial_flashlight_count <= 0`.
-- `shoes` when `initial_shoes_count > 0`.
+- `flashlight_forbidden` only when `flashlight_spawn_count <= 0`.
+- `shoes` when `shoes_spawn_count > 0`.
 - `patrol_bot` when `patrol_bot_spawn_rate > 0`.
 
 ## Intentional Exceptions

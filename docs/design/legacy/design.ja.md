@@ -142,7 +142,7 @@
   - `fuel_spawn_count`（`FuelMode.FUEL_CAN` で使う燃料缶候補数）
   - `empty_fuel_can_spawn_count`（`FuelMode.REFUEL_CHAIN` で使う空の燃料缶候補数）
   - `fuel_station_spawn_count`（`FuelMode.REFUEL_CHAIN` で使う給油所候補数）
-- 初期アイテム: `initial_flashlight_count`, `initial_shoes_count`
+- 初期アイテム: `flashlight_spawn_count`, `shoes_spawn_count`
 - 待機車両: `waiting_car_target_count`（ステージ別の待機車両数の目安）
 - 変種移動ルーチン: `zombie_normal_ratio`（通常移動の出現率）
 - 変種移動ルーチン: `zombie_tracker_ratio`（足跡追跡型の出現率）
@@ -572,7 +572,7 @@
     - `FuelMode.FUEL_CAN` では「燃料缶候補」
     - `FuelMode.REFUEL_CHAIN` では「給油所候補」
   - `l`: 懐中電灯候補（flashlight candidate）
-  - `s`: 靴候補（shoes candidate）
+  - `s`: シューズ候補（shoes candidate）
   - `^`/`v`/`<`/`>`: 動く床（上/下/左/右）
 
 - `generate_random_blueprint(...)`
@@ -590,7 +590,7 @@
   - 燃料系候補セル数はモードごとに確保される。
     - `FuelMode.FUEL_CAN`: `f` 候補を確保。
     - `FuelMode.REFUEL_CHAIN`: `e`（空缶）と `f`（給油所）をそれぞれ確保し、最低1つずつ保証する。
-  - 懐中電灯/靴の候補セル数も、レイアウト生成時にステージ設定の必要数に合わせて確保される。
+  - 懐中電灯/シューズの候補セル数も、レイアウト生成時にステージ設定の必要数に合わせて確保される。
 
 - 落下ゾンビ用タイル
   - `fall_spawn_zones`（ステージ定義の矩形群）をセル集合に展開し、`fall_spawn_cells` として保持。
