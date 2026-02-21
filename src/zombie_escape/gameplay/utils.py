@@ -6,6 +6,7 @@ from ..entities import Camera, Player, random_position_outside_building
 from ..rng import get_rng
 from ..render_constants import (
     FLASHLIGHT_FOG_SCALE_ONE,
+    FLASHLIGHT_FOG_SCALE_THREE,
     FLASHLIGHT_FOG_SCALE_TWO,
     FOG_RADIUS_SCALE,
     FOV_RADIUS,
@@ -38,8 +39,10 @@ def fov_radius_for_flashlights(flashlight_count: int) -> float:
         scale = FOG_RADIUS_SCALE
     elif count == 1:
         scale = FLASHLIGHT_FOG_SCALE_ONE
-    else:
+    elif count == 2:
         scale = FLASHLIGHT_FOG_SCALE_TWO
+    else:
+        scale = FLASHLIGHT_FOG_SCALE_THREE
     return FOV_RADIUS * scale
 
 

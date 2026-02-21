@@ -5,7 +5,7 @@ This project ships fog overlay cache files as bundled resources in
 
 ## Build Command
 
-Generate fog cache files for all fog profiles (`DARK0`, `DARK1`, `DARK2`):
+Generate fog cache files for all fog profiles (`DARK0`, `DARK1`, `DARK2`, `DARK3`):
 
 ```bash
 uv run -p .venv/bin/python -m zombie_escape --build-fog-cache

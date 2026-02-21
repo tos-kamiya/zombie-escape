@@ -41,13 +41,14 @@ _BAYER_MATRIX_16 = _build_bayer_matrix(16)
 
 def _max_flashlight_pickups() -> int:
     """Return the maximum flashlight pickups available per stage."""
-    return max(1, DEFAULT_FLASHLIGHT_SPAWN_COUNT)
+    return max(3, DEFAULT_FLASHLIGHT_SPAWN_COUNT)
 
 
 class _FogProfile(Enum):
     DARK0 = (0, (0, 0, 0, 255))
     DARK1 = (1, (0, 0, 0, 255))
     DARK2 = (2, (0, 0, 0, 255))
+    DARK3 = (3, (0, 0, 0, 255))
 
     def __init__(self, flashlight_count: int, color: tuple[int, int, int, int]) -> None:
         self.flashlight_count = flashlight_count
@@ -60,6 +61,8 @@ class _FogProfile(Enum):
     @staticmethod
     def _from_flashlight_count(count: int) -> "_FogProfile":
         safe_count = max(0, count)
+        if safe_count >= 3:
+            return _FogProfile.DARK3
         if safe_count >= 2:
             return _FogProfile.DARK2
         if safe_count == 1:

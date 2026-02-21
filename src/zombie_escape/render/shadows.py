@@ -11,6 +11,7 @@ from ..render_constants import (
     ENTITY_SHADOW_ALPHA,
     ENTITY_SHADOW_EDGE_SOFTNESS,
     FLASHLIGHT_FOG_SCALE_ONE,
+    FLASHLIGHT_FOG_SCALE_THREE,
     FLASHLIGHT_FOG_SCALE_TWO,
     FOG_RADIUS_SCALE,
     FOV_RADIUS,
@@ -390,8 +391,10 @@ def _expanded_shadow_screen_rect(
         scale = FOG_RADIUS_SCALE
     elif count == 1:
         scale = FLASHLIGHT_FOG_SCALE_ONE
-    else:
+    elif count == 2:
         scale = FLASHLIGHT_FOG_SCALE_TWO
+    else:
+        scale = FLASHLIGHT_FOG_SCALE_THREE
     extra_scale = max(0.0, scale - FOG_RADIUS_SCALE)
     margin = int(FOV_RADIUS * extra_scale)
     if margin <= 0:

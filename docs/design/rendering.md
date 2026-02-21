@@ -89,7 +89,7 @@ Supporting modules:
 
 - Add an offline fog-cache tool that precomputes data close to runtime fog
   overlays and writes it to a file.
-- Target profiles are `DARK0`, `DARK1`, and `DARK2`.
+- Target profiles are `DARK0`, `DARK1`, `DARK2`, and `DARK3`.
 - Cache payload stores a PNG alpha plane for the `combined` fog layer;
   runtime reconstructs `Surface` objects from loaded alpha data.
 - Runtime first tries bundled resource cache files

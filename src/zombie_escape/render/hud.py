@@ -35,6 +35,7 @@ from ..render_assets import (
 )
 from ..render_constants import (
     FLASHLIGHT_FOG_SCALE_ONE,
+    FLASHLIGHT_FOG_SCALE_THREE,
     FLASHLIGHT_FOG_SCALE_TWO,
     GAMEPLAY_FONT_SIZE,
     HUD_ICON_SIZE,
@@ -725,7 +726,9 @@ def _get_fog_scale(
         return scale
     if flashlight_count == 1:
         return max(scale, FLASHLIGHT_FOG_SCALE_ONE)
-    return max(scale, FLASHLIGHT_FOG_SCALE_TWO)
+    if flashlight_count == 2:
+        return max(scale, FLASHLIGHT_FOG_SCALE_TWO)
+    return max(scale, FLASHLIGHT_FOG_SCALE_THREE)
 
 
 def _draw_hint_arrow(
