@@ -16,6 +16,10 @@ _WALL_DAMAGE_OVERLAY_CACHE: dict[
     tuple[int, int, int, int, int],
     tuple[pygame.Surface, ...],
 ] = {}
+_WALL_DAMAGE_VARIANT_COUNT = 9
+_WALL_DAMAGE_VARIANT_SEEDS: tuple[int, ...] = tuple(
+    random.randint(0, (1 << 30) - 1) for _ in range(_WALL_DAMAGE_VARIANT_COUNT)
+)
 
 RUBBLE_ROTATION_DEG = 5.0
 RUBBLE_OFFSET_RATIO = 0.06
@@ -70,7 +74,8 @@ def paint_wall_damage_overlay(
     surface: pygame.Surface,
     *,
     health_ratio: float,
-    seed: int,
+    seed: int | None = None,
+    variant_index: int | None = None,
     steps: int = 12,
     circle_size_ratio: float = 0.30,
 ) -> None:
@@ -86,12 +91,20 @@ def paint_wall_damage_overlay(
     width, height = surface.get_size()
     if width <= 0 or height <= 0:
         return
+    if variant_index is not None:
+        resolved_seed = _WALL_DAMAGE_VARIANT_SEEDS[
+            int(variant_index) % _WALL_DAMAGE_VARIANT_COUNT
+        ]
+    elif seed is not None:
+        resolved_seed = int(seed)
+    else:
+        resolved_seed = _WALL_DAMAGE_VARIANT_SEEDS[0]
     alpha = 140
     ratio_milli = max(1, int(round(circle_size_ratio * 1000)))
     overlays = _get_wall_damage_overlays(
         width=width,
         height=height,
-        seed=seed,
+        seed=resolved_seed,
         steps=resolved_steps,
         alpha=alpha,
         ratio_milli=ratio_milli,
@@ -160,6 +173,10 @@ def _shared_crack_strokes(seed: int) -> tuple[tuple[float, float, float, float, 
     result = tuple(strokes)
     _CRACK_STROKES_CACHE[seed] = result
     return result
+
+
+for _variant_seed in _WALL_DAMAGE_VARIANT_SEEDS:
+    _shared_crack_strokes(_variant_seed)
 
 
 def _stroke_count_for_level(*, level: int, steps: int, total_strokes: int) -> int:

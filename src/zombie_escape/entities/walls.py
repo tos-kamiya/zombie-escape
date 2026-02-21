@@ -37,6 +37,20 @@ _WALL_INDEX_DIRTY = False
 _WALL_DAMAGE_OVERLAY_SEED = 1337
 
 
+def _damage_overlay_variant_index(
+    *,
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+) -> int:
+    cell_w = max(1, int(width))
+    cell_h = max(1, int(height))
+    cell_x = int(x) // cell_w
+    cell_y = int(y) // cell_h
+    return (cell_x % 3) + ((cell_y % 3) * 3)
+
+
 def _mark_wall_index_dirty() -> None:
     global _WALL_INDEX_DIRTY
     _WALL_INDEX_DIRTY = True
@@ -84,6 +98,12 @@ class Wall(pygame.sprite.Sprite):
         self.bottom_side_ratio = max(0.0, bottom_side_ratio)
         self.side_shade_ratio = max(0.0, min(1.0, side_shade_ratio))
         self._damage_visual_seed = damage_overlay_seed
+        self._damage_overlay_variant = _damage_overlay_variant_index(
+            x=x,
+            y=y,
+            width=safe_width,
+            height=safe_height,
+        )
         self._local_polygon = _build_beveled_polygon(
             safe_width, safe_height, self.bevel_depth, self.bevel_mask
         )
@@ -132,6 +152,7 @@ class Wall(pygame.sprite.Sprite):
             self.image,
             health_ratio=health_ratio,
             seed=self._damage_visual_seed,
+            variant_index=self._damage_overlay_variant,
         )
 
     def collides_rect(self: Self, rect_obj: rect.Rect) -> bool:
@@ -380,6 +401,12 @@ class SteelBeam(pygame.sprite.Sprite):
         self.palette = palette
         self.on_destroy = on_destroy
         self._damage_visual_seed = damage_overlay_seed
+        self._damage_overlay_variant = _damage_overlay_variant_index(
+            x=x,
+            y=y,
+            width=size,
+            height=size,
+        )
         self._update_color()
         self.rect = self.image.get_rect(center=(x + size // 2, y + size // 2))
 
@@ -411,6 +438,7 @@ class SteelBeam(pygame.sprite.Sprite):
             self.image,
             health_ratio=health_ratio,
             seed=self._damage_visual_seed,
+            variant_index=self._damage_overlay_variant,
         )
 
 

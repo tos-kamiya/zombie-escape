@@ -4,6 +4,7 @@ from zombie_escape.render_assets import (
     paint_wall_damage_overlay,
     resolve_wall_colors,
 )
+from zombie_escape.entities.walls import _damage_overlay_variant_index
 
 pygame = pytest.importorskip("pygame")
 
@@ -40,3 +41,12 @@ def test_wall_damage_overlay_is_deterministic_for_same_seed() -> None:
     paint_wall_damage_overlay(right, health_ratio=0.35, seed=1234)
 
     assert pygame.image.tobytes(left, "RGBA") == pygame.image.tobytes(right, "RGBA")
+
+
+def test_wall_damage_overlay_variant_uses_3x3_position_pattern() -> None:
+    indices = {
+        _damage_overlay_variant_index(x=x * 50, y=y * 50, width=50, height=50)
+        for y in range(3)
+        for x in range(3)
+    }
+    assert indices == set(range(9))
