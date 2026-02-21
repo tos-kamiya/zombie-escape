@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import random
 from dataclasses import dataclass
 
 import pygame
@@ -59,6 +60,8 @@ _ZOMBIE_DOG_DIRECTIONAL_CACHE: dict[tuple[float, float, int], list[pygame.Surfac
 _PATROL_BOT_DIRECTIONAL_CACHE: dict[tuple[int, int], list[pygame.Surface]] = {}
 _RUBBLE_SURFACE_CACHE: dict[tuple, pygame.Surface] = {}
 _HUMANOID_SURFACE_EXTENT_RATIO = 2.0
+_PIXEL_ORDER_CACHE: dict[int, tuple[tuple[int, int], ...]] = {}
+_WALL_DAMAGE_MASK_BASE_SIZE = 128
 
 RUBBLE_ROTATION_DEG = 5.0
 RUBBLE_OFFSET_RATIO = 0.06
@@ -337,24 +340,100 @@ def resolve_wall_colors(
         base_color = palette.inner_wall
         border_base_color = palette.inner_wall_border
 
-    if health_ratio <= 0:
-        fill_color = (40, 40, 40)
-        ratio = 0.0
-    else:
-        ratio = max(0.0, min(1.0, health_ratio))
-        mix = 0.6 + 0.4 * ratio
-        fill_color = (
-            int(base_color[0] * mix),
-            int(base_color[1] * mix),
-            int(base_color[2] * mix),
-        )
-    border_mix = 0.6 + 0.4 * ratio
+    ratio = max(0.0, min(1.0, health_ratio))
+    # Keep wall tone mostly stable and rely on impact marks for damage readability.
+    mix = 0.9 + 0.1 * ratio
+    fill_color = (
+        int(base_color[0] * mix),
+        int(base_color[1] * mix),
+        int(base_color[2] * mix),
+    )
+    border_mix = 0.9 + 0.1 * ratio
     border_color = (
         int(border_base_color[0] * border_mix),
         int(border_base_color[1] * border_mix),
         int(border_base_color[2] * border_mix),
     )
     return fill_color, border_color
+
+
+def paint_wall_damage_overlay(
+    surface: pygame.Surface,
+    *,
+    health_ratio: float,
+    seed: int,
+    steps: int = 12,
+    circle_size_ratio: float = 0.30,
+) -> None:
+    """Paint random semi-transparent impact marks as the wall takes damage."""
+    clamped_health = max(0.0, min(1.0, health_ratio))
+    damage_ratio = 1.0 - clamped_health
+    if damage_ratio <= 0.0:
+        return
+    resolved_steps = max(2, int(steps))
+    level = int(round(damage_ratio * (resolved_steps - 1)))
+    if level <= 0:
+        return
+
+    width, height = surface.get_size()
+    if width <= 0 or height <= 0:
+        return
+    radius = max(2, int(round(min(width, height) * max(0.05, circle_size_ratio) * 0.5)))
+    if radius <= 0:
+        return
+
+    shared_positions = _PIXEL_ORDER_CACHE.get(seed)
+    if shared_positions is None:
+        shuffled_positions = [
+            (x, y)
+            for y in range(_WALL_DAMAGE_MASK_BASE_SIZE)
+            for x in range(_WALL_DAMAGE_MASK_BASE_SIZE)
+            if (x % 3 == 0 and y % 3 == 0)
+        ]
+        rng = random.Random(seed)
+        rng.shuffle(shuffled_positions)
+        shared_positions = tuple(shuffled_positions)
+        _PIXEL_ORDER_CACHE[seed] = shared_positions
+
+    positions = tuple(
+        (x, y) for x, y in shared_positions if (x < width and y < height)
+    )
+    if not positions:
+        return
+
+    # Fibonacci-like progression with custom seeds: 0, 1, 2, 3, 5, 8, ...
+    mark_count = min(len(positions), _damage_mark_count_for_level(level))
+
+    alpha = 120
+    coverage_mask = pygame.Surface((width, height), pygame.SRCALPHA)
+    for cx, cy in positions[:mark_count]:
+        mark_radius = max(1, radius - 1)
+        diameter = (mark_radius * 2) + 1
+        mark_surface = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+        pygame.draw.circle(
+            mark_surface,
+            (255, 255, 255, 255),
+            (mark_radius, mark_radius),
+            mark_radius,
+        )
+        coverage_mask.blit(mark_surface, (cx - mark_radius, cy - mark_radius))
+    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, alpha))
+    overlay.blit(coverage_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    surface.blit(overlay, (0, 0))
+
+
+def _damage_mark_count_for_level(level: int) -> int:
+    if level <= 0:
+        return 0
+    if level == 1:
+        return 1
+    if level == 2:
+        return 2
+    prev, cur = 1, 2
+    for _ in range(3, level + 1):
+        prev, cur = cur, prev + cur
+    return cur
 
 
 _CAR_COLOR_SCHEMES: dict[str, dict[str, tuple[int, int, int]]] = {
@@ -1056,7 +1135,7 @@ def paint_steel_beam_surface(
     health_ratio: float,
 ) -> None:
     surface.fill((0, 0, 0, 0))
-    fill_mix = 0.55 + 0.45 * health_ratio
+    fill_mix = 0.25 + 0.75 * health_ratio
     fill_color = tuple(int(c * fill_mix) for c in base_color)
     rect_obj = surface.get_rect()
     side_height = max(1, int(rect_obj.height * 0.1))
@@ -1066,7 +1145,7 @@ def paint_steel_beam_surface(
         rect_obj.width,
         rect_obj.height - side_height,
     )
-    side_mix = 0.45 + 0.35 * health_ratio
+    side_mix = 0.2 + 0.6 * health_ratio
     side_color = tuple(int(c * side_mix * 0.9) for c in base_color)
     side_rect = pygame.Rect(
         rect_obj.left,
@@ -1075,7 +1154,7 @@ def paint_steel_beam_surface(
         side_height,
     )
     pygame.draw.rect(surface, side_color, side_rect)
-    line_mix = 0.7 + 0.3 * health_ratio
+    line_mix = 0.3 + 0.7 * health_ratio
     tuned_line_color = tuple(int(c * line_mix) for c in line_color)
     top_surface = pygame.Surface(top_rect.size, pygame.SRCALPHA)
     local_rect = top_surface.get_rect()
@@ -1400,6 +1479,7 @@ __all__ = [
     "RenderAssets",
     "build_beveled_polygon",
     "resolve_wall_colors",
+    "paint_wall_damage_overlay",
     "resolve_car_color",
     "resolve_steel_beam_colors",
     "build_player_directional_surfaces",

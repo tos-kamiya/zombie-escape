@@ -20,6 +20,7 @@ from ..render_assets import (
     build_beveled_polygon,
     build_rubble_wall_surface,
     paint_steel_beam_surface,
+    paint_wall_damage_overlay,
     paint_wall_surface,
     resolve_steel_beam_colors,
     resolve_wall_colors,
@@ -33,6 +34,7 @@ from .movement import (
 )
 
 _WALL_INDEX_DIRTY = False
+_WALL_DAMAGE_OVERLAY_SEED = 1337
 
 
 def _mark_wall_index_dirty() -> None:
@@ -64,6 +66,7 @@ class Wall(pygame.sprite.Sprite):
         draw_bottom_side: bool = False,
         bottom_side_ratio: float = 0.1,
         side_shade_ratio: float = 0.9,
+        damage_overlay_seed: int = _WALL_DAMAGE_OVERLAY_SEED,
         on_destroy: Callable[[Self], None] | None = None,
     ) -> None:
         super().__init__()
@@ -80,6 +83,7 @@ class Wall(pygame.sprite.Sprite):
         self.draw_bottom_side = draw_bottom_side
         self.bottom_side_ratio = max(0.0, bottom_side_ratio)
         self.side_shade_ratio = max(0.0, min(1.0, side_shade_ratio))
+        self._damage_visual_seed = damage_overlay_seed
         self._local_polygon = _build_beveled_polygon(
             safe_width, safe_height, self.bevel_depth, self.bevel_mask
         )
@@ -121,6 +125,14 @@ class Wall(pygame.sprite.Sprite):
             bottom_side_ratio=self.bottom_side_ratio,
             side_shade_ratio=self.side_shade_ratio,
         )
+        self._paint_damage_marks(health_ratio=health_ratio)
+
+    def _paint_damage_marks(self: Self, *, health_ratio: float) -> None:
+        paint_wall_damage_overlay(
+            self.image,
+            health_ratio=health_ratio,
+            seed=self._damage_visual_seed,
+        )
 
     def collides_rect(self: Self, rect_obj: rect.Rect) -> bool:
         if self._collision_polygon is None:
@@ -161,6 +173,7 @@ class RubbleWall(Wall):
         bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
         rubble_rotation_deg: float | None = None,
         rubble_offset_px: int | None = None,
+        damage_overlay_seed: int = _WALL_DAMAGE_OVERLAY_SEED,
         on_destroy: Callable[[Self], None] | None = None,
     ) -> None:
         self._rubble_rotation_deg = (
@@ -183,6 +196,7 @@ class RubbleWall(Wall):
             bevel_depth=bevel_depth,
             bevel_mask=(False, False, False, False),
             draw_bottom_side=False,
+            damage_overlay_seed=damage_overlay_seed,
             on_destroy=on_destroy,
         )
 
@@ -206,6 +220,7 @@ class RubbleWall(Wall):
         )
         self.image.fill((0, 0, 0, 0))
         self.image.blit(rubble_surface, (0, 0))
+        self._paint_damage_marks(health_ratio=health_ratio)
 
 
 class ReinforcedWall(Wall):
@@ -337,6 +352,7 @@ class ReinforcedWall(Wall):
         if inner_rect.width > 0 and inner_rect.height > 0:
             panel_color = fill_color
             pygame.draw.rect(self.image, panel_color, inner_rect)
+        self._paint_damage_marks(health_ratio=health_ratio)
 
 
 class SteelBeam(pygame.sprite.Sprite):
@@ -350,6 +366,7 @@ class SteelBeam(pygame.sprite.Sprite):
         *,
         health: int = STEEL_BEAM_HEALTH,
         palette: EnvironmentPalette | None = None,
+        damage_overlay_seed: int = _WALL_DAMAGE_OVERLAY_SEED,
         on_destroy: Callable[[Self], None] | None = None,
     ) -> None:
         super().__init__()
@@ -362,6 +379,7 @@ class SteelBeam(pygame.sprite.Sprite):
         self.max_health = max(1, health)
         self.palette = palette
         self.on_destroy = on_destroy
+        self._damage_visual_seed = damage_overlay_seed
         self._update_color()
         self.rect = self.image.get_rect(center=(x + size // 2, y + size // 2))
 
@@ -388,6 +406,11 @@ class SteelBeam(pygame.sprite.Sprite):
             base_color=base_color,
             line_color=line_color,
             health_ratio=health_ratio,
+        )
+        paint_wall_damage_overlay(
+            self.image,
+            health_ratio=health_ratio,
+            seed=self._damage_visual_seed,
         )
 
 
