@@ -38,18 +38,26 @@ def resolve_wall_colors(
     if palette_category == "outer_wall":
         base_color = palette.outer_wall
         border_base_color = palette.outer_wall_border
+        fill_min = 0.16
+        fill_span = 0.84
+        border_min = 0.40
+        border_span = 0.60
     else:
         base_color = palette.inner_wall
         border_base_color = palette.inner_wall_border
+        fill_min = 0.14
+        fill_span = 0.86
+        border_min = 0.42
+        border_span = 0.58
 
     ratio = max(0.0, min(1.0, health_ratio))
-    mix = 0.25 + 0.75 * ratio
+    mix = fill_min + fill_span * ratio
     fill_color = (
         int(base_color[0] * mix),
         int(base_color[1] * mix),
         int(base_color[2] * mix),
     )
-    border_mix = 0.3 + 0.7 * ratio
+    border_mix = border_min + border_span * ratio
     border_color = (
         int(border_base_color[0] * border_mix),
         int(border_base_color[1] * border_mix),
