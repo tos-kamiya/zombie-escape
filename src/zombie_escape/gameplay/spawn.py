@@ -931,15 +931,11 @@ def setup_player_and_cars(
     player_pos = _pick_center(layout_data["player_cells"] or walkable_cells)
     player = Player(*player_pos)
 
-    car_spawn_cells = (
-        layout_data.get("car_spawn_cells")
-        or layout_data.get("car_walkable_cells")
-        or walkable_cells
-    )
+    car_spawn_cells = list(layout_data.get("car_spawn_cells", []))
     spiky_plant_set = set(layout_data.get("spiky_plant_cells", []))
     car_candidates = [
         c
-        for c in (layout_data["car_cells"] or car_spawn_cells)
+        for c in (layout_data["car_cells"] or car_spawn_cells or walkable_cells)
         if c not in spiky_plant_set
     ]
     waiting_cars: list[Car] = []
@@ -1132,16 +1128,9 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
     player = game_data.player
     if not player:
         return None
-    # Use cells that are 4-way reachable by car (prefer spawn-filtered cells).
-    car_spawn_cells = list(game_data.layout.car_spawn_cells)
-    if car_spawn_cells:
-        walkable_cells = car_spawn_cells
-    else:
-        car_walkable = list(game_data.layout.car_walkable_cells)
-        walkable_cells = (
-            car_walkable if car_walkable else game_data.layout.walkable_cells
-        )
-    if not walkable_cells:
+    # Use only spawn-safe car cells; reachability cells are tracked separately.
+    spawn_cells = list(game_data.layout.car_spawn_cells)
+    if not spawn_cells:
         return None
     wall_group = game_data.groups.wall_group
     all_sprites = game_data.groups.all_sprites
@@ -1158,7 +1147,7 @@ def spawn_waiting_car(game_data: GameData) -> Car | None:
         new_car = place_new_car(
             wall_group,
             player,
-            walkable_cells,
+            spawn_cells,
             cell_size,
             existing_cars=obstacles,
             appearance=appearance,

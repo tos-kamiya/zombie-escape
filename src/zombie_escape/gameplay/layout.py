@@ -594,9 +594,8 @@ def generate_level_from_blueprint(
         rubble_ratio=float(stage.wall_rubble_ratio),
     )
 
-    moving_floor_set = set(moving_floor_cells)
     blocked_spawn_cells = (
-        set(transport_reserved_cells) | set(fire_floor_cells) | moving_floor_set
+        set(transport_reserved_cells) | set(fire_floor_cells) | set(moving_floor_cells) | set(spiky_plant_cells)
     )
     item_spawn_cells = _filter_spawn_cells(
         walkable_cells,
@@ -610,7 +609,11 @@ def generate_level_from_blueprint(
         list(car_cells),
         blocked_cells=blocked_spawn_cells,
     )
-    layout.car_spawn_cells = car_spawn_cells
+    # Keep reachable cells and spawn candidates separate:
+    # - car_walkable_cells: pathing/reachability domain
+    # - car_spawn_cells: spawn-safe subset with extra placement bans
+    layout.car_walkable_cells = set(car_reachable_cells)
+    layout.car_spawn_cells = list(car_spawn_cells)
 
     return (
         layout,
@@ -644,7 +647,7 @@ def generate_level_from_blueprint(
             "walkable_cells": walkable_cells,
             "car_walkable_cells": list(car_reachable_cells),
             "item_spawn_cells": item_spawn_cells,
-            "car_spawn_cells": car_spawn_cells,
+            "car_spawn_cells": list(car_spawn_cells),
         },
         wall_group,
         all_sprites,
