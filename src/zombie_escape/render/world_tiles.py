@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import random
 from typing import Any, Callable
 
 import pygame
@@ -50,6 +51,162 @@ _FIRE_TILE_CACHE: dict[
     tuple[int, int, tuple[int, int, int], tuple[int, int, int], tuple[int, int, int]],
     surface.Surface,
 ] = {}
+_FLOOR_RUIN_TILE_CACHE: dict[
+    tuple[int, tuple[int, int, int], tuple[int, int, int], int, int],
+    surface.Surface,
+] = {}
+_FLOOR_RUIN_CELL_CHOICE_CACHE: dict[
+    tuple[int, int, int, bool, int], tuple[bool, int]
+] = {}
+
+_FLOOR_RUIN_VARIANTS = 8
+
+
+def _floor_ruin_cell_choice(
+    *,
+    x: int,
+    y: int,
+    tier: int,
+    is_fall_spawn: bool,
+    rubble_ratio: float,
+) -> tuple[bool, int]:
+    if rubble_ratio <= 0.0:
+        return False, 0
+    rubble_key = int(max(0.0, min(1.0, rubble_ratio)) * 1000)
+    cache_key = (x, y, max(0, min(2, tier)), bool(is_fall_spawn), rubble_key)
+    cached = _FLOOR_RUIN_CELL_CHOICE_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+    base_prob = (0.18, 0.26, 0.34)[max(0, min(2, tier))]
+    if is_fall_spawn:
+        base_prob += 0.08
+    base_prob *= max(0.0, min(1.0, rubble_ratio))
+    enabled = random.random() <= max(0.0, min(1.0, base_prob))
+    variant = random.randrange(0, _FLOOR_RUIN_VARIANTS) if enabled else 0
+    choice = (enabled, variant)
+    _FLOOR_RUIN_CELL_CHOICE_CACHE[cache_key] = choice
+    return choice
+
+
+def _floor_clutter_tier_for_cell(*, x: int, y: int, xs: int, ys: int, xe: int, ye: int) -> int:
+    dist_left = x - xs
+    dist_right = (xe - 1) - x
+    dist_top = y - ys
+    dist_bottom = (ye - 1) - y
+    edge_distance = min(dist_left, dist_right, dist_top, dist_bottom)
+    if edge_distance <= 1:
+        return 2
+    if edge_distance <= 3:
+        return 1
+    return 0
+
+
+def _get_floor_ruin_overlay_tile(
+    *,
+    cell_size: int,
+    base_color: tuple[int, int, int],
+    wall_color: tuple[int, int, int],
+    tier: int,
+    variant: int,
+) -> surface.Surface:
+    key = (
+        max(1, int(cell_size)),
+        (int(base_color[0]), int(base_color[1]), int(base_color[2])),
+        (int(wall_color[0]), int(wall_color[1]), int(wall_color[2])),
+        int(tier),
+        int(variant),
+    )
+    cached = _FLOOR_RUIN_TILE_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    size = key[0]
+    overlay = pygame.Surface((size, size), pygame.SRCALPHA)
+    rng = random
+
+    # Dust: sparse 1px noise with low alpha.
+    dust_count = (2, 4, 7)[max(0, min(2, tier))]
+    dark_dust = (
+        max(0, base_color[0] - 28),
+        max(0, base_color[1] - 28),
+        max(0, base_color[2] - 28),
+        34,
+    )
+    light_dust = (
+        min(255, base_color[0] + 14),
+        min(255, base_color[1] + 14),
+        min(255, base_color[2] + 14),
+        24,
+    )
+    for _ in range(dust_count):
+        px = rng.randrange(0, size)
+        py = rng.randrange(0, size)
+        overlay.set_at((px, py), dark_dust if rng.random() < 0.7 else light_dust)
+
+    # Debris: triangular chips using wall-like tones; more frequent near edges.
+    debris_count = (1, 2, 3)[max(0, min(2, tier))]
+    for _ in range(debris_count):
+        cx = rng.randrange(2, max(3, size - 2))
+        cy = rng.randrange(2, max(3, size - 2))
+        chip_color = (
+            max(0, int(wall_color[0] * rng.uniform(0.70, 0.92))),
+            max(0, int(wall_color[1] * rng.uniform(0.70, 0.92))),
+            max(0, int(wall_color[2] * rng.uniform(0.70, 0.92))),
+            118,
+        )
+        # ~50% larger than previous micro chips, and intentionally irregular.
+        base_angle = rng.uniform(0.0, math.tau)
+        # Avoid near-equilateral spacing by using uneven angular intervals.
+        angle_1 = base_angle
+        angle_2 = angle_1 + rng.uniform(0.85, 2.25)
+        angle_3 = angle_2 + rng.uniform(0.95, 2.55)
+        radii = [
+            rng.uniform(2.0, 4.3),
+            rng.uniform(1.6, 4.6),
+            rng.uniform(2.2, 5.0),
+        ]
+        points = []
+        for angle, radius in zip((angle_1, angle_2, angle_3), radii):
+            px = int(round(cx + math.cos(angle) * radius))
+            py = int(round(cy + math.sin(angle) * radius))
+            points.append((px, py))
+        if len({points[0], points[1], points[2]}) < 3:
+            continue
+        pygame.draw.polygon(overlay, chip_color, points)
+
+    # Screws/metal bits: metallic tiny T marks.
+    screw_prob = (0.055, 0.12, 0.18)[max(0, min(2, tier))]
+    screw_count = 1 if rng.random() < screw_prob else 0
+    if tier >= 2 and rng.random() < 0.09:
+        screw_count += 1
+    for _ in range(screw_count):
+        sx = rng.randrange(1, max(2, size - 1))
+        sy = rng.randrange(1, max(2, size - 1))
+        screw_color = (138, 146, 158, 180)
+        orientation = rng.randrange(0, 4)
+        if orientation == 0:  # up
+            pygame.draw.line(
+                overlay, screw_color, (sx - 1, sy - 1), (sx + 1, sy - 1), width=1
+            )
+            pygame.draw.line(overlay, screw_color, (sx, sy - 1), (sx, sy + 1), width=1)
+        elif orientation == 1:  # right
+            pygame.draw.line(
+                overlay, screw_color, (sx + 1, sy - 1), (sx + 1, sy + 1), width=1
+            )
+            pygame.draw.line(overlay, screw_color, (sx - 1, sy), (sx + 1, sy), width=1)
+        elif orientation == 2:  # down
+            pygame.draw.line(
+                overlay, screw_color, (sx - 1, sy + 1), (sx + 1, sy + 1), width=1
+            )
+            pygame.draw.line(overlay, screw_color, (sx, sy - 1), (sx, sy + 1), width=1)
+        else:  # left
+            pygame.draw.line(
+                overlay, screw_color, (sx - 1, sy - 1), (sx - 1, sy + 1), width=1
+            )
+            pygame.draw.line(overlay, screw_color, (sx - 1, sy), (sx + 1, sy), width=1)
+
+    _FLOOR_RUIN_TILE_CACHE[key] = overlay
+    return overlay
 
 
 def _build_moving_floor_pattern(
@@ -301,6 +458,7 @@ def _draw_play_area(
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection],
     electrified_cells: set[tuple[int, int]],
     cell_size: int,
+    wall_rubble_ratio: float,
     *,
     elapsed_ms: int,
 ) -> tuple[int, int, int, int, set[tuple[int, int]]]:
@@ -550,23 +708,45 @@ def _draw_play_area(
                     if use_secondary
                     else palette.fall_zone_primary
                 )
-            elif not use_secondary:
-                continue
-            else:
+            elif use_secondary:
                 color = palette.floor_secondary
-            lx, ly = (
-                x * grid_snap,
-                y * grid_snap,
-            )
-            r = pygame.Rect(
-                lx,
-                ly,
-                grid_snap,
-                grid_snap,
-            )
+            else:
+                color = palette.floor_primary
+            lx, ly = (x * grid_snap, y * grid_snap)
+            r = pygame.Rect(lx, ly, grid_snap, grid_snap)
             sr = apply_rect(r)
             if sr.colliderect(screen_rect):
-                pygame.draw.rect(screen, color, sr)
+                if use_secondary or (x, y) in fall_spawn_cells:
+                    pygame.draw.rect(screen, color, sr)
+                # Floor ruin dressing: visual-only overlay for normal/fall-spawn floor tiles.
+                is_fall_spawn = (x, y) in fall_spawn_cells
+                clutter_tier = _floor_clutter_tier_for_cell(
+                    x=x, y=y, xs=xs, ys=ys, xe=xe, ye=ye
+                )
+                enabled, variant = _floor_ruin_cell_choice(
+                    x=x,
+                    y=y,
+                    tier=clutter_tier,
+                    is_fall_spawn=is_fall_spawn,
+                    rubble_ratio=wall_rubble_ratio,
+                )
+                if enabled:
+                    ruin_overlay = _get_floor_ruin_overlay_tile(
+                        cell_size=grid_snap,
+                        base_color=(
+                            int(color[0]),
+                            int(color[1]),
+                            int(color[2]),
+                        ),
+                        wall_color=(
+                            int(palette.inner_wall[0]),
+                            int(palette.inner_wall[1]),
+                            int(palette.inner_wall[2]),
+                        ),
+                        tier=clutter_tier,
+                        variant=variant,
+                    )
+                    screen.blit(ruin_overlay, sr.topleft)
 
     if cell_size > 0 and electrified_cells:
         for cell_x, cell_y in electrified_cells:

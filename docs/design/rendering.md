@@ -30,18 +30,13 @@ Supporting modules:
 - Runtime draw path reuses cached step overlays (size/seed/step keyed) instead of regenerating
   crack geometry each frame.
 
-## Floor Ruin Dressing (INPROGRESS)
+## Floor Ruin Dressing
 
-- Status: `INPROGRESS` (idea/prototype phase; not implemented in runtime yet).
-- Goal: add subtle ruin atmosphere to normal floor tiles without reducing gameplay readability.
-- Candidate decoration layers:
-  - Dust specks: sparse 1px points with low alpha; use slightly darker/lighter tones than base floor.
-  - Debris chips: small 2-4px irregular fragments, biased toward wall edges and corners.
-  - Screw/metal bits: rare tiny cross-like or point-plus-shadow details mixed into debris clusters.
-- Intended constraints:
-  - Deterministic placement from fixed seed.
-  - Prebuilt/cached overlays (avoid per-frame procedural regeneration).
-  - Keep central traversable areas less cluttered than periphery.
+- Normal floor tiles render subtle ruin dressing overlays (dust specks, debris chips, rare screw/metal bits).
+- Placement uses runtime random sampling (`random`) and is cached per cell profile.
+- Overlay tiles are prebuilt/cached by size/base-color/seed/tier/variant key.
+- Clutter density is intentionally higher near outer edges and lower toward central walk lanes.
+- Spawn rate is scaled by `Stage.wall_rubble_ratio`; when ratio is `0`, floor ruin dressing does not appear.
 
 ## Render Pipeline (`render/core.py`)
 

@@ -120,6 +120,7 @@ def _render_studio_snapshot(
     falling_zombies: list[FallingEntity] | None = None,
     enable_shadows: bool = False,
     ambient_palette_key: str | None = STUDIO_AMBIENT_PALETTE_KEY,
+    wall_rubble_ratio: float | None = None,
 ) -> pygame.Surface:
     game_data = _build_studio_game_data(cell_size)
     game_data.state.ambient_palette_key = ambient_palette_key
@@ -175,6 +176,11 @@ def _render_studio_snapshot(
         layout.moving_floor_cells,
         set(),
         game_data.cell_size,
+        (
+            float(wall_rubble_ratio)
+            if wall_rubble_ratio is not None
+            else float(game_data.stage.wall_rubble_ratio)
+        ),
         elapsed_ms=int(game_data.state.clock.elapsed_ms),
     )
     if enable_shadows:
