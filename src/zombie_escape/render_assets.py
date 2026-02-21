@@ -62,6 +62,10 @@ _RUBBLE_SURFACE_CACHE: dict[tuple, pygame.Surface] = {}
 _HUMANOID_SURFACE_EXTENT_RATIO = 2.0
 _PIXEL_ORDER_CACHE: dict[int, tuple[tuple[int, int], ...]] = {}
 _WALL_DAMAGE_MASK_BASE_SIZE = 128
+_WALL_DAMAGE_OVERLAY_CACHE: dict[
+    tuple[int, int, int, int, int],
+    tuple[pygame.Surface, ...],
+] = {}
 
 RUBBLE_ROTATION_DEG = 5.0
 RUBBLE_OFFSET_RATIO = 0.06
@@ -382,45 +386,18 @@ def paint_wall_damage_overlay(
     if radius <= 0:
         return
 
-    shared_positions = _PIXEL_ORDER_CACHE.get(seed)
-    if shared_positions is None:
-        shuffled_positions = [
-            (x, y)
-            for y in range(_WALL_DAMAGE_MASK_BASE_SIZE)
-            for x in range(_WALL_DAMAGE_MASK_BASE_SIZE)
-            if (x % 3 == 0 and y % 3 == 0)
-        ]
-        rng = random.Random(seed)
-        rng.shuffle(shuffled_positions)
-        shared_positions = tuple(shuffled_positions)
-        _PIXEL_ORDER_CACHE[seed] = shared_positions
-
-    positions = tuple(
-        (x, y) for x, y in shared_positions if (x < width and y < height)
+    alpha = 100
+    ratio_milli = max(1, int(round(circle_size_ratio * 1000)))
+    overlays = _get_wall_damage_overlays(
+        width=width,
+        height=height,
+        seed=seed,
+        steps=resolved_steps,
+        radius=radius,
+        alpha=alpha,
+        ratio_milli=ratio_milli,
     )
-    if not positions:
-        return
-
-    # Fibonacci-like progression with custom seeds: 0, 1, 2, 3, 5, 8, ...
-    mark_count = min(len(positions), _damage_mark_count_for_level(level))
-
-    alpha = 120
-    coverage_mask = pygame.Surface((width, height), pygame.SRCALPHA)
-    for cx, cy in positions[:mark_count]:
-        mark_radius = max(1, radius - 1)
-        diameter = (mark_radius * 2) + 1
-        mark_surface = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        pygame.draw.circle(
-            mark_surface,
-            (255, 255, 255, 255),
-            (mark_radius, mark_radius),
-            mark_radius,
-        )
-        coverage_mask.blit(mark_surface, (cx - mark_radius, cy - mark_radius))
-    overlay = pygame.Surface((width, height), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, alpha))
-    overlay.blit(coverage_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-    surface.blit(overlay, (0, 0))
+    surface.blit(overlays[level], (0, 0))
 
 
 def _damage_mark_count_for_level(level: int) -> int:
@@ -434,6 +411,91 @@ def _damage_mark_count_for_level(level: int) -> int:
     for _ in range(3, level + 1):
         prev, cur = cur, prev + cur
     return cur
+
+
+def _shared_damage_positions(seed: int) -> tuple[tuple[int, int], ...]:
+    positions = _PIXEL_ORDER_CACHE.get(seed)
+    if positions is not None:
+        return positions
+    shuffled_positions = [
+        (x, y)
+        for y in range(_WALL_DAMAGE_MASK_BASE_SIZE)
+        for x in range(_WALL_DAMAGE_MASK_BASE_SIZE)
+        if (x % 3 == 0 and y % 3 == 0)
+    ]
+    rng = random.Random(seed)
+    rng.shuffle(shuffled_positions)
+    positions = tuple(shuffled_positions)
+    _PIXEL_ORDER_CACHE[seed] = positions
+    return positions
+
+
+def _get_wall_damage_overlays(
+    *,
+    width: int,
+    height: int,
+    seed: int,
+    steps: int,
+    radius: int,
+    alpha: int,
+    ratio_milli: int,
+) -> tuple[pygame.Surface, ...]:
+    cache_key = (width, height, seed, steps, ratio_milli)
+    cached = _WALL_DAMAGE_OVERLAY_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    shared_positions = _shared_damage_positions(seed)
+    positions = [(x, y) for x, y in shared_positions if (x < width and y < height)]
+    empty = pygame.Surface((width, height), pygame.SRCALPHA)
+    if not positions:
+        overlays = tuple(empty.copy() for _ in range(steps))
+        _WALL_DAMAGE_OVERLAY_CACHE[cache_key] = overlays
+        return overlays
+
+    mark_radius = max(1, radius - 1)
+    diameter = (mark_radius * 2) + 1
+    mark_surface = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+    center = mark_radius
+    radius_sq = max(1.0, float(mark_radius * mark_radius))
+    core_radius_sq = radius_sq * 0.36
+    for py in range(diameter):
+        dy = py - center
+        for px in range(diameter):
+            dx = px - center
+            dist_sq = float(dx * dx + dy * dy)
+            if dist_sq > radius_sq:
+                continue
+            # Two-step mask: darker core + lighter ring.
+            local_alpha = 255 if dist_sq <= core_radius_sq else 140
+            if local_alpha <= 0:
+                continue
+            mark_surface.set_at((px, py), (255, 255, 255, local_alpha))
+    overlay_base = pygame.Surface((width, height), pygame.SRCALPHA)
+    overlay_base.fill((0, 0, 0, alpha))
+
+    coverage_mask = pygame.Surface((width, height), pygame.SRCALPHA)
+    built: list[pygame.Surface] = []
+    prev_mark_count = 0
+    for level in range(steps):
+        target_count = min(len(positions), _damage_mark_count_for_level(level))
+        for cx, cy in positions[prev_mark_count:target_count]:
+            coverage_mask.blit(
+                mark_surface,
+                (cx - mark_radius, cy - mark_radius),
+                special_flags=pygame.BLEND_RGBA_MAX,
+            )
+        prev_mark_count = target_count
+        if target_count <= 0:
+            built.append(empty.copy())
+            continue
+        overlay = overlay_base.copy()
+        overlay.blit(coverage_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        built.append(overlay)
+
+    overlays = tuple(built)
+    _WALL_DAMAGE_OVERLAY_CACHE[cache_key] = overlays
+    return overlays
 
 
 _CAR_COLOR_SCHEMES: dict[str, dict[str, tuple[int, int, int]]] = {
