@@ -22,7 +22,8 @@
 - Human-like sprites share cached directional textures.
 - Player and buddy render with arm markers; survivors/zombies do not.
 - Buddy can damage interior walls/steel beams when colliding.
-- Player wall collision applies damage to only the first detected wall per contact.
+- Player wall collision can split wall damage across overlapping collided walls
+  in the same contact frame.
 - Off-screen survivor/buddy zombie contact triggers respawn behavior.
 - Car and patrol bot wall-overlap resolution uses shared
   `separate_circle_from_walls(...)` from `entities/movement.py`.

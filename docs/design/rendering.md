@@ -21,6 +21,15 @@ Supporting modules:
 - `src/zombie_escape/render_assets.py` (procedural sprite/icon construction used by renderers and UI)
 - `src/zombie_escape/colors.py` (palette selection and ambient color policy)
 
+## Wall Damage Visuals
+
+- `Wall`, `RubbleWall`, and `SteelBeam` use shared wall-damage overlay logic.
+- Wall base colors darken as health drops (same direction as steel-beam damage darkening).
+- Damage marks are crack-texture overlays, not random per-frame marks.
+- Crack strokes are generated deterministically from a fixed seed and cached.
+- Runtime draw path reuses cached step overlays (size/seed/step keyed) instead of regenerating
+  crack geometry each frame.
+
 ## Render Pipeline (`render/core.py`)
 
 `draw(...)` performs rendering in this order:
