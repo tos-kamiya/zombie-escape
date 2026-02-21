@@ -53,7 +53,7 @@ def update_footprints(game_data: GameData, config: dict[str, Any]) -> None:
     )
     step_distance = FOOTPRINT_STEP_DISTANCE * 0.5
     step_distance_sq = step_distance * step_distance
-    if player.in_car:
+    if getattr(player, "mounted_vehicle", None) is not None:
         state.last_puddle_splash_pos = None
         state.last_footprint_pos = None
     elif in_puddle:

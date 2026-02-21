@@ -705,11 +705,11 @@ def _build_objective_lines(
     ):
         objective_lines.append(tr("objectives.find_fuel"))
     elif stage and stage.survivor_rescue_stage:
-        if not player.in_car:
+        if getattr(player, "mounted_vehicle", None) is None:
             objective_lines.append(tr("objectives.find_car"))
         else:
             objective_lines.append(tr("objectives.escape_with_survivors"))
-    elif not player.in_car:
+    elif getattr(player, "mounted_vehicle", None) is None:
         objective_lines.append(tr("objectives.find_car"))
     else:
         objective_lines.append(tr("objectives.escape"))

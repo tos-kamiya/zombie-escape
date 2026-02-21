@@ -62,7 +62,16 @@ def update_survivors(
     car = game_data.car
     if not player:
         return
-    target_rect = car.rect if player.in_car and car and car.alive() else player.rect
+    mounted_vehicle = player.mounted_vehicle
+    mounted_target = (
+        mounted_vehicle
+        if mounted_vehicle is not None and mounted_vehicle.alive()
+        else None
+    )
+    if mounted_target is None and player.in_car and car and car.alive():
+        # Legacy fallback while call sites migrate from `in_car`.
+        mounted_target = car
+    target_rect = mounted_target.rect if mounted_target is not None else player.rect
     target_pos = target_rect.center
     spatial_index = game_data.state.spatial_index
     survivors = [s for s in survivor_group if s.alive()]
@@ -382,7 +391,13 @@ def handle_survivor_zombie_collisions(
     player = game_data.player
     car = game_data.car
     active_car = car if car and car.alive() else None
-    fov_target = active_car if player and player.in_car and active_car else player
+    mounted_target = player.mounted_vehicle if player is not None else None
+    if mounted_target is not None and not mounted_target.alive():
+        mounted_target = None
+    if mounted_target is None and player and player.in_car and active_car:
+        # Legacy fallback while call sites migrate from `in_car`.
+        mounted_target = active_car
+    fov_target = mounted_target if mounted_target is not None else player
     now = game_data.state.clock.elapsed_ms
 
     def _is_on_contaminated_cell(survivor: Survivor) -> bool:

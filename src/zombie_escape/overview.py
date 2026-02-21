@@ -486,14 +486,18 @@ def draw_debug_overview(
         palette_key=game_data.state.ambient_palette_key,
     )
     fov_target = None
-    if (
-        game_data.player
-        and game_data.player.in_car
-        and game_data.car
-        and game_data.car.alive()
-    ):
-        fov_target = game_data.car
-    elif game_data.player:
+    if game_data.player:
+        mounted_vehicle = game_data.player.mounted_vehicle
+        if mounted_vehicle is not None and mounted_vehicle.alive():
+            fov_target = mounted_vehicle
+        elif (
+            game_data.player.in_car
+            and game_data.car
+            and game_data.car.alive()
+        ):
+            # Legacy fallback while call sites migrate from `in_car`.
+            fov_target = game_data.car
+    if fov_target is None and game_data.player:
         fov_target = game_data.player
     if fov_target:
         fov_scale = _get_fog_scale(assets, game_data.state.flashlight_count)

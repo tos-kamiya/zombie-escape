@@ -97,7 +97,7 @@ def _resolve_hint_target_type(
     stage: Stage,
     fuel_progress: FuelProgress,
     game_data: Any,
-    player_in_car: bool,
+    player_mounted: bool,
     active_car: Any,
     report_internal_error_once: callable,
 ) -> str | None:
@@ -112,7 +112,7 @@ def _resolve_hint_target_type(
                 return "fuel_station"
             report_internal_error_once("missing_fuel_station_for_refuel")
             return None
-        if not player_in_car and (active_car or _alive_waiting_cars(game_data)):
+        if not player_mounted and (active_car or _alive_waiting_cars(game_data)):
             return "car"
         return None
 
@@ -122,7 +122,7 @@ def _resolve_hint_target_type(
         report_internal_error_once("missing_fuel_can_for_fuel_mode")
         return None
 
-    if not player_in_car and (active_car or _alive_waiting_cars(game_data)):
+    if not player_mounted and (active_car or _alive_waiting_cars(game_data)):
         return "car"
     return None
 
@@ -918,11 +918,12 @@ class GameplayScreenRunner:
         )
         if not hint_enabled:
             return None
+        player_mounted = player.mounted_vehicle is not None
         target_type = _resolve_hint_target_type(
             stage=self.stage,
             fuel_progress=state.fuel_progress,
             game_data=game_data,
-            player_in_car=player.in_car,
+            player_mounted=player_mounted,
             active_car=active_car,
             report_internal_error_once=self._report_internal_error_once,
         )
@@ -934,7 +935,7 @@ class GameplayScreenRunner:
             not target_type
             or not hint_expires_at
             or elapsed_ms < hint_expires_at
-            or player.in_car
+            or player_mounted
         ):
             return None
         hint_target_raw = _resolve_hint_target_position(

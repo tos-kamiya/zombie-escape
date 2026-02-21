@@ -76,8 +76,14 @@ def draw(
     has_empty_fuel_can = state.fuel_progress == FuelProgress.EMPTY_CAN
     flashlight_count = state.flashlight_count
     active_car = game_data.car if game_data.car and game_data.car.alive() else None
-    if player.in_car and game_data.car and game_data.car.alive():
+    mounted_vehicle = player.mounted_vehicle
+    player_in_active_car = active_car is not None and mounted_vehicle is active_car
+    if mounted_vehicle is not None and mounted_vehicle.alive():
+        fov_target = mounted_vehicle
+    elif player.in_car and game_data.car and game_data.car.alive():
+        # Legacy fallback while call sites migrate from `in_car`.
         fov_target = game_data.car
+        player_in_active_car = True
     else:
         fov_target = player
 
@@ -247,7 +253,7 @@ def draw(
         has_empty_fuel_can=has_empty_fuel_can,
         flashlight_count=flashlight_count,
         shoes_count=state.shoes_count,
-        player_in_car=player.in_car,
+        player_in_car=player_in_active_car,
         buddy_onboard=state.buddy_onboard,
         survivors_onboard=state.survivors_onboard,
         passenger_capacity=state.survivor_capacity,

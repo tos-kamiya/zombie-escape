@@ -43,9 +43,9 @@ def _draw_fuel_indicator(
     *,
     has_fuel: bool,
     has_empty_fuel_can: bool,
-    in_car: bool,
+    mounted: bool,
 ) -> None:
-    if in_car:
+    if mounted:
         return
     if not has_fuel and not has_empty_fuel_can:
         return
@@ -87,7 +87,7 @@ def _draw_entities(
                     sprite_screen_rect,
                     has_fuel=has_fuel,
                     has_empty_fuel_can=has_empty_fuel_can,
-                    in_car=player.in_car,
+                    mounted=getattr(player, "mounted_vehicle", None) is not None,
                 )
 
 

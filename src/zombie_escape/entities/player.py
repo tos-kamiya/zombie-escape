@@ -12,6 +12,7 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
 import pygame
 
 if TYPE_CHECKING:
+    from .car import Car
     from ..models import LevelLayout
 
 from ..entities_constants import (
@@ -61,7 +62,8 @@ class Player(pygame.sprite.Sprite):
         self.image = self.directional_images[self.facing_bin]
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = PLAYER_SPEED
-        self.in_car = False
+        self.mounted_vehicle: pygame.sprite.Sprite | None = None
+        self._legacy_in_car = False
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
         self.jump_start_at = 0
@@ -73,6 +75,31 @@ class Player(pygame.sprite.Sprite):
         )
         self.shadow_offset_scale = 1.0
         self.is_zombified_visual = False
+
+    @property
+    def in_car(self: Self) -> bool:
+        mounted_car = self.mounted_car
+        return mounted_car is not None or self._legacy_in_car
+
+    @in_car.setter
+    def in_car(self: Self, value: bool) -> None:
+        bool_value = bool(value)
+        self._legacy_in_car = bool_value
+        if not bool_value:
+            mounted_car = self.mounted_car
+            if mounted_car is not None:
+                self.mounted_vehicle = None
+
+    @property
+    def mounted_car(self: Self) -> "Car | None":
+        mounted = self.mounted_vehicle
+        if mounted is None:
+            return None
+        from .car import Car
+
+        if isinstance(mounted, Car):
+            return mounted
+        return None
 
     def move(
         self: Self,
@@ -86,7 +113,7 @@ class Player(pygame.sprite.Sprite):
         layout: LevelLayout,
         now_ms: int,
     ) -> None:
-        if self.in_car:
+        if self.mounted_vehicle is not None:
             return
         self.pending_pitfall_fall = False
 
@@ -240,7 +267,7 @@ class Player(pygame.sprite.Sprite):
         update_directional_image_scale(self, scale)
 
     def update_facing_from_input(self: Self, dx: float, dy: float) -> None:
-        if self.in_car:
+        if self.mounted_vehicle is not None:
             return
         new_bin = angle_bin_from_vector(dx, dy)
         if new_bin is None:
@@ -250,7 +277,7 @@ class Player(pygame.sprite.Sprite):
         self.input_facing_bin = new_bin
 
     def _update_facing_for_bump(self: Self, inner_wall_hit: bool) -> None:
-        if self.in_car:
+        if self.mounted_vehicle is not None:
             return
         if inner_wall_hit:
             self.wall_bump_counter += 1

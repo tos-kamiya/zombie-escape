@@ -98,16 +98,24 @@ def process_player_input(
 
     player_dx, player_dy, car_dx, car_dy = 0, 0, 0, 0
 
-    if player.in_car and car and car.alive():
-        car.update_facing_from_input(dx_input, dy_input)
-        target_speed = car.speed
+    mounted_car = player.mounted_car
+    controlled_car: Car | None = None
+    if mounted_car and mounted_car.alive():
+        controlled_car = mounted_car
+    elif player.in_car and car and car.alive():
+        # Legacy fallback while call sites migrate from `in_car` to `mounted_vehicle`.
+        controlled_car = car
+
+    if controlled_car:
+        controlled_car.update_facing_from_input(dx_input, dy_input)
+        target_speed = controlled_car.speed
         move_len = math.hypot(dx_input, dy_input)
         if move_len > 0:
             car_dx, car_dy = (
                 (dx_input / move_len) * target_speed,
                 (dy_input / move_len) * target_speed,
             )
-    elif not player.in_car:
+    elif player.mounted_vehicle is None:
         target_speed = PLAYER_SPEED * _shoes_speed_multiplier(shoes_count)
         move_len = math.hypot(dx_input, dy_input)
         if move_len > 0:
@@ -149,7 +157,18 @@ def update_entities(
     spatial_index = game_data.state.spatial_index
     camera = game_data.camera
     stage = game_data.stage
-    active_car = car if car and car.alive() else None
+    mounted_vehicle = player.mounted_vehicle
+    if mounted_vehicle is not None and not mounted_vehicle.alive():
+        player.mounted_vehicle = None
+        mounted_vehicle = None
+    mounted_car = player.mounted_car if mounted_vehicle is not None else None
+    active_car = mounted_car if mounted_car is not None else None
+    player_mounted = mounted_vehicle is not None
+    if not player_mounted and player.in_car and car and car.alive():
+        # Legacy fallback while call sites migrate from `in_car` to `mounted_vehicle`.
+        active_car = car
+        mounted_vehicle = car
+        player_mounted = True
     pitfall_cells = game_data.layout.pitfall_cells
     fire_floor_cells = game_data.layout.fire_floor_cells
     field_rect = game_data.layout.field_rect
@@ -170,7 +189,7 @@ def update_entities(
         )
 
     # Update player/car movement
-    if player.in_car and active_car:
+    if player_mounted and active_car:
         player.on_moving_floor = False
         floor_dx, floor_dy = get_moving_floor_drift(
             active_car.rect,
@@ -227,7 +246,7 @@ def update_entities(
                 active_car.y = float(active_car.rect.centery)
         player.rect.center = active_car.rect.center
         player.x, player.y = active_car.x, active_car.y
-    elif not player.in_car:
+    elif not player_mounted:
         # Ensure player is in all_sprites if not in car
         if player not in all_sprites and not game_data.state.game_over:
             all_sprites.add(player, layer=LAYER_PLAYERS)
@@ -333,13 +352,20 @@ def update_entities(
             game_data.state.game_over = True
             game_data.state.game_over_at = game_data.state.clock.elapsed_ms
             print("Player fell into pitfall!")
+    elif mounted_vehicle is not None:
+        # Generic mounted behavior for non-car vehicles.
+        player.on_moving_floor = False
+        player.rect.center = mounted_vehicle.rect.center
+        player.x = float(player.rect.centerx)
+        player.y = float(player.rect.centery)
     else:
-        # Player flagged as in-car but car is gone; drop them back to foot control
+        # Mounted vehicle disappeared; drop back to foot control.
+        player.mounted_vehicle = None
         player.in_car = False
         player.on_moving_floor = False
 
     # Update camera
-    target_for_camera = active_car if player.in_car and active_car else player
+    target_for_camera = mounted_vehicle if player_mounted and mounted_vehicle else player
     camera.update(target_for_camera)
 
     if player.inner_wall_hit and player.inner_wall_cell is not None:
@@ -385,7 +411,7 @@ def update_entities(
             continue
         if getattr(survivor, "pending_pitfall_fall", False):
             visible = rect_visible_on_screen(camera, survivor.rect)
-            fov_target = active_car if player.in_car and active_car else player
+            fov_target = mounted_vehicle if player_mounted and mounted_vehicle else player
             in_fov = is_entity_in_fov(
                 survivor.rect,
                 fov_target=fov_target,
@@ -448,7 +474,9 @@ def update_entities(
 
     # Update zombies
     target_center = (
-        active_car.rect.center if player.in_car and active_car else player.rect.center
+        mounted_vehicle.rect.center
+        if player_mounted and mounted_vehicle
+        else player.rect.center
     )
     buddies = [
         survivor
@@ -642,7 +670,9 @@ def update_entities(
             if died_from_damage and last_damage_source == "patrol_bot":
                 died_from_damage = False
             if not died_from_damage:
-                fov_target = active_car if player.in_car and active_car else player
+                fov_target = (
+                    mounted_vehicle if player_mounted and mounted_vehicle else player
+                )
                 if rect_visible_on_screen(camera, zombie.rect) and is_entity_in_fov(
                     zombie.rect,
                     fov_target=fov_target,
@@ -660,7 +690,7 @@ def update_entities(
             fire_floor_cells=fire_floor_cells,
         ):
             zombie.kill()
-            fov_target = active_car if player.in_car and active_car else player
+            fov_target = mounted_vehicle if player_mounted and mounted_vehicle else player
             if rect_visible_on_screen(camera, zombie.rect) and is_entity_in_fov(
                 zombie.rect,
                 fov_target=fov_target,
@@ -719,7 +749,7 @@ def update_entities(
             nearby_walls,
             patrol_bot_group=patrol_bot_group,
             human_group=active_humans,
-            player=None if player.in_car else player,
+            player=None if player_mounted else player,
             car=active_car,
             parked_cars=game_data.waiting_cars,
             cell_size=game_data.cell_size,

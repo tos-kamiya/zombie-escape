@@ -276,7 +276,14 @@ def _pick_fall_spawn_position(
     if not fall_spawn_cells:
         return None
     car = game_data.car
-    target_sprite = car if player.in_car and car and car.alive() else player
+    mounted_vehicle = getattr(player, "mounted_vehicle", None)
+    if mounted_vehicle is not None and mounted_vehicle.alive():
+        target_sprite = mounted_vehicle
+    elif player.in_car and car and car.alive():
+        # Legacy fallback while call sites migrate from `in_car`.
+        target_sprite = car
+    else:
+        target_sprite = player
     target_center = target_sprite.rect.center
     cell_size = game_data.cell_size
     fov_radius = fov_radius_for_flashlights(game_data.state.flashlight_count)
