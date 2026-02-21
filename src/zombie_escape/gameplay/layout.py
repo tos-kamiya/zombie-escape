@@ -209,14 +209,14 @@ def _finalize_layout_cells(
     list[tuple[int, int]],
 ]:
     if moving_floor_cells:
-        pitfall_cells.difference_update(moving_floor_cells.keys())
-        for cell in moving_floor_cells:
+        movable_floor_cells = [
+            cell
+            for cell in moving_floor_cells
+            if cell not in pitfall_cells and cell not in fire_floor_cells
+        ]
+        for cell in movable_floor_cells:
             if cell not in walkable_cells:
                 walkable_cells.append(cell)
-    if pitfall_cells:
-        walkable_cells = [cell for cell in walkable_cells if cell not in pitfall_cells]
-    if fire_floor_cells:
-        walkable_cells = [cell for cell in walkable_cells if cell not in fire_floor_cells]
     layout.walkable_cells = walkable_cells
     layout.pitfall_cells = pitfall_cells
     layout.car_walkable_cells = set(car_reachable_cells)
@@ -230,24 +230,19 @@ def _finalize_layout_cells(
     walkable_set = set(walkable_cells)
     floor_ratio = max(0.0, min(1.0, stage.fall_spawn_cell_ratio))
     if floor_ratio > 0.0 and interior_min_x <= interior_max_x:
-        for y in range(interior_min_y, interior_max_y + 1):
-            for x in range(interior_min_x, interior_max_x + 1):
-                cell = (x, y)
-                if cell not in walkable_set:
-                    continue
-                if RNG.random() < floor_ratio:
-                    fall_spawn_cells.add(cell)
-        if not fall_spawn_cells:
-            candidates = [
-                cell
-                for cell in walkable_set
-                if (
-                    interior_min_x <= cell[0] <= interior_max_x
-                    and interior_min_y <= cell[1] <= interior_max_y
-                )
-            ]
-            if candidates:
-                fall_spawn_cells.add(RNG.choice(candidates))
+        candidates = [
+            cell
+            for cell in walkable_set
+            if (
+                interior_min_x <= cell[0] <= interior_max_x
+                and interior_min_y <= cell[1] <= interior_max_y
+            )
+        ]
+        if candidates:
+            RNG.shuffle(candidates)
+            pick_count = max(1, int(round(len(candidates) * floor_ratio)))
+            pick_count = min(len(candidates), pick_count)
+            fall_spawn_cells.update(candidates[:pick_count])
     layout.fall_spawn_cells = fall_spawn_cells
 
     floor_ruin_candidates = [
