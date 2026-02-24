@@ -48,7 +48,14 @@ _METAL_TILE_CACHE: dict[
     surface.Surface,
 ] = {}
 _FIRE_TILE_CACHE: dict[
-    tuple[int, int, tuple[int, int, int], tuple[int, int, int], tuple[int, int, int]],
+    tuple[
+        int,
+        int,
+        tuple[int, int, int],
+        tuple[int, int, int],
+        tuple[int, int, int],
+        int,
+    ],
     surface.Surface,
 ] = {}
 _FLOOR_RUIN_TILE_CACHE: dict[
@@ -432,21 +439,51 @@ def _get_metal_tile_surface(*, cell_size: int, palette: Any) -> surface.Surface:
     return tile
 
 
-def _get_fire_tile_surface(*, cell_size: int, phase: int, palette: Any) -> surface.Surface:
+def _scale_rgb(color: tuple[int, int, int], factor: float) -> tuple[int, int, int]:
+    return (
+        max(0, min(255, int(round(color[0] * factor)))),
+        max(0, min(255, int(round(color[1] * factor)))),
+        max(0, min(255, int(round(color[2] * factor)))),
+    )
+
+
+def _fire_brightness_for_flashlights(flashlight_count: int) -> float:
+    count = max(0, int(flashlight_count))
+    if count <= 0:
+        return 1.4
+    brightness = 1.0 - (0.12 * min(count - 1, 3))
+    if count > 4:
+        brightness -= 0.03 * (count - 4)
+    return max(0.5, brightness)
+
+
+def _get_fire_tile_surface(
+    *,
+    cell_size: int,
+    phase: int,
+    palette: Any,
+    flashlight_count: int,
+) -> surface.Surface:
+    brightness_factor = _fire_brightness_for_flashlights(flashlight_count)
+    brightness_key = int(round(brightness_factor * 100))
     key = (
         max(1, int(cell_size)),
         int(phase) % 3,
         tuple(map(int, palette.fire_floor_base)),
         tuple(map(int, palette.fire_glass_base)),
         tuple(map(int, palette.fire_grate_edge)),
+        brightness_key,
     )
     cached = _FIRE_TILE_CACHE.get(key)
     if cached is not None:
         return cached
     size = key[0]
-    fire_base = key[2]
+    fire_base = _scale_rgb(key[2], brightness_factor)
     fire_glass_base = key[3]
     fire_grate_edge = key[4]
+    flame_colors = tuple(
+        _scale_rgb(color, brightness_factor) for color in FIRE_FLOOR_FLAME_COLORS
+    )
     tile = pygame.Surface((size, size), pygame.SRCALPHA)
     pulse = key[1]
 
@@ -454,10 +491,10 @@ def _get_fire_tile_surface(*, cell_size: int, phase: int, palette: Any) -> surfa
     tile.fill(fire_base)
     band_h = max(3, size // 6)
     for row in range(0, size, band_h):
-        color = FIRE_FLOOR_FLAME_COLORS[(row // band_h + pulse) % len(FIRE_FLOOR_FLAME_COLORS)]
+        color = flame_colors[(row // band_h + pulse) % len(flame_colors)]
         glow_rect = pygame.Rect(0, row, size, min(band_h + 1, size - row))
         pygame.draw.rect(tile, color, glow_rect)
-    for idx, color in enumerate(FIRE_FLOOR_FLAME_COLORS):
+    for idx, color in enumerate(flame_colors):
         ember_w = max(2, int(size * (0.18 + idx * 0.03)))
         ember_h = max(2, int(size * (0.12 + idx * 0.02)))
         ox = (idx * (size // 3) + pulse * 2) % max(1, size - ember_w)
@@ -467,8 +504,10 @@ def _get_fire_tile_surface(*, cell_size: int, phase: int, palette: Any) -> surfa
     # Dark tempered-glass grate overlay.
     grate = pygame.Surface((size, size), pygame.SRCALPHA)
     grate.fill((*fire_glass_base, 232))
-    slot_step = max(6, size // 4)
-    diamond_r = max(2, int(slot_step // 2.5))
+    # Keep the fire-grate pattern coarser than before so it balances better
+    # against surrounding floor tiles at common cell sizes.
+    slot_step = max(8, size // 3)
+    diamond_r = max(2, int(slot_step // 2.3))
     row_index = 0
     for cy in range(slot_step // 2, size, slot_step):
         row_offset = (slot_step // 2) if (row_index % 2 == 1) else 0
@@ -512,6 +551,7 @@ def _draw_play_area(
     stage_number: int,
     *,
     elapsed_ms: int,
+    flashlight_count: int = 0,
 ) -> tuple[int, int, int, int, set[tuple[int, int]]]:
     grid_snap = assets.internal_wall_grid_snap
     xs, ys, xe, ye = (
@@ -679,6 +719,7 @@ def _draw_play_area(
                         cell_size=grid_snap,
                         phase=phase,
                         palette=palette,
+                        flashlight_count=flashlight_count,
                     )
                     screen.blit(fire_tile, sr.topleft)
                     border_color = (

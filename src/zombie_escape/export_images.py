@@ -202,6 +202,7 @@ def _render_studio_snapshot(
         game_data.cell_size,
         max(0, int(stage_number)),
         elapsed_ms=int(game_data.state.clock.elapsed_ms),
+        flashlight_count=game_data.state.flashlight_count,
     )
     if enable_shadows:
         shadow_layer = _get_shadow_layer(screen.get_size())
