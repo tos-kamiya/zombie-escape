@@ -88,6 +88,7 @@ class CarrierBot(BaseLineBot):
         pitfall_cells: set[tuple[int, int]],
         walls: list[Wall],
         materials: Iterable[Material],
+        blockers: Iterable[pygame.sprite.Sprite],
     ) -> bool:
         cx, cy = cell
         if cell_size <= 0:
@@ -111,6 +112,17 @@ class CarrierBot(BaseLineBot):
                 material.rect.centery // cell_size
             ) == cy:
                 return False
+        for blocker in blockers:
+            if blocker is self or blocker is carried:
+                continue
+            br = getattr(blocker, "collision_radius", None)
+            if br is None:
+                br = max(blocker.rect.width, blocker.rect.height) / 2
+            dx = drop_x - float(blocker.rect.centerx)
+            dy = drop_y - float(blocker.rect.centery)
+            hit_range = drop_radius + float(br)
+            if dx * dx + dy * dy <= hit_range * hit_range:
+                return False
         return True
 
     def _place_material_on_grid(
@@ -121,6 +133,7 @@ class CarrierBot(BaseLineBot):
         pitfall_cells: set[tuple[int, int]],
         walls: list[Wall],
         materials: Iterable[Material],
+        blockers: Iterable[pygame.sprite.Sprite],
     ) -> None:
         material = self.carried_material
         if material is None or cell_size <= 0:
@@ -144,6 +157,7 @@ class CarrierBot(BaseLineBot):
                 pitfall_cells=pitfall_cells,
                 walls=walls,
                 materials=materials,
+                blockers=blockers,
             ):
                 continue
             drop_x, drop_y = self._cell_center(cell=cell, cell_size=cell_size)
@@ -284,6 +298,7 @@ class CarrierBot(BaseLineBot):
                     pitfall_cells=pitfall_cells,
                     walls=walls,
                     materials=materials,
+                    blockers=all_blockers,
                 )
             self._push_overlapping_entities(
                 center_x=self.x,

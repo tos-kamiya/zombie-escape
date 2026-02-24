@@ -207,7 +207,7 @@ def test_carrier_bot_y_axis_drop_selects_y_axis_cells() -> None:
 
     assert bot.carried_material is None
     assert carried.carried_by is None
-    assert carried.rect.center == (75, 125)
+    assert carried.rect.center == (75, 175)
 
 
 def test_carrier_bot_pushes_overlapping_targets() -> None:

@@ -21,6 +21,7 @@ from .entities import (
     Flashlight,
     FuelCan,
     FuelStation,
+    Material,
     Player,
     PatrolBot,
     Shoes,
@@ -237,6 +238,7 @@ def _draw_overview_items(
     fuel_station: FuelStation | None,
     flashlights: list[Flashlight] | None,
     shoes: list[Shoes] | None,
+    materials: list[Material] | None,
 ) -> None:
     if fuel and fuel.alive():
         pygame.draw.rect(surface, YELLOW, fuel.rect, border_radius=3)
@@ -258,6 +260,11 @@ def _draw_overview_items(
         for item in shoes:
             if item.alive():
                 surface.blit(item.image, item.rect)
+    if materials:
+        for material in materials:
+            if not material.alive() or material.carried_by is not None:
+                continue
+            surface.blit(material.image, material.rect)
 
 
 def _draw_overview_humanoids(
@@ -376,6 +383,7 @@ def draw_level_overview(
     fuel_station: FuelStation | None = None,
     flashlights: list[Flashlight] | None = None,
     shoes: list[Shoes] | None = None,
+    materials: list[Material] | None = None,
     buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
     patrol_bots: list[PatrolBot] | None = None,
@@ -428,6 +436,7 @@ def draw_level_overview(
         fuel_station=fuel_station,
         flashlights=flashlights,
         shoes=shoes,
+        materials=materials,
     )
     _draw_overview_humanoids(
         surface,
@@ -486,6 +495,7 @@ def draw_debug_overview(
         fuel_station=game_data.fuel_station,
         flashlights=game_data.flashlights or [],
         shoes=game_data.shoes or [],
+        materials=list(game_data.groups.material_group),
         buddies=[
             survivor
             for survivor in game_data.groups.survivor_group

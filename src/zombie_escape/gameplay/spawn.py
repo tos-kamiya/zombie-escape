@@ -1028,24 +1028,40 @@ def setup_player_and_cars(
         assert car_count > 0, "Non-endurance stages must have at least one car"
 
     all_sprites = game_data.groups.all_sprites
-    walkable_cells: list[tuple[int, int]] = layout_data["walkable_cells"]
+    walkable_cells: list[tuple[int, int]] = list(layout_data["walkable_cells"])
     cell_size = game_data.cell_size
     level_rect = game_data.layout.field_rect
+    material_blocked_cells = {
+        (int(x), int(y)) for x, y in game_data.stage.material_spawns
+    }
+    if material_blocked_cells:
+        walkable_cells = [
+            cell for cell in walkable_cells if cell not in material_blocked_cells
+        ]
+    player_cells = [
+        (int(cx), int(cy))
+        for cx, cy in layout_data.get("player_cells", [])
+        if (int(cx), int(cy)) not in material_blocked_cells
+    ]
 
     def _pick_center(cells: list[tuple[int, int]]) -> tuple[int, int]:
         return (
             _cell_center(RNG.choice(cells), cell_size) if cells else level_rect.center
         )
 
-    player_pos = _pick_center(layout_data["player_cells"] or walkable_cells)
+    player_pos = _pick_center(player_cells or walkable_cells)
     player = Player(*player_pos)
 
-    car_spawn_cells = list(layout_data.get("car_spawn_cells", []))
+    car_spawn_cells = [
+        (int(cx), int(cy))
+        for cx, cy in layout_data.get("car_spawn_cells", [])
+        if (int(cx), int(cy)) not in material_blocked_cells
+    ]
     spiky_plant_set = set(layout_data.get("spiky_plant_cells", []))
     car_candidates = [
         c
         for c in (layout_data["car_cells"] or car_spawn_cells or walkable_cells)
-        if c not in spiky_plant_set
+        if c not in spiky_plant_set and c not in material_blocked_cells
     ]
     waiting_cars: list[Car] = []
     car_appearance = _car_appearance_for_stage(game_data.stage)
@@ -1247,6 +1263,24 @@ def spawn_initial_carrier_bots_and_materials(game_data: GameData) -> None:
     cell_size = game_data.cell_size
     pitfall_cells = game_data.layout.pitfall_cells
     occupied_cells: set[tuple[int, int]] = set()
+    reserved_material_cells: set[tuple[int, int]] = set()
+    active_car = game_data.car if game_data.car and game_data.car.alive() else None
+    if active_car and cell_size > 0:
+        reserved_material_cells.add(
+            (
+                int(active_car.rect.centerx // cell_size),
+                int(active_car.rect.centery // cell_size),
+            )
+        )
+    for parked in game_data.waiting_cars:
+        if not parked.alive() or cell_size <= 0:
+            continue
+        reserved_material_cells.add(
+            (
+                int(parked.rect.centerx // cell_size),
+                int(parked.rect.centery // cell_size),
+            )
+        )
 
     carrier_spawn_plans: list[tuple[int, int, str, int]] = []
     for cell_x, cell_y, axis, direction_sign in stage.carrier_bot_spawns:
@@ -1270,10 +1304,12 @@ def spawn_initial_carrier_bots_and_materials(game_data: GameData) -> None:
             layout=game_data.layout,
             pitfall_cells=pitfall_cells,
             count=random_material_count,
-            occupied_cells=occupied_cells,
+            occupied_cells=occupied_cells | reserved_material_cells,
         )
 
     for cell_x, cell_y in material_spawns:
+        if (int(cell_x), int(cell_y)) in reserved_material_cells:
+            continue
         occupied_cells.add((int(cell_x), int(cell_y)))
         center = _cell_center((int(cell_x), int(cell_y)), cell_size)
         material = Material(center[0], center[1], size=max(4, int(cell_size * 0.8)))
