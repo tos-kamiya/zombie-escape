@@ -42,7 +42,7 @@ from ..gameplay_constants import (
     DEFAULT_SHOES_SPAWN_COUNT,
 )
 from ..level_constants import DEFAULT_CELL_SIZE, DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
-from ..models import DustRing, FallingEntity, GameData, Stage
+from ..models import DustRing, FallingEntity, GameData, LevelLayout, Stage
 from ..rng import get_rng
 from .constants import (
     FALLING_ZOMBIE_DUST_DURATION_MS,
@@ -98,6 +98,48 @@ def _cell_center(cell: tuple[int, int], cell_size: int) -> tuple[int, int]:
         int((cell[0] * cell_size) + (cell_size / 2)),
         int((cell[1] * cell_size) + (cell_size / 2)),
     )
+
+
+def _carrier_blocked_cells(
+    layout: LevelLayout, pitfall_cells: set[tuple[int, int]]
+) -> set[tuple[int, int]]:
+    blocked = set(layout.outer_wall_cells)
+    blocked.update(layout.outside_cells)
+    blocked.update(layout.wall_cells)
+    blocked.update(layout.steel_beam_cells)
+    blocked.update(pitfall_cells)
+    return blocked
+
+
+def _select_carrier_spawn_cell(
+    *,
+    start_cell: tuple[int, int],
+    axis: str,
+    layout: LevelLayout,
+    pitfall_cells: set[tuple[int, int]],
+) -> tuple[int, int] | None:
+    cell_x, cell_y = int(start_cell[0]), int(start_cell[1])
+    if not (0 <= cell_x < layout.grid_cols and 0 <= cell_y < layout.grid_rows):
+        return None
+
+    blocked = _carrier_blocked_cells(layout, pitfall_cells)
+    if axis == "y":
+        candidates = [
+            (cell_x, y)
+            for y in range(layout.grid_rows)
+            if (cell_x, y) not in blocked
+        ]
+        candidates.sort(key=lambda c: abs(c[1] - cell_y))
+    else:
+        candidates = [
+            (x, cell_y)
+            for x in range(layout.grid_cols)
+            if (x, cell_y) not in blocked
+        ]
+        candidates.sort(key=lambda c: abs(c[0] - cell_x))
+    if not candidates:
+        return None
+    return candidates[0]
 
 
 def _car_appearance_for_stage(stage: Stage | None) -> str:
@@ -1136,6 +1178,7 @@ def spawn_initial_carrier_bots_and_materials(game_data: GameData) -> None:
     material_group = game_data.groups.material_group
     carrier_group = game_data.groups.carrier_bot_group
     cell_size = game_data.cell_size
+    pitfall_cells = game_data.layout.pitfall_cells
 
     for cell_x, cell_y in stage.material_spawns:
         center = _cell_center((int(cell_x), int(cell_y)), cell_size)
@@ -1146,7 +1189,15 @@ def spawn_initial_carrier_bots_and_materials(game_data: GameData) -> None:
         all_sprites.add(material, layer=LAYER_ITEMS)
 
     for cell_x, cell_y, axis, direction_sign in stage.carrier_bot_spawns:
-        center = _cell_center((int(cell_x), int(cell_y)), cell_size)
+        spawn_cell = _select_carrier_spawn_cell(
+            start_cell=(int(cell_x), int(cell_y)),
+            axis=str(axis),
+            layout=game_data.layout,
+            pitfall_cells=pitfall_cells,
+        )
+        if spawn_cell is None:
+            continue
+        center = _cell_center(spawn_cell, cell_size)
         bot = CarrierBot(
             center[0],
             center[1],

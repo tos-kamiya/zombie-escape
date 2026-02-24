@@ -91,6 +91,11 @@ Constraints:
 - `Stage.material_spawns`: `(cell_x, cell_y)`
 - Spawn points are defined in cell-space and converted to cell centers.
 - Stage validation checks coordinate bounds and carrier parameter validity.
+- Carrier spawn cell is resolved on its axis to the nearest movable cell.
+  - Blocked for spawn-range resolution: outside/outer-wall, wall, reinforced-wall
+    (`steel_beam_cells`), and pitfall cells.
+  - If no movable cell exists on that axis line, that carrier spawn entry is
+    skipped.
 
 ## Collision and Terrain Policy
 
