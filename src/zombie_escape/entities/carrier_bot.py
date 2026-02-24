@@ -15,6 +15,11 @@ from ..entities_constants import (
     CARRIER_BOT_SPEED,
     CARRIER_BOT_WIDTH,
 )
+from ..render_constants import (
+    PATROL_BOT_ARROW_COLOR,
+    PATROL_BOT_BODY_COLOR,
+    PATROL_BOT_OUTLINE_COLOR,
+)
 from .base_line_bot import BaseLineBot
 from .material import Material
 from .movement import _circle_wall_collision
@@ -37,9 +42,8 @@ class CarrierBot(BaseLineBot):
         speed: float = CARRIER_BOT_SPEED,
     ) -> None:
         super().__init__()
+        self.axis = "y" if axis == "y" else "x"
         self.image = pygame.Surface((CARRIER_BOT_WIDTH, CARRIER_BOT_HEIGHT), pygame.SRCALPHA)
-        self.image.fill((236, 236, 236))
-        pygame.draw.rect(self.image, (20, 20, 20), self.image.get_rect(), width=1)
         self.rect = self.image.get_rect(center=(int(x), int(y)))
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
@@ -47,10 +51,62 @@ class CarrierBot(BaseLineBot):
         self.shadow_radius = max(1, int(self.collision_radius * 1.2))
         self.shadow_offset_scale = 1.0 / 3.0
         self.speed = max(0.1, float(speed))
-        self.axis = "y" if axis == "y" else "x"
         self.direction = self._initial_direction(sign=direction_sign)
+        self._refresh_surface()
         self.carried_material: Material | None = None
         self._recently_dropped_material: Material | None = None
+
+    def _refresh_surface(self: Self) -> None:
+        center = self.rect.center
+        self.image = self._build_surface(axis=self.axis)
+        self.rect = self.image.get_rect(center=center)
+
+    def _reverse_direction(self: Self) -> None:
+        super()._reverse_direction()
+        self._refresh_surface()
+
+    def _build_surface(self: Self, *, axis: str) -> pygame.Surface:
+        surface = pygame.Surface((CARRIER_BOT_WIDTH, CARRIER_BOT_HEIGHT), pygame.SRCALPHA)
+        rect = surface.get_rect()
+        pygame.draw.rect(surface, PATROL_BOT_BODY_COLOR, rect)
+        pygame.draw.rect(surface, PATROL_BOT_OUTLINE_COLOR, rect, width=2)
+        # Slightly rounded corners: clear one pixel at each corner.
+        surface.set_at((rect.left, rect.top), (0, 0, 0, 0))
+        surface.set_at((rect.right - 1, rect.top), (0, 0, 0, 0))
+        surface.set_at((rect.left, rect.bottom - 1), (0, 0, 0, 0))
+        surface.set_at((rect.right - 1, rect.bottom - 1), (0, 0, 0, 0))
+
+        cx = rect.width // 2
+        cy = rect.height // 2
+        marker_depth = max(2, min(rect.width, rect.height) // 6)
+        marker_half = max(3, marker_depth * 2)
+        offset = max(3, marker_depth + 2) + 1
+        active_color = PATROL_BOT_ARROW_COLOR
+        inactive_color = tuple(
+            min(255, int((c * 0.35) + (255 * 0.65))) for c in PATROL_BOT_ARROW_COLOR
+        )
+
+        if axis == "y":
+            up_tip_y = cy - offset
+            up_base_y = up_tip_y + marker_depth
+            up = [(cx, up_tip_y), (cx - marker_half, up_base_y), (cx + marker_half, up_base_y)]
+            # Mirror the same integer-grid triangle to keep up/down shape identical.
+            down = [(px, rect.height - 1 - py) for px, py in up]
+            up_color = active_color if self.direction[1] < 0 else inactive_color
+            down_color = active_color if self.direction[1] > 0 else inactive_color
+            pygame.draw.polygon(surface, up_color, up)
+            pygame.draw.polygon(surface, down_color, down)
+        else:
+            left_tip_x = cx - offset
+            left_base_x = left_tip_x + marker_depth
+            left = [(left_tip_x, cy), (left_base_x, cy - marker_half), (left_base_x, cy + marker_half)]
+            # Mirror the same integer-grid triangle to keep left/right shape identical.
+            right = [(rect.width - 1 - px, py) for px, py in left]
+            left_color = active_color if self.direction[0] < 0 else inactive_color
+            right_color = active_color if self.direction[0] > 0 else inactive_color
+            pygame.draw.polygon(surface, left_color, left)
+            pygame.draw.polygon(surface, right_color, right)
+        return surface
 
     def _initial_direction(self: Self, *, sign: int) -> tuple[int, int]:
         step = 1 if sign >= 0 else -1
@@ -142,13 +198,40 @@ class CarrierBot(BaseLineBot):
         base_cell = (int(self.x // cell_size), int(self.y // cell_size))
         forward = (int(self.direction[0]), int(self.direction[1]))
         backward = (-int(self.direction[0]), -int(self.direction[1]))
-        candidates = [
-            base_cell,
-            (base_cell[0] + backward[0], base_cell[1] + backward[1]),
-            (base_cell[0] + backward[0] * 2, base_cell[1] + backward[1] * 2),
-            (base_cell[0] + forward[0], base_cell[1] + forward[1]),
-            (base_cell[0] + forward[0] * 2, base_cell[1] + forward[1] * 2),
-        ]
+        forward_cell_1 = (base_cell[0] + forward[0], base_cell[1] + forward[1])
+        forward_cell_2 = (base_cell[0] + forward[0] * 2, base_cell[1] + forward[1] * 2)
+        backward_cell_1 = (base_cell[0] + backward[0], base_cell[1] + backward[1])
+        backward_cell_2 = (base_cell[0] + backward[0] * 2, base_cell[1] + backward[1] * 2)
+        target_forward_cells = {forward_cell_1, forward_cell_2}
+        car_blocking_ahead = False
+        for blocker in blockers:
+            if blocker is self:
+                continue
+            if blocker.__class__.__name__ != "Car":
+                continue
+            blocker_cell = (
+                int(blocker.rect.centerx // cell_size),
+                int(blocker.rect.centery // cell_size),
+            )
+            if blocker_cell in target_forward_cells:
+                car_blocking_ahead = True
+                break
+        if car_blocking_ahead:
+            candidates = [
+                forward_cell_1,
+                forward_cell_2,
+                base_cell,
+                backward_cell_1,
+                backward_cell_2,
+            ]
+        else:
+            candidates = [
+                base_cell,
+                backward_cell_1,
+                backward_cell_2,
+                forward_cell_1,
+                forward_cell_2,
+            ]
         for cell in candidates:
             if not self._can_drop_on_cell(
                 cell=cell,

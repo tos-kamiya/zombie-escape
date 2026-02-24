@@ -17,6 +17,7 @@ from .colors import (
 )
 from .entities import (
     Car,
+    CarrierBot,
     EmptyFuelCan,
     Flashlight,
     FuelCan,
@@ -277,6 +278,7 @@ def _draw_overview_humanoids(
     car: Car | None,
     waiting_cars: list[Car] | None,
     patrol_bots: list[PatrolBot] | None,
+    carrier_bots: list[CarrierBot] | None,
     spiky_plants: list[SpikyPlant] | None,
 ) -> None:
     if survivors:
@@ -317,6 +319,20 @@ def _draw_overview_humanoids(
                     bot.rect.center,
                     int(PATROL_BOT_COLLISION_RADIUS),
                 )
+    if carrier_bots:
+        for bot in carrier_bots:
+            if not bot.alive():
+                continue
+            half = max(2, int(getattr(bot, "collision_radius", 5)))
+            center_x, center_y = bot.rect.center
+            bot_rect = pygame.Rect(
+                center_x - half,
+                center_y - half,
+                half * 2,
+                half * 2,
+            )
+            pygame.draw.rect(surface, (200, 200, 200), bot_rect)
+            pygame.draw.rect(surface, (90, 45, 120), bot_rect, width=2)
     if spiky_plants:
         for hp in spiky_plants:
             if hp.alive():
@@ -387,6 +403,7 @@ def draw_level_overview(
     buddies: list[Survivor] | None = None,
     survivors: list[Survivor] | None = None,
     patrol_bots: list[PatrolBot] | None = None,
+    carrier_bots: list[CarrierBot] | None = None,
     spiky_plants: list[SpikyPlant] | None = None,
     zombies: list[pygame.sprite.Sprite] | None = None,
     lineformer_trains: "LineformerTrainManager | None" = None,
@@ -447,6 +464,7 @@ def draw_level_overview(
         car=car,
         waiting_cars=waiting_cars,
         patrol_bots=patrol_bots,
+        carrier_bots=carrier_bots,
         spiky_plants=spiky_plants,
     )
     _draw_overview_zombies(
@@ -503,6 +521,7 @@ def draw_debug_overview(
         ],
         survivors=list(game_data.groups.survivor_group),
         patrol_bots=list(game_data.groups.patrol_bot_group),
+        carrier_bots=list(game_data.groups.carrier_bot_group),
         spiky_plants=list(game_data.spiky_plants.values()),
         zombies=list(game_data.groups.zombie_group),
         lineformer_trains=game_data.lineformer_trains,
