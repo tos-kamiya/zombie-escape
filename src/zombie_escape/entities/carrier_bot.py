@@ -17,6 +17,7 @@ from ..entities_constants import (
 )
 from .base_line_bot import BaseLineBot
 from .material import Material
+from .movement import _circle_wall_collision
 from .walls import Wall
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -72,6 +73,84 @@ class CarrierBot(BaseLineBot):
         self.carried_material = None
         self._recently_dropped_material = material
 
+    def _cell_center(self: Self, *, cell: tuple[int, int], cell_size: int) -> tuple[float, float]:
+        return (
+            float((cell[0] * cell_size) + (cell_size / 2)),
+            float((cell[1] * cell_size) + (cell_size / 2)),
+        )
+
+    def _can_drop_on_cell(
+        self: Self,
+        *,
+        cell: tuple[int, int],
+        cell_size: int,
+        layout: "LevelLayout",
+        pitfall_cells: set[tuple[int, int]],
+        walls: list[Wall],
+        materials: Iterable[Material],
+    ) -> bool:
+        cx, cy = cell
+        if cell_size <= 0:
+            return False
+        if not (0 <= cx < layout.grid_cols and 0 <= cy < layout.grid_rows):
+            return False
+        if cell in pitfall_cells or cell in layout.outer_wall_cells or cell in layout.outside_cells:
+            return False
+        drop_x, drop_y = self._cell_center(cell=cell, cell_size=cell_size)
+        carried = self.carried_material
+        if carried is None:
+            return False
+        drop_radius = float(carried.collision_radius)
+        for wall in walls:
+            if _circle_wall_collision((drop_x, drop_y), drop_radius, wall):
+                return False
+        for material in materials:
+            if material is carried or material.carried_by is not None:
+                continue
+            if int(material.rect.centerx // cell_size) == cx and int(
+                material.rect.centery // cell_size
+            ) == cy:
+                return False
+        return True
+
+    def _place_material_on_grid(
+        self: Self,
+        *,
+        cell_size: int,
+        layout: "LevelLayout",
+        pitfall_cells: set[tuple[int, int]],
+        walls: list[Wall],
+        materials: Iterable[Material],
+    ) -> None:
+        material = self.carried_material
+        if material is None or cell_size <= 0:
+            self._place_material_here()
+            return
+        base_cell = (int(self.x // cell_size), int(self.y // cell_size))
+        backward = (-int(self.direction[0]), -int(self.direction[1]))
+        candidates = [
+            base_cell,
+            (base_cell[0] + backward[0], base_cell[1] + backward[1]),
+            (base_cell[0] + backward[0] * 2, base_cell[1] + backward[1] * 2),
+        ]
+        for cell in candidates:
+            if not self._can_drop_on_cell(
+                cell=cell,
+                cell_size=cell_size,
+                layout=layout,
+                pitfall_cells=pitfall_cells,
+                walls=walls,
+                materials=materials,
+            ):
+                continue
+            drop_x, drop_y = self._cell_center(cell=cell, cell_size=cell_size)
+            material.carried_by = None
+            material.place_at(drop_x, drop_y)
+            self.carried_material = None
+            self._recently_dropped_material = material
+            return
+        self._place_material_here()
+
     def _try_pick_overlapping_material(
         self: Self,
         *,
@@ -84,8 +163,8 @@ class CarrierBot(BaseLineBot):
                 continue
             dx = self.x - float(material.rect.centerx)
             dy = self.y - float(material.rect.centery)
-            # "Complete overlap": material is fully inside carrier circle.
-            pickup_range = max(0.0, self.collision_radius - material.collision_radius)
+            # "Complete overlap": either circle is fully inside the other.
+            pickup_range = abs(self.collision_radius - material.collision_radius)
             if dx * dx + dy * dy > pickup_range * pickup_range:
                 continue
             material.carried_by = self
@@ -195,7 +274,13 @@ class CarrierBot(BaseLineBot):
             blockers=all_blockers,
         ):
             if self.carried_material is not None:
-                self._place_material_here()
+                self._place_material_on_grid(
+                    cell_size=cell_size,
+                    layout=layout,
+                    pitfall_cells=pitfall_cells,
+                    walls=walls,
+                    materials=materials,
+                )
             self._reverse_direction()
             return
 

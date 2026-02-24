@@ -1139,7 +1139,7 @@ def spawn_initial_carrier_bots_and_materials(game_data: GameData) -> None:
 
     for cell_x, cell_y in stage.material_spawns:
         center = _cell_center((int(cell_x), int(cell_y)), cell_size)
-        material = Material(center[0], center[1])
+        material = Material(center[0], center[1], size=max(4, int(cell_size * 0.8)))
         if spritecollideany_walls(material, game_data.groups.wall_group):
             continue
         material_group.add(material)

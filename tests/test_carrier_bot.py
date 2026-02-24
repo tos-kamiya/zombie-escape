@@ -61,18 +61,7 @@ def test_carrier_bot_loads_only_after_overlap_and_reverses() -> None:
     assert bot.carried_material is None
     assert bot.rect.center == (35, 25)
 
-    # Still not fully overlapping yet.
-    bot.update(
-        [],
-        layout=layout,
-        cell_size=DEFAULT_CELL_SIZE,
-        pitfall_cells=set(),
-        materials=[material],
-    )
-    assert bot.carried_material is None
-    assert bot.rect.center == (45, 25)
-
-    # Fully overlapping tick: should load and reverse.
+    # Overlap becomes complete enough after movement, then it should load/reverse.
     bot.update(
         [],
         layout=layout,
@@ -83,7 +72,7 @@ def test_carrier_bot_loads_only_after_overlap_and_reverses() -> None:
     assert bot.carried_material is material
     assert material.carried_by is bot
     assert bot.direction == (-1, 0)
-    assert bot.rect.center == (55, 25)
+    assert bot.rect.center == (45, 25)
 
 
 def test_carrier_bot_drops_material_when_blocked_then_reverses() -> None:
@@ -104,7 +93,7 @@ def test_carrier_bot_drops_material_when_blocked_then_reverses() -> None:
 
     assert bot.carried_material is None
     assert material.carried_by is None
-    assert material.rect.center == (95, 25)
+    assert material.rect.center == (75, 25)
     assert bot.direction == (-1, 0)
 
 
@@ -146,7 +135,7 @@ def test_carrier_bot_moves_away_after_drop_at_outer_wall() -> None:
     assert bot.direction == (-1, 0)
     assert material.carried_by is None
     assert bot.carried_material is None
-    assert material.rect.center == (95, 25)
+    assert material.rect.center == (75, 25)
     bot.update(
         [],
         layout=layout,
@@ -176,7 +165,7 @@ def test_carrier_bot_does_not_repickup_dropped_material_until_separated() -> Non
 
     assert bot.carried_material is None
     assert carried.carried_by is None
-    assert carried.rect.center == bot.rect.center
+    assert carried.rect.center == (75, 25)
     # Next tick while still close: should not instantly re-pick.
     bot.update(
         [],

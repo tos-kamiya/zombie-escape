@@ -122,6 +122,7 @@ class LevelLayout:
     metal_floor_cells: set[tuple[int, int]] = field(default_factory=set)
     zombie_contaminated_cells: set[tuple[int, int]] = field(default_factory=set)
     puddle_cells: set[tuple[int, int]] = field(default_factory=set)
+    material_cells: set[tuple[int, int]] = field(default_factory=set)
     bevel_corners: dict[tuple[int, int], tuple[bool, bool, bool, bool]] = field(
         default_factory=dict
     )

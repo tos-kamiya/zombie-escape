@@ -348,7 +348,7 @@ class PatrolBot(BaseLineBot):
             return False
 
         hit_pitfall = False
-        blocked_hazard_cells = set(pitfall_cells)
+        blocked_hazard_cells = set(pitfall_cells) | set(layout.material_cells)
         if blocked_hazard_cells and cell_size > 0:
             lead_x = next_x + float(self.direction[0]) * collision_radius
             lead_y = next_y + float(self.direction[1]) * collision_radius

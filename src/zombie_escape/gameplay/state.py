@@ -190,6 +190,7 @@ def initialize_game_state(stage: Stage) -> GameData:
             metal_floor_cells=set(),
             zombie_contaminated_cells=set(),
             puddle_cells=set(),
+            material_cells=set(),
             bevel_corners={},
             moving_floor_cells={},
             floor_ruin_cells={},

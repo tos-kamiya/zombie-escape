@@ -179,6 +179,17 @@ def update_entities(
     fire_floor_cells = game_data.layout.fire_floor_cells
     field_rect = game_data.layout.field_rect
     current_time = game_data.state.clock.elapsed_ms
+    if game_data.cell_size > 0:
+        game_data.layout.material_cells = {
+            (
+                int(material.rect.centerx // game_data.cell_size),
+                int(material.rect.centery // game_data.cell_size),
+            )
+            for material in material_group
+            if material.alive() and getattr(material, "carried_by", None) is None
+        }
+    else:
+        game_data.layout.material_cells = set()
 
     all_walls = list(wall_group) if wall_index is None else None
 
