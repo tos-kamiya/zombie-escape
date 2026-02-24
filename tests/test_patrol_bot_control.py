@@ -16,7 +16,11 @@ def _init_pygame() -> None:
         pygame.init()
 
 
-def _make_layout() -> LevelLayout:
+def _make_layout(
+    *, puddle_cells: set[tuple[int, int]] | None = None
+) -> LevelLayout:
+    if puddle_cells is None:
+        puddle_cells = set()
     return LevelLayout(
         field_rect=pygame.Rect(
             0,
@@ -36,7 +40,7 @@ def _make_layout() -> LevelLayout:
         car_spawn_cells=[],
         fall_spawn_cells=set(),
         spiky_plant_cells=set(),
-        puddle_cells=set(),
+        puddle_cells=puddle_cells,
         bevel_corners={},
         moving_floor_cells={},
     )
@@ -85,3 +89,24 @@ def test_patrol_bot_accepts_direction_after_neutral_then_input() -> None:
     _update_paused_bot(bot, player, now_ms=120)
     assert bot.direction == (-1, 0)
     assert bot.indicator_mode == "player"
+
+
+def test_patrol_bot_does_not_enter_puddle_cell() -> None:
+    _init_pygame()
+    cell_size = DEFAULT_CELL_SIZE
+    bot = PatrolBot(
+        5 * cell_size + cell_size / 2,
+        5 * cell_size + cell_size / 2,
+    )
+    bot.direction = (1, 0)
+    layout = _make_layout(puddle_cells={(6, 5)})
+
+    bot.update(
+        [],
+        cell_size=cell_size,
+        pitfall_cells=set(),
+        layout=layout,
+        now_ms=1_000,
+    )
+
+    assert (int(bot.x // cell_size), int(bot.y // cell_size)) != (6, 5)

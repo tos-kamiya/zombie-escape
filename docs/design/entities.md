@@ -44,7 +44,7 @@
 ## PatrolBot
 
 - Circular body, speed at half of player base speed.
-- Changes direction on wall/pitfall/bot/car collision.
+- Changes direction on wall/pitfall/puddle/bot/car collision.
 - Reverses at outside area boundaries.
 - Can stun/slow interactions via electrified-cell updates.
 - While the bot is stopped due to overlap with player/humanoids, the player can set
@@ -71,6 +71,7 @@
 - Terrain-only slow tile (`w`), not a sprite.
 - Applies movement speed factor while on puddle cells.
 - Spiky plant slow has higher priority than puddle slow.
+- Patrol bots treat puddle cells as blocked terrain (cannot enter).
 - In gameplay render, visualized with animated ripple-ring tiles.
 - In overview render, visualized as a simple circle marker for readability.
 - Puddle cells suppress footprint recording, so long puddle crossings

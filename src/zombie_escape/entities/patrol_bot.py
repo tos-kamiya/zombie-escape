@@ -25,8 +25,7 @@ from ..render_constants import ANGLE_BINS
 from ..rng import get_rng
 from ..surface_effects import is_in_puddle_cell
 from ..world_grid import apply_cell_edge_nudge
-from .base_line_bot import BaseLineBot
-from .movement import separate_circle_from_walls
+from .movement import _circle_wall_collision, separate_circle_from_walls
 from .walls import Wall
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -35,7 +34,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing-only imports
 RNG = get_rng()
 
 
-class PatrolBot(BaseLineBot):
+class PatrolBot(pygame.sprite.Sprite):
     def __init__(self: Self, x: float, y: float) -> None:
         super().__init__()
         self.size = PATROL_BOT_SPRITE_SIZE
@@ -135,6 +134,49 @@ class PatrolBot(BaseLineBot):
         )
         self._update_facing_from_movement(*self.direction)
         self._set_indicator_mode("player")
+
+    def _handle_axis_collision(
+        self: Self,
+        *,
+        next_x: float,
+        next_y: float,
+        walls: list[Wall],
+        radius: float,
+    ) -> tuple[float, float, bool]:
+        final_x, final_y = next_x, next_y
+        hit = False
+        if next_x != self.x:
+            for wall in walls:
+                if _circle_wall_collision((next_x, self.y), radius, wall):
+                    final_x = self.x
+                    hit = True
+                    break
+        if next_y != self.y:
+            for wall in walls:
+                if _circle_wall_collision((final_x, next_y), radius, wall):
+                    final_y = self.y
+                    hit = True
+                    break
+        return final_x, final_y, hit
+
+    def _resolve_circle_from_bot(
+        self: Self,
+        cx: float,
+        cy: float,
+        radius: float,
+        other: "PatrolBot",
+    ) -> tuple[float, float]:
+        dx = cx - other.x
+        dy = cy - other.y
+        dist_sq = dx * dx + dy * dy
+        min_dist = radius + other.collision_radius
+        if dist_sq <= 0:
+            return cx + min_dist, cy
+        dist = dist_sq**0.5
+        if dist >= min_dist:
+            return cx, cy
+        push = min_dist - dist
+        return cx + (dx / dist) * push, cy + (dy / dist) * push
 
     def update(
         self: Self,
@@ -237,8 +279,6 @@ class PatrolBot(BaseLineBot):
         final_x, final_y, hit_wall = self._handle_axis_collision(
             next_x=next_x,
             next_y=next_y,
-            current_x=self.x,
-            current_y=self.y,
             walls=walls,
             radius=collision_radius,
         )
@@ -348,7 +388,8 @@ class PatrolBot(BaseLineBot):
             return False
 
         hit_pitfall = False
-        blocked_hazard_cells = set(pitfall_cells) | set(layout.material_cells)
+        blocked_hazard_cells = set(pitfall_cells)
+        blocked_hazard_cells.update(layout.puddle_cells)
         if blocked_hazard_cells and cell_size > 0:
             lead_x = next_x + float(self.direction[0]) * collision_radius
             lead_y = next_y + float(self.direction[1]) * collision_radius
@@ -395,13 +436,8 @@ class PatrolBot(BaseLineBot):
             final_x = min(layout.field_rect.width, max(0.0, final_x))
             final_y = min(layout.field_rect.height, max(0.0, final_y))
             if hit_bot and closest_bot is not None:
-                final_x, final_y = self._resolve_circle_overlap(
-                    final_x,
-                    final_y,
-                    collision_radius,
-                    other_x=closest_bot.x,
-                    other_y=closest_bot.y,
-                    other_radius=closest_bot.collision_radius,
+                final_x, final_y = self._resolve_circle_from_bot(
+                    final_x, final_y, collision_radius, closest_bot
                 )
             if hit_wall:
                 (final_x, final_y), separated = separate_circle_from_walls(
@@ -421,7 +457,7 @@ class PatrolBot(BaseLineBot):
             if not forced_floor_dir:
                 # If we hit the outer boundary, reverse direction.
                 if hit_outer:
-                    self._reverse_direction()
+                    self.direction = (-self.direction[0], -self.direction[1])
                     self._set_indicator_mode("auto")
                 else:
                     pattern = self.turn_patterns[self.turn_pattern_idx]
@@ -443,7 +479,7 @@ class PatrolBot(BaseLineBot):
             or final_x >= level_width
             or final_y >= level_height
         ):
-            self._reverse_direction()
+            self.direction = (-self.direction[0], -self.direction[1])
             self._set_indicator_mode("auto")
             final_x = min(level_width - 1, max(1.0, final_x))
             final_y = min(level_height - 1, max(1.0, final_y))
