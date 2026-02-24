@@ -38,6 +38,31 @@ _WALL_INDEX_DIRTY = False
 _WALL_DAMAGE_OVERLAY_SEED = 1337
 
 
+def _draw_dotted_rect_outline(
+    image: pygame.Surface,
+    *,
+    color: tuple[int, int, int],
+    step: int = 3,
+) -> None:
+    """Draw a 1px dotted outline around the whole surface rectangle."""
+    width, height = image.get_size()
+    if width <= 1 or height <= 1:
+        return
+    dot_step = max(2, int(step))
+    max_x = width - 1
+    max_y = height - 1
+    for x in range(0, width, dot_step):
+        image.set_at((x, 0), color)
+        image.set_at((x, max_y), color)
+    for y in range(0, height, dot_step):
+        image.set_at((0, y), color)
+        image.set_at((max_x, y), color)
+    image.set_at((0, 0), color)
+    image.set_at((max_x, 0), color)
+    image.set_at((0, max_y), color)
+    image.set_at((max_x, max_y), color)
+
+
 def _damage_overlay_variant_index(
     *,
     x: int,
@@ -140,6 +165,7 @@ class Wall(pygame.sprite.Sprite):
             palette_category=self.palette_category,
             palette=self.palette,
         )
+        use_dotted_outline = self.palette_category == "inner_wall" and 0.0 < health_ratio < 1.0
         paint_wall_surface(
             self.image,
             fill_color=fill_color,
@@ -149,9 +175,11 @@ class Wall(pygame.sprite.Sprite):
             draw_bottom_side=self.draw_bottom_side,
             bottom_side_ratio=self.bottom_side_ratio,
             side_shade_ratio=self.side_shade_ratio,
+            draw_outline=not use_dotted_outline,
         )
         self._paint_panel_relief(fill_color=fill_color)
         self._paint_damage_marks(health_ratio=health_ratio)
+        self._apply_damage_alpha(health_ratio=health_ratio)
 
     def _paint_panel_relief(
         self: Self,
@@ -224,6 +252,20 @@ class Wall(pygame.sprite.Sprite):
             variant_index=self._damage_overlay_variant,
             visibility_scale=visibility_scale,
         )
+        if self.palette_category == "inner_wall" and 0.0 < health_ratio < 1.0:
+            outline_color = resolve_wall_outline_color(
+                palette_category=self.palette_category,
+                palette=self.palette,
+            )
+            _draw_dotted_rect_outline(self.image, color=outline_color)
+
+    def _apply_damage_alpha(self: Self, *, health_ratio: float) -> None:
+        if self.palette_category != "inner_wall":
+            self.image.set_alpha(255)
+            return
+        ratio = max(0.0, min(1.0, health_ratio))
+        alpha = int(round(255 * (0.5 + 0.5 * ratio)))
+        self.image.set_alpha(max(0, min(255, alpha)))
 
     def collides_rect(self: Self, rect_obj: rect.Rect) -> bool:
         if self._collision_polygon is None:
@@ -310,10 +352,12 @@ class RubbleWall(Wall):
             offset_px=self._rubble_offset_px,
             bevel_depth=self.bevel_depth,
             relief_variant_index=self._damage_overlay_variant,
+            draw_outline=not (0.0 < health_ratio < 1.0),
         )
         self.image.fill((0, 0, 0, 0))
         self.image.blit(rubble_surface, (0, 0))
         self._paint_damage_marks(health_ratio=health_ratio)
+        self._apply_damage_alpha(health_ratio=health_ratio)
 
 
 class ReinforcedWall(Wall):
@@ -374,6 +418,7 @@ class ReinforcedWall(Wall):
             draw_bottom_side=self.draw_bottom_side,
             bottom_side_ratio=self.bottom_side_ratio,
             side_shade_ratio=self.side_shade_ratio,
+            draw_outline=True,
         )
 
         w, h = self.image.get_size()

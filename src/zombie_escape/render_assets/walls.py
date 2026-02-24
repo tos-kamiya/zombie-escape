@@ -292,6 +292,7 @@ def paint_wall_surface(
     draw_bottom_side: bool,
     bottom_side_ratio: float,
     side_shade_ratio: float,
+    draw_outline: bool = True,
 ) -> None:
     surface.fill((0, 0, 0, 0))
     rect_obj = surface.get_rect()
@@ -310,10 +311,12 @@ def paint_wall_surface(
                 face_width, face_height, bevel_depth, bevel_mask
             )
             pygame.draw.polygon(target, fill_color, face_polygon)
-            pygame.draw.polygon(target, outline_color, face_polygon, width=1)
+            if draw_outline:
+                pygame.draw.polygon(target, outline_color, face_polygon, width=1)
         else:
             target.fill(fill_color)
-            pygame.draw.rect(target, outline_color, target.get_rect(), width=1)
+            if draw_outline:
+                pygame.draw.rect(target, outline_color, target.get_rect(), width=1)
 
     if draw_bottom_side:
         extra_height = max(0, int(bevel_depth / 2))
@@ -498,6 +501,7 @@ def build_rubble_wall_surface(
     shadow_ratio: float = RUBBLE_SHADOW_RATIO,
     bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
     relief_variant_index: int = 0,
+    draw_outline: bool = True,
 ) -> pygame.Surface:
     offset_px = offset_px if offset_px is not None else rubble_offset_for_size(size)
     safe_size = max(1, size)
@@ -523,6 +527,7 @@ def build_rubble_wall_surface(
         shadow_ratio,
         tuned_bevel,
         int(relief_variant_index) % 9,
+        bool(draw_outline),
     )
     cached = _RUBBLE_SURFACE_CACHE.get(cache_key)
     if cached is not None:
@@ -542,6 +547,7 @@ def build_rubble_wall_surface(
         draw_bottom_side=False,
         bottom_side_ratio=0.1,
         side_shade_ratio=0.9,
+        draw_outline=draw_outline,
     )
     paint_wall_panel_relief(
         top_surface,
@@ -570,6 +576,7 @@ def build_rubble_wall_surface(
         draw_bottom_side=False,
         bottom_side_ratio=0.1,
         side_shade_ratio=0.9,
+        draw_outline=draw_outline,
     )
     # Keep the relief only on the top piece; drawing it on the shadow muddies
     # the shape and makes the panel hard to read at gameplay scale.
