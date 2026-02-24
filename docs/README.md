@@ -13,7 +13,6 @@ This file is the main documentation index.
 - `docs/design/architecture.md`: Module layout and screen transitions.
 - `docs/design/data-models.md`: Core dataclasses and runtime state.
 - `docs/design/entities.md`: Entity behavior and gameplay objects.
-- `docs/design/carrier-bot.md`: `CarrierBot` + `Material` spec.
 - `docs/design/ai-zombies.md`: Zombie variants and AI behavior.
 - `docs/design/gameplay-flow.md`: Initialization, update, and interaction flow.
 - `docs/design/rendering.md`: Render pipeline, fog, shadows, and HUD.
@@ -32,6 +31,7 @@ This file is the main documentation index.
 - `docs/developer/wall-hug-optimization.md`: Wall-hug AI tuning notes.
 - `docs/developer/user-input-spec.md`: Input normalization spec.
 - `docs/developer/fog-cache-cli.md`: Fog asset build command and runtime expectations.
+- `docs/developer/rubble-relief-table.md`: Rubble relief table generation workflow.
 
 ## Other
 
