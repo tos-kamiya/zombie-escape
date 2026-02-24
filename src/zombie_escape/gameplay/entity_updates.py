@@ -7,6 +7,7 @@ import pygame
 
 from ..entities import (
     Car,
+    CarrierBot,
     Player,
     PatrolBot,
     Survivor,
@@ -154,6 +155,8 @@ def update_entities(
     zombie_group = game_data.groups.zombie_group
     survivor_group = game_data.groups.survivor_group
     patrol_bot_group = game_data.groups.patrol_bot_group
+    carrier_bot_group = game_data.groups.carrier_bot_group
+    material_group = game_data.groups.material_group
     spatial_index = game_data.state.spatial_index
     camera = game_data.camera
     stage = game_data.stage
@@ -174,6 +177,18 @@ def update_entities(
     fire_floor_cells = game_data.layout.fire_floor_cells
     field_rect = game_data.layout.field_rect
     current_time = game_data.state.clock.elapsed_ms
+    if game_data.cell_size > 0:
+        material_cells: set[tuple[int, int]] = set()
+        for material in material_group:
+            if not material.alive() or getattr(material, "carried_by", None) is not None:
+                continue
+            cx = int(material.rect.centerx // game_data.cell_size)
+            cy = int(material.rect.centery // game_data.cell_size)
+            if 0 <= cx < game_data.layout.grid_cols and 0 <= cy < game_data.layout.grid_rows:
+                material_cells.add((cx, cy))
+        game_data.layout.material_cells = material_cells
+    else:
+        game_data.layout.material_cells = set()
 
     all_walls = list(wall_group) if wall_index is None else None
 
@@ -233,6 +248,7 @@ def update_entities(
             walls_nearby=wall_index is not None,
             cell_size=game_data.cell_size,
             pitfall_cells=pitfall_cells,
+            blocked_cells=game_data.layout.material_cells,
         )
         if getattr(active_car, "pending_pitfall_fall", False):
             active_car.health = 0
@@ -779,5 +795,50 @@ def update_entities(
             now_ms=game_data.state.clock.elapsed_ms,
             spiky_plants=game_data.spiky_plants,
         )
+
+    carrier_bots_sorted: list[CarrierBot] = sorted(
+        [bot for bot in carrier_bot_group if bot.alive()],
+        key=lambda b: b.x,
+    )
+    carrier_materials = [m for m in material_group if m.alive() and m.carried_by is None]
+    blocker_entities: list[pygame.sprite.Sprite] = []
+    blocker_entities.extend([c for c in game_data.waiting_cars if c.alive()])
+    blocker_entities.extend(carrier_bots_sorted)
+    if active_car is not None and active_car.alive():
+        blocker_entities.append(active_car)
+    push_targets: list[pygame.sprite.Sprite] = []
+    if not player_mounted and player.alive():
+        push_targets.append(player)
+    if active_car is not None and active_car.alive():
+        push_targets.append(active_car)
+    push_targets.extend([s for s in survivor_group if s.alive()])
+    push_targets.extend([z for z in zombie_group if z.alive()])
+    push_targets.extend([b for b in patrol_bots_sorted if b.alive()])
+    push_targets.extend([c for c in game_data.waiting_cars if c.alive()])
+
+    for carrier_bot in carrier_bots_sorted:
+        bot_search_radius = carrier_bot.collision_radius + 120
+        nearby_walls = _walls_near((carrier_bot.x, carrier_bot.y), bot_search_radius)
+        carrier_bot.update(
+            nearby_walls,
+            layout=game_data.layout,
+            cell_size=game_data.cell_size,
+            pitfall_cells=pitfall_cells,
+            materials=carrier_materials,
+            blockers=blocker_entities,
+            push_targets=push_targets,
+        )
+    if game_data.cell_size > 0:
+        material_cells: set[tuple[int, int]] = set()
+        for material in material_group:
+            if not material.alive() or getattr(material, "carried_by", None) is not None:
+                continue
+            cx = int(material.rect.centerx // game_data.cell_size)
+            cy = int(material.rect.centery // game_data.cell_size)
+            if 0 <= cx < game_data.layout.grid_cols and 0 <= cy < game_data.layout.grid_rows:
+                material_cells.add((cx, cy))
+        game_data.layout.material_cells = material_cells
+    else:
+        game_data.layout.material_cells = set()
 
     update_decay_effects(game_data.state.decay_effects, frames=1)

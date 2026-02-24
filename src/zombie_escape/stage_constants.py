@@ -96,6 +96,48 @@ def _build_stage18_pitfall_zones(
     return [(x, y, 1, 1) for x, y in sorted(pitfall_cells)]
 
 
+def _build_stage36_reinforced_wall_zones() -> list[tuple[int, int, int, int]]:
+    """Three vertical reinforced walls placed on the right side of each carrier shaft."""
+    right_walls = [15, 29, 43]
+    min_y = 4
+    max_y = 18
+    doorway_rows = {4, 18}
+    zones: list[tuple[int, int, int, int]] = []
+    for y in range(min_y, max_y + 1):
+        if y in doorway_rows:
+            continue
+        for wall_x in right_walls:
+            zones.append((wall_x, y, 1, 1))
+    return zones
+
+
+def _build_stage36_storage_material_spawns(
+    *, grid_cols: int, grid_rows: int, band_height: int
+) -> list[tuple[int, int]]:
+    """Fill top/bottom storage bands with materials, skipping edge corridors/border."""
+    if band_height <= 0:
+        return []
+    top_rows = range(0, min(band_height, grid_rows))
+    bottom_start = max(0, grid_rows - band_height)
+    bottom_rows = range(bottom_start, grid_rows)
+    start_x = 3
+    end_x = max(start_x, grid_cols - 3)
+    y_rows = sorted(set(top_rows) | set(bottom_rows))
+    return [
+        (x, y)
+        for y in y_rows
+        if 0 < y < grid_rows - 1
+        for x in range(start_x, end_x)
+    ]
+
+
+def _build_stage36_fall_spawn_zones() -> list[tuple[int, int, int, int]]:
+    """Place fall-spawn floors at the same rows as left-right corridor doorways."""
+    room_center_x = [6, 20, 34, 49]
+    doorway_rows = [4, 18]
+    return [(x, y, 1, 1) for x in room_center_x for y in doorway_rows]
+
+
 STAGES: list[Stage] = [
     Stage(
         id="stage1",
@@ -1224,25 +1266,38 @@ STAGES: list[Stage] = [
         description_key="stages.stage36.description",
         available=True,
         cell_size=50,
-        grid_cols=30,
-        grid_rows=15,
-        wall_algorithm="default.10%",
-        fuel_mode=FuelMode.START_FULL,
-        buddy_required_count=1,
-        survivor_rescue_stage=True,
+        grid_cols=57,
+        grid_rows=23,
+        wall_algorithm="empty",
+        fuel_mode=FuelMode.REFUEL_CHAIN,
+        exit_sides=["left", "right"],
+        reinforced_wall_zones=_build_stage36_reinforced_wall_zones(),
+        fall_spawn_zones=_build_stage36_fall_spawn_zones(),
+        buddy_required_count=0,
+        survivor_rescue_stage=False,
         waiting_car_target_count=1,
-        initial_interior_spawn_rate=0.01,
-        exterior_spawn_weight=0.8,
-        interior_spawn_weight=0.2,
+        initial_interior_spawn_rate=0.05,
+        exterior_spawn_weight=0.3,
+        interior_spawn_weight=0.4,
+        interior_fall_spawn_weight=0.3,
         zombie_normal_ratio=1.0,
         zombie_tracker_ratio=0.0,
         zombie_wall_hugging_ratio=0.0,
         zombie_lineformer_ratio=0.0,
         zombie_dog_ratio=0.0,
         zombie_tracker_dog_ratio=0.0,
+        zombie_nimble_dog_ratio=0.0,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
-        flashlight_spawn_count=1,
-        shoes_spawn_count=1,
+        carrier_bot_spawns=[
+            (14, 9, "y", 1),
+            (28, 13, "y", -1),
+            (42, 9, "y", 1),
+        ],
+        material_spawns=_build_stage36_storage_material_spawns(
+            grid_cols=57, grid_rows=23, band_height=4
+        ),
+        flashlight_spawn_count=3,
+        shoes_spawn_count=2,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"
