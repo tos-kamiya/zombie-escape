@@ -148,11 +148,13 @@ class Wall(pygame.sprite.Sprite):
         self._paint_damage_marks(health_ratio=health_ratio)
 
     def _paint_damage_marks(self: Self, *, health_ratio: float) -> None:
+        visibility_scale = 0.7
         paint_wall_damage_overlay(
             self.image,
             health_ratio=health_ratio,
             seed=self._damage_visual_seed,
             variant_index=self._damage_overlay_variant,
+            visibility_scale=visibility_scale,
         )
 
     def collides_rect(self: Self, rect_obj: rect.Rect) -> bool:

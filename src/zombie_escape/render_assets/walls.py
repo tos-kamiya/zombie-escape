@@ -78,6 +78,7 @@ def paint_wall_damage_overlay(
     variant_index: int | None = None,
     steps: int = 12,
     circle_size_ratio: float = 0.30,
+    visibility_scale: float = 1.0,
 ) -> None:
     clamped_health = max(0.0, min(1.0, health_ratio))
     damage_ratio = 1.0 - clamped_health
@@ -99,17 +100,23 @@ def paint_wall_damage_overlay(
         resolved_seed = int(seed)
     else:
         resolved_seed = _WALL_DAMAGE_VARIANT_SEEDS[0]
-    alpha = 140
+    visibility = max(0.2, min(1.0, float(visibility_scale)))
+    alpha = int(round(140 * visibility))
     ratio_milli = max(1, int(round(circle_size_ratio * 1000)))
     overlays = _get_wall_damage_overlays(
         width=width,
         height=height,
         seed=resolved_seed,
         steps=resolved_steps,
-        alpha=alpha,
         ratio_milli=ratio_milli,
     )
-    surface.blit(overlays[level], (0, 0))
+    overlay = overlays[level]
+    if alpha >= 255:
+        surface.blit(overlay, (0, 0))
+        return
+    alpha_overlay = overlay.copy()
+    alpha_overlay.set_alpha(alpha)
+    surface.blit(alpha_overlay, (0, 0))
 
 
 def _shared_crack_strokes(seed: int) -> tuple[tuple[float, float, float, float, float], ...]:
@@ -194,7 +201,6 @@ def _get_wall_damage_overlays(
     height: int,
     seed: int,
     steps: int,
-    alpha: int,
     ratio_milli: int,
 ) -> tuple[pygame.Surface, ...]:
     cache_key = (width, height, seed, steps, ratio_milli)
@@ -235,7 +241,7 @@ def _get_wall_damage_overlays(
         stroke_masks.append(mask)
 
     overlay_base = pygame.Surface((width, height), pygame.SRCALPHA)
-    overlay_base.fill((0, 0, 0, alpha))
+    overlay_base.fill((0, 0, 0, 255))
 
     coverage_mask = pygame.Surface((width, height), pygame.SRCALPHA)
     built: list[pygame.Surface] = []
