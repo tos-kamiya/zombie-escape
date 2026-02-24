@@ -16,6 +16,7 @@ from ..render_assets import (
     build_zombie_dog_directional_surfaces,
     build_zombie_directional_surfaces,
 )
+from ..render_constants import FIRE_FLOOR_FLAME_COLORS
 from ..screen_constants import FPS
 
 DECAY_VARIANT_COUNT = 3
@@ -108,6 +109,10 @@ class DecayingEntityEffect:
         self._burn_body_circle_visible = False
         if self.tone == "burned":
             self._init_burn_particles()
+            # Keep only a few particles so the large 3-circle overlay remains dominant.
+            if len(self._burn_particles) > 3:
+                random.shuffle(self._burn_particles)
+                self._burn_particles = self._burn_particles[:3]
 
     def update(self, *, frames: int = 1) -> bool:
         if frames <= 0:
@@ -121,8 +126,6 @@ class DecayingEntityEffect:
             if remove_count > 0:
                 self.pixel_carry -= remove_count
                 self._erase_pixels(remove_count)
-            if self._burn_particles and self._draw_burn_particles():
-                self._burn_body_circle_visible = False
         return self.frames_elapsed < self.duration_frames
 
     def _erase_pixels(self, count: int) -> None:
@@ -214,7 +217,7 @@ class DecayingEntityEffect:
             )
             selected_count += 1
 
-    def _draw_burn_particles(self) -> bool:
+    def _draw_burn_particles(self, *, target_surface: pygame.Surface) -> bool:
         has_active_particle = False
         for px, py, base_radius, start_frame, life_frames in self._burn_particles:
             age = self.frames_elapsed - start_frame
@@ -228,6 +231,7 @@ class DecayingEntityEffect:
             size_progress = max(0.0, min(1.0, progress * 0.5))
             radius = max(0.8, base_radius * (1.0 - size_progress))
             self._draw_burn_gradient_circle(
+                target_surface=target_surface,
                 center=(int(round(px)), int(round(py))),
                 radius=radius,
             )
@@ -236,6 +240,7 @@ class DecayingEntityEffect:
     def _draw_burn_gradient_circle(
         self,
         *,
+        target_surface: pygame.Surface,
         center: tuple[int, int],
         radius: float,
     ) -> None:
@@ -250,17 +255,39 @@ class DecayingEntityEffect:
         mid = (186, 62, 37, 220)
         inner = (191, 64, 38, 245)
         core = (209, 47, 42, 255)
-        pygame.draw.circle(self.surface, outer, (cx, cy), r_outer)
-        pygame.draw.circle(self.surface, mid, (cx, cy), r_mid)
-        pygame.draw.circle(self.surface, inner, (cx, cy), r_inner)
-        pygame.draw.circle(self.surface, core, (cx, cy), r_core)
+        pygame.draw.circle(target_surface, outer, (cx, cy), r_outer)
+        pygame.draw.circle(target_surface, mid, (cx, cy), r_mid)
+        pygame.draw.circle(target_surface, inner, (cx, cy), r_inner)
+        pygame.draw.circle(target_surface, core, (cx, cy), r_core)
 
     def build_draw_surface(self) -> pygame.Surface:
         if not (self.tone == "burned" and self._burn_body_circle_visible and self._burn_body_circle):
             return self.surface
         cx, cy, radius = self._burn_body_circle
         draw_surface = self.surface.copy()
-        pygame.draw.circle(draw_surface, (220, 20, 20, 255), (cx, cy), radius)
+        flame_alpha = 70
+        def brighten(color: tuple[int, int, int], factor: float = 1.28) -> tuple[int, int, int]:
+            return (
+                min(255, int(round(color[0] * factor))),
+                min(255, int(round(color[1] * factor))),
+                min(255, int(round(color[2] * factor))),
+            )
+        flame_colors = (
+            (*brighten(FIRE_FLOOR_FLAME_COLORS[0]), flame_alpha),
+            (*brighten(FIRE_FLOOR_FLAME_COLORS[1]), flame_alpha),
+            (*brighten(FIRE_FLOOR_FLAME_COLORS[2]), flame_alpha),
+        )
+        offset = max(1, int(radius * 0.22))
+        wobble = int(round(math.sin(self.frames_elapsed * 0.35) * max(1, radius * 0.08)))
+        centers = (
+            (cx - offset, cy + wobble),
+            (cx + offset, cy - wobble),
+            (cx, cy - offset + wobble),
+        )
+        for color, center in zip(flame_colors, centers):
+            pygame.draw.circle(draw_surface, color, center, radius)
+        if self._burn_particles:
+            self._draw_burn_particles(target_surface=draw_surface)
         return draw_surface
 
 

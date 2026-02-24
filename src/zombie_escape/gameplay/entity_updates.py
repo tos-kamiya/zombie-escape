@@ -6,7 +6,6 @@ from typing import Any, Sequence
 import pygame
 
 from ..entities import (
-    CarrierBot,
     Car,
     Player,
     PatrolBot,
@@ -155,8 +154,6 @@ def update_entities(
     zombie_group = game_data.groups.zombie_group
     survivor_group = game_data.groups.survivor_group
     patrol_bot_group = game_data.groups.patrol_bot_group
-    carrier_bot_group = game_data.groups.carrier_bot_group
-    material_group = game_data.groups.material_group
     spatial_index = game_data.state.spatial_index
     camera = game_data.camera
     stage = game_data.stage
@@ -177,17 +174,6 @@ def update_entities(
     fire_floor_cells = game_data.layout.fire_floor_cells
     field_rect = game_data.layout.field_rect
     current_time = game_data.state.clock.elapsed_ms
-    if game_data.cell_size > 0:
-        game_data.layout.material_cells = {
-            (
-                int(material.rect.centerx // game_data.cell_size),
-                int(material.rect.centery // game_data.cell_size),
-            )
-            for material in material_group
-            if material.alive() and getattr(material, "carried_by", None) is None
-        }
-    else:
-        game_data.layout.material_cells = set()
 
     all_walls = list(wall_group) if wall_index is None else None
 
@@ -247,7 +233,6 @@ def update_entities(
             walls_nearby=wall_index is not None,
             cell_size=game_data.cell_size,
             pitfall_cells=pitfall_cells,
-            blocked_cells=game_data.layout.material_cells,
         )
         if getattr(active_car, "pending_pitfall_fall", False):
             active_car.health = 0
@@ -330,7 +315,11 @@ def update_entities(
             )
         ):
             game_data.state.decay_effects.append(
-                DecayingEntityEffect(player.image, player.rect.center)
+                DecayingEntityEffect(
+                    player.image,
+                    player.rect.center,
+                    tone="burned",
+                )
             )
             if player in all_sprites:
                 all_sprites.remove(player)
@@ -541,9 +530,6 @@ def update_entities(
     )
     patrol_bots_sorted: list[PatrolBot] = sorted(
         list(patrol_bot_group), key=lambda b: b.x
-    )
-    carrier_bots_sorted: list[CarrierBot] = sorted(
-        list(carrier_bot_group), key=lambda b: b.x
     )
     electrified_cells: set[tuple[int, int]] = set()
     if game_data.cell_size > 0:
@@ -792,35 +778,6 @@ def update_entities(
             drift=(floor_dx, floor_dy),
             now_ms=game_data.state.clock.elapsed_ms,
             spiky_plants=game_data.spiky_plants,
-        )
-
-    hard_blockers: list[pygame.sprite.Sprite] = []
-    if active_car and active_car.alive():
-        hard_blockers.append(active_car)
-    hard_blockers.extend([car for car in game_data.waiting_cars if car.alive()])
-    hard_blockers.extend([b for b in patrol_bot_group if b.alive()])
-    hard_blockers.extend([b for b in carrier_bot_group if b.alive()])
-
-    push_targets: list[pygame.sprite.Sprite] = []
-    if player.alive():
-        push_targets.append(player)
-    push_targets.extend([s for s in survivor_group if s.alive()])
-    push_targets.extend([z for z in zombie_group if z.alive()])
-
-    materials_alive = [m for m in material_group if m.alive()]
-    for bot in carrier_bots_sorted:
-        if not bot.alive():
-            continue
-        bot_search_radius = bot.collision_radius + 120
-        nearby_walls = _walls_near((bot.x, bot.y), bot_search_radius)
-        bot.update(
-            nearby_walls,
-            layout=game_data.layout,
-            cell_size=game_data.cell_size,
-            pitfall_cells=pitfall_cells,
-            materials=materials_alive,
-            blockers=hard_blockers,
-            push_targets=push_targets,
         )
 
     update_decay_effects(game_data.state.decay_effects, frames=1)
