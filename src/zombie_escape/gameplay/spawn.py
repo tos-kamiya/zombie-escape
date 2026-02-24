@@ -107,6 +107,7 @@ def _carrier_blocked_cells(
     blocked.update(layout.outside_cells)
     blocked.update(layout.wall_cells)
     blocked.update(layout.steel_beam_cells)
+    blocked.update(layout.puddle_cells)
     blocked.update(pitfall_cells)
     return blocked
 
@@ -140,6 +141,68 @@ def _select_carrier_spawn_cell(
     if not candidates:
         return None
     return candidates[0]
+
+
+def _material_spawn_cells_from_carrier_paths(
+    *,
+    carrier_spawns: list[tuple[int, int, str, int]],
+    layout: LevelLayout,
+    pitfall_cells: set[tuple[int, int]],
+    count: int,
+    occupied_cells: set[tuple[int, int]] | None = None,
+) -> list[tuple[int, int]]:
+    if count <= 0 or not carrier_spawns:
+        return []
+    occupied = set(occupied_cells or set())
+    blocked = _carrier_blocked_cells(layout, pitfall_cells)
+    path_cells_per_carrier: list[list[tuple[int, int]]] = []
+    for cell_x, cell_y, axis, _direction_sign in carrier_spawns:
+        x = int(cell_x)
+        y = int(cell_y)
+        if axis == "y":
+            cells = [
+                (x, yy)
+                for yy in range(layout.grid_rows)
+                if (x, yy) not in blocked and (x, yy) not in occupied
+            ]
+        else:
+            cells = [
+                (xx, y)
+                for xx in range(layout.grid_cols)
+                if (xx, y) not in blocked and (xx, y) not in occupied
+            ]
+        if cells:
+            path_cells_per_carrier.append(cells)
+    if not path_cells_per_carrier:
+        return []
+
+    selected: list[tuple[int, int]] = []
+    used = set(occupied)
+
+    carrier_indices = list(range(len(path_cells_per_carrier)))
+    RNG.shuffle(carrier_indices)
+    for idx in carrier_indices:
+        if len(selected) >= count:
+            break
+        candidates = [cell for cell in path_cells_per_carrier[idx] if cell not in used]
+        if not candidates:
+            continue
+        pick = RNG.choice(candidates)
+        selected.append(pick)
+        used.add(pick)
+
+    if len(selected) >= count:
+        return selected[:count]
+
+    remaining_pool: list[tuple[int, int]] = []
+    for cells in path_cells_per_carrier:
+        for cell in cells:
+            if cell in used:
+                continue
+            remaining_pool.append(cell)
+    RNG.shuffle(remaining_pool)
+    selected.extend(remaining_pool[: max(0, count - len(selected))])
+    return selected
 
 
 def _car_appearance_for_stage(stage: Stage | None) -> str:
@@ -1172,22 +1235,20 @@ def spawn_initial_transport_bots(game_data: GameData) -> None:
 def spawn_initial_carrier_bots_and_materials(game_data: GameData) -> None:
     """Spawn carrier bots and materials from explicit stage cell definitions."""
     stage = game_data.stage
-    if not stage.carrier_bot_spawns and not stage.material_spawns:
+    if (
+        not stage.carrier_bot_spawns
+        and not stage.material_spawns
+        and int(stage.material_spawns_from_carrier_paths) <= 0
+    ):
         return
     all_sprites = game_data.groups.all_sprites
     material_group = game_data.groups.material_group
     carrier_group = game_data.groups.carrier_bot_group
     cell_size = game_data.cell_size
     pitfall_cells = game_data.layout.pitfall_cells
+    occupied_cells: set[tuple[int, int]] = set()
 
-    for cell_x, cell_y in stage.material_spawns:
-        center = _cell_center((int(cell_x), int(cell_y)), cell_size)
-        material = Material(center[0], center[1], size=max(4, int(cell_size * 0.8)))
-        if spritecollideany_walls(material, game_data.groups.wall_group):
-            continue
-        material_group.add(material)
-        all_sprites.add(material, layer=LAYER_ITEMS)
-
+    carrier_spawn_plans: list[tuple[int, int, str, int]] = []
     for cell_x, cell_y, axis, direction_sign in stage.carrier_bot_spawns:
         spawn_cell = _select_carrier_spawn_cell(
             start_cell=(int(cell_x), int(cell_y)),
@@ -1197,7 +1258,33 @@ def spawn_initial_carrier_bots_and_materials(game_data: GameData) -> None:
         )
         if spawn_cell is None:
             continue
-        center = _cell_center(spawn_cell, cell_size)
+        carrier_spawn_plans.append(
+            (spawn_cell[0], spawn_cell[1], str(axis), int(direction_sign))
+        )
+
+    material_spawns = list(stage.material_spawns)
+    random_material_count = int(stage.material_spawns_from_carrier_paths)
+    if random_material_count > 0:
+        material_spawns = _material_spawn_cells_from_carrier_paths(
+            carrier_spawns=carrier_spawn_plans,
+            layout=game_data.layout,
+            pitfall_cells=pitfall_cells,
+            count=random_material_count,
+            occupied_cells=occupied_cells,
+        )
+
+    for cell_x, cell_y in material_spawns:
+        occupied_cells.add((int(cell_x), int(cell_y)))
+        center = _cell_center((int(cell_x), int(cell_y)), cell_size)
+        material = Material(center[0], center[1], size=max(4, int(cell_size * 0.8)))
+        if spritecollideany_walls(material, game_data.groups.wall_group):
+            continue
+        material_group.add(material)
+        all_sprites.add(material, layer=LAYER_ITEMS)
+
+    for cell_x, cell_y, axis, direction_sign in carrier_spawn_plans:
+        occupied_cells.add((int(cell_x), int(cell_y)))
+        center = _cell_center((int(cell_x), int(cell_y)), cell_size)
         bot = CarrierBot(
             center[0],
             center[1],

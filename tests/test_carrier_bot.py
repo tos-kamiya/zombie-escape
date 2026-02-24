@@ -175,3 +175,36 @@ def test_carrier_bot_does_not_repickup_dropped_material_until_separated() -> Non
         materials=[carried],
     )
     assert bot.carried_material is None
+
+
+def test_carrier_bot_y_axis_drop_selects_y_axis_cells() -> None:
+    _init_pygame()
+    layout = _make_layout(width=200, height=200)
+    bot = CarrierBot(75, 75, axis="y", direction_sign=1, speed=10.0)
+    carried = Material(75, 75)
+    bot.carried_material = carried
+    carried.carried_by = bot
+
+    # Block base drop cell with another grounded material.
+    grounded = Material(75, 75)
+
+    # Block backward Y cell so the bot must choose forward Y cell.
+    pitfall_cells = {(1, 0)}
+
+    blocker = pygame.sprite.Sprite()
+    blocker.image = pygame.Surface((1, 1))
+    blocker.rect = blocker.image.get_rect(center=(75, 105))
+    blocker.collision_radius = 20.0
+
+    bot.update(
+        [],
+        layout=layout,
+        cell_size=DEFAULT_CELL_SIZE,
+        pitfall_cells=pitfall_cells,
+        materials=[carried, grounded],
+        blockers=[blocker],
+    )
+
+    assert bot.carried_material is None
+    assert carried.carried_by is None
+    assert carried.rect.center == (75, 125)

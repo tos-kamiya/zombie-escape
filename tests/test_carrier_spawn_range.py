@@ -1,6 +1,9 @@
 import pytest
 
-from zombie_escape.gameplay.spawn import _select_carrier_spawn_cell
+from zombie_escape.gameplay.spawn import (
+    _material_spawn_cells_from_carrier_paths,
+    _select_carrier_spawn_cell,
+)
 from zombie_escape.level_constants import DEFAULT_CELL_SIZE
 from zombie_escape.models import LevelLayout
 
@@ -15,6 +18,7 @@ def _layout(
     walls: set[tuple[int, int]] | None = None,
     steel: set[tuple[int, int]] | None = None,
     outside: set[tuple[int, int]] | None = None,
+    puddles: set[tuple[int, int]] | None = None,
 ) -> LevelLayout:
     return LevelLayout(
         field_rect=pygame.Rect(0, 0, cols * DEFAULT_CELL_SIZE, rows * DEFAULT_CELL_SIZE),
@@ -30,6 +34,7 @@ def _layout(
         car_spawn_cells=[],
         fall_spawn_cells=set(),
         spiky_plant_cells=set(),
+        puddle_cells=puddles or set(),
     )
 
 
@@ -64,3 +69,31 @@ def test_select_carrier_spawn_cell_returns_none_if_axis_fully_blocked() -> None:
         pitfall_cells=set(),
     )
     assert selected is None
+
+
+def test_select_carrier_spawn_cell_avoids_puddle_on_axis() -> None:
+    layout = _layout(cols=6, rows=4, puddles={(2, 1), (3, 1)})
+    selected = _select_carrier_spawn_cell(
+        start_cell=(2, 1),
+        axis="x",
+        layout=layout,
+        pitfall_cells=set(),
+    )
+    assert selected == (1, 1)
+
+
+def test_material_spawns_from_carrier_paths_cover_each_carrier_line_first() -> None:
+    layout = _layout(cols=7, rows=7)
+    cells = _material_spawn_cells_from_carrier_paths(
+        carrier_spawns=[
+            (1, 2, "x", 1),
+            (5, 4, "y", -1),
+        ],
+        layout=layout,
+        pitfall_cells=set(),
+        count=2,
+    )
+    assert len(cells) == 2
+    assert len(set(cells)) == 2
+    assert any(cell[1] == 2 for cell in cells)
+    assert any(cell[0] == 5 for cell in cells)

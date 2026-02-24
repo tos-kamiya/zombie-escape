@@ -388,6 +388,9 @@ class Stage:
     carrier_bot_spawns: list[tuple[int, int, str, int]] = field(default_factory=list)
     # Material spawn cells in cell-space: (cell_x, cell_y)
     material_spawns: list[tuple[int, int]] = field(default_factory=list)
+    # If > 0, ignore `material_spawns` and randomly choose this many material cells
+    # from carrier movement lines.
+    material_spawns_from_carrier_paths: int = 0
 
     def __post_init__(self) -> None:
         mode_raw = self.fuel_mode
@@ -441,6 +444,18 @@ class Stage:
         for idx, (x, y) in enumerate(self.material_spawns):
             assert 0 <= int(x) < self.grid_cols and 0 <= int(y) < self.grid_rows, (
                 f"Stage {self.id}: material_spawns[{idx}] cell {(x, y)} is out of bounds"
+            )
+        assert int(self.material_spawns_from_carrier_paths) >= 0, (
+            f"Stage {self.id}: material_spawns_from_carrier_paths must be >= 0"
+        )
+        if int(self.material_spawns_from_carrier_paths) > 0:
+            assert not self.material_spawns, (
+                f"Stage {self.id}: material_spawns cannot be combined with "
+                "material_spawns_from_carrier_paths"
+            )
+            assert self.carrier_bot_spawns, (
+                f"Stage {self.id}: material_spawns_from_carrier_paths requires "
+                "carrier_bot_spawns"
             )
         for idx, (x, y, axis, direction_sign) in enumerate(self.carrier_bot_spawns):
             assert 0 <= int(x) < self.grid_cols and 0 <= int(y) < self.grid_rows, (

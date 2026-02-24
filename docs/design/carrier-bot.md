@@ -89,11 +89,13 @@ Constraints:
 
 - `Stage.carrier_bot_spawns`: `(cell_x, cell_y, axis, direction_sign)`
 - `Stage.material_spawns`: `(cell_x, cell_y)`
+- `Stage.material_spawns_from_carrier_paths`: random material count sampled from
+  carrier movement lines (when > 0, `material_spawns` is not used).
 - Spawn points are defined in cell-space and converted to cell centers.
 - Stage validation checks coordinate bounds and carrier parameter validity.
 - Carrier spawn cell is resolved on its axis to the nearest movable cell.
   - Blocked for spawn-range resolution: outside/outer-wall, wall, reinforced-wall
-    (`steel_beam_cells`), and pitfall cells.
+    (`steel_beam_cells`), puddle cells, and pitfall cells.
   - If no movable cell exists on that axis line, that carrier spawn entry is
     skipped.
 

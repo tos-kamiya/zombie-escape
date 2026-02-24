@@ -127,11 +127,14 @@ class CarrierBot(BaseLineBot):
             self._place_material_here()
             return
         base_cell = (int(self.x // cell_size), int(self.y // cell_size))
+        forward = (int(self.direction[0]), int(self.direction[1]))
         backward = (-int(self.direction[0]), -int(self.direction[1]))
         candidates = [
             base_cell,
             (base_cell[0] + backward[0], base_cell[1] + backward[1]),
             (base_cell[0] + backward[0] * 2, base_cell[1] + backward[1] * 2),
+            (base_cell[0] + forward[0], base_cell[1] + forward[1]),
+            (base_cell[0] + forward[0] * 2, base_cell[1] + forward[1] * 2),
         ]
         for cell in candidates:
             if not self._can_drop_on_cell(
