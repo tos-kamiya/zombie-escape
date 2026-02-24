@@ -96,45 +96,107 @@ def _build_stage18_pitfall_zones(
     return [(x, y, 1, 1) for x, y in sorted(pitfall_cells)]
 
 
-def _build_stage36_reinforced_wall_zones() -> list[tuple[int, int, int, int]]:
+_STAGE_36_RIGHT_WALLS = [14, 27, 40]
+_STAGE_36_CARRIER_BOT_SPAWNS_X = [
+    (8, 6, "x", 1),
+    (21, 9, "x", -1),
+    (34, 13, "x", 1),
+    (46, 16, "x", -1),
+]
+_STAGE_36_CARRIER_BOT_SPAWNS_Y = [
+    (13, 6, "y", 1),
+    (26, 12, "y", -1),
+    (39, 18, "y", 1),
+]
+_STAGE_36_CARRIER_BOT_SPAWNS = (
+    _STAGE_36_CARRIER_BOT_SPAWNS_X + _STAGE_36_CARRIER_BOT_SPAWNS_Y
+)
+
+def _build_stage36_reinforced_wall_zones(grid_cols: int, grid_rows: int) -> list[tuple[int, int, int, int]]:
     """Three vertical reinforced walls placed on the right side of each carrier shaft."""
-    right_walls = [15, 29, 43]
-    min_y = 4
-    max_y = 18
-    doorway_rows = {4, 18}
     zones: list[tuple[int, int, int, int]] = []
-    for y in range(min_y, max_y + 1):
-        if y in doorway_rows:
-            continue
-        for wall_x in right_walls:
+    for y in range(4, grid_rows - 4):
+        for wall_x in _STAGE_36_RIGHT_WALLS:
             zones.append((wall_x, y, 1, 1))
+            zones.append((wall_x - 2, y, 1, 1))
     return zones
 
 
-def _build_stage36_storage_material_spawns(
-    *, grid_cols: int, grid_rows: int, band_height: int
+def _build_stage36_lane_material_spawns(
+    grid_cols: int,
+    grid_rows: int,
+    carrier_bot_spawns: list[tuple[int, int, str, int]],
+    *,
+    per_lane: int = 5,
 ) -> list[tuple[int, int]]:
-    """Fill top/bottom storage bands with materials, skipping edge corridors/border."""
-    if band_height <= 0:
+    """Place materials on each carrier lane (x-axis rows), near each bot's movement range."""
+    if per_lane <= 0:
         return []
-    top_rows = range(0, min(band_height, grid_rows))
-    bottom_start = max(0, grid_rows - band_height)
-    bottom_rows = range(bottom_start, grid_rows)
-    start_x = 3
-    end_x = max(start_x, grid_cols - 3)
-    y_rows = sorted(set(top_rows) | set(bottom_rows))
+    blocked_x = set(_STAGE_36_RIGHT_WALLS) | {x - 2 for x in _STAGE_36_RIGHT_WALLS}
+    spawns: list[tuple[int, int]] = []
+    occupied: set[tuple[int, int]] = set()
+    min_x = 1
+    max_x = grid_cols - 2
+    min_y = 1
+    max_y = grid_rows - 2
+    for bot_x, bot_y, axis, _dir in carrier_bot_spawns:
+        if axis != "x":
+            continue
+        y = int(bot_y)
+        if not (min_y <= y <= max_y):
+            continue
+        candidates = [
+            x
+            for x in range(min_x, max_x + 1)
+            if x not in blocked_x and (x, y) not in occupied
+        ]
+        candidates.sort(key=lambda x: (abs(x - int(bot_x)), x))
+        added = 0
+        for x in candidates:
+            spawns.append((x, y))
+            occupied.add((x, y))
+            added += 1
+            if added >= per_lane:
+                break
+    return spawns
+
+
+def _build_stage36_storage_material_spawns(
+    grid_cols: int, grid_rows: int
+) -> list[tuple[int, int]]:
+    """Place one storage row near top and bottom edges."""
     return [
         (x, y)
-        for y in y_rows
-        if 0 < y < grid_rows - 1
-        for x in range(start_x, end_x)
+        for y in [2, grid_rows - 3]
+        for x in range(3, grid_cols - 3)
     ]
 
 
-def _build_stage36_fall_spawn_zones() -> list[tuple[int, int, int, int]]:
+def _build_stage36_material_spawns(
+    grid_cols: int,
+    grid_rows: int,
+    carrier_bot_spawns: list[tuple[int, int, str, int]],
+) -> list[tuple[int, int]]:
+    combined = _build_stage36_storage_material_spawns(grid_cols, grid_rows)
+    combined.extend(
+        _build_stage36_lane_material_spawns(
+            grid_cols, grid_rows, carrier_bot_spawns, per_lane=5
+        )
+    )
+    seen: set[tuple[int, int]] = set()
+    unique: list[tuple[int, int]] = []
+    for cell in combined:
+        if cell in seen:
+            continue
+        seen.add(cell)
+        unique.append(cell)
+    return unique
+
+
+def _build_stage36_fall_spawn_zones(grid_cols: int, grid_rows: int) -> list[tuple[int, int, int, int]]:
     """Place fall-spawn floors at the same rows as left-right corridor doorways."""
-    room_center_x = [6, 20, 34, 49]
-    doorway_rows = [4, 18]
+    room_center_x = [8, 21, 34, 46]
+    doorway_rows = [3, grid_rows - 4]
     return [(x, y, 1, 1) for x in room_center_x for y in doorway_rows]
 
 
@@ -1265,14 +1327,14 @@ STAGES: list[Stage] = [
         name_key="stages.stage36.name",
         description_key="stages.stage36.description",
         available=True,
-        cell_size=50,
-        grid_cols=57,
+        cell_size=40,
+        grid_cols=53,
         grid_rows=23,
         wall_algorithm="empty",
         fuel_mode=FuelMode.REFUEL_CHAIN,
         exit_sides=["left", "right"],
-        reinforced_wall_zones=_build_stage36_reinforced_wall_zones(),
-        fall_spawn_zones=_build_stage36_fall_spawn_zones(),
+        reinforced_wall_zones=_build_stage36_reinforced_wall_zones(53, 23),
+        fall_spawn_zones=_build_stage36_fall_spawn_zones(53, 23),
         buddy_required_count=0,
         survivor_rescue_stage=False,
         waiting_car_target_count=1,
@@ -1280,21 +1342,17 @@ STAGES: list[Stage] = [
         exterior_spawn_weight=0.3,
         interior_spawn_weight=0.4,
         interior_fall_spawn_weight=0.3,
-        zombie_normal_ratio=1.0,
+        zombie_normal_ratio=0.5,
         zombie_tracker_ratio=0.0,
         zombie_wall_hugging_ratio=0.0,
         zombie_lineformer_ratio=0.0,
-        zombie_dog_ratio=0.0,
+        zombie_dog_ratio=0.5,
         zombie_tracker_dog_ratio=0.0,
         zombie_nimble_dog_ratio=0.0,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
-        carrier_bot_spawns=[
-            (14, 9, "y", 1),
-            (28, 13, "y", -1),
-            (42, 9, "y", 1),
-        ],
-        material_spawns=_build_stage36_storage_material_spawns(
-            grid_cols=57, grid_rows=23, band_height=4
+        carrier_bot_spawns=_STAGE_36_CARRIER_BOT_SPAWNS,
+        material_spawns=_build_stage36_material_spawns(
+            53, 23, _STAGE_36_CARRIER_BOT_SPAWNS
         ),
         flashlight_spawn_count=3,
         shoes_spawn_count=2,
