@@ -96,17 +96,17 @@ def _build_stage18_pitfall_zones(
     return [(x, y, 1, 1) for x, y in sorted(pitfall_cells)]
 
 
-_STAGE_36_RIGHT_WALLS = [14, 27, 40]
+_STAGE_36_RIGHT_WALLS = [12, 22, 32]
 _STAGE_36_CARRIER_BOT_SPAWNS_X = [
-    (8, 6, "x", 1),
-    (21, 9, "x", -1),
-    (34, 13, "x", 1),
-    (46, 16, "x", -1),
+    (6, 7, "x", 1),
+    (16, 11, "x", -1),
+    (26, 15, "x", 1),
+    (38, 19, "x", -1),
 ]
 _STAGE_36_CARRIER_BOT_SPAWNS_Y = [
-    (13, 6, "y", 1),
-    (26, 12, "y", -1),
-    (39, 18, "y", 1),
+    (11, 7, "y", 1),
+    (21, 15, "y", -1),
+    (31, 23, "y", 1),
 ]
 _STAGE_36_CARRIER_BOT_SPAWNS = (
     _STAGE_36_CARRIER_BOT_SPAWNS_X + _STAGE_36_CARRIER_BOT_SPAWNS_Y
@@ -195,7 +195,7 @@ def _build_stage36_material_spawns(
 
 def _build_stage36_fall_spawn_zones(grid_rows: int) -> list[tuple[int, int, int, int]]:
     """Place fall-spawn floors at the same rows as left-right corridor doorways."""
-    room_center_x = [8, 21, 34, 46]
+    room_center_x = [6, 16, 26, 38]
     doorway_rows = [3, grid_rows - 4]
     return [(x, y, 1, 1) for x in room_center_x for y in doorway_rows]
 
@@ -1300,13 +1300,13 @@ STAGES: list[Stage] = [
         description_key="stages.stage36.description",
         available=True,
         cell_size=40,
-        grid_cols=53,
-        grid_rows=23,
+        grid_cols=43,
+        grid_rows=31,
         wall_algorithm="empty",
         fuel_mode=FuelMode.REFUEL_CHAIN,
         exit_sides=["left", "right"],
-        reinforced_wall_zones=_build_stage36_reinforced_wall_zones(23),
-        fall_spawn_zones=_build_stage36_fall_spawn_zones(23),
+        reinforced_wall_zones=_build_stage36_reinforced_wall_zones(31),
+        fall_spawn_zones=_build_stage36_fall_spawn_zones(31),
         buddy_required_count=0,
         survivor_rescue_stage=False,
         waiting_car_target_count=1,
@@ -1314,17 +1314,17 @@ STAGES: list[Stage] = [
         exterior_spawn_weight=0.3,
         interior_spawn_weight=0.4,
         interior_fall_spawn_weight=0.3,
-        zombie_normal_ratio=0.3,
+        zombie_normal_ratio=0.35,
         zombie_tracker_ratio=0.0,
         zombie_wall_hugging_ratio=0.0,
         zombie_lineformer_ratio=0.0,
-        zombie_dog_ratio=0.7,
+        zombie_dog_ratio=0.65,
         zombie_tracker_dog_ratio=0.0,
         zombie_nimble_dog_ratio=0.0,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
         carrier_bot_spawns=_STAGE_36_CARRIER_BOT_SPAWNS,
         material_spawns=_build_stage36_material_spawns(
-            53, 23, _STAGE_36_CARRIER_BOT_SPAWNS
+            43, 31, _STAGE_36_CARRIER_BOT_SPAWNS
         ),
         flashlight_spawn_count=3,
         shoes_spawn_count=2,
