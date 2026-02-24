@@ -9,6 +9,11 @@ from ..colors import STEEL_BEAM_COLOR, STEEL_BEAM_LINE_COLOR, EnvironmentPalette
 from ..entities_constants import INTERNAL_WALL_BEVEL_DEPTH
 from .common import scale_color
 from .geometry import build_beveled_polygon
+from .rubble_relief_table import (
+    RUBBLE_RELIEF_EDGE_WIDTH_TABLE,
+    RUBBLE_RELIEF_POINT_TABLE,
+    RUBBLE_ROTATION_SCALES,
+)
 
 _RUBBLE_SURFACE_CACHE: dict[tuple, pygame.Surface] = {}
 _CRACK_STROKES_CACHE: dict[int, tuple[tuple[float, float, float, float, float], ...]] = {}
@@ -25,109 +30,6 @@ RUBBLE_ROTATION_DEG = 5.0
 RUBBLE_OFFSET_RATIO = 0.06
 RUBBLE_SCALE_RATIO = 0.9
 RUBBLE_SHADOW_RATIO = 0.9
-_RUBBLE_ROTATION_SCALES: tuple[float, ...] = (
-    -1.20,
-    -0.80,
-    -0.45,
-    -0.15,
-    0.15,
-    0.45,
-    0.80,
-    1.10,
-    1.35,
-)
-_RUBBLE_RELIEF_VARIANTS: tuple[tuple[tuple[float, float], ...], ...] = (
-    (
-        (-0.20, -0.05),
-        (0.10, -0.20),
-        (0.05, -0.15),
-        (0.18, 0.00),
-        (0.12, 0.12),
-        (-0.08, 0.20),
-        (-0.15, 0.10),
-        (-0.18, -0.12),
-    ),
-    (
-        (-0.10, -0.20),
-        (0.20, -0.08),
-        (0.18, -0.10),
-        (0.05, 0.15),
-        (-0.05, 0.20),
-        (-0.20, 0.10),
-        (-0.10, 0.05),
-        (-0.02, -0.18),
-    ),
-    (
-        (0.05, -0.18),
-        (0.18, -0.02),
-        (0.20, 0.05),
-        (0.10, 0.20),
-        (-0.12, 0.18),
-        (-0.22, 0.00),
-        (-0.15, -0.08),
-        (-0.04, -0.20),
-    ),
-    (
-        (-0.18, -0.02),
-        (0.00, -0.22),
-        (0.12, -0.05),
-        (0.20, 0.08),
-        (0.18, 0.15),
-        (0.05, 0.22),
-        (-0.10, 0.10),
-        (-0.20, 0.00),
-    ),
-    (
-        (-0.12, -0.12),
-        (0.12, -0.12),
-        (0.15, 0.00),
-        (0.12, 0.12),
-        (0.00, 0.15),
-        (-0.12, 0.12),
-        (-0.15, 0.00),
-        (-0.12, -0.12),
-    ),
-    (
-        (0.00, -0.22),
-        (0.22, -0.02),
-        (0.12, 0.10),
-        (0.00, 0.22),
-        (-0.12, 0.10),
-        (-0.22, -0.02),
-        (-0.12, -0.10),
-        (0.00, -0.12),
-    ),
-    (
-        (-0.22, 0.00),
-        (-0.05, -0.18),
-        (0.10, -0.20),
-        (0.22, -0.05),
-        (0.20, 0.10),
-        (0.05, 0.18),
-        (-0.10, 0.20),
-        (-0.20, 0.10),
-    ),
-    (
-        (-0.05, -0.20),
-        (0.15, -0.15),
-        (0.22, 0.00),
-        (0.15, 0.15),
-        (-0.05, 0.20),
-        (-0.18, 0.12),
-        (-0.22, -0.02),
-        (-0.15, -0.15),
-    ),
-    (
-        (-0.15, -0.15),
-        (0.05, -0.22),
-        (0.20, -0.05),
-        (0.18, 0.12),
-        (0.05, 0.22),
-        (-0.15, 0.15),
-        (-0.20, 0.00),
-        (-0.18, -0.10),
-    ),
-)
 
 
 def rubble_offset_for_size(size: int) -> int:
@@ -495,91 +397,23 @@ def paint_wall_panel_relief(
         h2 = local_rect.height
         if w2 < 8 or h2 < 8:
             return
-        # Draw directly on the destination surface so the shape can protrude
-        # slightly outside the nominal panel rectangle.
         cx, cy = panel_rect.center
         half_w = panel_rect.width / 2.0
         half_h = panel_rect.height / 2.0
-        protrude = max(1.0, float(overflow_px))
-        variant = int(variant_index) % 9
-        jitter = max(1.0, min(3.0, min(half_w, half_h) * 0.05))
-        pattern = _RUBBLE_RELIEF_VARIANTS[variant]
-        # Build a 12-point shape from the base rectangle perimeter so it keeps
-        # a "squared" silhouette and avoids collapsing into a diamond.
-        left = cx - half_w
-        right = cx + half_w
-        top = cy - half_h
-        bottom = cy + half_h
-        side_step = (bottom - top) / 3.0
-        top_step = (right - left) / 4.0
-        points = [
-            # Include original rectangle corners exactly.
-            (left, top),
-            # Top edge inner points
-            (left + top_step, top - protrude),
-            (left + (top_step * 3.0), top - protrude),
-            (right, top),
-            # Right edge inner points
-            (right + protrude, top + side_step),
-            (right + protrude, top + (side_step * 2.0)),
-            (right, bottom),
-            # Bottom edge inner points
-            (left + (top_step * 3.0), bottom + protrude),
-            (left + top_step, bottom + protrude),
-            (left, bottom),
-            # Left edge inner points
-            (left - protrude, top + (side_step * 2.0)),
-            (left - protrude, top + side_step),
-        ]
-        normals = [
-            (-1.0, -1.0),  # top-left corner
-            (0.0, -1.0),   # top
-            (0.0, -1.0),   # top
-            (1.0, -1.0),   # top-right corner
-            (1.0, 0.0),    # right
-            (1.0, 0.0),    # right
-            (1.0, 1.0),    # bottom-right corner
-            (0.0, 1.0),    # bottom
-            (0.0, 1.0),    # bottom
-            (-1.0, 1.0),   # bottom-left corner
-            (-1.0, 0.0),   # left
-            (-1.0, 0.0),   # left
-        ]
-        variant_row = variant // 3
-        variant_col = variant % 3
-        out_scale = 1.00 + (variant_col * 0.22)
-        in_scale = 0.78 + (variant_row * 0.18)
-        tangent_scale = 0.28 + (variant_col * 0.06) + (variant_row * 0.04)
-        direction_sequence = [-1.0] * 6 + [1.0] * 6
-        random.Random(72_001 + variant).shuffle(direction_sequence)
-        for i in range(12):
-            pat = pattern[(i + variant) % len(pattern)]
-            px, py = points[i]
-            nx, ny = normals[i]
-            normal_len = math.hypot(nx, ny)
-            if normal_len > 0:
-                nx /= normal_len
-                ny /= normal_len
-            tx, ty = -ny, nx
-            # Use a per-variant shuffled inward/outward order.
-            direction = direction_sequence[i]
-            wave_mul = 0.2
-            base_amp = protrude + (jitter * (0.42 + abs(pat[0]) * 0.38))
-            amp_scale = out_scale if direction > 0 else in_scale
-            radial = direction * base_amp * amp_scale * wave_mul
-            tangent = pat[1] * jitter * tangent_scale
-            points[i] = (
-                px + (nx * radial) + (tx * tangent),
-                py + (ny * radial) + (ty * tangent),
+        variant = int(variant_index) % len(RUBBLE_RELIEF_POINT_TABLE)
+        overflow_scale = 1.0 + (max(0.0, float(overflow_px) - 1.0) * 0.06)
+        point_template = RUBBLE_RELIEF_POINT_TABLE[variant]
+        int_points = [
+            (
+                int(round(cx + (px * half_w * overflow_scale))),
+                int(round(cy + (py * half_h * overflow_scale))),
             )
-        int_points = [(int(round(px)), int(round(py))) for px, py in points]
+            for px, py in point_template
+        ]
         pygame.draw.polygon(surface, panel_color, int_points)
 
-        # Border width varies per edge (1px/2px). At width transitions,
-        # blend with a thin triangle to avoid harsh discontinuities.
         edge_count = len(int_points)
-        edge_rng = random.Random(91_000 + variant)
-        edge_widths = [1 + int(edge_rng.random() < 0.45) for _ in range(edge_count)]
+        edge_widths = RUBBLE_RELIEF_EDGE_WIDTH_TABLE[variant]
         for i in range(edge_count):
             start = int_points[i]
             end = int_points[(i + 1) % edge_count]
@@ -713,8 +547,8 @@ def build_rubble_wall_surface(
         top_surface,
         fill_color=fill_color,
         bottom_side_ratio=0.0,
-        panel_fill_ratio=0.97,
-        panel_border_ratio=0.80,
+        panel_fill_ratio=0.96,
+        panel_border_ratio=0.72,
         panel_shape="distorted_octagon",
         variant_index=relief_variant_index,
         overflow_px=max(1, base_size // 16),
@@ -742,7 +576,7 @@ def build_rubble_wall_surface(
 
     variant = int(relief_variant_index) % 9
     base_rotation = abs(float(angle_deg))
-    resolved_angle_deg = base_rotation * _RUBBLE_ROTATION_SCALES[variant]
+    resolved_angle_deg = base_rotation * RUBBLE_ROTATION_SCALES[variant]
     if resolved_angle_deg:
         top_surface = pygame.transform.rotate(top_surface, resolved_angle_deg)
         shadow_surface = pygame.transform.rotate(shadow_surface, resolved_angle_deg)
