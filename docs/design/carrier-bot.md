@@ -8,7 +8,6 @@ This chapter defines the implemented `CarrierBot` variant and the passive
 - `CarrierBot` is a line-movement bot variant.
 - `Material` is a carryable passive object.
 - Shared line movement mechanics are reused via `BaseLineBot`.
-- This system is separate from `TransportBot`.
 
 ## Terminology
 

@@ -24,7 +24,7 @@ from ..level_blueprints import (
     generate_random_blueprint,
     validate_connectivity,
 )
-from ..models import LevelLayout, Stage, transport_path_cells
+from ..models import LevelLayout, Stage
 from ..models import FuelMode
 from ..rng import get_rng, seed_rng
 
@@ -138,7 +138,6 @@ def _filter_spawn_cells(
 def _build_layout_data(
     *,
     layout: LevelLayout,
-    transport_reserved_cells: set[tuple[int, int]],
     player_cells: list[tuple[int, int]],
     filtered_car_cells: list[tuple[int, int]],
     fuel_cells: list[tuple[int, int]],
@@ -157,21 +156,11 @@ def _build_layout_data(
     return {
         "player_cells": player_cells,
         "car_cells": filtered_car_cells,
-        "fuel_cells": [
-            cell for cell in fuel_cells if cell not in transport_reserved_cells
-        ],
-        "empty_fuel_can_cells": [
-            cell for cell in empty_fuel_can_cells if cell not in transport_reserved_cells
-        ],
-        "fuel_station_cells": [
-            cell for cell in fuel_cells if cell not in transport_reserved_cells
-        ],
-        "flashlight_cells": [
-            cell for cell in flashlight_cells if cell not in transport_reserved_cells
-        ],
-        "shoes_cells": [
-            cell for cell in shoes_cells if cell not in transport_reserved_cells
-        ],
+        "fuel_cells": fuel_cells,
+        "empty_fuel_can_cells": empty_fuel_can_cells,
+        "fuel_station_cells": fuel_cells,
+        "flashlight_cells": flashlight_cells,
+        "shoes_cells": shoes_cells,
         "spiky_plant_cells": list(spiky_plant_cells),
         "fire_floor_cells": list(fire_floor_cells),
         "metal_floor_cells": list(metal_floor_cells),
@@ -197,7 +186,6 @@ def _finalize_layout_cells(
     spiky_plant_cells: set[tuple[int, int]],
     car_reachable_cells: set[tuple[int, int]],
     car_cells: list[tuple[int, int]],
-    transport_reserved_cells: set[tuple[int, int]],
     interior_min_x: int,
     interior_max_x: int,
     interior_min_y: int,
@@ -260,11 +248,8 @@ def _finalize_layout_cells(
         rubble_ratio=float(stage.wall_rubble_ratio),
     )
 
-    blocked_spawn_cells = (
-        set(transport_reserved_cells)
-        | set(fire_floor_cells)
-        | set(moving_floor_cells)
-        | set(spiky_plant_cells)
+    blocked_spawn_cells = set(fire_floor_cells) | set(moving_floor_cells) | set(
+        spiky_plant_cells
     )
     item_spawn_cells = _filter_spawn_cells(
         walkable_cells,
@@ -288,7 +273,6 @@ def _generate_valid_blueprint_with_retries(
     seed: int | None,
     steel_chance: float,
     moving_floor_cells: dict[tuple[int, int], MovingFloorDirection],
-    transport_reserved_cells: set[tuple[int, int]],
     fuel_count: int,
     empty_fuel_can_count: int,
     fuel_station_count: int,
@@ -326,29 +310,6 @@ def _generate_valid_blueprint_with_retries(
             )
         except MapGenerationError:
             continue
-
-        if transport_reserved_cells:
-            grid_rows = len(blueprint.grid)
-            grid_cols = len(blueprint.grid[0]) if grid_rows > 0 else 0
-            if any(
-                cell[0] < 0
-                or cell[1] < 0
-                or cell[0] >= grid_cols
-                or cell[1] >= grid_rows
-                for cell in transport_reserved_cells
-            ):
-                continue
-            editable = [list(row) for row in blueprint.grid]
-            for cell_x, cell_y in transport_reserved_cells:
-                ch = editable[cell_y][cell_x]
-                if ch not in {"P", "C", "E"}:
-                    editable[cell_y][cell_x] = "."
-            blueprint.grid = ["".join(row) for row in editable]
-            blueprint.steel_cells = {
-                (x, y)
-                for (x, y) in blueprint.steel_cells
-                if (x, y) not in transport_reserved_cells
-            }
 
         require_car_spawn = not stage.endurance_stage
         car_reachable = validate_connectivity(
@@ -695,7 +656,6 @@ def generate_level_from_blueprint(
     steel_enabled = steel_conf.get("enabled", False)
 
     base_moving_floor_cells = _expand_moving_floor_cells(stage)
-    transport_reserved_cells = transport_path_cells(stage.transport_bot_paths)
     fuel_count = 0
     empty_fuel_can_count = 0
     fuel_station_count = 0
@@ -719,7 +679,6 @@ def generate_level_from_blueprint(
         seed=seed,
         steel_chance=steel_chance,
         moving_floor_cells=base_moving_floor_cells,
-        transport_reserved_cells=transport_reserved_cells,
         fuel_count=fuel_count,
         empty_fuel_can_count=empty_fuel_can_count,
         fuel_station_count=fuel_station_count,
@@ -812,7 +771,6 @@ def generate_level_from_blueprint(
         spiky_plant_cells=spiky_plant_cells,
         car_reachable_cells=car_reachable_cells,
         car_cells=car_cells,
-        transport_reserved_cells=transport_reserved_cells,
         interior_min_x=interior_min_x,
         interior_max_x=interior_max_x,
         interior_min_y=interior_min_y,
@@ -825,7 +783,6 @@ def generate_level_from_blueprint(
 
     layout_data = _build_layout_data(
         layout=layout,
-        transport_reserved_cells=transport_reserved_cells,
         player_cells=player_cells,
         filtered_car_cells=filtered_car_cells,
         fuel_cells=fuel_cells,

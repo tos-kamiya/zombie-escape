@@ -48,47 +48,6 @@ def _make_lineformer_manager():
     return LineformerTrainManager()
 
 
-def _bresenham_cells(
-    x0: int,
-    y0: int,
-    x1: int,
-    y1: int,
-) -> set[tuple[int, int]]:
-    cells: set[tuple[int, int]] = set()
-    x, y = x0, y0
-    dx = abs(x1 - x0)
-    dy = abs(y1 - y0)
-    sx = 1 if x0 < x1 else -1
-    sy = 1 if y0 < y1 else -1
-    err = dx - dy
-    while True:
-        cells.add((x, y))
-        if x == x1 and y == y1:
-            break
-        e2 = err * 2
-        if e2 > -dy:
-            err -= dy
-            x += sx
-        if e2 < dx:
-            err += dx
-            y += sy
-    return cells
-
-
-def transport_path_cells(
-    paths: list[list[tuple[int, int]]],
-) -> set[tuple[int, int]]:
-    cells: set[tuple[int, int]] = set()
-    for path in paths:
-        if len(path) < 2:
-            continue
-        for idx in range(len(path) - 1):
-            x0, y0 = path[idx]
-            x1, y1 = path[idx + 1]
-            cells.update(_bresenham_cells(int(x0), int(y0), int(x1), int(y1)))
-    return cells
-
-
 class FuelMode(IntEnum):
     REFUEL_CHAIN = 0
     FUEL_CAN = 1
@@ -267,7 +226,6 @@ class Groups:
     zombie_group: sprite.Group
     survivor_group: sprite.Group
     patrol_bot_group: sprite.Group
-    transport_bot_group: sprite.Group
     carrier_bot_group: sprite.Group
     material_group: sprite.Group
 
@@ -379,10 +337,6 @@ class Stage:
 
     # Survivor spawning
     survivor_spawn_rate: float = 0.0
-    # Transport bot routes (cell-space polylines)
-    transport_bot_paths: list[list[tuple[int, int]]] = field(default_factory=list)
-    transport_bot_activation_radius: float = 0.0
-    transport_bot_end_wait_ms: int = 0
     # Carrier bot spawn definitions in cell-space:
     # (cell_x, cell_y, axis, direction_sign)
     carrier_bot_spawns: list[tuple[int, int, str, int]] = field(default_factory=list)
@@ -425,22 +379,6 @@ class Stage:
         assert total_zombie_ratio > 0.0, (
             f"Stage {self.id}: at least one zombie ratio must be > 0"
         )
-        for idx, path in enumerate(self.transport_bot_paths):
-            assert len(path) >= 2, (
-                f"Stage {self.id}: transport_bot_paths[{idx}] requires at least 2 points"
-            )
-        if self.transport_bot_paths:
-            path_cells = transport_path_cells(self.transport_bot_paths)
-            for x, y in path_cells:
-                assert 0 <= x < self.grid_cols and 0 <= y < self.grid_rows, (
-                    f"Stage {self.id}: transport path cell {(x, y)} is out of bounds"
-                )
-                assert (
-                    2 <= x <= self.grid_cols - 3 and 2 <= y <= self.grid_rows - 3
-                ), (
-                    f"Stage {self.id}: transport path cell {(x, y)} cannot be on "
-                    "outside/outer-wall band"
-                )
         for idx, (x, y) in enumerate(self.material_spawns):
             assert 0 <= int(x) < self.grid_cols and 0 <= int(y) < self.grid_rows, (
                 f"Stage {self.id}: material_spawns[{idx}] cell {(x, y)} is out of bounds"

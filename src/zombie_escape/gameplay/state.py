@@ -146,7 +146,6 @@ def initialize_game_state(stage: Stage) -> GameData:
     zombie_group = pygame.sprite.Group()
     survivor_group = pygame.sprite.Group()
     patrol_bot_group = pygame.sprite.Group()
-    transport_bot_group = pygame.sprite.Group()
     carrier_bot_group = pygame.sprite.Group()
     material_group = pygame.sprite.Group()
 
@@ -167,7 +166,6 @@ def initialize_game_state(stage: Stage) -> GameData:
             zombie_group=zombie_group,
             survivor_group=survivor_group,
             patrol_bot_group=patrol_bot_group,
-            transport_bot_group=transport_bot_group,
             carrier_bot_group=carrier_bot_group,
             material_group=material_group,
         ),
