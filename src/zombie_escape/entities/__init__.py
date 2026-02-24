@@ -42,7 +42,6 @@ from .zombie import Zombie, TrappedZombie
 from .zombie_dog import ZombieDog
 from .patrol_bot import PatrolBot
 from .carrier_bot import CarrierBot
-from .transport_bot import TransportBot
 from .spiky_plant import SpikyPlant
 from .material import Material
 
@@ -161,7 +160,6 @@ __all__ = [
     "ZombieDog",
     "PatrolBot",
     "CarrierBot",
-    "TransportBot",
     "Material",
     "SpikyPlant",
     "Car",

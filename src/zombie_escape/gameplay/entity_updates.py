@@ -11,7 +11,6 @@ from ..entities import (
     Player,
     PatrolBot,
     Survivor,
-    TransportBot,
     Wall,
     Zombie,
     ZombieDog,
@@ -156,7 +155,6 @@ def update_entities(
     zombie_group = game_data.groups.zombie_group
     survivor_group = game_data.groups.survivor_group
     patrol_bot_group = game_data.groups.patrol_bot_group
-    transport_bot_group = game_data.groups.transport_bot_group
     carrier_bot_group = game_data.groups.carrier_bot_group
     material_group = game_data.groups.material_group
     spatial_index = game_data.state.spatial_index
@@ -169,7 +167,7 @@ def update_entities(
     mounted_car = player.mounted_car if mounted_vehicle is not None else None
     active_car = mounted_car if mounted_car is not None else None
     player_mounted = mounted_vehicle is not None
-    player_hidden_from_zombies = isinstance(mounted_vehicle, TransportBot)
+    player_hidden_from_zombies = False
     if not player_mounted and player.in_car and car and car.alive():
         # Legacy fallback while call sites migrate from `in_car` to `mounted_vehicle`.
         active_car = car
@@ -544,9 +542,6 @@ def update_entities(
     patrol_bots_sorted: list[PatrolBot] = sorted(
         list(patrol_bot_group), key=lambda b: b.x
     )
-    transport_bots_sorted: list[TransportBot] = sorted(
-        list(transport_bot_group), key=lambda b: b.x
-    )
     carrier_bots_sorted: list[CarrierBot] = sorted(
         list(carrier_bot_group), key=lambda b: b.x
     )
@@ -799,29 +794,11 @@ def update_entities(
             spiky_plants=game_data.spiky_plants,
         )
 
-    for bot in transport_bots_sorted:
-        if not bot.alive():
-            continue
-        bot_search_radius = bot.collision_radius + 120
-        nearby_walls = _walls_near((bot.x, bot.y), bot_search_radius)
-        bot.update(
-            nearby_walls,
-            player=player,
-            survivor_group=survivor_group,
-            zombie_group=zombie_group,
-            all_sprites=all_sprites,
-            layout=game_data.layout,
-            cell_size=game_data.cell_size,
-            pitfall_cells=pitfall_cells,
-            now_ms=game_data.state.clock.elapsed_ms,
-        )
-
     hard_blockers: list[pygame.sprite.Sprite] = []
     if active_car and active_car.alive():
         hard_blockers.append(active_car)
     hard_blockers.extend([car for car in game_data.waiting_cars if car.alive()])
     hard_blockers.extend([b for b in patrol_bot_group if b.alive()])
-    hard_blockers.extend([b for b in transport_bot_group if b.alive()])
     hard_blockers.extend([b for b in carrier_bot_group if b.alive()])
 
     push_targets: list[pygame.sprite.Sprite] = []

@@ -35,7 +35,6 @@ from ..gameplay import (
     setup_player_and_cars,
     spawn_initial_patrol_bots,
     spawn_initial_carrier_bots_and_materials,
-    spawn_initial_transport_bots,
     spawn_initial_zombies,
     spawn_spiky_plants,
     spawn_survivors,
@@ -513,7 +512,6 @@ class GameplayScreenRunner:
         spawn_initial_zombies(self.game_data, player, layout_data, self.config)
         spawn_initial_patrol_bots(self.game_data, player, layout_data)
         spawn_initial_carrier_bots_and_materials(self.game_data)
-        spawn_initial_transport_bots(self.game_data)
 
         spiky_plant_list = spawn_spiky_plants(self.game_data, layout_data)
         spiky_plant_cells = layout_data.get("spiky_plant_cells", [])
@@ -783,9 +781,6 @@ class GameplayScreenRunner:
         )
         mobile_entities.extend([bot for bot in groups.patrol_bot_group if bot.alive()])
         mobile_entities.extend([bot for bot in groups.carrier_bot_group if bot.alive()])
-        mobile_entities.extend(
-            [bot for bot in groups.transport_bot_group if bot.alive()]
-        )
         state.spatial_index.rebuild(mobile_entities)
 
     def _draw_game_frame(self, current_fps: float) -> None:
