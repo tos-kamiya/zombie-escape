@@ -200,6 +200,84 @@ def _material_spawn_cells_from_carrier_paths(
     return selected
 
 
+def _carrier_spawn_cells_from_density(
+    *,
+    layout: LevelLayout,
+    cell_size: int,
+    player: Player | None,
+    density: float,
+    occupied_cells: set[tuple[int, int]] | None = None,
+) -> list[tuple[int, int, str, int]]:
+    if density <= 0.0:
+        return []
+    occupied = set(occupied_cells or set())
+    candidate_cells = [
+        (x, y)
+        for x, y in layout.walkable_cells
+        if (x, y) not in occupied
+    ]
+    if not candidate_cells:
+        return []
+    positions = find_interior_spawn_positions(
+        candidate_cells,
+        cell_size,
+        density,
+        jitter_ratio=0.0,
+        player=player,
+        min_player_dist=ZOMBIE_SPAWN_PLAYER_BUFFER,
+    )
+    selected: list[tuple[int, int, str, int]] = []
+    selected_cells: set[tuple[int, int]] = set()
+    for px, py in positions:
+        x = int(px // cell_size)
+        y = int(py // cell_size)
+        if not (0 <= x < layout.grid_cols and 0 <= y < layout.grid_rows):
+            continue
+        if (x, y) in occupied or (x, y) in selected_cells:
+            continue
+        if any(abs(x - sx) + abs(y - sy) < 3 for sx, sy, _, _ in selected):
+            continue
+        selected_cells.add((x, y))
+        axis = RNG.choice(["x", "y"])
+        direction_sign = RNG.choice([-1, 1])
+        selected.append((x, y, axis, direction_sign))
+    return selected
+
+
+def _material_count_from_density_on_carrier_paths(
+    *,
+    carrier_spawns: list[tuple[int, int, str, int]],
+    layout: LevelLayout,
+    pitfall_cells: set[tuple[int, int]],
+    occupied_cells: set[tuple[int, int]] | None = None,
+    density: float,
+) -> int:
+    if density <= 0.0 or not carrier_spawns:
+        return 0
+    occupied = set(occupied_cells or set())
+    blocked = _carrier_blocked_cells(layout, pitfall_cells)
+    path_cells: set[tuple[int, int]] = set()
+    for cell_x, cell_y, axis, _direction_sign in carrier_spawns:
+        x = int(cell_x)
+        y = int(cell_y)
+        if axis == "y":
+            for yy in range(layout.grid_rows):
+                cell = (x, yy)
+                if cell in blocked or cell in occupied:
+                    continue
+                path_cells.add(cell)
+        else:
+            for xx in range(layout.grid_cols):
+                cell = (xx, y)
+                if cell in blocked or cell in occupied:
+                    continue
+                path_cells.add(cell)
+    if not path_cells:
+        return 0
+    count = int(round(len(path_cells) * density))
+    return max(1, count)
+
+
 def _car_appearance_for_stage(stage: Stage | None) -> str:
     return "disabled" if stage and stage.endurance_stage else "default"
 
@@ -1214,8 +1292,10 @@ def spawn_initial_carrier_bots_and_materials(game_data: GameData) -> None:
     stage = game_data.stage
     if (
         not stage.carrier_bot_spawns
+        and float(stage.carrier_bot_spawn_density) <= 0.0
         and not stage.material_spawns
         and int(stage.material_spawns_from_carrier_paths) <= 0
+        and float(stage.material_spawn_density) <= 0.0
     ):
         return
     all_sprites = game_data.groups.all_sprites
@@ -1256,9 +1336,28 @@ def spawn_initial_carrier_bots_and_materials(game_data: GameData) -> None:
         carrier_spawn_plans.append(
             (spawn_cell[0], spawn_cell[1], str(axis), int(direction_sign))
         )
+    if float(stage.carrier_bot_spawn_density) > 0.0:
+        existing_cells = {(x, y) for x, y, _, _ in carrier_spawn_plans}
+        carrier_spawn_plans.extend(
+            _carrier_spawn_cells_from_density(
+                layout=game_data.layout,
+                cell_size=cell_size,
+                player=game_data.player,
+                density=float(stage.carrier_bot_spawn_density),
+                occupied_cells=existing_cells,
+            )
+        )
 
     material_spawns = list(stage.material_spawns)
     random_material_count = int(stage.material_spawns_from_carrier_paths)
+    if random_material_count <= 0 and float(stage.material_spawn_density) > 0.0:
+        random_material_count = _material_count_from_density_on_carrier_paths(
+            carrier_spawns=carrier_spawn_plans,
+            layout=game_data.layout,
+            pitfall_cells=pitfall_cells,
+            occupied_cells=occupied_cells | reserved_material_cells,
+            density=float(stage.material_spawn_density),
+        )
     if random_material_count > 0:
         material_spawns = _material_spawn_cells_from_carrier_paths(
             carrier_spawns=carrier_spawn_plans,

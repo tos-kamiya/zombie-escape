@@ -331,8 +331,7 @@ def _draw_overview_humanoids(
                 half * 2,
                 half * 2,
             )
-            pygame.draw.rect(surface, (200, 200, 200), bot_rect)
-            pygame.draw.rect(surface, (90, 45, 120), bot_rect, width=2)
+            pygame.draw.rect(surface, (90, 45, 120), bot_rect)
     if spiky_plants:
         for hp in spiky_plants:
             if hp.alive():

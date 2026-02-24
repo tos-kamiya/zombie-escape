@@ -340,11 +340,16 @@ class Stage:
     # Carrier bot spawn definitions in cell-space:
     # (cell_x, cell_y, axis, direction_sign)
     carrier_bot_spawns: list[tuple[int, int, str, int]] = field(default_factory=list)
+    # If > 0, randomly generate carrier bots from blueprint/layout cells.
+    carrier_bot_spawn_density: float = 0.0
     # Material spawn cells in cell-space: (cell_x, cell_y)
     material_spawns: list[tuple[int, int]] = field(default_factory=list)
     # If > 0, ignore `material_spawns` and randomly choose this many material cells
     # from carrier movement lines.
     material_spawns_from_carrier_paths: int = 0
+    # If > 0, randomly choose material cells from carrier movement lines
+    # using this density over candidate path cells.
+    material_spawn_density: float = 0.0
 
     def __post_init__(self) -> None:
         mode_raw = self.fuel_mode
@@ -383,6 +388,12 @@ class Stage:
             assert 0 <= int(x) < self.grid_cols and 0 <= int(y) < self.grid_rows, (
                 f"Stage {self.id}: material_spawns[{idx}] cell {(x, y)} is out of bounds"
             )
+        assert float(self.carrier_bot_spawn_density) >= 0.0, (
+            f"Stage {self.id}: carrier_bot_spawn_density must be >= 0"
+        )
+        assert float(self.material_spawn_density) >= 0.0, (
+            f"Stage {self.id}: material_spawn_density must be >= 0"
+        )
         assert int(self.material_spawns_from_carrier_paths) >= 0, (
             f"Stage {self.id}: material_spawns_from_carrier_paths must be >= 0"
         )
@@ -391,9 +402,22 @@ class Stage:
                 f"Stage {self.id}: material_spawns cannot be combined with "
                 "material_spawns_from_carrier_paths"
             )
-            assert self.carrier_bot_spawns, (
+            assert self.carrier_bot_spawns or float(self.carrier_bot_spawn_density) > 0.0, (
                 f"Stage {self.id}: material_spawns_from_carrier_paths requires "
-                "carrier_bot_spawns"
+                "carrier_bot_spawns or carrier_bot_spawn_density"
+            )
+        if float(self.material_spawn_density) > 0.0:
+            assert not self.material_spawns, (
+                f"Stage {self.id}: material_spawns cannot be combined with "
+                "material_spawn_density"
+            )
+            assert int(self.material_spawns_from_carrier_paths) == 0, (
+                f"Stage {self.id}: material_spawn_density cannot be combined with "
+                "material_spawns_from_carrier_paths"
+            )
+            assert self.carrier_bot_spawns or float(self.carrier_bot_spawn_density) > 0.0, (
+                f"Stage {self.id}: material_spawn_density requires "
+                "carrier_bot_spawns or carrier_bot_spawn_density"
             )
         for idx, (x, y, axis, direction_sign) in enumerate(self.carrier_bot_spawns):
             assert 0 <= int(x) < self.grid_cols and 0 <= int(y) < self.grid_rows, (

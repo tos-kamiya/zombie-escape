@@ -228,6 +228,10 @@
       "stage36": {
         "name": "#36 Material Warehouse",
         "description": "The upper and lower storage bands are packed with materials. Push through partition passages."
+      },
+      "stage37": {
+        "name": "#37 Chaotic Conveyor Yard",
+        "description": "A square floor where carrier bots and materials are scattered at random."
       }
     },
     "status": {
