@@ -8,7 +8,7 @@ English is the source of truth.
 - `docs/design/architecture.md`: Module layout and screen transitions.
 - `docs/design/data-models.md`: Core dataclasses (`GameData`, `ProgressState`, `Stage`, etc.).
 - `docs/design/entities.md`: Entity behavior and gameplay objects.
-- `docs/design/carrier-bot.md`: `CarrierBot` + `Material` draft specification (`INPROGRESS`).
+- `docs/design/carrier-bot.md`: `CarrierBot` + `Material` specification.
 - `docs/design/ai-zombies.md`: Zombie variants and AI behavior.
 - `docs/design/gameplay-flow.md`: Initialization, spawn, update, interaction flow, and pause transitions.
 - `docs/design/title-screen.md`: Title menu behavior and stage-select icon ordering rules.

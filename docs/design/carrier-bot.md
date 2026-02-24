@@ -1,36 +1,29 @@
-# Carrier Bot and Material (INPROGRESS)
+# Carrier Bot and Material
 
-Status: `INPROGRESS`
-
-This chapter defines the planned `CarrierBot` variant and the new passive
+This chapter defines the implemented `CarrierBot` variant and the passive
 `Material` entity.
 
 ## Scope
 
-- Introduce `CarrierBot` as a line-movement bot variant.
-- Introduce `Material` as a carryable passive object.
-- Reuse shared line-movement mechanics from a base class/mixin (working name:
-  `BaseLineBot`).
-- Keep this design separate from existing transport-bot features.
+- `CarrierBot` is a line-movement bot variant.
+- `Material` is a carryable passive object.
+- Shared line movement mechanics are reused via `BaseLineBot`.
+- This system is separate from `TransportBot`.
 
 ## Terminology
 
 - `Axis`: fixed move axis per bot instance (`x` or `y`).
-- `Forward cell`: one cell in the current facing direction along the assigned
-  axis.
 - `Loaded`: bot currently carries one `Material`.
 - `Unloaded`: bot does not carry material.
 
 ## `BaseLineBot` Responsibilities
 
-`BaseLineBot` should contain common movement mechanics, not role-specific AI.
+`BaseLineBot` contains shared mechanics, not role-specific AI.
 
 - Fixed-axis movement (`x`-axis or `y`-axis).
 - Direction state (`-1` / `+1`) and reverse operation.
 - Forward-cell computation.
-- Shared move-block checks:
-  - Collision/repulsion occupancy checks.
-  - Non-enterable terrain checks (puddle/pitfall policy can be configured).
+- Shared move-block helpers (axis wall checks, overlap resolution).
 - Shared wall-separation and position correction behavior.
 
 Role-specific decisions stay in derived classes (`PatrolBot`, `CarrierBot`):
@@ -44,17 +37,13 @@ Role-specific decisions stay in derived classes (`PatrolBot`, `CarrierBot`):
 `Material` is a dedicated entity and is not a robot subclass.
 
 - No autonomous movement.
-- Occupies space for collision/repulsion (other characters should not overlap).
+- On ground, it is represented as `layout.material_cells` and blocks humanoid
+  movement like wall-type cells.
 - Has carry state:
   - `carried_by: CarrierBot | None`
 - Position rule:
   - If `carried_by is None`, stays at world position.
   - If carrying, follows carrier anchor position every update tick.
-
-Optional future extensions (out of scope now):
-
-- Push/pull by player.
-- Burnable/breakable material variants.
 
 ## `CarrierBot` State Machine
 
@@ -65,62 +54,56 @@ Working states:
 
 `UNLOADED` tick behavior:
 
-1. Check forward cell.
-2. If a `Material` is directly ahead and loadable:
+1. Move along axis.
+2. If complete-overlap with a loadable `Material` occurs:
    - Attach that material (`carried_by = self`).
    - Reverse direction immediately.
-3. Else if forward movement is blocked:
+3. If movement is blocked:
    - Reverse direction.
-4. Else:
-   - Move forward one step according to speed.
 
 `LOADED` tick behavior:
 
 1. Check forward movement.
 2. If blocked:
-   - Drop carried material at current location (or nearest valid non-overlap
-     spot; exact drop resolution TBD).
+   - Drop carried material.
    - Reverse direction.
 3. Else:
    - Move forward while material follows.
+
+Drop rules:
+
+- Material drop uses cell-based placement, preferring safe cell centers near the
+  bot.
+- Placement avoids out-of-bounds/outside/outer-wall/pitfall/wall-overlap and
+  occupied material cells.
+- After drop, the same material is temporarily excluded from re-pickup until
+  the carrier separates.
 
 Constraints:
 
 - One carrier holds at most one material.
 - One material can be carried by at most one carrier.
-- Carrier and carried material should be treated as one moving unit for overlap
-  with third parties.
+- While carried, only the carrier collision is used.
 
-## Spawn/Stage Data (Planned)
+## Spawn/Stage Data
 
-- `CarrierBot` spawn should include:
-  - Position
-  - Axis (`x`/`y`)
-  - Initial direction (`-1`/`+1`)
-- `Material` spawn list should be explicit in stage data.
-- Stage authoring guideline:
-  - Place materials on the active lane where carrier patrols.
+- `Stage.carrier_bot_spawns`: `(cell_x, cell_y, axis, direction_sign)`
+- `Stage.material_spawns`: `(cell_x, cell_y)`
+- Spawn points are defined in cell-space and converted to cell centers.
+- Stage validation checks coordinate bounds and carrier parameter validity.
 
-## Collision and Terrain Policy (Planned)
+## Collision and Terrain Policy
 
-Shared by line bots unless overridden:
+- Carrier movement blocks on walls, outside/outer-wall cells, pitfall cells, and
+  relevant entity blockers.
+- Grounded materials participate via `material_cells` for humanoid grid-blocking.
 
-- Repulsion: no overlap with solid entities.
-- Non-enterable terrain: should include pitfall; puddle policy remains
-  configurable and must be made explicit during implementation.
-- Hazard entry (e.g. flame floor) should be controlled by bot-role policy, not
-  hardcoded in `BaseLineBot`.
+## Rendering/Layering
 
-## Rendering/Layering (Planned)
+- `CarrierBot` renders in vehicle layer.
+- Grounded `Material` renders in item layer.
+- Carried material position is synced to carrier center.
 
-- `CarrierBot` layer should remain compatible with existing bot layers.
-- Carried material should render visually attached to carrier.
-- Dropped material returns to normal entity layer ordering.
+## Notes
 
-## Open Items
-
-- Decide final class name: `BaseLineBot` vs `LineBotBase`.
-- Decide exact drop placement fallback when current cell is invalid.
-- Confirm puddle entry policy for bots (blocked or slow-only).
-- Confirm whether player can interact with `Material` directly.
-
+- `stage36` is configured as a verification stage for carrier/material behavior.

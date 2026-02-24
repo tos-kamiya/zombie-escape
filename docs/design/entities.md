@@ -51,9 +51,9 @@
   its direction only after a neutral-input frame and then a directional input.
 - Turn pattern cycles through right/left blocks (`TF`, `TTFF`, ...).
 
-## Carrier Bot and Material (INPROGRESS)
+## Carrier Bot and Material
 
-- Detailed draft spec lives in `docs/design/carrier-bot.md`.
+- Detailed spec lives in `docs/design/carrier-bot.md`.
 - `CarrierBot` is a line-movement variant that carries/drops `Material`.
 - `Material` is a passive, non-autonomous entity with collision occupancy.
 - Shared axis/direction/reverse movement mechanics should be factored into a
