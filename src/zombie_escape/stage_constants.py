@@ -200,6 +200,41 @@ def _build_stage36_fall_spawn_zones(grid_rows: int) -> list[tuple[int, int, int,
     return [(x, y, 1, 1) for x in room_center_x for y in doorway_rows]
 
 
+def _build_stage38_reinforced_wall_zones(
+    grid_cols: int, grid_rows: int
+) -> list[tuple[int, int, int, int]]:
+    """Build Head On-like multi-loop tracks with a central plaza."""
+    ring_offsets = [4, 7, 10]
+    center_row = grid_rows // 2
+    center_col = grid_cols // 2
+    # Keep all ring openings aligned to one centered 3-cell-wide cross passage.
+    gate_rows_by_ring = [
+        [center_row - 1, center_row, center_row + 1] for _ in ring_offsets
+    ]
+    gate_cols_by_ring = [
+        [center_col - 1, center_col, center_col + 1] for _ in ring_offsets
+    ]
+    wall_cells: set[tuple[int, int]] = set()
+    for idx, offset in enumerate(ring_offsets):
+        x0 = offset
+        x1 = grid_cols - 1 - offset
+        y0 = offset
+        y1 = grid_rows - 1 - offset
+        if x0 >= x1 or y0 >= y1:
+            continue
+        gate_rows = set(gate_rows_by_ring[idx])
+        gate_cols = set(gate_cols_by_ring[idx])
+        for x in range(x0, x1 + 1):
+            if x not in gate_cols:
+                wall_cells.add((x, y0))
+                wall_cells.add((x, y1))
+        for y in range(y0, y1 + 1):
+            if y not in gate_rows:
+                wall_cells.add((x0, y))
+                wall_cells.add((x1, y))
+    return [(x, y, 1, 1) for x, y in sorted(wall_cells)]
+
+
 STAGES: list[Stage] = [
     Stage(
         id="stage1",
@@ -1356,6 +1391,37 @@ STAGES: list[Stage] = [
         patrol_bot_spawn_rate=0.006,
         material_spawn_density=0.11,
         flashlight_spawn_count=3,
+        shoes_spawn_count=0,
+    ),
+    Stage(
+        id="stage38",
+        name_key="stages.stage38.name",
+        description_key="stages.stage38.description",
+        available=True,
+        cell_size=40,
+        grid_cols=39,
+        grid_rows=31,
+        wall_algorithm="empty",
+        fuel_mode=FuelMode.REFUEL_CHAIN,
+        exit_sides=["left", "right"],
+        reinforced_wall_zones=_build_stage38_reinforced_wall_zones(39, 31),
+        waiting_car_target_count=1,
+        initial_interior_spawn_rate=0.045,
+        exterior_spawn_weight=0.4,
+        interior_spawn_weight=0.6,
+        interior_fall_spawn_weight=0.0,
+        zombie_normal_ratio=0.25,
+        zombie_tracker_ratio=0.15,
+        zombie_wall_hugging_ratio=0.0,
+        zombie_lineformer_ratio=0.0,
+        zombie_dog_ratio=0.15,
+        zombie_tracker_dog_ratio=0.45,
+        zombie_nimble_dog_ratio=0.0,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
+        puddle_zones=[
+            (15, 14, 9, 3),
+        ],
+        flashlight_spawn_count=0,
         shoes_spawn_count=0,
     ),
 ]

@@ -232,6 +232,10 @@
       "stage37": {
         "name": "#37 Robots",
         "description": "A square floor where carrier bots and materials are scattered at random."
+      },
+      "stage38": {
+        "name": "#38 The Pursuers",
+        "description": "Footprint-tracking zombies and hounds. Avoid getting pincered."
       }
     },
     "status": {
