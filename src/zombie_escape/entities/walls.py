@@ -24,6 +24,7 @@ from ..render_assets import (
     paint_wall_surface,
     resolve_steel_beam_colors,
     resolve_wall_colors,
+    resolve_wall_outline_color,
     rubble_offset_for_size,
     RUBBLE_ROTATION_DEG,
 )
@@ -130,22 +131,89 @@ class Wall(pygame.sprite.Sprite):
             health_ratio = 0.0
         else:
             health_ratio = max(0.0, self.health / self.max_health)
-        fill_color, border_color = resolve_wall_colors(
+        fill_color, _border_color = resolve_wall_colors(
             health_ratio=health_ratio,
+            palette_category=self.palette_category,
+            palette=self.palette,
+        )
+        outline_color = resolve_wall_outline_color(
             palette_category=self.palette_category,
             palette=self.palette,
         )
         paint_wall_surface(
             self.image,
             fill_color=fill_color,
-            border_color=border_color,
+            outline_color=outline_color,
             bevel_depth=self.bevel_depth,
             bevel_mask=self.bevel_mask,
             draw_bottom_side=self.draw_bottom_side,
             bottom_side_ratio=self.bottom_side_ratio,
             side_shade_ratio=self.side_shade_ratio,
         )
+        self._paint_panel_relief(fill_color=fill_color)
         self._paint_damage_marks(health_ratio=health_ratio)
+
+    def _paint_panel_relief(
+        self: Self,
+        *,
+        fill_color: tuple[int, int, int],
+    ) -> None:
+        w, h = self.image.get_size()
+        if w <= 2 or h <= 2:
+            return
+        # Keep panel placement stable across tiles regardless of whether their
+        # bottom side is currently visible; this avoids per-tile vertical drift.
+        reference_side_height = max(1, int(h * max(0.0, self.bottom_side_ratio)))
+        top_height = max(1, h - reference_side_height)
+        top_rect = pygame.Rect(0, 0, w, top_height)
+
+        # Recessed panel effect inside the top face.
+        inset = max(2, min(w, top_height) // 6)
+        # Define the panel base rectangle first, independent of bevel details.
+        panel_rect = pygame.Rect(
+            top_rect.left + inset,
+            top_rect.top + inset,
+            max(1, top_rect.width - inset * 2),
+            max(1, top_rect.height - inset * 2),
+        )
+        # Make the decoration square slightly smaller on all sides (+1px inset each side).
+        panel_rect = panel_rect.inflate(-2, -2)
+        if panel_rect.width < 6 or panel_rect.height < 6:
+            return
+        panel_color = (
+            max(0, int(fill_color[0] * 0.96)),
+            max(0, int(fill_color[1] * 0.96)),
+            max(0, int(fill_color[2] * 0.96)),
+        )
+        panel_border = (
+            max(0, int(fill_color[0] * 0.72)),
+            max(0, int(fill_color[1] * 0.72)),
+            max(0, int(fill_color[2] * 0.72)),
+        )
+        panel_overlay = pygame.Surface(panel_rect.size, pygame.SRCALPHA)
+        local_rect = panel_overlay.get_rect()
+        pygame.draw.rect(panel_overlay, panel_color, local_rect)
+        pygame.draw.rect(panel_overlay, panel_border, local_rect, width=1)
+        # North edge accent: draw as an inset 2px band to avoid corner misalignment.
+        top_band = pygame.Rect(
+            1,
+            1,
+            max(1, local_rect.width - 2),
+            max(1, min(2, local_rect.height - 2)),
+        )
+        if top_band.width > 0 and top_band.height > 0:
+            pygame.draw.rect(panel_overlay, panel_border, top_band)
+        # Trim 1px from each corner for a subtle rounded-corner read.
+        corner_points = [
+            (0, 0),
+            (local_rect.width - 1, 0),
+            (0, local_rect.height - 1),
+            (local_rect.width - 1, local_rect.height - 1),
+        ]
+        for cx, cy in corner_points:
+            if 0 <= cx < local_rect.width and 0 <= cy < local_rect.height:
+                panel_overlay.set_at((cx, cy), (0, 0, 0, 0))
+        self.image.blit(panel_overlay, panel_rect.topleft)
 
     def _paint_damage_marks(self: Self, *, health_ratio: float) -> None:
         visibility_scale = 0.7
@@ -228,7 +296,7 @@ class RubbleWall(Wall):
             health_ratio = 0.0
         else:
             health_ratio = max(0.0, self.health / self.max_health)
-        fill_color, border_color = resolve_wall_colors(
+        fill_color, _border_color = resolve_wall_colors(
             health_ratio=health_ratio,
             palette_category=self.palette_category,
             palette=self.palette,
@@ -236,7 +304,8 @@ class RubbleWall(Wall):
         rubble_surface = build_rubble_wall_surface(
             self.image.get_width(),
             fill_color=fill_color,
-            border_color=border_color,
+            palette_category=self.palette_category,
+            palette=self.palette,
             angle_deg=self._rubble_rotation_deg,
             offset_px=self._rubble_offset_px,
             bevel_depth=self.bevel_depth,
@@ -291,10 +360,14 @@ class ReinforcedWall(Wall):
             palette_category="outer_wall",
             palette=self.palette,
         )
+        outline_color = resolve_wall_outline_color(
+            palette_category="outer_wall",
+            palette=self.palette,
+        )
         paint_wall_surface(
             self.image,
             fill_color=fill_color,
-            border_color=border_color,
+            outline_color=outline_color,
             bevel_depth=self.bevel_depth,
             bevel_mask=self.bevel_mask,
             draw_bottom_side=self.draw_bottom_side,

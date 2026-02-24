@@ -30,9 +30,10 @@ class EnvironmentPalette:
     fall_zone_secondary: tuple[int, int, int]
     outside: tuple[int, int, int]
     inner_wall: tuple[int, int, int]
-    inner_wall_border: tuple[int, int, int]
+    inner_wall_outline: tuple[int, int, int]
     outer_wall: tuple[int, int, int]
-    outer_wall_border: tuple[int, int, int]
+    reinforced_wall_frame: tuple[int, int, int]
+    outer_wall_outline: tuple[int, int, int]
     metal_floor_base: tuple[int, int, int]
     metal_floor_line: tuple[int, int, int]
     metal_floor_highlight: tuple[int, int, int]
@@ -72,9 +73,10 @@ _DEFAULT_ENVIRONMENT_PALETTE = EnvironmentPalette(
     fall_zone_secondary=(94, 54, 32),
     outside=(32, 60, 40),
     inner_wall=(125, 101, 78),
-    inner_wall_border=(136, 110, 85),
+    inner_wall_outline=(122, 98, 76),
     outer_wall=(136, 135, 128),
-    outer_wall_border=(147, 146, 138),
+    reinforced_wall_frame=(255, 0, 0),
+    outer_wall_outline=(125, 124, 117),
     metal_floor_base=(52, 56, 62),
     metal_floor_line=(78, 84, 94),
     metal_floor_highlight=(104, 112, 126),
@@ -116,8 +118,8 @@ _GLOOM_ENVIRONMENT_PALETTE = EnvironmentPalette(
         brightness=0.8,
         saturation=0.75,
     ),
-    inner_wall_border=_adjust_color(
-        _DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border,
+    inner_wall_outline=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.inner_wall_outline,
         brightness=0.8,
         saturation=0.75,
     ),
@@ -126,8 +128,13 @@ _GLOOM_ENVIRONMENT_PALETTE = EnvironmentPalette(
         brightness=0.8,
         saturation=0.75,
     ),
-    outer_wall_border=_adjust_color(
-        _DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border,
+    reinforced_wall_frame=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.reinforced_wall_frame,
+        brightness=0.8,
+        saturation=0.75,
+    ),
+    outer_wall_outline=_adjust_color(
+        _DEFAULT_ENVIRONMENT_PALETTE.outer_wall_outline,
         brightness=0.8,
         saturation=0.75,
     ),
@@ -175,9 +182,10 @@ _DAWN_ENVIRONMENT_PALETTE = EnvironmentPalette(
     fall_zone_secondary=(95, 44, 33),
     outside=(118, 140, 104),
     inner_wall=(125, 101, 78),
-    inner_wall_border=(136, 110, 85),
+    inner_wall_outline=_DEFAULT_ENVIRONMENT_PALETTE.inner_wall_outline,
     outer_wall=(136, 135, 128),
-    outer_wall_border=(147, 146, 138),
+    reinforced_wall_frame=(147, 146, 138),
+    outer_wall_outline=_DEFAULT_ENVIRONMENT_PALETTE.outer_wall_outline,
     metal_floor_base=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_base,
     metal_floor_line=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_line,
     metal_floor_highlight=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_highlight,
@@ -194,9 +202,10 @@ _STUDIO_ENVIRONMENT_PALETTE = EnvironmentPalette(
     fall_zone_secondary=_DEFAULT_ENVIRONMENT_PALETTE.fall_zone_secondary,
     outside=WHITE,
     inner_wall=_DEFAULT_ENVIRONMENT_PALETTE.inner_wall,
-    inner_wall_border=_DEFAULT_ENVIRONMENT_PALETTE.inner_wall_border,
+    inner_wall_outline=_DEFAULT_ENVIRONMENT_PALETTE.inner_wall_outline,
     outer_wall=_DEFAULT_ENVIRONMENT_PALETTE.outer_wall,
-    outer_wall_border=_DEFAULT_ENVIRONMENT_PALETTE.outer_wall_border,
+    reinforced_wall_frame=_DEFAULT_ENVIRONMENT_PALETTE.reinforced_wall_frame,
+    outer_wall_outline=_DEFAULT_ENVIRONMENT_PALETTE.outer_wall_outline,
     metal_floor_base=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_base,
     metal_floor_line=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_line,
     metal_floor_highlight=_DEFAULT_ENVIRONMENT_PALETTE.metal_floor_highlight,

@@ -41,18 +41,18 @@ def resolve_wall_colors(
         palette = get_environment_palette(None)
     if palette_category == "outer_wall":
         base_color = palette.outer_wall
-        border_base_color = palette.outer_wall_border
+        border_base_color = palette.reinforced_wall_frame
         fill_min = 0.16
         fill_span = 0.84
         border_min = 0.40
         border_span = 0.60
     else:
         base_color = palette.inner_wall
-        border_base_color = palette.inner_wall_border
         fill_min = 0.14
         fill_span = 0.86
-        border_min = 0.42
-        border_span = 0.58
+        border_base_color = base_color
+        border_min = fill_min
+        border_span = fill_span
 
     ratio = max(0.0, min(1.0, health_ratio))
     mix = fill_min + fill_span * ratio
@@ -68,6 +68,18 @@ def resolve_wall_colors(
         int(border_base_color[2] * border_mix),
     )
     return fill_color, border_color
+
+
+def resolve_wall_outline_color(
+    *,
+    palette_category: str,
+    palette: EnvironmentPalette | None,
+) -> tuple[int, int, int]:
+    if palette is None:
+        palette = get_environment_palette(None)
+    if palette_category == "outer_wall":
+        return palette.outer_wall_outline
+    return palette.inner_wall_outline
 
 
 def paint_wall_damage_overlay(
@@ -269,7 +281,7 @@ def paint_wall_surface(
     surface: pygame.Surface,
     *,
     fill_color: tuple[int, int, int],
-    border_color: tuple[int, int, int],
+    outline_color: tuple[int, int, int],
     bevel_depth: int,
     bevel_mask: tuple[bool, bool, bool, bool],
     draw_bottom_side: bool,
@@ -292,27 +304,11 @@ def paint_wall_surface(
             face_polygon = build_beveled_polygon(
                 face_width, face_height, bevel_depth, bevel_mask
             )
-            pygame.draw.polygon(target, border_color, face_polygon)
+            pygame.draw.polygon(target, fill_color, face_polygon)
+            pygame.draw.polygon(target, outline_color, face_polygon, width=1)
         else:
-            target.fill(border_color)
-        border_width = 18
-        inner_rect = target.get_rect().inflate(-border_width, -border_width)
-        if inner_rect.width > 0 and inner_rect.height > 0:
-            inner_depth = max(0, bevel_depth - border_width)
-            if inner_depth > 0 and any(bevel_mask):
-                inner_polygon = build_beveled_polygon(
-                    inner_rect.width, inner_rect.height, inner_depth, bevel_mask
-                )
-                inner_offset_polygon = [
-                    (
-                        int(point[0] + inner_rect.left),
-                        int(point[1] + inner_rect.top),
-                    )
-                    for point in inner_polygon
-                ]
-                pygame.draw.polygon(target, fill_color, inner_offset_polygon)
-            else:
-                pygame.draw.rect(target, fill_color, inner_rect)
+            target.fill(fill_color)
+            pygame.draw.rect(target, outline_color, target.get_rect(), width=1)
 
     if draw_bottom_side:
         extra_height = max(0, int(bevel_depth / 2))
@@ -353,7 +349,8 @@ def build_rubble_wall_surface(
     size: int,
     *,
     fill_color: tuple[int, int, int],
-    border_color: tuple[int, int, int],
+    palette_category: str = "inner_wall",
+    palette: EnvironmentPalette | None = None,
     angle_deg: float,
     offset_px: int | None = None,
     scale_ratio: float = RUBBLE_SCALE_RATIO,
@@ -367,7 +364,17 @@ def build_rubble_wall_surface(
     cache_key = (
         safe_size,
         fill_color,
-        border_color,
+        palette_category,
+        (
+            tuple(int(c) for c in palette.inner_wall_outline)
+            if palette is not None
+            else None
+        ),
+        (
+            tuple(int(c) for c in palette.outer_wall_outline)
+            if palette is not None
+            else None
+        ),
         angle_deg,
         offset_px,
         scale_ratio,
@@ -379,10 +386,14 @@ def build_rubble_wall_surface(
         return cached
 
     top_surface = pygame.Surface((base_size, base_size), pygame.SRCALPHA)
+    outline_color = resolve_wall_outline_color(
+        palette_category=palette_category,
+        palette=palette,
+    )
     paint_wall_surface(
         top_surface,
         fill_color=fill_color,
-        border_color=border_color,
+        outline_color=outline_color,
         bevel_depth=tuned_bevel,
         bevel_mask=(False, False, False, False),
         draw_bottom_side=False,
@@ -391,12 +402,16 @@ def build_rubble_wall_surface(
     )
 
     shadow_fill = scale_color(fill_color, ratio=shadow_ratio)
-    shadow_border = scale_color(border_color, ratio=shadow_ratio)
+    shadow_outline = resolve_wall_outline_color(
+        palette_category=palette_category,
+        palette=palette,
+    )
+    shadow_outline = scale_color(shadow_outline, ratio=shadow_ratio)
     shadow_surface = pygame.Surface((base_size, base_size), pygame.SRCALPHA)
     paint_wall_surface(
         shadow_surface,
         fill_color=shadow_fill,
-        border_color=shadow_border,
+        outline_color=shadow_outline,
         bevel_depth=tuned_bevel,
         bevel_mask=(False, False, False, False),
         draw_bottom_side=False,

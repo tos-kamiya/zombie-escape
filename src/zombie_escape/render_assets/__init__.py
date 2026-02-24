@@ -39,6 +39,7 @@ from .walls import (
     paint_wall_surface,
     resolve_steel_beam_colors,
     resolve_wall_colors,
+    resolve_wall_outline_color,
     rubble_offset_for_size,
 )
 
@@ -48,6 +49,7 @@ __all__ = [
     "RenderAssets",
     "build_beveled_polygon",
     "resolve_wall_colors",
+    "resolve_wall_outline_color",
     "paint_wall_damage_overlay",
     "resolve_car_color",
     "resolve_steel_beam_colors",
