@@ -121,6 +121,16 @@ Puddle interaction with footprints:
 - Zombies can fall and be removed when entering pitfall cells.
 - Wander logic attempts pitfall avoidance; chase paths may still fall.
 
+## Wall and Material Collision (Runtime)
+
+- Zombie and zombie-dog overlap against walls/material blockers is resolved by
+  position-based circle separation (`separate_circle_from_blockers`), shared
+  with humanoid-style movement codepaths.
+- Grounded materials are treated as wall-equivalent blockers through
+  `layout.material_cells`.
+- Zombie wall damage remains enabled, but is limited to the first collided wall
+  in a frame (single wall-damage application per frame).
+
 ## Solitary Notes
 
 - Decision cadence is fixed at 10 frames; the chosen move vector is committed for that window.

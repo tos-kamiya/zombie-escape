@@ -31,6 +31,13 @@
     `first_extra_clearance=6.0`) and fall back to `last_safe_pos` if still stuck.
   - Patrol bot parameters prioritize conservative correction (`scale=1.0`,
     no extra clearance) and fall back to its current position if still stuck.
+- Player/survivor/buddy/zombie/zombie-dog wall-equivalent collision now uses a
+  shared position-based separation pass
+  (`separate_circle_from_blockers(...)` in `entities/movement_helpers.py`).
+  - Collision blockers include wall sprites and grid blockers such as
+    `layout.material_cells`.
+  - This model resolves penetration from current geometry relation (not only
+    from per-axis rollback decisions).
 
 ## Footprints
 
