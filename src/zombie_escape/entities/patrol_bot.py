@@ -25,7 +25,11 @@ from ..render_constants import ANGLE_BINS
 from ..rng import get_rng
 from ..surface_effects import is_in_puddle_cell
 from ..world_grid import apply_cell_edge_nudge
-from .movement import _circle_wall_collision, separate_circle_from_walls
+from .movement import (
+    _circle_rect_collision,
+    _circle_wall_collision,
+    separate_circle_from_walls,
+)
 from .walls import Wall
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
@@ -282,6 +286,39 @@ class PatrolBot(pygame.sprite.Sprite):
             walls=walls,
             radius=collision_radius,
         )
+        hit_material = False
+        if cell_size > 0 and layout.material_cells:
+            def _collides_material_cells(check_x: float, check_y: float) -> bool:
+                radius = collision_radius
+                min_cell_x = max(0, int((check_x - radius) // cell_size))
+                max_cell_x = min(layout.grid_cols - 1, int((check_x + radius) // cell_size))
+                min_cell_y = max(0, int((check_y - radius) // cell_size))
+                max_cell_y = min(layout.grid_rows - 1, int((check_y + radius) // cell_size))
+                for cy in range(min_cell_y, max_cell_y + 1):
+                    for cx in range(min_cell_x, max_cell_x + 1):
+                        if (cx, cy) not in layout.material_cells:
+                            continue
+                        rect = pygame.Rect(
+                            cx * cell_size,
+                            cy * cell_size,
+                            cell_size,
+                            cell_size,
+                        )
+                        if _circle_rect_collision((check_x, check_y), radius, rect):
+                            return True
+                return False
+
+            material_x = final_x
+            material_y = final_y
+            if next_x != self.x and _collides_material_cells(next_x, self.y):
+                material_x = self.x
+                hit_material = True
+            if next_y != self.y and _collides_material_cells(material_x, next_y):
+                material_y = self.y
+                hit_material = True
+            final_x = material_x
+            final_y = material_y
+
         hit_bot = False
         possible_bots = []
         if patrol_bot_group:
@@ -423,6 +460,7 @@ class PatrolBot(pygame.sprite.Sprite):
             self.pause_until_ms = now + PATROL_BOT_HUMANOID_PAUSE_MS
         elif (
             hit_wall
+            or hit_material
             or hit_pitfall
             or hit_bot
             or hit_car
