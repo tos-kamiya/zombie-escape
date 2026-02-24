@@ -107,6 +107,7 @@ def move_axis_with_pitfall(
     collide: Callable[[], T | None],
     cell_size: int | None,
     pitfall_cells: set[tuple[int, int]],
+    blocked_cells: set[tuple[int, int]] | None = None,
     pending_fall_cells: set[tuple[int, int]] | None = None,
     can_jump_now: bool,
     now: int,
@@ -133,7 +134,13 @@ def move_axis_with_pitfall(
         sprite.rect.centery = int(sprite.y)  # type: ignore[attr-defined]
 
     hit = collide()
+    blocked_by_cell = False
     blocked_by_pitfall = False
+
+    if blocked_cells and cell_size:
+        cx = int(sprite.rect.centerx // cell_size)
+        cy = int(sprite.rect.centery // cell_size)
+        blocked_by_cell = (cx, cy) in blocked_cells
 
     if not sprite.is_jumping and pitfall_cells and cell_size:  # type: ignore[attr-defined]
         cx = int(sprite.rect.centerx // cell_size)
@@ -145,7 +152,7 @@ def move_axis_with_pitfall(
             else:
                 blocked_by_pitfall = True
 
-    if hit or blocked_by_pitfall:
+    if hit or blocked_by_cell or blocked_by_pitfall:
         if hit and on_wall_hit is not None:
             on_wall_hit(hit)
         if blocked_by_pitfall and cell_size:

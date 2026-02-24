@@ -249,6 +249,7 @@ def update_entities(
             walls_nearby=wall_index is not None,
             cell_size=game_data.cell_size,
             pitfall_cells=pitfall_cells,
+            blocked_cells=game_data.layout.material_cells,
         )
         if getattr(active_car, "pending_pitfall_fall", False):
             active_car.health = 0

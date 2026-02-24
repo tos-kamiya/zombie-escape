@@ -96,7 +96,10 @@ Constraints:
 
 - Carrier movement blocks on walls, outside/outer-wall cells, pitfall cells, and
   relevant entity blockers.
-- Grounded materials participate via `material_cells` for humanoid grid-blocking.
+- Grounded materials participate via `material_cells` as wall-equivalent blockers:
+  player, survivors, car, and zombie variants cannot enter those cells.
+- While carried, material does not occupy `material_cells`; only carrier collision
+  is effective.
 
 ## Rendering/Layering
 

@@ -114,7 +114,7 @@ class Survivor(pygame.sprite.Sprite):
     ) -> None:
         self.pending_pitfall_fall = False
         pitfall_cells = layout.pitfall_cells
-        blocked_cells = pitfall_cells | layout.material_cells
+        blocked_cells = layout.material_cells
         jumpable_hazard_cells = pitfall_cells
         walkable_cells = layout.walkable_cells
         level_width = layout.field_rect.width
@@ -223,7 +223,8 @@ class Survivor(pygame.sprite.Sprite):
             move_y,
             collide=_collide,
             cell_size=cell_size,
-            pitfall_cells=blocked_cells,
+            pitfall_cells=pitfall_cells,
+            blocked_cells=blocked_cells,
             pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
@@ -344,7 +345,8 @@ class Survivor(pygame.sprite.Sprite):
             move_y,
             collide=lambda: self._collide_walls(walls, wall_index, cell_size, layout),
             cell_size=cell_size,
-            pitfall_cells=blocked_cells,
+            pitfall_cells=pitfall_cells,
+            blocked_cells=blocked_cells,
             pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
@@ -460,7 +462,8 @@ class Survivor(pygame.sprite.Sprite):
             move_y,
             collide=lambda: self._collide_walls(walls, wall_index, cell_size, layout),
             cell_size=cell_size,
-            pitfall_cells=blocked_cells,
+            pitfall_cells=pitfall_cells,
+            blocked_cells=blocked_cells,
             pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
@@ -507,6 +510,7 @@ class Survivor(pygame.sprite.Sprite):
         collide: Callable[[], Wall | None],
         cell_size: int | None,
         pitfall_cells: set[tuple[int, int]],
+        blocked_cells: set[tuple[int, int]],
         pending_fall_cells: set[tuple[int, int]],
         can_jump_now: bool,
         now: int,
@@ -520,6 +524,7 @@ class Survivor(pygame.sprite.Sprite):
             collide=collide,
             cell_size=cell_size,
             pitfall_cells=pitfall_cells,
+            blocked_cells=blocked_cells,
             pending_fall_cells=pending_fall_cells,
             can_jump_now=can_jump_now,
             now=now,
@@ -533,6 +538,7 @@ class Survivor(pygame.sprite.Sprite):
             collide=collide,
             cell_size=cell_size,
             pitfall_cells=pitfall_cells,
+            blocked_cells=blocked_cells,
             pending_fall_cells=pending_fall_cells,
             can_jump_now=can_jump_now,
             now=now,

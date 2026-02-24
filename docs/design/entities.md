@@ -56,6 +56,8 @@
 - Detailed spec lives in `docs/design/carrier-bot.md`.
 - `CarrierBot` is a line-movement variant that carries/drops `Material`.
 - `Material` is a passive, non-autonomous entity with collision occupancy.
+- Grounded `Material` cells are treated as wall-equivalent blockers for player,
+  survivors, car, and zombie variants.
 - Shared axis/direction/reverse movement mechanics should be factored into a
   base line-bot component to avoid role-logic duplication.
 

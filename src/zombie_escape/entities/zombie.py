@@ -54,7 +54,7 @@ from ..rng import get_rng
 from ..surface_effects import SpikyPlantLike, is_in_contaminated_cell, is_in_puddle_cell
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from ..world_grid import apply_cell_edge_nudge
-from .movement import _circle_wall_collision
+from .movement import _circle_rect_collision, _circle_wall_collision
 from .zombie_movement import (
     _zombie_lineformer_train_head_movement,
     _zombie_solitary_movement,
@@ -765,6 +765,32 @@ class Zombie(pygame.sprite.Sprite):
         self._refresh_variant_image()
         self.last_move_dx = move_x
         self.last_move_dy = move_y
+        blocked_material_cells = (
+            layout.material_cells if cell_size > 0 else set()
+        )
+
+        def _collides_material_cells(check_x: float, check_y: float) -> bool:
+            if cell_size <= 0 or not blocked_material_cells:
+                return False
+            radius = self.collision_radius
+            min_cell_x = max(0, int((check_x - radius) // cell_size))
+            max_cell_x = min(layout.grid_cols - 1, int((check_x + radius) // cell_size))
+            min_cell_y = max(0, int((check_y - radius) // cell_size))
+            max_cell_y = min(layout.grid_rows - 1, int((check_y + radius) // cell_size))
+            for cy in range(min_cell_y, max_cell_y + 1):
+                for cx in range(min_cell_x, max_cell_x + 1):
+                    if (cx, cy) not in blocked_material_cells:
+                        continue
+                    rect = pygame.Rect(
+                        cx * cell_size,
+                        cy * cell_size,
+                        cell_size,
+                        cell_size,
+                    )
+                    if _circle_rect_collision((check_x, check_y), radius, rect):
+                        return True
+            return False
+
         possible_walls = [
             w
             for w in walls
@@ -775,6 +801,8 @@ class Zombie(pygame.sprite.Sprite):
         final_y = self.y
         if move_x:
             next_x = final_x + move_x
+            if _collides_material_cells(next_x, final_y):
+                next_x = final_x
             for wall in possible_walls:
                 if _circle_wall_collision(
                     (next_x, final_y), self.collision_radius, wall
@@ -787,6 +815,8 @@ class Zombie(pygame.sprite.Sprite):
             final_x = next_x
         if move_y:
             next_y = final_y + move_y
+            if _collides_material_cells(final_x, next_y):
+                next_y = final_y
             for wall in possible_walls:
                 if _circle_wall_collision(
                     (final_x, next_y), self.collision_radius, wall

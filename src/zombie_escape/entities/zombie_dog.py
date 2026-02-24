@@ -124,7 +124,7 @@ def _pick_charge_target_around_player(
             continue
         if cell_size > 0:
             target_cell = (int(tx // cell_size), int(ty // cell_size))
-            if target_cell in layout.wall_cells:
+            if target_cell in layout.wall_cells or target_cell in layout.material_cells:
                 continue
         # Avoid micro-charge that looks like jitter.
         if math.hypot(tx - zombie_dog.x, ty - zombie_dog.y) < zombie_dog.speed_assault * 6.0:
@@ -770,6 +770,7 @@ class ZombieDog(pygame.sprite.Sprite):
         blocked_cells = set(layout.wall_cells)
         blocked_cells.update(layout.outer_wall_cells)
         blocked_cells.update(layout.steel_beam_cells)
+        blocked_cells.update(layout.material_cells)
 
         def _collides(x: float, y: float) -> bool:
             radius = self.collision_radius

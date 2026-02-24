@@ -218,6 +218,7 @@ def _wall_hug_blocked_cells(layout: "LevelLayout") -> set[tuple[int, int]]:
     blocked.update(layout.outer_wall_cells)
     blocked.update(layout.steel_beam_cells)
     blocked.update(layout.fire_floor_cells)
+    blocked.update(layout.material_cells)
     return blocked
 
 

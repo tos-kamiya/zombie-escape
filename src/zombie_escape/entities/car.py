@@ -105,17 +105,17 @@ class Car(pygame.sprite.Sprite):
         cx, cy = self._collision_center(self.x, self.y)
         return (int(round(cx)), int(round(cy))), float(self.collision_radius)
 
-    def _pitfall_cell_at_position(
+    def _cell_at_position(
         self: Self,
         x: float,
         y: float,
         *,
         cell_size: int,
-        pitfall_cells: set[tuple[int, int]],
+        cells: set[tuple[int, int]],
     ) -> tuple[int, int] | None:
         cx, cy = self._collision_center(x, y)
         cell = (int(cx // cell_size), int(cy // cell_size))
-        if cell in pitfall_cells:
+        if cell in cells:
             return cell
         return None
 
@@ -142,6 +142,7 @@ class Car(pygame.sprite.Sprite):
         walls_nearby: bool = False,
         cell_size: int | None = None,
         pitfall_cells: set[tuple[int, int]] | None = None,
+        blocked_cells: set[tuple[int, int]] | None = None,
     ) -> None:
         if self.health <= 0:
             return
@@ -173,16 +174,27 @@ class Car(pygame.sprite.Sprite):
         entered_pitfall = False
         if pitfall_cells and cell_size:
             entered_pitfall = (
-                self._pitfall_cell_at_position(
+                self._cell_at_position(
                     new_x,
                     new_y,
                     cell_size=cell_size,
-                    pitfall_cells=pitfall_cells,
+                    cells=pitfall_cells,
+                )
+                is not None
+            )
+        entered_blocked = False
+        if blocked_cells and cell_size:
+            entered_blocked = (
+                self._cell_at_position(
+                    new_x,
+                    new_y,
+                    cell_size=cell_size,
+                    cells=blocked_cells,
                 )
                 is not None
             )
 
-        if hit_walls or entered_pitfall:
+        if hit_walls or entered_blocked or entered_pitfall:
             if hit_walls:
                 self._take_damage(CAR_WALL_DAMAGE)
                 hit_walls.sort(
@@ -207,17 +219,21 @@ class Car(pygame.sprite.Sprite):
                 new_y += center_after[1] - center_before[1]
                 if not separated:
                     new_x, new_y = self.last_safe_pos
+            elif entered_blocked:
+                # Wall-equivalent grid blockers (e.g. materials): stop without pitfall behavior.
+                new_x = self.x
+                new_y = self.y
             else:
                 # Pitfall only: bounce back from current position
                 new_x = self.x - dx * 0.5
                 new_y = self.y - dy * 0.5
 
         if pitfall_cells and cell_size:
-            pitfall_cell = self._pitfall_cell_at_position(
+            pitfall_cell = self._cell_at_position(
                 new_x,
                 new_y,
                 cell_size=cell_size,
-                pitfall_cells=pitfall_cells,
+                cells=pitfall_cells,
             )
             if pitfall_cell is not None:
                 if self._is_pitfall_fall_position(
@@ -232,11 +248,11 @@ class Car(pygame.sprite.Sprite):
                 else:
                     bounce_x = self.x - dx * 0.5
                     bounce_y = self.y - dy * 0.5
-                    bounce_cell = self._pitfall_cell_at_position(
+                    bounce_cell = self._cell_at_position(
                         bounce_x,
                         bounce_y,
                         cell_size=cell_size,
-                        pitfall_cells=pitfall_cells,
+                        cells=pitfall_cells,
                     )
                     if bounce_cell is None:
                         new_x = bounce_x
@@ -252,11 +268,11 @@ class Car(pygame.sprite.Sprite):
         if not (
             pitfall_cells
             and cell_size
-            and self._pitfall_cell_at_position(
+            and self._cell_at_position(
                 self.x,
                 self.y,
                 cell_size=cell_size,
-                pitfall_cells=pitfall_cells,
+                cells=pitfall_cells,
             )
         ):
             self.last_safe_pos = (self.x, self.y)
