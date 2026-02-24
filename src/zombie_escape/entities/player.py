@@ -32,10 +32,11 @@ from ..render_assets import (
 )
 from ..render_constants import ANGLE_BINS, PLAYER_SHADOW_RADIUS_MULT
 from ..world_grid import WallIndex, walls_for_radius
-from .collisions import collide_circle_custom, spritecollideany_walls
-from .movement import _can_humanoid_jump, _circle_wall_collision, _get_jump_scale
+from .collisions import collide_circle_custom
+from .movement import _can_humanoid_jump, _get_jump_scale
 from .movement_helpers import (
     move_axis_with_pitfall,
+    separate_circle_from_blockers,
     set_facing_bin,
     update_directional_image_scale,
 )
@@ -159,43 +160,36 @@ class Player(pygame.sprite.Sprite):
         inner_wall_hit = False
         inner_wall_cell: tuple[int, int] | None = None
 
-        def _on_player_wall_hit(hit_wall: Wall | None) -> None:
+        def _apply_player_wall_damage(hit_walls: list[pygame.sprite.Sprite]) -> None:
             nonlocal inner_wall_hit, inner_wall_cell
-            if hit_wall is None or not hasattr(hit_wall, "_take_damage"):
+            targets = [
+                wall
+                for wall in hit_walls
+                if wall is not None and hasattr(wall, "_take_damage") and wall.alive()
+            ]
+            if not targets:
                 return
             damage = max(1, PLAYER_WALL_DAMAGE)
-            radius = float(getattr(self, "collision_radius", self.radius))
-            center = (self.x, self.y)
-            if wall_index is None:
-                wall_candidates = [wall for wall in walls if wall.alive()]
-            else:
-                if cell_size is None:
-                    wall_candidates = []
-                else:
-                    wall_candidates = walls_for_radius(
-                        wall_index,
-                        center,
-                        radius,
-                        cell_size=cell_size,
-                        grid_cols=grid_cols,
-                        grid_rows=grid_rows,
-                    )
-            collided_walls = [
-                wall
-                for wall in wall_candidates
-                if wall.alive() and _circle_wall_collision(center, radius, wall)
-            ]
-            targets = collided_walls or [hit_wall]
-            split_count = len(targets)
+            unique_targets: list[pygame.sprite.Sprite] = []
+            seen: set[int] = set()
+            for wall in targets:
+                key = id(wall)
+                if key in seen:
+                    continue
+                seen.add(key)
+                unique_targets.append(wall)
+            split_count = len(unique_targets)
             if split_count <= 0:
                 return
             base_damage = damage // split_count
             remainder = damage % split_count
-            for idx, wall in enumerate(targets):
+            for idx, wall in enumerate(unique_targets):
                 wall_damage = base_damage + (1 if idx < remainder else 0)
                 if wall_damage > 0 and wall.alive():
                     wall._take_damage(amount=wall_damage)
-            inner_wall = next((wall for wall in targets if _is_inner_wall(wall)), None)
+            inner_wall = next(
+                (wall for wall in unique_targets if _is_inner_wall(wall)), None
+            )
             if inner_wall is not None:
                 inner_wall_hit = True
                 if inner_wall_cell is None and cell_size:
@@ -205,15 +199,7 @@ class Player(pygame.sprite.Sprite):
                     )
 
         def _collide_player() -> Wall | None:
-            hit_wall = spritecollideany_walls(
-                self,
-                walls,
-                wall_index=wall_index,
-                cell_size=cell_size,
-                grid_cols=grid_cols if cell_size else None,
-                grid_rows=grid_rows if cell_size else None,
-            )
-            return hit_wall
+            return None
 
         move_axis_with_pitfall(
             sprite=self,
@@ -222,13 +208,12 @@ class Player(pygame.sprite.Sprite):
             collide=_collide_player,
             cell_size=cell_size,
             pitfall_cells=pitfall_hazard_cells,
-            blocked_cells=material_cells,
+            blocked_cells=None,
             pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
             rollback_factor=1.0,
             clamp_range=(0.0, level_width),
-            on_wall_hit=_on_player_wall_hit,
         )
 
         move_axis_with_pitfall(
@@ -238,14 +223,45 @@ class Player(pygame.sprite.Sprite):
             collide=_collide_player,
             cell_size=cell_size,
             pitfall_cells=pitfall_hazard_cells,
-            blocked_cells=material_cells,
+            blocked_cells=None,
             pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
             rollback_factor=1.0,
             clamp_range=(0.0, level_height),
-            on_wall_hit=_on_player_wall_hit,
         )
+
+        wall_candidates: list[pygame.sprite.Sprite]
+        if wall_index is None:
+            wall_candidates = [wall for wall in walls if wall.alive()]
+        elif cell_size is None:
+            wall_candidates = []
+        else:
+            wall_candidates = list(
+                walls_for_radius(
+                    wall_index,
+                    (self.x, self.y),
+                    float(getattr(self, "collision_radius", self.radius)),
+                    cell_size=cell_size,
+                    grid_cols=grid_cols,
+                    grid_rows=grid_rows,
+                )
+            )
+        separation = separate_circle_from_blockers(
+            x=self.x,
+            y=self.y,
+            radius=float(getattr(self, "collision_radius", self.radius)),
+            walls=wall_candidates,
+            cell_size=int(cell_size or 0),
+            blocked_cells=material_cells,
+            grid_cols=grid_cols,
+            grid_rows=grid_rows,
+            max_attempts=5,
+        )
+        self.x = separation.x
+        self.y = separation.y
+        if separation.hit_walls:
+            _apply_player_wall_damage(separation.hit_walls)
 
         self.rect.center = (int(self.x), int(self.y))
         if inner_wall_hit:

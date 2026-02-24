@@ -60,7 +60,7 @@ from ..render_assets import (
 )
 from ..world_grid import apply_cell_edge_nudge
 from .zombie import Zombie
-from .movement import _circle_rect_collision
+from .movement_helpers import separate_circle_from_blockers
 from .tracker_scent import TrackerScentState, update_tracker_target_from_footprints
 from .zombie_visuals import build_grayscale_image
 from .zombie_vitals import ZombieVitals
@@ -761,52 +761,30 @@ class ZombieDog(pygame.sprite.Sprite):
         next_x: float,
         next_y: float,
         *,
+        walls: list[pygame.sprite.Sprite],
         cell_size: int,
         layout,
     ) -> tuple[float, float, bool, bool]:
-        if cell_size <= 0:
+        if cell_size <= 0 or layout.grid_cols <= 0 or layout.grid_rows <= 0:
             return next_x, next_y, False, False
-
-        blocked_cells = set(layout.wall_cells)
-        blocked_cells.update(layout.outer_wall_cells)
-        blocked_cells.update(layout.steel_beam_cells)
-        blocked_cells.update(layout.material_cells)
-
-        def _collides(x: float, y: float) -> bool:
-            radius = self.collision_radius
-            min_cell_x = max(0, int((x - radius) // cell_size))
-            max_cell_x = min(layout.grid_cols - 1, int((x + radius) // cell_size))
-            min_cell_y = max(0, int((y - radius) // cell_size))
-            max_cell_y = min(layout.grid_rows - 1, int((y + radius) // cell_size))
-            for cy in range(min_cell_y, max_cell_y + 1):
-                for cx in range(min_cell_x, max_cell_x + 1):
-                    if (cx, cy) not in blocked_cells:
-                        continue
-                    rect = pygame.Rect(
-                        cx * cell_size,
-                        cy * cell_size,
-                        cell_size,
-                        cell_size,
-                    )
-                    if _circle_rect_collision((x, y), radius, rect):
-                        return True
-            return False
-
-        hit_x = False
-        hit_y = False
-        final_x = self.x
-        final_y = self.y
-        if next_x != self.x:
-            if _collides(next_x, final_y):
-                hit_x = True
-                next_x = self.x
-            final_x = next_x
-        if next_y != self.y:
-            if _collides(final_x, next_y):
-                hit_y = True
-                next_y = self.y
-            final_y = next_y
-        return final_x, final_y, hit_x, hit_y
+        attempted_dx = next_x - self.x
+        attempted_dy = next_y - self.y
+        separation = separate_circle_from_blockers(
+            x=next_x,
+            y=next_y,
+            radius=self.collision_radius,
+            walls=walls,
+            cell_size=cell_size,
+            blocked_cells=layout.material_cells,
+            grid_cols=layout.grid_cols,
+            grid_rows=layout.grid_rows,
+            max_attempts=5,
+        )
+        resolved_dx = separation.x - self.x
+        resolved_dy = separation.y - self.y
+        hit_x = abs(attempted_dx - resolved_dx) > 1e-6 and abs(attempted_dx) > 0.0
+        hit_y = abs(attempted_dy - resolved_dy) > 1e-6 and abs(attempted_dy) > 0.0
+        return separation.x, separation.y, hit_x, hit_y
 
     def _refresh_variant_image(self: Self) -> None:
         self.image = self.directional_images[self.facing_bin]
@@ -853,7 +831,6 @@ class ZombieDog(pygame.sprite.Sprite):
         if not self.alive():
             return
 
-        _ = walls
         now = now_ms
         drift_x, drift_y = drift
         on_electrified_floor = False
@@ -942,6 +919,7 @@ class ZombieDog(pygame.sprite.Sprite):
         final_x, final_y, hit_x, hit_y = self._apply_wall_collision(
             next_x,
             next_y,
+            walls=walls,
             cell_size=cell_size,
             layout=layout,
         )
@@ -982,6 +960,7 @@ class ZombieDog(pygame.sprite.Sprite):
             retry_x, retry_y, _, _ = self._apply_wall_collision(
                 self.x + try_dx,
                 self.y + try_dy,
+                walls=walls,
                 cell_size=cell_size,
                 layout=layout,
             )

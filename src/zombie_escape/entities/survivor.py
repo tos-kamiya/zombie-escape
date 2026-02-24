@@ -32,6 +32,7 @@ from .collisions import collide_circle_custom, spritecollideany_walls
 from .movement import _can_humanoid_jump, _get_jump_scale
 from .movement_helpers import (
     move_axis_with_pitfall,
+    separate_circle_from_blockers,
     set_facing_bin,
     update_directional_image_scale,
 )
@@ -190,7 +191,7 @@ class Survivor(pygame.sprite.Sprite):
             return
 
         def _collide() -> Wall | None:
-            return self._collide_walls(walls, wall_index, cell_size, layout)
+            return None
 
         if cell_size is not None:
             move_x, move_y = apply_cell_edge_nudge(
@@ -224,10 +225,17 @@ class Survivor(pygame.sprite.Sprite):
             collide=_collide,
             cell_size=cell_size,
             pitfall_cells=pitfall_cells,
-            blocked_cells=blocked_cells,
+            blocked_cells=set(),
             pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
+        )
+        self._separate_from_walls_and_materials(
+            walls=walls,
+            wall_index=wall_index,
+            cell_size=cell_size,
+            layout=layout,
+            blocked_cells=blocked_cells,
         )
         self.rect.center = (int(self.x), int(self.y))
 
@@ -343,14 +351,21 @@ class Survivor(pygame.sprite.Sprite):
         self._move_with_pitfall(
             move_x,
             move_y,
-            collide=lambda: self._collide_walls(walls, wall_index, cell_size, layout),
+            collide=lambda: None,
             cell_size=cell_size,
             pitfall_cells=pitfall_cells,
-            blocked_cells=blocked_cells,
+            blocked_cells=set(),
             pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
             rollback_factor=1.5,
+        )
+        self._separate_from_walls_and_materials(
+            walls=walls,
+            wall_index=wall_index,
+            cell_size=cell_size,
+            layout=layout,
+            blocked_cells=blocked_cells,
             on_wall_hit=_on_buddy_wall_hit,
         )
 
@@ -460,13 +475,20 @@ class Survivor(pygame.sprite.Sprite):
         self._move_with_pitfall(
             move_x,
             move_y,
-            collide=lambda: self._collide_walls(walls, wall_index, cell_size, layout),
+            collide=lambda: None,
             cell_size=cell_size,
             pitfall_cells=pitfall_cells,
-            blocked_cells=blocked_cells,
+            blocked_cells=set(),
             pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
+        )
+        self._separate_from_walls_and_materials(
+            walls=walls,
+            wall_index=wall_index,
+            cell_size=cell_size,
+            layout=layout,
+            blocked_cells=blocked_cells,
         )
 
         self.rect.center = (int(self.x), int(self.y))
@@ -488,6 +510,62 @@ class Survivor(pygame.sprite.Sprite):
             grid_cols=layout.grid_cols,
             grid_rows=layout.grid_rows,
         )
+
+    def _separate_from_walls_and_materials(
+        self: Self,
+        *,
+        walls: pygame.sprite.Group,
+        wall_index: WallIndex | None,
+        cell_size: int | None,
+        layout: "LevelLayout",
+        blocked_cells: set[tuple[int, int]],
+        on_wall_hit: Callable[[Wall], None] | None = None,
+    ) -> None:
+        wall_candidates: list[pygame.sprite.Sprite]
+        if wall_index is None:
+            wall_candidates = [wall for wall in walls if wall.alive()]
+        elif cell_size is None:
+            wall_candidates = []
+        else:
+            radius = float(getattr(self, "collision_radius", self.radius))
+            min_cell_x = max(0, int((self.x - radius) // cell_size))
+            max_cell_x = min(layout.grid_cols - 1, int((self.x + radius) // cell_size))
+            min_cell_y = max(0, int((self.y - radius) // cell_size))
+            max_cell_y = min(layout.grid_rows - 1, int((self.y + radius) // cell_size))
+            wall_candidates = []
+            seen: set[int] = set()
+            for cy in range(min_cell_y, max_cell_y + 1):
+                for cx in range(min_cell_x, max_cell_x + 1):
+                    for wall in wall_index.get((cx, cy), []):
+                        wall_id = id(wall)
+                        if wall_id in seen:
+                            continue
+                        seen.add(wall_id)
+                        wall_candidates.append(wall)
+
+        separation = separate_circle_from_blockers(
+            x=self.x,
+            y=self.y,
+            radius=float(getattr(self, "collision_radius", self.radius)),
+            walls=wall_candidates,
+            cell_size=int(cell_size or 0),
+            blocked_cells=blocked_cells,
+            grid_cols=layout.grid_cols,
+            grid_rows=layout.grid_rows,
+            max_attempts=5,
+        )
+        self.x = separation.x
+        self.y = separation.y
+        if on_wall_hit is not None and separation.hit_walls:
+            seen_walls: set[int] = set()
+            for wall in separation.hit_walls:
+                if not isinstance(wall, Wall):
+                    continue
+                key = id(wall)
+                if key in seen_walls:
+                    continue
+                seen_walls.add(key)
+                on_wall_hit(wall)
 
     def _update_overlap_scale(
         self: Self, patrol_bot_group: pygame.sprite.Group | None

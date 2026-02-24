@@ -612,6 +612,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
     car = game_data.car
     zombie_group = game_data.groups.zombie_group
     patrol_bot_group = game_data.groups.patrol_bot_group
+    carrier_bot_group = game_data.groups.carrier_bot_group
     all_sprites = game_data.groups.all_sprites
     survivor_group = game_data.groups.survivor_group
     state = game_data.state
@@ -941,23 +942,30 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
                         hp._take_damage(hp.max_health)
                         active_car._take_damage(CAR_WALL_DAMAGE // 4)
 
-    # Car hitting patrol bots
-    if player_in_active_car and active_car and active_car.health > 0 and patrol_bot_group:
+    # Car hitting patrol/carrier bots
+    bot_groups = [patrol_bot_group, carrier_bot_group]
+    if (
+        player_in_active_car
+        and active_car
+        and active_car.health > 0
+        and any(len(group) > 0 for group in bot_groups)
+    ):
         if hasattr(active_car, "get_collision_circle"):
             (car_center_x, car_center_y), car_radius = active_car.get_collision_circle()
         else:
             car_center_x = active_car.x
             car_center_y = active_car.y
             car_radius = getattr(active_car, "collision_radius", 0.0)
-        for bot in list(patrol_bot_group):
-            if not bot.alive():
-                continue
-            dx = bot.x - car_center_x
-            dy = bot.y - car_center_y
-            hit_range = car_radius + getattr(bot, "collision_radius", 0.0)
-            if dx * dx + dy * dy <= hit_range * hit_range:
-                bot.kill()
-                active_car._take_damage(CAR_WALL_DAMAGE)
+        for group in bot_groups:
+            for bot in list(group):
+                if not bot.alive():
+                    continue
+                dx = bot.x - car_center_x
+                dy = bot.y - car_center_y
+                hit_range = car_radius + getattr(bot, "collision_radius", 0.0)
+                if dx * dx + dy * dy <= hit_range * hit_range:
+                    bot.kill()
+                    active_car._take_damage(CAR_WALL_DAMAGE)
 
     _board_survivors_if_colliding(
         game_data=game_data,

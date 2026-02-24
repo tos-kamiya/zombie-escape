@@ -449,6 +449,41 @@ def _is_patrol_spawn_position_clear(
     return True
 
 
+def _is_carrier_spawn_position_clear(
+    game_data: GameData,
+    candidate: CarrierBot,
+    *,
+    allow_player_overlap: bool = False,
+) -> bool:
+    wall_group = game_data.groups.wall_group
+    if spritecollideany_walls(candidate, wall_group):
+        return False
+
+    spawn_rect = candidate.rect
+    player = game_data.player
+    if not allow_player_overlap and player and spawn_rect.colliderect(player.rect):
+        return False
+    car = game_data.car
+    if car and car.alive() and spawn_rect.colliderect(car.rect):
+        return False
+    for parked in game_data.waiting_cars:
+        if parked.alive() and spawn_rect.colliderect(parked.rect):
+            return False
+    for survivor in game_data.groups.survivor_group:
+        if survivor.alive() and spawn_rect.colliderect(survivor.rect):
+            return False
+    for zombie in game_data.groups.zombie_group:
+        if zombie.alive() and spawn_rect.colliderect(zombie.rect):
+            return False
+    for bot in game_data.groups.patrol_bot_group:
+        if bot.alive() and spawn_rect.colliderect(bot.rect):
+            return False
+    for bot in game_data.groups.carrier_bot_group:
+        if bot.alive() and bot is not candidate and spawn_rect.colliderect(bot.rect):
+            return False
+    return True
+
+
 def _pick_fall_spawn_position(
     game_data: GameData,
     *,
@@ -1387,7 +1422,7 @@ def spawn_initial_carrier_bots_and_materials(game_data: GameData) -> None:
             axis=str(axis),
             direction_sign=int(direction_sign),
         )
-        if spritecollideany_walls(bot, game_data.groups.wall_group):
+        if not _is_carrier_spawn_position_clear(game_data, bot):
             continue
         carrier_group.add(bot)
         all_sprites.add(bot, layer=LAYER_VEHICLES)

@@ -54,7 +54,8 @@ from ..rng import get_rng
 from ..surface_effects import SpikyPlantLike, is_in_contaminated_cell, is_in_puddle_cell
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from ..world_grid import apply_cell_edge_nudge
-from .movement import _circle_rect_collision, _circle_wall_collision
+from .movement import _circle_wall_collision
+from .movement_helpers import separate_circle_from_blockers
 from .zombie_movement import (
     _zombie_lineformer_train_head_movement,
     _zombie_solitary_movement,
@@ -765,68 +766,32 @@ class Zombie(pygame.sprite.Sprite):
         self._refresh_variant_image()
         self.last_move_dx = move_x
         self.last_move_dy = move_y
-        blocked_material_cells = (
-            layout.material_cells if cell_size > 0 else set()
-        )
-
-        def _collides_material_cells(check_x: float, check_y: float) -> bool:
-            if cell_size <= 0 or not blocked_material_cells:
-                return False
-            radius = self.collision_radius
-            min_cell_x = max(0, int((check_x - radius) // cell_size))
-            max_cell_x = min(layout.grid_cols - 1, int((check_x + radius) // cell_size))
-            min_cell_y = max(0, int((check_y - radius) // cell_size))
-            max_cell_y = min(layout.grid_rows - 1, int((check_y + radius) // cell_size))
-            for cy in range(min_cell_y, max_cell_y + 1):
-                for cx in range(min_cell_x, max_cell_x + 1):
-                    if (cx, cy) not in blocked_material_cells:
-                        continue
-                    rect = pygame.Rect(
-                        cx * cell_size,
-                        cy * cell_size,
-                        cell_size,
-                        cell_size,
-                    )
-                    if _circle_rect_collision((check_x, check_y), radius, rect):
-                        return True
-            return False
-
         possible_walls = [
             w
             for w in walls
             if abs(w.rect.centerx - self.x) < 100 and abs(w.rect.centery - self.y) < 100
         ]
-
-        final_x = self.x
-        final_y = self.y
-        if move_x:
-            next_x = final_x + move_x
-            if _collides_material_cells(next_x, final_y):
-                next_x = final_x
-            for wall in possible_walls:
-                if _circle_wall_collision(
-                    (next_x, final_y), self.collision_radius, wall
-                ):
-                    if wall.alive():
-                        wall._take_damage(amount=ZOMBIE_WALL_DAMAGE)
-                    if wall.alive():
-                        next_x = final_x
-                        break
-            final_x = next_x
-        if move_y:
-            next_y = final_y + move_y
-            if _collides_material_cells(final_x, next_y):
-                next_y = final_y
-            for wall in possible_walls:
-                if _circle_wall_collision(
-                    (final_x, next_y), self.collision_radius, wall
-                ):
-                    if wall.alive():
-                        wall._take_damage(amount=ZOMBIE_WALL_DAMAGE)
-                    if wall.alive():
-                        next_y = final_y
-                        break
-            final_y = next_y
+        attempted_x = self.x + move_x
+        attempted_y = self.y + move_y
+        separation = separate_circle_from_blockers(
+            x=attempted_x,
+            y=attempted_y,
+            radius=self.collision_radius,
+            walls=possible_walls,
+            cell_size=cell_size,
+            blocked_cells=layout.material_cells,
+            grid_cols=layout.grid_cols,
+            grid_rows=layout.grid_rows,
+            max_attempts=5,
+        )
+        final_x = separation.x
+        final_y = separation.y
+        first_hit_wall = next(
+            (wall for wall in separation.hit_walls if isinstance(wall, Wall)),
+            None,
+        )
+        if first_hit_wall is not None and first_hit_wall.alive():
+            first_hit_wall._take_damage(amount=ZOMBIE_WALL_DAMAGE)
 
         if not (0 <= final_x < level_width and 0 <= final_y < level_height):
             self.kill()

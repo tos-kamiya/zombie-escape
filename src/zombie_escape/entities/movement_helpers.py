@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import math
+from dataclasses import dataclass
 from typing import Callable, Literal, TypeVar
 
 import pygame
+
+from .movement import _circle_rect_collision, _circle_wall_collision
 
 T = TypeVar("T")
 
@@ -97,6 +101,116 @@ def set_facing_bin(sprite: pygame.sprite.Sprite, new_bin: int) -> None:
     sprite.facing_bin = new_bin  # type: ignore[attr-defined]
     sprite.image = sprite.directional_images[sprite.facing_bin]  # type: ignore[attr-defined]
     sprite.rect = sprite.image.get_rect(center=center)
+
+
+@dataclass
+class SeparationResult:
+    x: float
+    y: float
+    hit_walls: list[pygame.sprite.Sprite]
+    hit_cells: set[tuple[int, int]]
+
+
+def _repel_circle_from_rect(
+    x: float,
+    y: float,
+    radius: float,
+    rect_obj: pygame.Rect,
+    *,
+    epsilon: float = 0.0,
+) -> tuple[float, float]:
+    closest_x = max(rect_obj.left, min(x, rect_obj.right))
+    closest_y = max(rect_obj.top, min(y, rect_obj.bottom))
+    dx = x - closest_x
+    dy = y - closest_y
+    dist = math.hypot(dx, dy)
+    target = radius + max(0.0, epsilon)
+    if dist > 1e-6:
+        penetration = target - dist
+        if penetration <= 0.0:
+            return x, y
+        return x + (dx / dist) * penetration, y + (dy / dist) * penetration
+
+    left_pen = (x - rect_obj.left) + target
+    right_pen = (rect_obj.right - x) + target
+    top_pen = (y - rect_obj.top) + target
+    bottom_pen = (rect_obj.bottom - y) + target
+    penetration, nx, ny = min(
+        (
+            (left_pen, -1.0, 0.0),
+            (right_pen, 1.0, 0.0),
+            (top_pen, 0.0, -1.0),
+            (bottom_pen, 0.0, 1.0),
+        ),
+        key=lambda item: item[0],
+    )
+    push = max(0.0, penetration)
+    return x + nx * push, y + ny * push
+
+
+def separate_circle_from_blockers(
+    *,
+    x: float,
+    y: float,
+    radius: float,
+    walls: list[pygame.sprite.Sprite],
+    cell_size: int,
+    blocked_cells: set[tuple[int, int]] | None = None,
+    grid_cols: int | None = None,
+    grid_rows: int | None = None,
+    max_attempts: int = 4,
+    epsilon: float = 0.01,
+) -> SeparationResult:
+    blocked = blocked_cells or set()
+    hit_walls: list[pygame.sprite.Sprite] = []
+    hit_wall_ids: set[int] = set()
+    hit_cells: set[tuple[int, int]] = set()
+    cur_x, cur_y = x, y
+
+    for _ in range(max(1, max_attempts)):
+        moved = False
+        for wall in walls:
+            if not wall.alive():
+                continue
+            if not _circle_wall_collision((cur_x, cur_y), radius, wall):
+                continue
+            wall_id = id(wall)
+            if wall_id not in hit_wall_ids:
+                hit_wall_ids.add(wall_id)
+                hit_walls.append(wall)
+            cur_x, cur_y = _repel_circle_from_rect(
+                cur_x, cur_y, radius, wall.rect, epsilon=epsilon
+            )
+            moved = True
+
+        if blocked and cell_size > 0 and grid_cols and grid_rows:
+            min_cell_x = max(0, int((cur_x - radius) // cell_size))
+            max_cell_x = min(grid_cols - 1, int((cur_x + radius) // cell_size))
+            min_cell_y = max(0, int((cur_y - radius) // cell_size))
+            max_cell_y = min(grid_rows - 1, int((cur_y + radius) // cell_size))
+            for cy in range(min_cell_y, max_cell_y + 1):
+                for cx in range(min_cell_x, max_cell_x + 1):
+                    cell = (cx, cy)
+                    if cell not in blocked:
+                        continue
+                    rect_obj = pygame.Rect(
+                        cx * cell_size,
+                        cy * cell_size,
+                        cell_size,
+                        cell_size,
+                    )
+                    if not _circle_rect_collision((cur_x, cur_y), radius, rect_obj):
+                        continue
+                    hit_cells.add(cell)
+                    cur_x, cur_y = _repel_circle_from_rect(
+                        cur_x, cur_y, radius, rect_obj, epsilon=epsilon
+                    )
+                    moved = True
+
+        if not moved:
+            break
+
+    return SeparationResult(x=cur_x, y=cur_y, hit_walls=hit_walls, hit_cells=hit_cells)
 
 
 def move_axis_with_pitfall(

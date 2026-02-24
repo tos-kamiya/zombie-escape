@@ -108,6 +108,37 @@ Constraints:
 - While carried, material does not occupy `material_cells`; only carrier collision
   is effective.
 
+### Position-Based Collision Unification Plan
+
+The project is migrating wall/material collision for these moving actors to a
+position-based separation model:
+
+- Player
+- Survivor
+- Buddy
+- Zombie
+- ZombieDog
+
+Target model:
+
+1. Apply movement delta to a tentative position.
+2. Run a shared "circle vs blockers" separation pass.
+3. Resolve overlaps by pushing the actor outward from wall/material geometry.
+4. Use bounded iteration with fallback to avoid vibration/sticking.
+
+Implementation notes:
+
+- A shared helper in movement utilities provides overlap resolution against:
+  - Wall sprites (including reinforced/outer wall geometry)
+  - Grid blockers (`material_cells`, and other wall-equivalent blocker sets when
+    required)
+- Existing actor-specific behavior remains:
+  - Player wall damage on collision
+  - Buddy wall damage on collision near player
+- For Player/Buddy, damage hooks are triggered from resolved wall hit sets
+  returned by the shared solver, so damage semantics stay intact while collision
+  math changes.
+
 ## Rendering/Layering
 
 - `CarrierBot` renders in vehicle layer.
