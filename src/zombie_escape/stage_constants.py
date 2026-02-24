@@ -235,6 +235,23 @@ def _build_stage38_reinforced_wall_zones(
     return [(x, y, 1, 1) for x, y in sorted(wall_cells)]
 
 
+def _build_stage39_carrier_bot_spawns(
+    grid_cols: int, grid_rows: int
+) -> list[tuple[int, int, str, int]]:
+    """Place one Y-axis carrier bot per interior column with staggered phase."""
+    if grid_cols <= 4 or grid_rows <= 2:
+        return []
+    travel_rows = grid_rows - 2
+    spawns: list[tuple[int, int, str, int]] = []
+    # Keep left/right exit lanes clear.
+    for x in range(2, grid_cols - 2):
+        phase = ((x - 1) * 3) % travel_rows
+        y = 1 + phase
+        direction_sign = 1 if (x % 2 == 0) else -1
+        spawns.append((x, y, "y", direction_sign))
+    return spawns
+
+
 STAGES: list[Stage] = [
     Stage(
         id="stage1",
@@ -1423,6 +1440,50 @@ STAGES: list[Stage] = [
         ],
         flashlight_spawn_count=0,
         shoes_spawn_count=0,
+    ),
+    Stage(
+        id="stage39",
+        name_key="stages.stage39.name",
+        description_key="stages.stage39.description",
+        available=True,
+        cell_size=35,
+        grid_cols=33,
+        grid_rows=25,
+        wall_algorithm="empty",
+        fuel_mode=FuelMode.REFUEL_CHAIN,
+        exit_sides=["left", "right"],
+        waiting_car_target_count=1,
+        initial_interior_spawn_rate=0.06,
+        exterior_spawn_weight=0.4,
+        interior_spawn_weight=0.5,
+        interior_fall_spawn_weight=0.1,
+        zombie_normal_ratio=0.4,
+        zombie_tracker_ratio=0.3,
+        zombie_wall_hugging_ratio=0.3,
+        zombie_lineformer_ratio=0.0,
+        zombie_dog_ratio=0.2,
+        zombie_tracker_dog_ratio=0.0,
+        zombie_nimble_dog_ratio=0.0,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
+        fire_floor_density=0.05,
+        fire_floor_zones=[
+            (1, 2, 31, 1),
+            (2, 6, 10, 1),
+            (16, 6, 8, 1),
+            (26, 6, 5, 1),
+            (3, 12, 9, 1),
+            (15, 12, 7, 1),
+            (24, 12, 6, 1),
+            (2, 18, 8, 1),
+            (13, 18, 10, 1),
+            (26, 18, 5, 1),
+            (1, 22, 31, 1),
+        ],
+        fall_spawn_cell_ratio=0.03,
+        carrier_bot_spawns=_build_stage39_carrier_bot_spawns(33, 25),
+        flashlight_spawn_count=1,
+        shoes_spawn_count=1,
+        zombie_spawn_count_per_interval=3,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"

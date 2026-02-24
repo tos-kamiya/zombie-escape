@@ -236,6 +236,10 @@
       "stage38": {
         "name": "#38 The Pursuers",
         "description": "Footprint-tracking zombies and hounds. Avoid getting pincered."
+      },
+      "stage39": {
+        "name": "#39 Restricted Zone",
+        "description": "Flame tiles are scattered everywhere. Don't get shoved into them by column-running carrier bots."
       }
     },
     "status": {
