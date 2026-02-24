@@ -25,6 +25,109 @@ RUBBLE_ROTATION_DEG = 5.0
 RUBBLE_OFFSET_RATIO = 0.06
 RUBBLE_SCALE_RATIO = 0.9
 RUBBLE_SHADOW_RATIO = 0.9
+_RUBBLE_ROTATION_SCALES: tuple[float, ...] = (
+    -1.20,
+    -0.80,
+    -0.45,
+    -0.15,
+    0.15,
+    0.45,
+    0.80,
+    1.10,
+    1.35,
+)
+_RUBBLE_RELIEF_VARIANTS: tuple[tuple[tuple[float, float], ...], ...] = (
+    (
+        (-0.20, -0.05),
+        (0.10, -0.20),
+        (0.05, -0.15),
+        (0.18, 0.00),
+        (0.12, 0.12),
+        (-0.08, 0.20),
+        (-0.15, 0.10),
+        (-0.18, -0.12),
+    ),
+    (
+        (-0.10, -0.20),
+        (0.20, -0.08),
+        (0.18, -0.10),
+        (0.05, 0.15),
+        (-0.05, 0.20),
+        (-0.20, 0.10),
+        (-0.10, 0.05),
+        (-0.02, -0.18),
+    ),
+    (
+        (0.05, -0.18),
+        (0.18, -0.02),
+        (0.20, 0.05),
+        (0.10, 0.20),
+        (-0.12, 0.18),
+        (-0.22, 0.00),
+        (-0.15, -0.08),
+        (-0.04, -0.20),
+    ),
+    (
+        (-0.18, -0.02),
+        (0.00, -0.22),
+        (0.12, -0.05),
+        (0.20, 0.08),
+        (0.18, 0.15),
+        (0.05, 0.22),
+        (-0.10, 0.10),
+        (-0.20, 0.00),
+    ),
+    (
+        (-0.12, -0.12),
+        (0.12, -0.12),
+        (0.15, 0.00),
+        (0.12, 0.12),
+        (0.00, 0.15),
+        (-0.12, 0.12),
+        (-0.15, 0.00),
+        (-0.12, -0.12),
+    ),
+    (
+        (0.00, -0.22),
+        (0.22, -0.02),
+        (0.12, 0.10),
+        (0.00, 0.22),
+        (-0.12, 0.10),
+        (-0.22, -0.02),
+        (-0.12, -0.10),
+        (0.00, -0.12),
+    ),
+    (
+        (-0.22, 0.00),
+        (-0.05, -0.18),
+        (0.10, -0.20),
+        (0.22, -0.05),
+        (0.20, 0.10),
+        (0.05, 0.18),
+        (-0.10, 0.20),
+        (-0.20, 0.10),
+    ),
+    (
+        (-0.05, -0.20),
+        (0.15, -0.15),
+        (0.22, 0.00),
+        (0.15, 0.15),
+        (-0.05, 0.20),
+        (-0.18, 0.12),
+        (-0.22, -0.02),
+        (-0.15, -0.15),
+    ),
+    (
+        (-0.15, -0.15),
+        (0.05, -0.22),
+        (0.20, -0.05),
+        (0.18, 0.12),
+        (0.05, 0.22),
+        (-0.15, 0.15),
+        (-0.20, 0.00),
+        (-0.18, -0.10),
+    ),
+)
 
 
 def rubble_offset_for_size(size: int) -> int:
@@ -345,6 +448,210 @@ def paint_wall_surface(
         _draw_face(surface)
 
 
+def paint_wall_panel_relief(
+    surface: pygame.Surface,
+    *,
+    fill_color: tuple[int, int, int],
+    bottom_side_ratio: float = 0.0,
+    panel_fill_ratio: float = 0.96,
+    panel_border_ratio: float = 0.72,
+    panel_shape: str = "rect",
+    variant_index: int = 0,
+    overflow_px: int = 0,
+) -> None:
+    w, h = surface.get_size()
+    if w <= 2 or h <= 2:
+        return
+
+    reference_side_height = max(1, int(h * max(0.0, bottom_side_ratio)))
+    top_height = max(1, h - reference_side_height)
+    top_rect = pygame.Rect(0, 0, w, top_height)
+
+    inset = max(2, min(w, top_height) // 6)
+    panel_rect = pygame.Rect(
+        top_rect.left + inset,
+        top_rect.top + inset,
+        max(1, top_rect.width - inset * 2),
+        max(1, top_rect.height - inset * 2),
+    )
+    panel_rect = panel_rect.inflate(-2, -2)
+    if panel_rect.width < 6 or panel_rect.height < 6:
+        return
+
+    panel_color = (
+        max(0, int(fill_color[0] * panel_fill_ratio)),
+        max(0, int(fill_color[1] * panel_fill_ratio)),
+        max(0, int(fill_color[2] * panel_fill_ratio)),
+    )
+    panel_border = (
+        max(0, int(fill_color[0] * panel_border_ratio)),
+        max(0, int(fill_color[1] * panel_border_ratio)),
+        max(0, int(fill_color[2] * panel_border_ratio)),
+    )
+    panel_overlay = pygame.Surface(panel_rect.size, pygame.SRCALPHA)
+    local_rect = panel_overlay.get_rect()
+    if panel_shape == "distorted_octagon":
+        w2 = local_rect.width
+        h2 = local_rect.height
+        if w2 < 8 or h2 < 8:
+            return
+        # Draw directly on the destination surface so the shape can protrude
+        # slightly outside the nominal panel rectangle.
+        cx, cy = panel_rect.center
+        half_w = panel_rect.width / 2.0
+        half_h = panel_rect.height / 2.0
+        protrude = max(1.0, float(overflow_px))
+        variant = int(variant_index) % 9
+        jitter = max(1.0, min(3.0, min(half_w, half_h) * 0.05))
+        pattern = _RUBBLE_RELIEF_VARIANTS[variant]
+        # Build a 12-point shape from the base rectangle perimeter so it keeps
+        # a "squared" silhouette and avoids collapsing into a diamond.
+        left = cx - half_w
+        right = cx + half_w
+        top = cy - half_h
+        bottom = cy + half_h
+        side_step = (bottom - top) / 3.0
+        top_step = (right - left) / 4.0
+        points = [
+            # Include original rectangle corners exactly.
+            (left, top),
+            # Top edge inner points
+            (left + top_step, top - protrude),
+            (left + (top_step * 3.0), top - protrude),
+            (right, top),
+            # Right edge inner points
+            (right + protrude, top + side_step),
+            (right + protrude, top + (side_step * 2.0)),
+            (right, bottom),
+            # Bottom edge inner points
+            (left + (top_step * 3.0), bottom + protrude),
+            (left + top_step, bottom + protrude),
+            (left, bottom),
+            # Left edge inner points
+            (left - protrude, top + (side_step * 2.0)),
+            (left - protrude, top + side_step),
+        ]
+        normals = [
+            (-1.0, -1.0),  # top-left corner
+            (0.0, -1.0),   # top
+            (0.0, -1.0),   # top
+            (1.0, -1.0),   # top-right corner
+            (1.0, 0.0),    # right
+            (1.0, 0.0),    # right
+            (1.0, 1.0),    # bottom-right corner
+            (0.0, 1.0),    # bottom
+            (0.0, 1.0),    # bottom
+            (-1.0, 1.0),   # bottom-left corner
+            (-1.0, 0.0),   # left
+            (-1.0, 0.0),   # left
+        ]
+        variant_row = variant // 3
+        variant_col = variant % 3
+        out_scale = 1.00 + (variant_col * 0.22)
+        in_scale = 0.78 + (variant_row * 0.18)
+        tangent_scale = 0.28 + (variant_col * 0.06) + (variant_row * 0.04)
+        direction_sequence = [-1.0] * 6 + [1.0] * 6
+        random.Random(72_001 + variant).shuffle(direction_sequence)
+        for i in range(12):
+            pat = pattern[(i + variant) % len(pattern)]
+            px, py = points[i]
+            nx, ny = normals[i]
+            normal_len = math.hypot(nx, ny)
+            if normal_len > 0:
+                nx /= normal_len
+                ny /= normal_len
+            tx, ty = -ny, nx
+            # Use a per-variant shuffled inward/outward order.
+            direction = direction_sequence[i]
+            wave_mul = 0.2
+            base_amp = protrude + (jitter * (0.42 + abs(pat[0]) * 0.38))
+            amp_scale = out_scale if direction > 0 else in_scale
+            radial = direction * base_amp * amp_scale * wave_mul
+            tangent = pat[1] * jitter * tangent_scale
+            points[i] = (
+                px + (nx * radial) + (tx * tangent),
+                py + (ny * radial) + (ty * tangent),
+            )
+        int_points = [(int(round(px)), int(round(py))) for px, py in points]
+        pygame.draw.polygon(surface, panel_color, int_points)
+
+        # Border width varies per edge (1px/2px). At width transitions,
+        # blend with a thin triangle to avoid harsh discontinuities.
+        edge_count = len(int_points)
+        edge_rng = random.Random(91_000 + variant)
+        edge_widths = [1 + int(edge_rng.random() < 0.45) for _ in range(edge_count)]
+        for i in range(edge_count):
+            start = int_points[i]
+            end = int_points[(i + 1) % edge_count]
+            pygame.draw.line(
+                surface,
+                panel_border,
+                start,
+                end,
+                width=edge_widths[i],
+            )
+        for i in range(edge_count):
+            prev_w = edge_widths[i - 1]
+            next_w = edge_widths[i]
+            if prev_w == next_w:
+                continue
+            vx, vy = int_points[i]
+            if next_w > prev_w:
+                nxp, nyp = int_points[(i + 1) % edge_count]
+            else:
+                nxp, nyp = int_points[(i - 1) % edge_count]
+            dx = nxp - vx
+            dy = nyp - vy
+            seg_len = math.hypot(dx, dy)
+            if seg_len <= 0.001:
+                continue
+            ux = dx / seg_len
+            uy = dy / seg_len
+            px = -uy
+            py = ux
+            tri_len = max(2.0, min(5.0, seg_len * 0.30))
+            half_base = 1.2
+            tip = (vx, vy)
+            base_cx = vx + (ux * tri_len)
+            base_cy = vy + (uy * tri_len)
+            p1 = (int(round(base_cx + (px * half_base))), int(round(base_cy + (py * half_base))))
+            p2 = (int(round(base_cx - (px * half_base))), int(round(base_cy - (py * half_base))))
+            pygame.draw.polygon(surface, panel_border, [tip, p1, p2])
+
+        top_y = int(round(min(p[1] for p in int_points))) + 1
+        top_x0 = int(round(min(p[0] for p in int_points))) + 3
+        top_x1 = int(round(max(p[0] for p in int_points))) - 3
+        if top_x1 > top_x0:
+            pygame.draw.line(
+                surface,
+                panel_border,
+                (top_x0, top_y),
+                (top_x1, top_y),
+                width=2,
+            )
+    else:
+        pygame.draw.rect(panel_overlay, panel_color, local_rect)
+        pygame.draw.rect(panel_overlay, panel_border, local_rect, width=1)
+        top_band = pygame.Rect(
+            1,
+            1,
+            max(1, local_rect.width - 2),
+            max(1, min(2, local_rect.height - 2)),
+        )
+        if top_band.width > 0 and top_band.height > 0:
+            pygame.draw.rect(panel_overlay, panel_border, top_band)
+        corner_points = [
+            (0, 0),
+            (local_rect.width - 1, 0),
+            (0, local_rect.height - 1),
+            (local_rect.width - 1, local_rect.height - 1),
+        ]
+        for cx, cy in corner_points:
+            if 0 <= cx < local_rect.width and 0 <= cy < local_rect.height:
+                panel_overlay.set_at((cx, cy), (0, 0, 0, 0))
+    surface.blit(panel_overlay, panel_rect.topleft)
+
+
 def build_rubble_wall_surface(
     size: int,
     *,
@@ -356,6 +663,7 @@ def build_rubble_wall_surface(
     scale_ratio: float = RUBBLE_SCALE_RATIO,
     shadow_ratio: float = RUBBLE_SHADOW_RATIO,
     bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
+    relief_variant_index: int = 0,
 ) -> pygame.Surface:
     offset_px = offset_px if offset_px is not None else rubble_offset_for_size(size)
     safe_size = max(1, size)
@@ -380,6 +688,7 @@ def build_rubble_wall_surface(
         scale_ratio,
         shadow_ratio,
         tuned_bevel,
+        int(relief_variant_index) % 9,
     )
     cached = _RUBBLE_SURFACE_CACHE.get(cache_key)
     if cached is not None:
@@ -400,6 +709,16 @@ def build_rubble_wall_surface(
         bottom_side_ratio=0.1,
         side_shade_ratio=0.9,
     )
+    paint_wall_panel_relief(
+        top_surface,
+        fill_color=fill_color,
+        bottom_side_ratio=0.0,
+        panel_fill_ratio=0.97,
+        panel_border_ratio=0.80,
+        panel_shape="distorted_octagon",
+        variant_index=relief_variant_index,
+        overflow_px=max(1, base_size // 16),
+    )
 
     shadow_fill = scale_color(fill_color, ratio=shadow_ratio)
     shadow_outline = resolve_wall_outline_color(
@@ -418,10 +737,15 @@ def build_rubble_wall_surface(
         bottom_side_ratio=0.1,
         side_shade_ratio=0.9,
     )
+    # Keep the relief only on the top piece; drawing it on the shadow muddies
+    # the shape and makes the panel hard to read at gameplay scale.
 
-    if angle_deg:
-        top_surface = pygame.transform.rotate(top_surface, angle_deg)
-        shadow_surface = pygame.transform.rotate(shadow_surface, angle_deg)
+    variant = int(relief_variant_index) % 9
+    base_rotation = abs(float(angle_deg))
+    resolved_angle_deg = base_rotation * _RUBBLE_ROTATION_SCALES[variant]
+    if resolved_angle_deg:
+        top_surface = pygame.transform.rotate(top_surface, resolved_angle_deg)
+        shadow_surface = pygame.transform.rotate(shadow_surface, resolved_angle_deg)
 
     final_surface = pygame.Surface((safe_size, safe_size), pygame.SRCALPHA)
     center = final_surface.get_rect().center

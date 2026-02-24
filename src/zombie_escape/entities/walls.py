@@ -309,6 +309,7 @@ class RubbleWall(Wall):
             angle_deg=self._rubble_rotation_deg,
             offset_px=self._rubble_offset_px,
             bevel_depth=self.bevel_depth,
+            relief_variant_index=self._damage_overlay_variant,
         )
         self.image.fill((0, 0, 0, 0))
         self.image.blit(rubble_surface, (0, 0))
