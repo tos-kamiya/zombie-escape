@@ -13,6 +13,7 @@ This file is the main documentation index.
 - `docs/design/architecture.md`: Module layout and screen transitions.
 - `docs/design/data-models.md`: Core dataclasses and runtime state.
 - `docs/design/entities.md`: Entity behavior and gameplay objects.
+- `docs/design/carrier-bot.md`: `CarrierBot` + `Material` draft spec (`INPROGRESS`).
 - `docs/design/ai-zombies.md`: Zombie variants and AI behavior.
 - `docs/design/gameplay-flow.md`: Initialization, update, and interaction flow.
 - `docs/design/rendering.md`: Render pipeline, fog, shadows, and HUD.

@@ -5,11 +5,13 @@ from typing import Any, Callable, Literal, Mapping, Sequence
 import pygame
 
 from ..entities import (
+    CarrierBot,
     Car,
     EmptyFuelCan,
     Flashlight,
     FuelCan,
     FuelStation,
+    Material,
     PatrolBot,
     Player,
     Shoes,
@@ -47,6 +49,7 @@ from .constants import (
     FALLING_ZOMBIE_DURATION_MS,
     FALLING_ZOMBIE_PRE_FX_MS,
     LAYER_HOUSEPLANTS,
+    LAYER_ITEMS,
     LAYER_PLAYERS,
     LAYER_VEHICLES,
     LAYER_ZOMBIES,
@@ -79,6 +82,7 @@ __all__ = [
     "spawn_initial_zombies",
     "spawn_initial_patrol_bots",
     "spawn_initial_transport_bots",
+    "spawn_initial_carrier_bots_and_materials",
     "spawn_spiky_plants",
     "spawn_waiting_car",
     "maintain_waiting_car_supply",
@@ -1120,6 +1124,38 @@ def spawn_initial_transport_bots(game_data: GameData) -> None:
         if spritecollideany_walls(bot, game_data.groups.wall_group):
             continue
         transport_group.add(bot)
+        all_sprites.add(bot, layer=LAYER_VEHICLES)
+
+
+def spawn_initial_carrier_bots_and_materials(game_data: GameData) -> None:
+    """Spawn carrier bots and materials from explicit stage cell definitions."""
+    stage = game_data.stage
+    if not stage.carrier_bot_spawns and not stage.material_spawns:
+        return
+    all_sprites = game_data.groups.all_sprites
+    material_group = game_data.groups.material_group
+    carrier_group = game_data.groups.carrier_bot_group
+    cell_size = game_data.cell_size
+
+    for cell_x, cell_y in stage.material_spawns:
+        center = _cell_center((int(cell_x), int(cell_y)), cell_size)
+        material = Material(center[0], center[1])
+        if spritecollideany_walls(material, game_data.groups.wall_group):
+            continue
+        material_group.add(material)
+        all_sprites.add(material, layer=LAYER_ITEMS)
+
+    for cell_x, cell_y, axis, direction_sign in stage.carrier_bot_spawns:
+        center = _cell_center((int(cell_x), int(cell_y)), cell_size)
+        bot = CarrierBot(
+            center[0],
+            center[1],
+            axis=str(axis),
+            direction_sign=int(direction_sign),
+        )
+        if spritecollideany_walls(bot, game_data.groups.wall_group):
+            continue
+        carrier_group.add(bot)
         all_sprites.add(bot, layer=LAYER_VEHICLES)
 
 

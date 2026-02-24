@@ -267,6 +267,8 @@ class Groups:
     survivor_group: sprite.Group
     patrol_bot_group: sprite.Group
     transport_bot_group: sprite.Group
+    carrier_bot_group: sprite.Group
+    material_group: sprite.Group
 
 
 @dataclass
@@ -380,6 +382,11 @@ class Stage:
     transport_bot_paths: list[list[tuple[int, int]]] = field(default_factory=list)
     transport_bot_activation_radius: float = 0.0
     transport_bot_end_wait_ms: int = 0
+    # Carrier bot spawn definitions in cell-space:
+    # (cell_x, cell_y, axis, direction_sign)
+    carrier_bot_spawns: list[tuple[int, int, str, int]] = field(default_factory=list)
+    # Material spawn cells in cell-space: (cell_x, cell_y)
+    material_spawns: list[tuple[int, int]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         mode_raw = self.fuel_mode
@@ -430,6 +437,20 @@ class Stage:
                     f"Stage {self.id}: transport path cell {(x, y)} cannot be on "
                     "outside/outer-wall band"
                 )
+        for idx, (x, y) in enumerate(self.material_spawns):
+            assert 0 <= int(x) < self.grid_cols and 0 <= int(y) < self.grid_rows, (
+                f"Stage {self.id}: material_spawns[{idx}] cell {(x, y)} is out of bounds"
+            )
+        for idx, (x, y, axis, direction_sign) in enumerate(self.carrier_bot_spawns):
+            assert 0 <= int(x) < self.grid_cols and 0 <= int(y) < self.grid_rows, (
+                f"Stage {self.id}: carrier_bot_spawns[{idx}] cell {(x, y)} is out of bounds"
+            )
+            assert axis in ("x", "y"), (
+                f"Stage {self.id}: carrier_bot_spawns[{idx}] axis must be 'x' or 'y'"
+            )
+            assert int(direction_sign) in (-1, 1), (
+                f"Stage {self.id}: carrier_bot_spawns[{idx}] direction_sign must be -1 or 1"
+            )
 
         # Exclusivity validation for zone-based gimmicks
         self._validate_zone_exclusivity()

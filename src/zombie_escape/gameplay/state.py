@@ -147,6 +147,8 @@ def initialize_game_state(stage: Stage) -> GameData:
     survivor_group = pygame.sprite.Group()
     patrol_bot_group = pygame.sprite.Group()
     transport_bot_group = pygame.sprite.Group()
+    carrier_bot_group = pygame.sprite.Group()
+    material_group = pygame.sprite.Group()
 
     # Create camera
     cell_size = stage.cell_size
@@ -166,6 +168,8 @@ def initialize_game_state(stage: Stage) -> GameData:
             survivor_group=survivor_group,
             patrol_bot_group=patrol_bot_group,
             transport_bot_group=transport_bot_group,
+            carrier_bot_group=carrier_bot_group,
+            material_group=material_group,
         ),
         camera=camera,
         layout=LevelLayout(

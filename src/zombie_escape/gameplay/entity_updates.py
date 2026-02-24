@@ -6,6 +6,7 @@ from typing import Any, Sequence
 import pygame
 
 from ..entities import (
+    CarrierBot,
     Car,
     Player,
     PatrolBot,
@@ -156,6 +157,8 @@ def update_entities(
     survivor_group = game_data.groups.survivor_group
     patrol_bot_group = game_data.groups.patrol_bot_group
     transport_bot_group = game_data.groups.transport_bot_group
+    carrier_bot_group = game_data.groups.carrier_bot_group
+    material_group = game_data.groups.material_group
     spatial_index = game_data.state.spatial_index
     camera = game_data.camera
     stage = game_data.stage
@@ -532,6 +535,9 @@ def update_entities(
     transport_bots_sorted: list[TransportBot] = sorted(
         list(transport_bot_group), key=lambda b: b.x
     )
+    carrier_bots_sorted: list[CarrierBot] = sorted(
+        list(carrier_bot_group), key=lambda b: b.x
+    )
     electrified_cells: set[tuple[int, int]] = set()
     if game_data.cell_size > 0:
         for bot in patrol_bots_sorted:
@@ -796,6 +802,32 @@ def update_entities(
             cell_size=game_data.cell_size,
             pitfall_cells=pitfall_cells,
             now_ms=game_data.state.clock.elapsed_ms,
+        )
+
+    blocker_sprites: list[pygame.sprite.Sprite] = []
+    if player.alive():
+        blocker_sprites.append(player)
+    if active_car and active_car.alive():
+        blocker_sprites.append(active_car)
+    blocker_sprites.extend([car for car in game_data.waiting_cars if car.alive()])
+    blocker_sprites.extend([s for s in survivor_group if s.alive()])
+    blocker_sprites.extend([b for b in patrol_bot_group if b.alive()])
+    blocker_sprites.extend([b for b in transport_bot_group if b.alive()])
+    blocker_sprites.extend([b for b in carrier_bot_group if b.alive()])
+
+    materials_alive = [m for m in material_group if m.alive()]
+    for bot in carrier_bots_sorted:
+        if not bot.alive():
+            continue
+        bot_search_radius = bot.collision_radius + 120
+        nearby_walls = _walls_near((bot.x, bot.y), bot_search_radius)
+        bot.update(
+            nearby_walls,
+            layout=game_data.layout,
+            cell_size=game_data.cell_size,
+            pitfall_cells=pitfall_cells,
+            materials=materials_alive,
+            blockers=blocker_sprites,
         )
 
     update_decay_effects(game_data.state.decay_effects, frames=1)
