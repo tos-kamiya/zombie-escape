@@ -816,16 +816,19 @@ def update_entities(
             now_ms=game_data.state.clock.elapsed_ms,
         )
 
-    blocker_sprites: list[pygame.sprite.Sprite] = []
-    if player.alive():
-        blocker_sprites.append(player)
+    hard_blockers: list[pygame.sprite.Sprite] = []
     if active_car and active_car.alive():
-        blocker_sprites.append(active_car)
-    blocker_sprites.extend([car for car in game_data.waiting_cars if car.alive()])
-    blocker_sprites.extend([s for s in survivor_group if s.alive()])
-    blocker_sprites.extend([b for b in patrol_bot_group if b.alive()])
-    blocker_sprites.extend([b for b in transport_bot_group if b.alive()])
-    blocker_sprites.extend([b for b in carrier_bot_group if b.alive()])
+        hard_blockers.append(active_car)
+    hard_blockers.extend([car for car in game_data.waiting_cars if car.alive()])
+    hard_blockers.extend([b for b in patrol_bot_group if b.alive()])
+    hard_blockers.extend([b for b in transport_bot_group if b.alive()])
+    hard_blockers.extend([b for b in carrier_bot_group if b.alive()])
+
+    push_targets: list[pygame.sprite.Sprite] = []
+    if player.alive():
+        push_targets.append(player)
+    push_targets.extend([s for s in survivor_group if s.alive()])
+    push_targets.extend([z for z in zombie_group if z.alive()])
 
     materials_alive = [m for m in material_group if m.alive()]
     for bot in carrier_bots_sorted:
@@ -839,7 +842,8 @@ def update_entities(
             cell_size=game_data.cell_size,
             pitfall_cells=pitfall_cells,
             materials=materials_alive,
-            blockers=blocker_sprites,
+            blockers=hard_blockers,
+            push_targets=push_targets,
         )
 
     update_decay_effects(game_data.state.decay_effects, frames=1)

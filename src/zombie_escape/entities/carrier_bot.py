@@ -238,6 +238,7 @@ class CarrierBot(BaseLineBot):
         pitfall_cells: set[tuple[int, int]],
         materials: Iterable[Material],
         blockers: Iterable[pygame.sprite.Sprite] = (),
+        push_targets: Iterable[pygame.sprite.Sprite] | None = None,
     ) -> None:
         recent = self._recently_dropped_material
         if recent is not None:
@@ -284,6 +285,13 @@ class CarrierBot(BaseLineBot):
                     walls=walls,
                     materials=materials,
                 )
+            self._push_overlapping_entities(
+                center_x=self.x,
+                center_y=self.y,
+                radius=self.collision_radius,
+                entities=blockers if push_targets is None else push_targets,
+                ignore=[self.carried_material] if self.carried_material else (),
+            )
             self._reverse_direction()
             return
 
@@ -291,6 +299,13 @@ class CarrierBot(BaseLineBot):
         self.y = next_y
         self.rect.center = (int(self.x), int(self.y))
         self._sync_carried_material()
+        self._push_overlapping_entities(
+            center_x=self.x,
+            center_y=self.y,
+            radius=self.collision_radius,
+            entities=blockers if push_targets is None else push_targets,
+            ignore=[self.carried_material] if self.carried_material else (),
+        )
         if self.carried_material is None and self._try_pick_overlapping_material(
             materials=materials
         ):

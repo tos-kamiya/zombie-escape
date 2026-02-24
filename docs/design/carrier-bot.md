@@ -24,6 +24,7 @@ This chapter defines the implemented `CarrierBot` variant and the passive
 - Direction state (`-1` / `+1`) and reverse operation.
 - Forward-cell computation.
 - Shared move-block helpers (axis wall checks, overlap resolution).
+- Shared overlap-push helper for line-bot vs other character collisions.
 - Shared wall-separation and position correction behavior.
 
 Role-specific decisions stay in derived classes (`PatrolBot`, `CarrierBot`):

@@ -208,3 +208,30 @@ def test_carrier_bot_y_axis_drop_selects_y_axis_cells() -> None:
     assert bot.carried_material is None
     assert carried.carried_by is None
     assert carried.rect.center == (75, 125)
+
+
+def test_carrier_bot_pushes_overlapping_targets() -> None:
+    _init_pygame()
+    layout = _make_layout(width=200, height=200)
+    bot = CarrierBot(25, 25, axis="x", direction_sign=1, speed=10.0)
+    material = Material(150, 150)
+
+    target = pygame.sprite.Sprite()
+    target.image = pygame.Surface((1, 1))
+    target.rect = target.image.get_rect(center=(35, 25))
+    target.collision_radius = 16.0
+    target.x = float(target.rect.centerx)
+    target.y = float(target.rect.centery)
+
+    bot.update(
+        [],
+        layout=layout,
+        cell_size=DEFAULT_CELL_SIZE,
+        pitfall_cells=set(),
+        materials=[material],
+        blockers=[],
+        push_targets=[target],
+    )
+
+    assert bot.rect.center == (35, 25)
+    assert target.rect.centerx > 35

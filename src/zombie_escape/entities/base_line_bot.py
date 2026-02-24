@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Iterable
+
 import pygame
 
 try:
@@ -101,3 +103,43 @@ class BaseLineBot(pygame.sprite.Sprite):
             return cx, cy
         push = min_dist - dist
         return cx + (dx / dist) * push, cy + (dy / dist) * push
+
+    def _push_overlapping_entities(
+        self: Self,
+        *,
+        center_x: float,
+        center_y: float,
+        radius: float,
+        entities: Iterable[pygame.sprite.Sprite],
+        ignore: Iterable[pygame.sprite.Sprite] = (),
+    ) -> None:
+        ignored = set(ignore)
+        for entity in entities:
+            if entity is self or entity in ignored:
+                continue
+            if getattr(entity, "mounted_vehicle", None) is not None:
+                continue
+            ex = float(entity.rect.centerx)
+            ey = float(entity.rect.centery)
+            er = float(
+                getattr(
+                    entity,
+                    "collision_radius",
+                    getattr(entity, "radius", max(entity.rect.width, entity.rect.height) / 2),
+                )
+            )
+            new_x, new_y = self._resolve_circle_overlap(
+                ex,
+                ey,
+                er,
+                other_x=center_x,
+                other_y=center_y,
+                other_radius=radius,
+            )
+            if new_x == ex and new_y == ey:
+                continue
+            entity.rect.center = (int(new_x), int(new_y))
+            if hasattr(entity, "x"):
+                entity.x = float(entity.rect.centerx)
+            if hasattr(entity, "y"):
+                entity.y = float(entity.rect.centery)
