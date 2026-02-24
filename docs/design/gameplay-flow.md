@@ -15,7 +15,7 @@
     Python's `random` module (separate from deterministic gameplay RNG).
 - Spawn/item rule:
   - Runtime item and car placement candidates (`item_spawn_cells`, `car_spawn_cells`,
-    filtered `car_cells`) already exclude transport-path cells, fire floors,
+    filtered `car_cells`) already exclude fire floors,
     moving floors, and spiky-plant cells.
 
 ## Pitfalls and Jumping

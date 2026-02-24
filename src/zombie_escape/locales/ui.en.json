@@ -226,8 +226,8 @@
         "intro": "(The spiky plants...\nLet's survive here until dawn.)"
       },
       "stage36": {
-        "name": "#36 Material Warehouse",
-        "description": "The lower warehouse is packed with materials. Push through the partition passages."
+        "name": "#36 stage for testplay/debug",
+        "description": "..."
       }
     },
     "status": {

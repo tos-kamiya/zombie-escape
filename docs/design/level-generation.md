@@ -17,7 +17,7 @@
   - Stage-defined metal floor cells are placed before other hazards and are kept
     from being replaced by pitfall/puddle/spiky-plant/reinforced-wall placement.
   - Runtime spawn candidates (`item_spawn_cells`, `car_spawn_cells`, filtered `car_cells`)
-    exclude transport-path cells, fire floors, moving floors, and spiky-plant cells.
+    exclude fire floors, moving floors, and spiky-plant cells.
 - Adjacency decoration:
   - Orthogonally adjacent normal floor cells next to fire floors are converted to
     `metal_floor_cells` for visual transition.
@@ -150,3 +150,50 @@ Two BFS checks gate acceptance:
 - Retry covers both connectivity failures and blueprint-generation failures
   (including ratio-positive / zero-candidate density placement).
 - If all attempts fail, raises `MapGenerationError` and safely returns to title flow.
+
+## Blueprint Generation Structure (Current)
+
+`generate_random_blueprint(...)` is organized as composable helpers with unchanged
+runtime behavior and generation order:
+
+1. Base grid and exits
+   - `_init_grid`
+   - `_place_exits`
+   - `_place_corner_outer_walls_for_closed_sides`
+2. Reserved/moving-floor preparation
+   - `_prepare_reserved_cells`
+   - `_stamp_moving_floor_cells`
+3. Zone placement block
+   - `_place_zone_features`
+4. Objective/item token placement block
+   - `_place_objective_tokens`
+5. Wall algorithm resolution + density placement + wall painting
+   - `_resolve_wall_algorithm_settings`
+   - `_place_density_features`
+   - `_place_walls_with_algorithm`
+6. Post-process and finalize
+   - `_place_metal_adjacent_to_fire_floor`
+   - `_place_steel_beams`
+   - `Blueprint(grid=..., steel_cells=...)`
+
+## Connectivity Utility Structure (Current)
+
+- Humanoid passable-cell collection is centralized in `_collect_humanoid_passable_cells`.
+- Token-cell collection (`P`, `C`, `e`, `f`, `E`) is centralized in `_collect_token_cells`.
+- Objective path validation still uses `validate_humanoid_objective_connectivity`.
+- Car path validation still uses `validate_car_connectivity`.
+- Combined acceptance gate remains `validate_connectivity`.
+
+## Layout Builder Structure (Current)
+
+`generate_level_from_blueprint(...)` uses dedicated helpers for setup-only concerns:
+
+- `_compute_objective_item_counts`: per-stage objective-item counts
+- `_resolve_steel_chance`: steel toggle/chance parsing from config
+- `_build_level_layout_container`: `LevelLayout` initialization
+
+Public data contract remains unchanged:
+
+- `LevelLayout` fields used by runtime systems are preserved.
+- `layout_data` keys (`player_cells`, `car_cells`, `fuel_cells`, `item_spawn_cells`,
+  `car_spawn_cells`, etc.) are preserved.
