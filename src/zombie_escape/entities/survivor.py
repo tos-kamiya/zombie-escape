@@ -28,7 +28,7 @@ from ..entities_constants import (
 from ..render_assets import angle_bin_from_vector, build_survivor_directional_surfaces
 from ..render_constants import ANGLE_BINS, ENTITY_SHADOW_RADIUS_MULT
 from ..world_grid import WallIndex, apply_cell_edge_nudge
-from .collisions import collide_circle_custom, spritecollideany_walls
+from .collisions import collide_circle_custom
 from .movement import _can_humanoid_jump, _get_jump_scale
 from .movement_helpers import (
     move_axis_with_pitfall,
@@ -494,22 +494,6 @@ class Survivor(pygame.sprite.Sprite):
         self.rect.center = (int(self.x), int(self.y))
         self._update_facing_for_bump(False)
         self._update_overlap_scale(patrol_bot_group)
-
-    def _collide_walls(
-        self: Self,
-        walls: pygame.sprite.Group,
-        wall_index: WallIndex | None,
-        cell_size: int | None,
-        layout: "LevelLayout",
-    ) -> Wall | None:
-        return spritecollideany_walls(
-            self,
-            walls,
-            wall_index=wall_index,
-            cell_size=cell_size,
-            grid_cols=layout.grid_cols,
-            grid_rows=layout.grid_rows,
-        )
 
     def _separate_from_walls_and_materials(
         self: Self,

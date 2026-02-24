@@ -112,7 +112,7 @@ _STAGE_36_CARRIER_BOT_SPAWNS = (
     _STAGE_36_CARRIER_BOT_SPAWNS_X + _STAGE_36_CARRIER_BOT_SPAWNS_Y
 )
 
-def _build_stage36_reinforced_wall_zones(grid_cols: int, grid_rows: int) -> list[tuple[int, int, int, int]]:
+def _build_stage36_reinforced_wall_zones(grid_rows: int) -> list[tuple[int, int, int, int]]:
     """Three vertical reinforced walls placed on the right side of each carrier shaft."""
     zones: list[tuple[int, int, int, int]] = []
     for y in range(4, grid_rows - 4):
@@ -193,7 +193,7 @@ def _build_stage36_material_spawns(
     return unique
 
 
-def _build_stage36_fall_spawn_zones(grid_cols: int, grid_rows: int) -> list[tuple[int, int, int, int]]:
+def _build_stage36_fall_spawn_zones(grid_rows: int) -> list[tuple[int, int, int, int]]:
     """Place fall-spawn floors at the same rows as left-right corridor doorways."""
     room_center_x = [8, 21, 34, 46]
     doorway_rows = [3, grid_rows - 4]
@@ -1305,8 +1305,8 @@ STAGES: list[Stage] = [
         wall_algorithm="empty",
         fuel_mode=FuelMode.REFUEL_CHAIN,
         exit_sides=["left", "right"],
-        reinforced_wall_zones=_build_stage36_reinforced_wall_zones(53, 23),
-        fall_spawn_zones=_build_stage36_fall_spawn_zones(53, 23),
+        reinforced_wall_zones=_build_stage36_reinforced_wall_zones(23),
+        fall_spawn_zones=_build_stage36_fall_spawn_zones(23),
         buddy_required_count=0,
         survivor_rescue_stage=False,
         waiting_car_target_count=1,

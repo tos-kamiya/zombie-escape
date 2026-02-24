@@ -359,7 +359,6 @@ def _handle_player_item_pickups(
 def _board_survivors_if_colliding(
     *,
     game_data: GameData,
-    player: pygame.sprite.Sprite,
     active_car: Car | None,
     shrunk_car: pygame.sprite.Sprite | None,
     survivor_group: pygame.sprite.Group,
@@ -969,7 +968,6 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
 
     _board_survivors_if_colliding(
         game_data=game_data,
-        player=player,
         active_car=active_car,
         shrunk_car=shrunk_car,
         survivor_group=survivor_group,

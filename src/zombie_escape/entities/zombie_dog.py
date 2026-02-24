@@ -312,7 +312,7 @@ def _zombie_dog_tracker_movement(
     cell_size: int,
     layout,
     player_center: tuple[float, float],
-    nearby_zombies: list[pygame.sprite.Sprite],
+    _nearby_zombies: list[pygame.sprite.Sprite],
     footprints: list,
     *,
     now_ms: int,
