@@ -252,6 +252,97 @@ def _build_stage39_carrier_bot_spawns(
     return spawns
 
 
+_STAGE_40_PUDDLE_COLS = [5, 11, 17, 23, 29]
+_STAGE_40_FIRE_ROWS = [6, 10, 14, 18, 22, 26]
+
+
+def _build_stage40_reinforced_wall_zones(
+    grid_cols: int, grid_rows: int
+) -> list[tuple[int, int, int, int]]:
+    """Build striped reinforced walls just inside the outer perimeter."""
+    cells: set[tuple[int, int]] = set()
+    top_y = 2
+    bottom_y = grid_rows - 3
+
+    for x in range(2, grid_cols - 2):
+        if x % 3 == 2:  # on-on-off-off pattern
+            cells.add((x, top_y))
+            cells.add((x, bottom_y))
+
+    # Use reinforced walls at lane intersections.
+    for x in _STAGE_40_PUDDLE_COLS:
+        for y in _STAGE_40_FIRE_ROWS:
+            cells.add((x, y))
+
+    return [(x, y, 1, 1) for x, y in sorted(cells)]
+
+
+def _build_stage40_fire_floor_zones(
+    grid_cols: int,
+    blocked_cols: list[int],
+    rows: list[int],
+) -> list[tuple[int, int, int, int]]:
+    """Build horizontal fire lanes while leaving puddle columns clear."""
+    blocked = set(blocked_cols)
+    zones: list[tuple[int, int, int, int]] = []
+    x_start = 4
+    x_end = grid_cols - 5
+    for y in rows:
+        seg_start: int | None = None
+        for x in range(x_start, x_end + 1):
+            if x in blocked:
+                if seg_start is not None:
+                    zones.append((seg_start, y, x - seg_start, 1))
+                    seg_start = None
+                continue
+            if seg_start is None:
+                seg_start = x
+        if seg_start is not None:
+            zones.append((seg_start, y, x_end - seg_start + 1, 1))
+    return zones
+
+
+def _build_stage40_puddle_zones(
+    puddle_cols: list[int],
+    blocked_rows: list[int],
+    *,
+    y_start: int = 5,
+    y_end: int = 27,
+) -> list[tuple[int, int, int, int]]:
+    """Build vertical puddle lanes while leaving blocked rows clear."""
+    blocked = set(blocked_rows)
+    zones: list[tuple[int, int, int, int]] = []
+    for x in puddle_cols:
+        seg_start: int | None = None
+        for y in range(y_start, y_end + 1):
+            if y in blocked:
+                if seg_start is not None:
+                    zones.append((x, seg_start, 1, y - seg_start))
+                    seg_start = None
+                continue
+            if seg_start is None:
+                seg_start = y
+        if seg_start is not None:
+            zones.append((x, seg_start, 1, y_end - seg_start + 1))
+    return zones
+
+
+def _build_stage40_fall_spawn_zones(
+    puddle_cols: list[int],
+    fire_rows: list[int],
+) -> list[tuple[int, int, int, int]]:
+    """Place one fall-spawn at each center cell of lane-bounded rectangles."""
+    zones: list[tuple[int, int, int, int]] = []
+    if len(puddle_cols) < 2 or len(fire_rows) < 2:
+        return zones
+    for left_x, right_x in zip(puddle_cols, puddle_cols[1:]):
+        center_x = (left_x + right_x) // 2
+        for top_y, bottom_y in zip(fire_rows, fire_rows[1:]):
+            center_y = (top_y + bottom_y) // 2
+            zones.append((center_x, center_y, 1, 1))
+    return zones
+
+
 STAGES: list[Stage] = [
     Stage(
         id="stage1",
@@ -1488,6 +1579,48 @@ STAGES: list[Stage] = [
         flashlight_spawn_count=1,
         shoes_spawn_count=1,
         zombie_spawn_count_per_interval=3,
+    ),
+    Stage(
+        id="stage40",
+        name_key="stages.stage40.name",
+        description_key="stages.stage40.description",
+        available=True,
+        cell_size=35,
+        grid_cols=41,
+        grid_rows=33,
+        exit_sides=["left", "right"],
+        wall_algorithm="empty",
+        buddy_required_count=3,
+        endurance_stage=True,
+        endurance_goal_ms=300_000,
+        waiting_car_target_count=0,
+        fuel_spawn_count=0,
+        initial_interior_spawn_rate=0.04,
+        exterior_spawn_weight=0.3,
+        interior_spawn_weight=0.6,
+        interior_fall_spawn_weight=0.1,
+        zombie_normal_ratio=0.5,
+        zombie_tracker_ratio=0.0,
+        zombie_wall_hugging_ratio=0.3,
+        zombie_lineformer_ratio=0.1,
+        zombie_dog_ratio=0.0,
+        zombie_tracker_dog_ratio=0.0,
+        zombie_nimble_dog_ratio=0.1,
+        zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
+        patrol_bot_spawn_rate=0.02,
+        reinforced_wall_zones=_build_stage40_reinforced_wall_zones(41, 33),
+        fall_spawn_zones=_build_stage40_fall_spawn_zones(
+            _STAGE_40_PUDDLE_COLS, _STAGE_40_FIRE_ROWS
+        ),
+        puddle_zones=_build_stage40_puddle_zones(
+            _STAGE_40_PUDDLE_COLS, _STAGE_40_FIRE_ROWS
+        ),
+        fire_floor_zones=_build_stage40_fire_floor_zones(
+            41, _STAGE_40_PUDDLE_COLS, _STAGE_40_FIRE_ROWS
+        ),
+        flashlight_spawn_count=5,
+        shoes_spawn_count=2,
+        zombie_spawn_count_per_interval=2,
     ),
 ]
 DEFAULT_STAGE_ID = "stage1"
