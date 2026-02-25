@@ -433,6 +433,9 @@ def handle_survivor_zombie_collisions(
         insert_idx = bisect_left(zombie_xs, new_zombie.rect.centerx)
         zombie_xs.insert(insert_idx, new_zombie.rect.centerx)
         zombies.insert(insert_idx, new_zombie)
+        if survivor.is_buddy:
+            game_data.state.game_over = True
+            game_data.state.game_over_at = game_data.state.game_over_at or now
 
     for survivor in list(survivor_group):
         if not survivor.alive():

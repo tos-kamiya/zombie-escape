@@ -314,12 +314,22 @@ def _place_exits(
     rng = RNG.randint
     used = set()
 
+    def _axis_pick_range(min_inclusive: int, max_inclusive: int) -> tuple[int, int]:
+        """Prefer positions one cell away from side-ends; fallback for small maps."""
+        preferred_min = min_inclusive + 1
+        preferred_max = max_inclusive - 1
+        if preferred_min <= preferred_max:
+            return preferred_min, preferred_max
+        return min_inclusive, max_inclusive
+
     def _pick_pos(side: str) -> tuple[int, int]:
         if side in ("top", "bottom"):
-            x = rng(2, cols - 3)
+            start_x, end_x = _axis_pick_range(2, cols - 3)
+            x = rng(start_x, end_x)
             y = 1 if side == "top" else rows - 2
         else:
-            y = rng(2, rows - 3)
+            start_y, end_y = _axis_pick_range(2, rows - 3)
+            y = rng(start_y, end_y)
             x = 1 if side == "left" else cols - 2
         return x, y
 
