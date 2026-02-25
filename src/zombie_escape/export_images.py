@@ -9,10 +9,12 @@ import pygame
 from .colors import STUDIO_AMBIENT_PALETTE_KEY, get_environment_palette
 from .entities import (
     Car,
+    CarrierBot,
     EmptyFuelCan,
     Flashlight,
     FuelCan,
     FuelStation,
+    Material,
     PatrolBot,
     Player,
     ReinforcedWall,
@@ -583,6 +585,19 @@ def export_images(
     _save_surface(zombie_dog_nimble_surface, zombie_dog_nimble_path, scale=output_scale)
     saved.append(zombie_dog_nimble_path)
 
+    zombie_dog_tracker = ZombieDog(center_x, center_y, variant="tracker")
+    zombie_dog_tracker_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=zombie_dog_tracker.rect,
+        sprites=[zombie_dog_tracker],
+        enable_shadows=True,
+    )
+    zombie_dog_tracker_path = out / "zombie-dog-tracker.png"
+    _save_surface(
+        zombie_dog_tracker_surface, zombie_dog_tracker_path, scale=output_scale
+    )
+    saved.append(zombie_dog_tracker_path)
+
     buddy = Survivor(center_x, center_y, is_buddy=True)
     buddy_surface = _render_studio_snapshot(
         cell_size=cell_size,
@@ -627,6 +642,28 @@ def export_images(
     patrol_bot_path = out / "patrol-bot.png"
     _save_surface(patrol_bot_surface, patrol_bot_path, scale=output_scale)
     saved.append(patrol_bot_path)
+
+    carrier_bot = CarrierBot(center_x, center_y, axis="x", direction_sign=1)
+    carrier_bot_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=carrier_bot.rect,
+        sprites=[carrier_bot],
+        enable_shadows=True,
+    )
+    carrier_bot_path = out / "carrier-bot.png"
+    _save_surface(carrier_bot_surface, carrier_bot_path, scale=output_scale)
+    saved.append(carrier_bot_path)
+
+    material = Material(center_x, center_y)
+    material_surface = _render_studio_snapshot(
+        cell_size=cell_size,
+        target_rect=material.rect,
+        sprites=[material],
+        enable_shadows=True,
+    )
+    material_path = out / "material.png"
+    _save_surface(material_surface, material_path, scale=output_scale)
+    saved.append(material_path)
 
     fuel = FuelCan(center_x, center_y)
     fuel_surface = _render_studio_snapshot(
