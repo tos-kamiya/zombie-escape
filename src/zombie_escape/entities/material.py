@@ -92,6 +92,14 @@ class Material(pygame.sprite.Sprite):
         self.x = float(self.rect.centerx)
         self.y = float(self.rect.centery)
         self.collision_radius = float(max(1.0, safe_size * 0.5))
+        # Entity-shadow system uses radius; 0.8x icon width => 0.4x radius.
+        self.shadow_radius = max(1, int(safe_size * 0.4))
+        self.shadow_shape = "rect"
+        self.shadow_size = (
+            max(1, int(safe_size * 1.2)),
+            max(1, int(safe_size * 1.2)),
+        )
+        self.shadow_offset_scale = 1.0
         self.carried_by: CarrierBot | None = None
 
     def place_at(self: Self, x: float, y: float) -> None:

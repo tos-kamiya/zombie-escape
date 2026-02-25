@@ -24,6 +24,7 @@ from ..render_constants import (
 _SHADOW_TILE_CACHE: dict[tuple[int, int, float], surface.Surface] = {}
 _SHADOW_LAYER_CACHE: dict[tuple[int, int], surface.Surface] = {}
 _SHADOW_CIRCLE_CACHE: dict[tuple[int, int, float], surface.Surface] = {}
+_SHADOW_RECT_CACHE: dict[tuple[int, int, int, float], surface.Surface] = {}
 RectTransformer = Callable[[pygame.Rect], pygame.Rect]
 
 
@@ -145,6 +146,136 @@ def _get_shadow_circle_surface(
     return surf
 
 
+def _get_shadow_rect_surface(
+    width: int,
+    height: int,
+    alpha: int,
+    *,
+    edge_softness: float = 0.12,
+) -> surface.Surface:
+    key = (
+        max(1, int(width)),
+        max(1, int(height)),
+        max(0, min(255, int(alpha))),
+        edge_softness,
+    )
+    if key in _SHADOW_RECT_CACHE:
+        return _SHADOW_RECT_CACHE[key]
+    w = key[0]
+    h = key[1]
+    oversample = SHADOW_OVERSAMPLE
+    rw = w * oversample
+    rh = h * oversample
+    render_surf = pygame.Surface((rw, rh), pygame.SRCALPHA)
+    base_alpha = key[2]
+    if edge_softness <= 0:
+        render_surf.fill((0, 0, 0, 0))
+        radius = max(1, int(min(rw, rh) * SHADOW_RADIUS_RATIO))
+        pygame.draw.rect(
+            render_surf,
+            (0, 0, 0, base_alpha),
+            render_surf.get_rect(),
+            border_radius=radius,
+        )
+        if oversample > 1:
+            surf = pygame.transform.smoothscale(render_surf, (w, h))
+        else:
+            surf = render_surf
+        _SHADOW_RECT_CACHE[key] = surf
+        return surf
+
+    softness = max(0.0, min(1.0, edge_softness))
+    fade_band = max(1, int(min(rw, rh) * softness))
+    base_radius = max(1, int(min(rw, rh) * SHADOW_RADIUS_RATIO))
+    steps = SHADOW_STEPS
+    min_ratio = SHADOW_MIN_RATIO
+    render_surf.fill((0, 0, 0, 0))
+    for idx in range(steps):
+        t = idx / (steps - 1) if steps > 1 else 1.0
+        inset = int(fade_band * t)
+        draw_w = rw - inset * 2
+        draw_h = rh - inset * 2
+        if draw_w <= 0 or draw_h <= 0:
+            continue
+        radius = max(0, base_radius - inset)
+        layer_alpha = int(base_alpha * (min_ratio + (1.0 - min_ratio) * t))
+        pygame.draw.rect(
+            render_surf,
+            (0, 0, 0, layer_alpha),
+            pygame.Rect(inset, inset, draw_w, draw_h),
+            border_radius=radius,
+        )
+    if oversample > 1:
+        surf = pygame.transform.smoothscale(render_surf, (w, h))
+    else:
+        surf = render_surf
+    _SHADOW_RECT_CACHE[key] = surf
+    return surf
+
+
+def _entity_shadow_surface_and_offset_basis(
+    entity: pygame.sprite.Sprite,
+    *,
+    alpha: int,
+    edge_softness: float,
+    shadow_radius_override: int | None = None,
+) -> tuple[surface.Surface, float] | None:
+    shape = str(getattr(entity, "shadow_shape", "circle")).lower()
+    if shape == "rect":
+        shadow_size_raw = getattr(entity, "shadow_size", None)
+        width = 0
+        height = 0
+        if (
+            isinstance(shadow_size_raw, tuple)
+            and len(shadow_size_raw) == 2
+            and shadow_size_raw[0] is not None
+            and shadow_size_raw[1] is not None
+        ):
+            width = int(shadow_size_raw[0])
+            height = int(shadow_size_raw[1])
+        elif shadow_size_raw is not None:
+            size = int(shadow_size_raw)
+            width = size
+            height = size
+        if width <= 0 or height <= 0:
+            if shadow_radius_override is not None:
+                diameter = max(0, int(shadow_radius_override)) * 2
+                width = diameter
+                height = diameter
+            else:
+                radius_raw = getattr(entity, "shadow_radius", None)
+                if radius_raw is not None:
+                    diameter = max(0, int(radius_raw)) * 2
+                    width = diameter
+                    height = diameter
+        if width <= 0 or height <= 0:
+            width = max(1, int(entity.rect.width))
+            height = max(1, int(entity.rect.height))
+        surface_to_draw = _get_shadow_rect_surface(
+            width,
+            height,
+            alpha,
+            edge_softness=edge_softness,
+        )
+        return surface_to_draw, (max(width, height) * 0.5)
+
+    if shadow_radius_override is not None:
+        radius = max(0, int(shadow_radius_override))
+    else:
+        radius_raw = getattr(entity, "shadow_radius", None)
+        if radius_raw is None:
+            return None
+        radius = max(0, int(radius_raw))
+    if radius <= 0:
+        return None
+    surface_to_draw = _get_shadow_circle_surface(
+        radius,
+        alpha,
+        edge_softness=edge_softness,
+    )
+    return surface_to_draw, float(radius)
+
+
 def _abs_clip(value: float, min_v: float, max_v: float) -> float:
     value_sign = 1.0 if value >= 0.0 else -1.0
     value = abs(value)
@@ -240,12 +371,14 @@ def _draw_entity_shadows(
     for entity in all_sprites:
         if not entity.alive():
             continue
-        radius_raw = getattr(entity, "shadow_radius", None)
-        if radius_raw is None:
+        shadow_data = _entity_shadow_surface_and_offset_basis(
+            entity,
+            alpha=alpha,
+            edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
+        )
+        if shadow_data is None:
             continue
-        radius = max(0, int(radius_raw))
-        if radius <= 0:
-            continue
+        surface_to_draw, offset_basis = shadow_data
         if outside_cells:
             cell = (
                 int(entity.rect.centerx // cell_size),
@@ -257,13 +390,8 @@ def _draw_entity_shadows(
         dx = cx - px
         dy = cy - py
         dist = math.hypot(dx, dy)
-        surface_to_draw = _get_shadow_circle_surface(
-            radius,
-            alpha,
-            edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
-        )
         offset_scale = max(0.0, float(getattr(entity, "shadow_offset_scale", 1.0)))
-        offset_dist = max(1.0, radius * 0.6) * offset_scale
+        offset_dist = max(1.0, offset_basis * 0.6) * offset_scale
         if dist > 0.001:
             scale = offset_dist / dist
             offset_x = dx * scale
@@ -311,12 +439,14 @@ def _draw_entity_drop_shadows(
     for entity in all_sprites:
         if not entity.alive():
             continue
-        radius_raw = getattr(entity, "shadow_radius", None)
-        if radius_raw is None:
+        shadow_data = _entity_shadow_surface_and_offset_basis(
+            entity,
+            alpha=alpha,
+            edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
+        )
+        if shadow_data is None:
             continue
-        radius = max(0, int(radius_raw))
-        if radius <= 0:
-            continue
+        surface_to_draw, _offset_basis = shadow_data
         if outside_cells:
             cell = (
                 int(entity.rect.centerx // cell_size),
@@ -330,11 +460,6 @@ def _draw_entity_drop_shadows(
         if getattr(entity, "is_jumping", False):
             jump_dy = JUMP_SHADOW_OFFSET
 
-        surface_to_draw = _get_shadow_circle_surface(
-            radius,
-            alpha,
-            edge_softness=ENTITY_SHADOW_EDGE_SOFTNESS,
-        )
         shadow_rect = surface_to_draw.get_rect(center=(int(cx), int(cy + jump_dy)))
         shadow_screen_rect = apply_rect(shadow_rect)
         if not shadow_screen_rect.colliderect(screen_rect):
@@ -417,13 +542,15 @@ def _draw_single_entity_shadow(
 ) -> bool:
     if entity is None or not entity.alive() or light_source_pos is None:
         return False
-    if shadow_radius is None:
-        radius_raw = getattr(entity, "shadow_radius", None)
-        if radius_raw is None:
-            return False
-        shadow_radius = max(0, int(radius_raw))
-    if shadow_radius <= 0:
+    shadow_data = _entity_shadow_surface_and_offset_basis(
+        entity,
+        alpha=alpha,
+        edge_softness=edge_softness,
+        shadow_radius_override=shadow_radius,
+    )
+    if shadow_data is None:
         return False
+    shadow_surface, offset_basis = shadow_data
     if outside_cells and cell_size > 0:
         cell = (
             int(entity.rect.centerx // cell_size),
@@ -431,11 +558,6 @@ def _draw_single_entity_shadow(
         )
         if cell in outside_cells:
             return False
-    shadow_surface = _get_shadow_circle_surface(
-        shadow_radius,
-        alpha,
-        edge_softness=edge_softness,
-    )
     screen_rect = shadow_layer.get_rect()
     px, py = light_source_pos
     cx, cy = entity.rect.center
@@ -444,7 +566,7 @@ def _draw_single_entity_shadow(
     dist = math.hypot(dx, dy)
     if offset_scale is None:
         offset_scale = float(getattr(entity, "shadow_offset_scale", 1.0))
-    offset_dist = max(1.0, shadow_radius * 0.6) * max(0.0, offset_scale)
+    offset_dist = max(1.0, offset_basis * 0.6) * max(0.0, offset_scale)
     if dist > 0.001:
         scale = offset_dist / dist
         offset_x = dx * scale
@@ -523,13 +645,15 @@ def _draw_single_entity_drop_shadow(
 ) -> bool:
     if entity is None or not entity.alive():
         return False
-    if shadow_radius is None:
-        radius_raw = getattr(entity, "shadow_radius", None)
-        if radius_raw is None:
-            return False
-        shadow_radius = max(0, int(radius_raw))
-    if shadow_radius <= 0:
+    shadow_data = _entity_shadow_surface_and_offset_basis(
+        entity,
+        alpha=alpha,
+        edge_softness=edge_softness,
+        shadow_radius_override=shadow_radius,
+    )
+    if shadow_data is None:
         return False
+    shadow_surface, _offset_basis = shadow_data
     if outside_cells and cell_size > 0:
         cell = (
             int(entity.rect.centerx // cell_size),
@@ -537,11 +661,6 @@ def _draw_single_entity_drop_shadow(
         )
         if cell in outside_cells:
             return False
-    shadow_surface = _get_shadow_circle_surface(
-        shadow_radius,
-        alpha,
-        edge_softness=edge_softness,
-    )
     screen_rect = shadow_layer.get_rect()
     cx, cy = entity.rect.center
 
