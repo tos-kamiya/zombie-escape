@@ -24,6 +24,9 @@
 - Buddy can damage interior walls/steel beams when colliding.
 - Player wall collision can split wall damage across overlapping collided walls
   in the same contact frame.
+- Player and buddy wall-damage targeting uses an 8-direction jitter probe
+  queue (shuffled/refilled) to avoid directional bias at float-to-cell
+  boundaries.
 - Off-screen survivor/buddy zombie contact triggers respawn behavior.
 - Car and patrol bot wall-overlap resolution uses shared
   `separate_circle_from_walls(...)` from `entities/movement.py`.

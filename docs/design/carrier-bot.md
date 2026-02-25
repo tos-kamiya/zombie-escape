@@ -135,9 +135,9 @@ Implementation notes:
 - Existing actor-specific behavior remains:
   - Player wall damage on collision
   - Buddy wall damage on collision near player
-- For Player/Buddy, damage hooks are triggered from resolved wall hit sets
-  returned by the shared solver, so damage semantics stay intact while collision
-  math changes.
+- For Player/Buddy, wall-damage targeting now applies an 8-direction jitter
+  probe queue during collision-time contact checks to reduce float-to-cell
+  boundary bias.
 
 ## Rendering/Layering
 
