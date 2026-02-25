@@ -50,7 +50,12 @@ from .survivors import (
     increase_survivor_capacity,
     respawn_buddies_near_player,
 )
-from .utils import is_active_zombie_threat, is_entity_in_fov, rect_visible_on_screen
+from .utils import (
+    find_nearby_offscreen_spawn_position,
+    is_active_zombie_threat,
+    is_entity_in_fov,
+    rect_visible_on_screen,
+)
 from .ambient import sync_ambient_palette_with_flashlights
 from .constants import SCREAM_MESSAGE_DISPLAY_FRAMES, LAYER_ZOMBIES
 from .state import schedule_timed_message
@@ -462,6 +467,10 @@ def _handle_escape_conditions(
         if stage.buddy_required_count > 0:
             buddy_ready = state.buddy_merged_count >= stage.buddy_required_count
         if buddy_ready:
+            if stage.buddy_required_count > 0:
+                state.buddy_rescued = min(
+                    stage.buddy_required_count, state.buddy_merged_count
+                )
             state.game_won = True
 
     # Player escaping the level
@@ -497,6 +506,7 @@ def _handle_buddy_interactions(
     survivor_group: pygame.sprite.Group,
     camera: Any,
     walkable_cells: list[tuple[int, int]],
+    cell_size: int,
     cell_center: callable,
     lineformer_trains: Any,
     player_mounted: bool,
@@ -590,8 +600,28 @@ def _handle_buddy_interactions(
                     state.game_over_at = state.game_over_at or now
                 else:
                     if walkable_cells:
-                        new_cell = RNG.choice(walkable_cells)
-                        buddy.teleport(cell_center(new_cell))
+                        respawn_pos: tuple[int, int] | None = None
+                        for _ in range(20):
+                            candidate = find_nearby_offscreen_spawn_position(
+                                walkable_cells,
+                                cell_size,
+                                player=player,
+                                camera=camera,
+                                attempts=1,
+                            )
+                            test_rect = buddy.rect.copy()
+                            test_rect.center = candidate
+                            if not is_entity_in_fov(
+                                test_rect,
+                                fov_target=fov_target,
+                                flashlight_count=state.flashlight_count,
+                            ):
+                                respawn_pos = candidate
+                                break
+                        if respawn_pos is None:
+                            new_cell = RNG.choice(walkable_cells)
+                            respawn_pos = cell_center(new_cell)
+                        buddy.teleport(respawn_pos)
                     else:
                         buddy.teleport(game_data.layout.field_rect.center)
                     _forget_contact_hint(game_data, kind="buddy", target=buddy)
@@ -755,6 +785,7 @@ def check_interactions(game_data: GameData, config: dict[str, Any]) -> None:
         survivor_group=survivor_group,
         camera=camera,
         walkable_cells=walkable_cells,
+        cell_size=cell_size,
         cell_center=_cell_center,
         lineformer_trains=game_data.lineformer_trains,
         player_mounted=player_mounted,
