@@ -1,6 +1,21 @@
-# Stages 26-35 Additions
+# Stages 26-35 Notes
 
-This page covers additions first appearing in Stages 26-35.
+This page summarizes notes for Stages 26-35.
+
+## Stages
+
+- **Stage 26: Fork of Fate**
+- **Stage 27: Lineformer**
+- **Stage 28: Flooded Sector**
+- **Stage 29: Cultivation Facility**
+- **Stage 30: Maze Attraction**
+- **Stage 31: Skitter Dog**
+- **Stage 32: Burning Floor**
+- **Stage 33: Crosscurrent**
+- **Stage 34: Iron & Fire Labyrinth**
+- **Stage 35: Spiky Plant**
+
+## Character, Item, and Terrain Notes
 
 | Name | Image | First Appears | Notes |
 | --- | --- | --- | --- |

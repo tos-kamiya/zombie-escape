@@ -1,10 +1,21 @@
-# Stages 6-15 Additions
+# Stages 6-15 Notes
 
-This page covers additions first appearing in Stages 6-15.
+This page summarizes notes for Stages 6-15.
 
-For later pages:
-- `docs/stages-16plus.md` (Stages 16-25)
-- `docs/stages-26plus.md` (Stages 26-35)
+## Stages
+
+- **Stage 6: Tracker Run**
+- **Stage 7: Rescue Buddy 2**
+- **Stage 8: Assembly Floor**
+- **Stage 9: Evacuate Survivors 2**
+- **Stage 10: Outbreak**
+- **Stage 11: Don't Look Back!**
+- **Stage 12: OVERHEAD HAZARD**
+- **Stage 13: Rescue Buddy 3**
+- **Stage 14: Falling Factory**
+- **Stage 15: The Divide**
+
+## Character, Item, and Terrain Notes
 
 | Name | Image | First Appears | Notes |
 | --- | --- | --- | --- |

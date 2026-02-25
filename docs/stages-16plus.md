@@ -1,10 +1,25 @@
-# Stages 16-25 Additions
+# Stages 16-25 Notes
 
-This page covers additions first appearing in Stages 16-25.
+This page summarizes notes for Stages 16-25.
+
+## Stages
+
+- **Stage 16: Floor Collapse**
+- **Stage 17: Harder to Trap**
+- **Stage 18: Mold Factory**
+- **Stage 19: Corridors**
+- **Stage 20: Rescue Request**
+- **Stage 21: Running Shadow**
+- **Stage 22: Still on Duty**
+- **Stage 23: Hold the Line**
+- **Stage 24: Ride the Flow**
+- **Stage 25: Distribution Center**
 
 ## Control Recommendation (Stage 21+)
 
 From Stage 21 onward (when zombie dogs appear), a gamepad or mouse is recommended. Zombie dogs can rush in quickly from outside your view, so keyboard-only control can lead to over-pressing movement keys.
+
+## Character, Item, and Terrain Notes
 
 | Name | Image | First Appears | Notes |
 | --- | --- | --- | --- |
