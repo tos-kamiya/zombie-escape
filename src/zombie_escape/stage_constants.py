@@ -1414,6 +1414,7 @@ STAGES: list[Stage] = [
         id="stage38",
         name_key="stages.stage38.name",
         description_key="stages.stage38.description",
+        buddy_required_count=1,
         available=True,
         cell_size=40,
         grid_cols=35,
