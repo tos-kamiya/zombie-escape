@@ -430,80 +430,6 @@ def _place_walls_empty(
     _ = (grid, forbidden_cells)
 
 
-def _place_walls_debug_break_probe(
-    grid: list[list[str]],
-    *,
-    forbidden_cells: set[tuple[int, int]] | None = None,
-) -> None:
-    """DEBUG: Place deterministic wall probes for player wall-break behavior checks."""
-    cols, rows = len(grid[0]), len(grid)
-    forbidden = forbidden_cells or set()
-
-    def _place_if_open(x: int, y: int, ch: str) -> None:
-        if not (0 <= x < cols and 0 <= y < rows):
-            return
-        if (x, y) in forbidden:
-            return
-        if grid[y][x] != ".":
-            return
-        grid[y][x] = ch
-
-    # Each probe uses one anchor cell and one diagonal target around it.
-    # Row 1: case2 (orthogonal inner wall priority)
-    # Row 2: case3 (both orthogonals unbreakable -> no diagonal check)
-    # Row 3: case4 (otherwise -> allow 8-neighbor diagonal check)
-    probes = [
-        # case2
-        (6, 6, 1, 0, "1", 0, -1, "R", 1, -1, "1"),  # NE
-        (12, 6, -1, 0, "1", 0, -1, "R", -1, -1, "1"),  # NW
-        (18, 6, 1, 0, "1", 0, 1, "R", 1, 1, "1"),  # SE
-        (24, 6, -1, 0, "1", 0, 1, "R", -1, 1, "1"),  # SW
-        # case3
-        (6, 12, 1, 0, "R", 0, -1, "R", 1, -1, "1"),  # NE
-        (12, 12, -1, 0, "R", 0, -1, "R", -1, -1, "1"),  # NW
-        (18, 12, 1, 0, "R", 0, 1, "R", 1, 1, "1"),  # SE
-        (24, 12, -1, 0, "R", 0, 1, "R", -1, 1, "1"),  # SW
-        # case4
-        (6, 18, 1, 0, "R", 0, -1, ".", 1, -1, "1"),  # NE
-        (12, 18, -1, 0, "R", 0, -1, ".", -1, -1, "1"),  # NW
-        (18, 18, 1, 0, "R", 0, 1, ".", 1, 1, "1"),  # SE
-        (24, 18, -1, 0, "R", 0, 1, ".", -1, 1, "1"),  # SW
-    ]
-
-    for (
-        anchor_x,
-        anchor_y,
-        dx_a,
-        dy_a,
-        ch_a,
-        dx_b,
-        dy_b,
-        ch_b,
-        dx_d,
-        dy_d,
-        ch_diag,
-    ) in probes:
-        _ = (anchor_x, anchor_y)
-        if ch_a != ".":
-            _place_if_open(anchor_x + dx_a, anchor_y + dy_a, ch_a)
-        if ch_b != ".":
-            _place_if_open(anchor_x + dx_b, anchor_y + dy_b, ch_b)
-        if ch_diag != ".":
-            _place_if_open(anchor_x + dx_d, anchor_y + dy_d, ch_diag)
-
-    # Case 4 (3rd probe row): put fire floors on the orthogonal open side
-    # adjacent to each diagonal inner-wall target, so tests can verify
-    # whether breakability happens before stepping into that neighboring cell.
-    case4_fire_cells = [
-        (6, 17),   # NE block
-        (12, 17),  # NW block
-        (18, 19),  # SE block
-        (24, 19),  # SW block
-    ]
-    for fx, fy in case4_fire_cells:
-        _place_if_open(fx, fy, "F")
-
-
 def _place_walls_grid_wire(
     grid: list[list[str]],
     *,
@@ -777,7 +703,6 @@ def _place_walls_corridor(
 WALL_ALGORITHMS = {
     "default": _place_walls_default,
     "empty": _place_walls_empty,
-    "debug_break_probe": _place_walls_debug_break_probe,
     "grid_wire": _place_walls_grid_wire,
     "sparse_moore": _place_walls_sparse_moore,
     "sparse_ortho": _place_walls_sparse_ortho,

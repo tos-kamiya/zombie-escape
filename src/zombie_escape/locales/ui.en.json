@@ -245,10 +245,6 @@
         "name": "#40 Survival Odds",
         "description": "Guide the patrol robots and protect your three colleagues until dawn.",
         "intro": "(The odds aren't good.\nThree lives depend on me.)"
-      },
-      "stage41": {
-        "name": "#41 [DEBUG] Wall Break Probe",
-        "description": "Debug stage for player wall-break checks: test cases 2/3/4 across all four diagonal directions."
       }
     },
     "status": {
