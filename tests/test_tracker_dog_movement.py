@@ -9,6 +9,7 @@ from zombie_escape.entities.zombie_dog import (
     _zombie_dog_default_movement,
     _zombie_dog_tracker_movement,
 )
+from zombie_escape.entities_constants import ZOMBIE_DOG_TRACKER_FOLLOW_SPEED_MULTIPLIER
 from zombie_escape.entities_constants import ZombieKind
 from zombie_escape.level_constants import (
     DEFAULT_CELL_SIZE,
@@ -74,7 +75,12 @@ def test_tracker_dog_follows_footprints_out_of_sight() -> None:
     assert dog.tracker_target_pos == (90, 50)
     assert move_x > 0
     assert abs(move_y) < 1e-6
-    assert math.isclose(move_x, dog.speed_patrol * 1.2, rel_tol=1e-6, abs_tol=1e-6)
+    assert math.isclose(
+        move_x,
+        dog.speed_patrol * ZOMBIE_DOG_TRACKER_FOLLOW_SPEED_MULTIPLIER,
+        rel_tol=1e-6,
+        abs_tol=1e-6,
+    )
 
 
 def test_tracker_dog_charges_when_player_in_sight() -> None:

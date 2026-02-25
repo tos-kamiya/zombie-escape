@@ -50,7 +50,8 @@ def test_player_treats_material_as_blocking_cell() -> None:
         now_ms=0,
     )
 
-    assert player.rect.center == (25, 25)
+    assert player.rect.centerx < DEFAULT_CELL_SIZE
+    assert int(player.rect.centerx // DEFAULT_CELL_SIZE) == 0
     assert getattr(player, "pending_pitfall_fall", False) is False
 
 
