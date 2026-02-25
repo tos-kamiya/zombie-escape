@@ -49,7 +49,8 @@ class CarrierBot(BaseLineBot):
         self.y = float(self.rect.centery)
         self.collision_radius = float(CARRIER_BOT_COLLISION_RADIUS)
         self.shadow_radius = max(1, int(self.collision_radius * 1.2))
-        self.shadow_offset_scale = 1.0 / 3.0
+        self.shadow_shape = "circle"
+        self.shadow_offset_scale = 1.0
         self.speed = max(0.1, float(speed))
         self.direction = self._initial_direction(sign=direction_sign)
         self._refresh_surface()
