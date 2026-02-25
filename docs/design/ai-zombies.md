@@ -47,7 +47,7 @@ Zombie movement is strategy-driven (`movement_strategy` per instance):
 - Tracker dog disables `CHASE` (no dog-pack zombie chasing).
 - Tracker dog sight range is between tracker-zombie sight and normal dog sight.
 - Tracker dog uses normal dog charge distance/cooldown.
-- Tracker dog footprint-follow movement speed is `1.2x` patrol speed.
+- Tracker dog footprint-follow movement speed is `1.4x` patrol speed.
 
 ## Tracker Loss and Trail Gap Behavior
 - Goal: prevent tracker zombies from permanently stacking at the latest footprint

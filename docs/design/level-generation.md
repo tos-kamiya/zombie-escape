@@ -71,6 +71,9 @@ Reserved cells are protected from incompatible terrain placement.
 ## Exit Side Rule
 
 - `Stage.exit_sides` selects which sides (`top`, `bottom`, `left`, `right`) can have exits.
+- Exit placement prefers positions one cell away from each side's ends
+  (near-corner positions are avoided when map size allows).
+  - If the map is too small for that margin, placement falls back to the full side range.
 - If a side is not included in `exit_sides`, the two corners on that side are forced to `B`
   (outer wall) even though edge cells are normally `O`.
 - Example: when `exit_sides=["top","bottom"]`, both left-side and right-side corners

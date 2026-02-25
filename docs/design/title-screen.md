@@ -31,12 +31,14 @@ Icon order is fixed by category:
 - `fall_spawn` when falling spawn floor settings are present.
 - `pitfall` when pitfall settings are present.
 - `moving_floor` when moving floor settings are present.
+- `fire_floor` when fire-floor settings are present.
 - `puddle` when puddle settings are present.
 
 4. Helper signals
 - `flashlight_forbidden` only when `flashlight_spawn_count <= 0`.
 - `shoes` when `shoes_spawn_count > 0`.
 - `patrol_bot` when `patrol_bot_spawn_rate > 0`.
+- `carrier_bot` when carrier-bot spawn settings are present.
 
 ## Intentional Exceptions
 

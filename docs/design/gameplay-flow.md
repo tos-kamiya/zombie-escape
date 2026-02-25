@@ -171,6 +171,6 @@ Win requires both:
 
 - Escape condition:
   - With cars: reach outside while driving.
-  - Carless endurance stage: reach target survival time.
+  - Carless endurance stage: after dawn, reach outside on foot.
 - Buddy condition:
   - `buddy_onboard + nearby_following_buddies >= buddy_required_count`.

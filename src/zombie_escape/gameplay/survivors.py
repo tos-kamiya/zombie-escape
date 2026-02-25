@@ -433,9 +433,10 @@ def handle_survivor_zombie_collisions(
         insert_idx = bisect_left(zombie_xs, new_zombie.rect.centerx)
         zombie_xs.insert(insert_idx, new_zombie.rect.centerx)
         zombies.insert(insert_idx, new_zombie)
-        if survivor.is_buddy:
-            game_data.state.game_over = True
-            game_data.state.game_over_at = game_data.state.game_over_at or now
+
+    def _set_buddy_infected_game_over() -> None:
+        game_data.state.game_over = True
+        game_data.state.game_over_at = game_data.state.game_over_at or now
 
     for survivor in list(survivor_group):
         if not survivor.alive():
@@ -443,7 +444,23 @@ def handle_survivor_zombie_collisions(
         if getattr(survivor, "mounted_vehicle", None) is not None:
             continue
         if _is_on_contaminated_cell(survivor):
+            survivor_on_screen = rect_visible_on_screen(camera, survivor.rect)
+            survivor_in_fov = is_entity_in_fov(
+                survivor.rect,
+                fov_target=fov_target,
+                flashlight_count=game_data.state.flashlight_count,
+            )
+            if survivor.is_buddy and not (survivor_on_screen and survivor_in_fov):
+                spawn_pos = find_nearby_offscreen_spawn_position(
+                    walkable_cells,
+                    cell_size,
+                    camera=camera,
+                )
+                survivor.teleport(spawn_pos)
+                continue
             _convert_survivor_to_zombie(survivor, zombie_kind=ZombieKind.NORMAL)
+            if survivor.is_buddy:
+                _set_buddy_infected_game_over()
             continue
         survivor_radius = survivor.collision_radius
         search_radius = survivor_radius + ZOMBIE_RADIUS
@@ -494,6 +511,8 @@ def handle_survivor_zombie_collisions(
                 else getattr(collided_zombie, "kind", ZombieKind.NORMAL)
             ),
         )
+        if survivor.is_buddy:
+            _set_buddy_infected_game_over()
 
 
 def respawn_buddies_near_player(game_data: GameData) -> None:
