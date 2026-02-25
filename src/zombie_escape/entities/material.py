@@ -22,37 +22,56 @@ class Material(pygame.sprite.Sprite):
         super().__init__()
         safe_size = max(4, int(size))
         self.image = pygame.Surface((safe_size, safe_size), pygame.SRCALPHA)
-        body_color = (72, 132, 168)
-        frame_color = (34, 82, 108)
-        wire_color = (92, 98, 110)
+        body_color = (56, 60, 66)
+        frame_color = (24, 27, 32)
+        wire_color = (104, 110, 120)
         inset = max(1, safe_size // 10)
-        jag = max(1, safe_size // 40)
         left = inset
         right = safe_size - 1 - inset
         top = inset
         bottom = safe_size - 1 - inset
-        mid1 = max(left + 1, min(right - 1, safe_size // 3))
-        mid2 = max(left + 1, min(right - 1, (safe_size * 2) // 3))
-        cloth_outline = [
-            (left + jag, top),
-            (mid1, top + jag),
-            (mid2, top),
-            (right - jag, top + jag),
-            (right, mid1),
-            (right - jag, mid2),
-            (right, bottom - jag),
-            (mid2, bottom),
-            (mid1, bottom - jag),
-            (left + jag, bottom),
-            (left, mid2),
-            (left + jag, mid1),
-        ]
-        pygame.draw.polygon(self.image, body_color, cloth_outline)
-        pygame.draw.polygon(self.image, frame_color, cloth_outline, width=1)
+        body_rect = pygame.Rect(left, top, right - left + 1, bottom - top + 1)
+        # Draw as stacked metal plates: top face + visible front cross-section.
+        front_depth = max(2, body_rect.height // 5)
+        top_rect = pygame.Rect(
+            body_rect.left,
+            body_rect.top,
+            body_rect.width,
+            max(1, body_rect.height - front_depth),
+        )
+        front_rect = pygame.Rect(
+            body_rect.left,
+            top_rect.bottom,
+            body_rect.width,
+            max(1, body_rect.bottom - top_rect.bottom + 1),
+        )
+        pygame.draw.rect(self.image, body_color, top_rect)
+        pygame.draw.rect(self.image, frame_color, top_rect, width=1)
+
+        front_base_color = (46, 49, 55)
+        pygame.draw.rect(self.image, front_base_color, front_rect)
+        pygame.draw.rect(self.image, frame_color, front_rect, width=1)
+        plate_line_colors = ((70, 74, 82), (58, 62, 70))
+        plate_lines = max(2, min(4, front_rect.height))
+        for i in range(1, plate_lines):
+            y_pos = front_rect.top + (i * front_rect.height) // plate_lines
+            pygame.draw.line(
+                self.image,
+                plate_line_colors[i % 2],
+                (front_rect.left + 1, y_pos),
+                (front_rect.right - 1, y_pos),
+                width=1,
+            )
+
+        pygame.draw.rect(self.image, frame_color, body_rect, width=1)
         # Two vertical and two horizontal wire bands.
+        # Vertical bands continue across the front cross-section.
         wire_width = max(1, safe_size // 10)
         x_positions = (safe_size // 3, (safe_size * 2) // 3)
-        y_positions = (safe_size // 3, (safe_size * 2) // 3)
+        y_positions = (
+            top_rect.top + max(1, top_rect.height // 3),
+            top_rect.top + max(1, (top_rect.height * 2) // 3),
+        )
         for x_pos in x_positions:
             pygame.draw.line(
                 self.image,
