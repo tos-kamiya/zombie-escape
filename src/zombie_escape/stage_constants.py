@@ -1416,14 +1416,14 @@ STAGES: list[Stage] = [
         description_key="stages.stage38.description",
         available=True,
         cell_size=40,
-        grid_cols=39,
-        grid_rows=31,
+        grid_cols=35,
+        grid_rows=35,
         wall_algorithm="empty",
         fuel_mode=FuelMode.REFUEL_CHAIN,
         exit_sides=["left", "right"],
-        reinforced_wall_zones=_build_stage38_reinforced_wall_zones(39, 31),
+        reinforced_wall_zones=_build_stage38_reinforced_wall_zones(35, 35),
         waiting_car_target_count=1,
-        initial_interior_spawn_rate=0.045,
+        initial_interior_spawn_rate=0.06,
         exterior_spawn_weight=0.4,
         interior_spawn_weight=0.6,
         interior_fall_spawn_weight=0.0,
@@ -1436,7 +1436,10 @@ STAGES: list[Stage] = [
         zombie_nimble_dog_ratio=0.0,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
         puddle_zones=[
-            (15, 14, 9, 3),
+            (13, 13, 9, 2),  # top ring band
+            (13, 20, 9, 2),  # bottom ring band
+            (13, 15, 2, 5),  # left ring band
+            (20, 15, 2, 5),  # right ring band
         ],
         flashlight_spawn_count=0,
         shoes_spawn_count=0,
