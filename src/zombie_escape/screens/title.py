@@ -255,6 +255,7 @@ class TitleScreenController:
             "zombie_dog_nimble": self._create_lettered_zombie_dog("N"),
             "zombie_dog_tracker": self._create_lettered_zombie_dog("T"),
             "patrol_bot": get_character_icon("patrol_bot", self.icon_radius),
+            "carrier_bot": get_character_icon("carrier_bot", self.icon_radius),
             "car": pygame.transform.rotate(
                 get_character_icon("car", self.icon_radius), -90
             ),
@@ -344,6 +345,8 @@ class TitleScreenController:
             icons.append(self.icon_surfaces["shoes"])
         if stage.patrol_bot_spawn_rate > 0:
             icons.append(self.icon_surfaces["patrol_bot"])
+        if stage.carrier_bot_spawns or stage.carrier_bot_spawn_density > 0:
+            icons.append(self.icon_surfaces["carrier_bot"])
         return icons
 
     def _page_available(self, page_index: int) -> bool:

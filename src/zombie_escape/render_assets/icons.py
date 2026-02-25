@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import pygame
 
+from ..entities_constants import CARRIER_BOT_HEIGHT, CARRIER_BOT_WIDTH
 from ..render_constants import SPIKY_PLANT_BODY_COLOR, SPIKY_PLANT_SPIKE_COLOR
+from ..render_constants import (
+    PATROL_BOT_ARROW_COLOR,
+    PATROL_BOT_BODY_COLOR,
+    PATROL_BOT_OUTLINE_COLOR,
+)
 from .characters import (
     build_patrol_bot_directional_surfaces,
     build_player_directional_surfaces,
@@ -16,6 +22,33 @@ from .items import (
     build_shoes_surface,
 )
 from .vehicle import paint_car_surface, resolve_car_color
+
+
+def _build_carrier_bot_icon_surface(icon_size: int) -> pygame.Surface:
+    width = max(1, int(round(icon_size * (CARRIER_BOT_WIDTH / 20.0))))
+    height = max(1, int(round(icon_size * (CARRIER_BOT_HEIGHT / 20.0))))
+    surface = pygame.Surface((width, height), pygame.SRCALPHA)
+    rect = surface.get_rect()
+    pygame.draw.rect(surface, PATROL_BOT_BODY_COLOR, rect)
+    pygame.draw.rect(surface, PATROL_BOT_OUTLINE_COLOR, rect, width=max(1, icon_size // 9))
+    # Keep the silhouette consistent with in-game carrier bots.
+    surface.set_at((rect.left, rect.top), (0, 0, 0, 0))
+    surface.set_at((rect.right - 1, rect.top), (0, 0, 0, 0))
+    surface.set_at((rect.left, rect.bottom - 1), (0, 0, 0, 0))
+    surface.set_at((rect.right - 1, rect.bottom - 1), (0, 0, 0, 0))
+
+    cy = rect.height // 2
+    tri_w = max(2, rect.width // 4)
+    tri_h = max(4, int(round(rect.height * 0.5)))
+    tip_x = rect.right - max(2, rect.width // 5)
+    base_x = max(rect.left + 2, tip_x - tri_w)
+    right_triangle = [
+        (tip_x, cy),
+        (base_x, cy - tri_h // 2),
+        (base_x, cy + tri_h // 2),
+    ]
+    pygame.draw.polygon(surface, PATROL_BOT_ARROW_COLOR, right_triangle)
+    return surface
 
 
 def get_character_icon(kind: str, size: int) -> pygame.Surface:
@@ -32,6 +65,9 @@ def get_character_icon(kind: str, size: int) -> pygame.Surface:
     if kind == "patrol_bot":
         icon_size = max(1, int(round(size * (11.0 / 3.0))))
         return build_patrol_bot_directional_surfaces(icon_size)[0]
+    if kind == "carrier_bot":
+        icon_size = max(1, int(round(size * (11.0 / 3.0) * 0.8)))
+        return _build_carrier_bot_icon_surface(icon_size)
     if kind == "car":
         width = max(1, int(round(size * 3.0)))
         height = max(1, int(round(size * (13.0 / 3.0))))
