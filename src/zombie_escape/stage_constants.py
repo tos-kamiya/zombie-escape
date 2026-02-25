@@ -253,7 +253,7 @@ def _build_stage39_carrier_bot_spawns(
 
 
 _STAGE_40_PUDDLE_COLS = [5, 11, 17, 23, 29]
-_STAGE_40_FIRE_ROWS = [6, 10, 14, 18, 22, 26]
+_STAGE_40_FIRE_ROWS = [6, 12, 18, 24, 30]
 
 
 def _build_stage40_reinforced_wall_zones(
@@ -303,16 +303,35 @@ def _build_stage40_fire_floor_zones(
 
 
 def _build_stage40_puddle_zones(
+    grid_rows: int,
     puddle_cols: list[int],
     blocked_rows: list[int],
-    *,
-    y_start: int = 5,
-    y_end: int = 27,
 ) -> list[tuple[int, int, int, int]]:
     """Build vertical puddle lanes while leaving blocked rows clear."""
-    blocked = set(blocked_rows)
+    y_start = 5
+    y_end = grid_rows - 4
+    blocked_base = set(blocked_rows)
+    room_bands: list[tuple[int, int]] = []
+    seg_start: int | None = None
+    for y in range(y_start, y_end + 1):
+        if y in blocked_base:
+            if seg_start is not None:
+                room_bands.append((seg_start, y - 1))
+                seg_start = None
+            continue
+        if seg_start is None:
+            seg_start = y
+    if seg_start is not None:
+        room_bands.append((seg_start, y_end))
     zones: list[tuple[int, int, int, int]] = []
-    for x in puddle_cols:
+    for col_idx, x in enumerate(puddle_cols):
+        blocked = set(blocked_base)
+        for band_idx, (band_start, band_end) in enumerate(room_bands):
+            if band_start > band_end:
+                continue
+            band_len = (band_end - band_start) + 1
+            if band_len < 2:
+                continue
         seg_start: int | None = None
         for y in range(y_start, y_end + 1):
             if y in blocked:
@@ -1584,10 +1603,11 @@ STAGES: list[Stage] = [
         id="stage40",
         name_key="stages.stage40.name",
         description_key="stages.stage40.description",
+        intro_key="stages.stage40.intro",
         available=True,
-        cell_size=35,
-        grid_cols=41,
-        grid_rows=33,
+        cell_size=55,
+        grid_cols=35,
+        grid_rows=37,
         exit_sides=["left", "right"],
         wall_algorithm="empty",
         buddy_required_count=3,
@@ -1608,17 +1628,17 @@ STAGES: list[Stage] = [
         zombie_nimble_dog_ratio=0.1,
         zombie_decay_duration_frames=ZOMBIE_DECAY_DURATION_FRAMES * 2,
         patrol_bot_spawn_rate=0.02,
-        reinforced_wall_zones=_build_stage40_reinforced_wall_zones(41, 33),
+        reinforced_wall_zones=_build_stage40_reinforced_wall_zones(35, 37),
         fall_spawn_zones=_build_stage40_fall_spawn_zones(
             _STAGE_40_PUDDLE_COLS, _STAGE_40_FIRE_ROWS
         ),
         puddle_zones=_build_stage40_puddle_zones(
-            _STAGE_40_PUDDLE_COLS, _STAGE_40_FIRE_ROWS
+            35, _STAGE_40_PUDDLE_COLS, _STAGE_40_FIRE_ROWS
         ),
         fire_floor_zones=_build_stage40_fire_floor_zones(
-            41, _STAGE_40_PUDDLE_COLS, _STAGE_40_FIRE_ROWS
+            35, _STAGE_40_PUDDLE_COLS, _STAGE_40_FIRE_ROWS
         ),
-        flashlight_spawn_count=5,
+        flashlight_spawn_count=0,
         shoes_spawn_count=2,
         zombie_spawn_count_per_interval=2,
     ),

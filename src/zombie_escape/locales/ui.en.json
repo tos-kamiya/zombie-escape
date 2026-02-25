@@ -180,7 +180,7 @@
       },
       "stage25": {
         "name": "#25 Distribution Center",
-        "description": "It’s a wide facility -- search efficiently. This time, there are only two exits.",
+        "description": "It's a wide facility -- search efficiently. This time, there are only two exits.",
         "intro": "A map shows the floor\ndivided into eight sectors."
       },
       "stage26": {
@@ -240,6 +240,11 @@
       "stage39": {
         "name": "#39 Restricted Zone",
         "description": "Flame tiles are scattered everywhere. Don't get shoved into them by column-running carrier bots."
+      },
+      "stage40": {
+        "name": "#40 Survival Odds",
+        "description": "Guide the patrol robots and protect your three colleagues until dawn.",
+        "intro": "(The odds aren't good.\nThree lives depend on me.)"
       }
     },
     "status": {
