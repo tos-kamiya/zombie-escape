@@ -181,9 +181,7 @@ class Player(pygame.sprite.Sprite):
         inner_wall_hit = False
         inner_wall_cell: tuple[int, int] | None = None
 
-        def _apply_player_wall_damage(
-            hit_walls: list[pygame.sprite.Sprite], *, source: str
-        ) -> None:
+        def _apply_player_wall_damage(hit_walls: list[pygame.sprite.Sprite]) -> None:
             nonlocal inner_wall_hit, inner_wall_cell
             targets = [
                 wall
@@ -192,20 +190,6 @@ class Player(pygame.sprite.Sprite):
             ]
             if not targets:
                 return
-            debug_cells: list[tuple[int, int]] = []
-            if cell_size:
-                for wall in targets:
-                    debug_cells.append(
-                        (
-                            int(wall.rect.centerx // cell_size),
-                            int(wall.rect.centery // cell_size),
-                        )
-                    )
-            if source == "collision":
-                print(
-                    "[DEBUG walltouch] "
-                    f"source={source} target_cells={debug_cells}"
-                )
             damage = max(1, PLAYER_WALL_DAMAGE)
             unique_targets: list[pygame.sprite.Sprite] = []
             seen: set[int] = set()
@@ -313,10 +297,7 @@ class Player(pygame.sprite.Sprite):
                     wall,
                 )
             ]
-            _apply_player_wall_damage(
-                collision_targets or separation.hit_walls,
-                source="collision",
-            )
+            _apply_player_wall_damage(collision_targets or separation.hit_walls)
 
         self.rect.center = (int(self.x), int(self.y))
         if inner_wall_hit:
