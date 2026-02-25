@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 
 try:
@@ -33,7 +34,7 @@ from ..render_assets import (
 from ..render_constants import ANGLE_BINS, PLAYER_SHADOW_RADIUS_MULT
 from ..world_grid import WallIndex, walls_for_radius
 from .collisions import collide_circle_custom
-from .movement import _can_humanoid_jump, _get_jump_scale
+from .movement import _can_humanoid_jump, _circle_wall_collision, _get_jump_scale
 from .movement_helpers import (
     move_axis_with_pitfall,
     separate_circle_from_blockers,
@@ -41,6 +42,26 @@ from .movement_helpers import (
     update_directional_image_scale,
 )
 from .walls import Wall, _is_inner_wall
+
+_PLAYER_CELL_JITTER_DIRS: tuple[tuple[float, float], ...] = (
+    (1.0, 0.0),
+    (-1.0, 0.0),
+    (0.0, 1.0),
+    (0.0, -1.0),
+    (0.7, 0.7),
+    (0.7, -0.7),
+    (-0.7, 0.7),
+    (-0.7, -0.7),
+)
+_PLAYER_CELL_JITTER_QUEUE: list[tuple[float, float]] = []
+
+
+def _next_player_cell_jitter() -> tuple[float, float]:
+    if not _PLAYER_CELL_JITTER_QUEUE:
+        refill = list(_PLAYER_CELL_JITTER_DIRS)
+        random.shuffle(refill)
+        _PLAYER_CELL_JITTER_QUEUE.extend(refill)
+    return _PLAYER_CELL_JITTER_QUEUE.pop()
 
 
 class Player(pygame.sprite.Sprite):
@@ -160,7 +181,9 @@ class Player(pygame.sprite.Sprite):
         inner_wall_hit = False
         inner_wall_cell: tuple[int, int] | None = None
 
-        def _apply_player_wall_damage(hit_walls: list[pygame.sprite.Sprite]) -> None:
+        def _apply_player_wall_damage(
+            hit_walls: list[pygame.sprite.Sprite], *, source: str
+        ) -> None:
             nonlocal inner_wall_hit, inner_wall_cell
             targets = [
                 wall
@@ -169,6 +192,20 @@ class Player(pygame.sprite.Sprite):
             ]
             if not targets:
                 return
+            debug_cells: list[tuple[int, int]] = []
+            if cell_size:
+                for wall in targets:
+                    debug_cells.append(
+                        (
+                            int(wall.rect.centerx // cell_size),
+                            int(wall.rect.centery // cell_size),
+                        )
+                    )
+            if source == "collision":
+                print(
+                    "[DEBUG walltouch] "
+                    f"source={source} target_cells={debug_cells}"
+                )
             damage = max(1, PLAYER_WALL_DAMAGE)
             unique_targets: list[pygame.sprite.Sprite] = []
             seen: set[int] = set()
@@ -231,6 +268,10 @@ class Player(pygame.sprite.Sprite):
             clamp_range=(0.0, level_height),
         )
 
+        jitter_dx, jitter_dy = _next_player_cell_jitter()
+        collision_probe_x = self.x + jitter_dx
+        collision_probe_y = self.y + jitter_dy
+
         wall_candidates: list[pygame.sprite.Sprite]
         if wall_index is None:
             wall_candidates = [wall for wall in walls if wall.alive()]
@@ -240,7 +281,7 @@ class Player(pygame.sprite.Sprite):
             wall_candidates = list(
                 walls_for_radius(
                     wall_index,
-                    (self.x, self.y),
+                    (collision_probe_x, collision_probe_y),
                     float(getattr(self, "collision_radius", self.radius)),
                     cell_size=cell_size,
                     grid_cols=grid_cols,
@@ -261,7 +302,21 @@ class Player(pygame.sprite.Sprite):
         self.x = separation.x
         self.y = separation.y
         if separation.hit_walls:
-            _apply_player_wall_damage(separation.hit_walls)
+            collision_targets = [
+                wall
+                for wall in wall_candidates
+                if wall is not None
+                and wall.alive()
+                and _circle_wall_collision(
+                    (collision_probe_x, collision_probe_y),
+                    float(getattr(self, "collision_radius", self.radius)),
+                    wall,
+                )
+            ]
+            _apply_player_wall_damage(
+                collision_targets or separation.hit_walls,
+                source="collision",
+            )
 
         self.rect.center = (int(self.x), int(self.y))
         if inner_wall_hit:

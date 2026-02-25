@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import random
 from typing import TYPE_CHECKING, Callable
 
 import pygame
@@ -29,7 +30,7 @@ from ..render_assets import angle_bin_from_vector, build_survivor_directional_su
 from ..render_constants import ANGLE_BINS, ENTITY_SHADOW_RADIUS_MULT
 from ..world_grid import WallIndex, apply_cell_edge_nudge
 from .collisions import collide_circle_custom
-from .movement import _can_humanoid_jump, _get_jump_scale
+from .movement import _can_humanoid_jump, _circle_wall_collision, _get_jump_scale
 from .movement_helpers import (
     move_axis_with_pitfall,
     separate_circle_from_blockers,
@@ -40,6 +41,27 @@ from .walls import Wall, _is_inner_wall
 
 if TYPE_CHECKING:
     from ..models import LevelLayout
+
+
+_SURVIVOR_WALL_JITTER_DIRS: tuple[tuple[float, float], ...] = (
+    (1.0, 0.0),
+    (-1.0, 0.0),
+    (0.0, 1.0),
+    (0.0, -1.0),
+    (0.7, 0.7),
+    (0.7, -0.7),
+    (-0.7, 0.7),
+    (-0.7, -0.7),
+)
+_SURVIVOR_WALL_JITTER_QUEUE: list[tuple[float, float]] = []
+
+
+def _next_survivor_wall_jitter() -> tuple[float, float]:
+    if not _SURVIVOR_WALL_JITTER_QUEUE:
+        refill = list(_SURVIVOR_WALL_JITTER_DIRS)
+        random.shuffle(refill)
+        _SURVIVOR_WALL_JITTER_QUEUE.extend(refill)
+    return _SURVIVOR_WALL_JITTER_QUEUE.pop()
 
 
 class Survivor(pygame.sprite.Sprite):
@@ -334,11 +356,21 @@ class Survivor(pygame.sprite.Sprite):
                 walkable_cells,
             )
         )
+        jitter_dx, jitter_dy = _next_survivor_wall_jitter()
 
         def _on_buddy_wall_hit(hit_wall: Wall) -> None:
             if not hasattr(hit_wall, "_take_damage"):
                 return
             if hit_wall.alive():
+                probe_x = self.x + jitter_dx
+                probe_y = self.y + jitter_dy
+                touches_with_jitter = _circle_wall_collision(
+                    (probe_x, probe_y),
+                    float(getattr(self, "collision_radius", self.radius)),
+                    hit_wall,
+                )
+                if not touches_with_jitter:
+                    return
                 dx_to_player = player_pos[0] - self.x
                 dy_to_player = player_pos[1] - self.y
                 if dx_to_player * dx_to_player + dy_to_player * dy_to_player <= (
