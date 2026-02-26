@@ -134,6 +134,41 @@ def test_validate_connectivity_refuel_respects_one_way_flow() -> None:
     assert validate_connectivity(grid, fuel_mode=FuelMode.REFUEL_CHAIN) is None
 
 
+def test_validate_humanoid_connectivity_blocks_reinforced_corner_diagonal() -> None:
+    grid = [
+        "BBBBB",
+        "BPRBB",
+        "BRCBB",
+        "BBBBB",
+        "BBBBB",
+    ]
+
+    assert validate_humanoid_connectivity(grid) is False
+
+
+def test_validate_humanoid_connectivity_allows_breakable_corner_diagonal() -> None:
+    grid = [
+        "BBBBB",
+        "BP1BB",
+        "B1.CB",
+        "BBBBB",
+        "BBBBB",
+    ]
+
+    assert validate_humanoid_connectivity(grid) is True
+
+
+def test_validate_connectivity_rejects_player_corner_cut_to_car() -> None:
+    grid = [
+        "BBBBBB",
+        "BPR..B",
+        "BRC.EB",
+        "BBBBBB",
+    ]
+
+    assert validate_connectivity(grid, fuel_mode=FuelMode.START_FULL) is None
+
+
 def test_generate_random_blueprint_allows_puddle_density_on_fall_spawn_zone() -> None:
     seed_rng(12345)
     baseline = generate_random_blueprint(

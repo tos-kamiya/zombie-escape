@@ -87,7 +87,7 @@ def validate_humanoid_connectivity(grid: list[str]) -> bool:
             ch = grid[y][x]
             if ch == "P":
                 start_pos = (x, y)
-            if ch not in ("x", "B", "R", "F"):
+            if ch not in ("x", "B", "R", "F", "O"):
                 passable_cells.add((x, y))
 
     if start_pos is None:
@@ -112,7 +112,7 @@ def _humanoid_reachable_cells(
             (x, y)
             for y in range(rows)
             for x in range(cols)
-            if grid[y][x] not in ("x", "B", "R", "F")
+            if grid[y][x] not in ("x", "B", "R", "F", "O")
         }
     if start_pos not in passable_cells:
         return set()
@@ -143,6 +143,11 @@ def _humanoid_reachable_cells(
         for dx, dy in neighbor_offsets:
             if (dx, dy) in blocked_offsets:
                 continue
+            if dx != 0 and dy != 0:
+                side1 = grid[y][x + dx]
+                side2 = grid[y + dy][x]
+                if side1 in {"B", "R"} and side2 in {"B", "R"}:
+                    continue
             nx, ny = x + dx, y + dy
             next_cell = (nx, ny)
             if next_cell in passable_cells and next_cell not in reachable:
@@ -171,7 +176,7 @@ def validate_humanoid_objective_connectivity(
         (x, y)
         for y in range(rows)
         for x in range(cols)
-        if grid[y][x] not in ("x", "B", "R", "F")
+        if grid[y][x] not in ("x", "B", "R", "F", "O")
     }
     player_cells = [
         (x, y) for y in range(rows) for x in range(cols) if grid[y][x] == "P"
