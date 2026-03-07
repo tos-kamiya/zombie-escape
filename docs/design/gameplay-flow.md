@@ -90,6 +90,8 @@ Initial placement policy:
 - Hovering the cursor over the player (without pressing left button) displays static `>> 4x` near the player.
 - `check_interactions(...)`
   - Handles pickups, rescue boarding, car destruction, and win/loss logic.
+  - Builds a per-frame `InteractionContext` so helper calls share actor refs,
+    interaction radii, localized HUD text, and tile-query helpers.
 - `update_survivors(...)`
   - Survivor/buddy following and obstacle-aware movement.
 - `handle_survivor_zombie_collisions(...)`

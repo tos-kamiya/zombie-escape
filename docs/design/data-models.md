@@ -18,11 +18,13 @@ Primary definitions live in:
   - Non-goal for this step:
     - no broader `GameData` redesign
     - no behavior changes in placement logic
-- `[PROPOSED]` Introduce an `InteractionContext` bundle for per-frame interaction
+- `[DONE]` Introduce an `InteractionContext` bundle for per-frame interaction
   processing in `gameplay/entity_interactions.py`.
-  - Status: design exploration only
-  - Intent: gather `game_data`, active actor refs, localized strings, and precomputed
-    interaction radii into one object for `check_interactions(...)`.
+  - Intent: gather `game_data`, active actor refs, localized strings, and
+    precomputed interaction radii into one object for `check_interactions(...)`.
+  - Scope:
+    - `check_interactions(...)` now builds one per-frame context
+    - helper functions consume the context instead of long parameter lists
 - `[PROPOSED]` Split gameplay screen data into immutable dependencies and mutable
   runtime state.
   - Status: design exploration only
