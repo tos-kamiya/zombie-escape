@@ -9,6 +9,11 @@ from ..localization import get_font_settings
 from ..localization import translate as tr
 from ..render_constants import GAMEPLAY_FONT_SIZE
 
+_PAUSE_ICON_RADIUS = 34
+_PAUSE_ICON_BAR_WIDTH = 6
+_PAUSE_ICON_BAR_HEIGHT = 22
+_PAUSE_ICON_BAR_GAP = 8
+
 
 def _wrap_long_segment(
     segment: str, font: pygame.font.Font, max_width: int
@@ -166,7 +171,7 @@ def draw_pause_overlay(
     screen_width, screen_height = screen.get_size()
     overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 150))
-    pause_radius = 34
+    pause_radius = _PAUSE_ICON_RADIUS
     cx = screen_width // 2
     cy = screen_height // 2 - 20
     pygame.draw.circle(
@@ -176,9 +181,9 @@ def draw_pause_overlay(
         pause_radius,
         width=3,
     )
-    bar_width = 6
-    bar_height = 22
-    gap = 8
+    bar_width = _PAUSE_ICON_BAR_WIDTH
+    bar_height = _PAUSE_ICON_BAR_HEIGHT
+    gap = _PAUSE_ICON_BAR_GAP
     pygame.draw.rect(
         overlay,
         LIGHT_GRAY,

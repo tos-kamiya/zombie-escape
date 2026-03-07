@@ -47,6 +47,12 @@ from ..render_constants import (
 
 _HUD_ICON_CACHE: dict[str, surface.Surface] = {}
 _TIME_ACCEL_FRAMES = ("  >>", ">  >", ">>  ", " >> ")
+_HINT_ARROW_TIP_LENGTH = 6
+_HINT_ARROW_BACK_OFFSET = 6
+_HINT_ARROW_WING_OFFSET = 5
+_SUBTLE_HINT_ARROW_TIP_LENGTH = 5
+_SUBTLE_HINT_ARROW_BACK_OFFSET = 4
+_SUBTLE_HINT_ARROW_WING_OFFSET = 3
 
 
 def build_time_accel_text(
@@ -762,16 +768,19 @@ def _draw_hint_arrow(
     )
     center_x = player_screen[0] + dir_x * ring_radius
     center_y = player_screen[1] + dir_y * ring_radius
-    arrow_len = 6
+    arrow_len = _HINT_ARROW_TIP_LENGTH
     tip = (center_x + dir_x * arrow_len, center_y + dir_y * arrow_len)
-    base = (center_x - dir_x * 6, center_y - dir_y * 6)
+    base = (
+        center_x - dir_x * _HINT_ARROW_BACK_OFFSET,
+        center_y - dir_y * _HINT_ARROW_BACK_OFFSET,
+    )
     left = (
-        base[0] - dir_y * 5,
-        base[1] + dir_x * 5,
+        base[0] - dir_y * _HINT_ARROW_WING_OFFSET,
+        base[1] + dir_x * _HINT_ARROW_WING_OFFSET,
     )
     right = (
-        base[0] + dir_y * 5,
-        base[1] - dir_x * 5,
+        base[0] + dir_y * _HINT_ARROW_WING_OFFSET,
+        base[1] - dir_x * _HINT_ARROW_WING_OFFSET,
     )
     pygame.draw.polygon(screen, color, [tip, left, right])
 
@@ -807,10 +816,22 @@ def _draw_subtle_hint_arrow(
     center_y = player_screen[1] + dir_y * ring_radius
     normal_x = -dir_y
     normal_y = dir_x
-    tip = (center_x + dir_x * 5, center_y + dir_y * 5)
-    back = (center_x - dir_x * 4, center_y - dir_y * 4)
-    left = (back[0] + normal_x * 3, back[1] + normal_y * 3)
-    right = (back[0] - normal_x * 3, back[1] - normal_y * 3)
+    tip = (
+        center_x + dir_x * _SUBTLE_HINT_ARROW_TIP_LENGTH,
+        center_y + dir_y * _SUBTLE_HINT_ARROW_TIP_LENGTH,
+    )
+    back = (
+        center_x - dir_x * _SUBTLE_HINT_ARROW_BACK_OFFSET,
+        center_y - dir_y * _SUBTLE_HINT_ARROW_BACK_OFFSET,
+    )
+    left = (
+        back[0] + normal_x * _SUBTLE_HINT_ARROW_WING_OFFSET,
+        back[1] + normal_y * _SUBTLE_HINT_ARROW_WING_OFFSET,
+    )
+    right = (
+        back[0] - normal_x * _SUBTLE_HINT_ARROW_WING_OFFSET,
+        back[1] - normal_y * _SUBTLE_HINT_ARROW_WING_OFFSET,
+    )
     pygame.draw.polygon(screen, color, [tip, left, right], width=1)
 
 

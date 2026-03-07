@@ -88,6 +88,8 @@ _MOUSE_STEERING_DEADZONE_SCALE = 2.0
 _MOUSE_ACCEL_HOLD_SCALE = 1.2
 _MOUSE_CURSOR_SHOW_MS = 1500
 _MOUSE_CURSOR_MOVE_SHOW_DISTANCE_PX = 10
+_MOUSE_STEERING_MIN_DEADZONE_PX = 2
+_MOUSE_ACCEL_MIN_RADIUS_PX = 2
 _PAUSE_HOTSPOT_COLOR = (48, 48, 48)
 _PAUSE_HOTSPOT_HOVER_COLOR = (128, 128, 128)
 _PAUSE_HOTSPOT_TRI_SIZE = 7
@@ -1090,7 +1092,8 @@ class GameplayScreenRunner:
         dy = float(mouse_screen_pos[1] - player_screen_pos[1])
         magnitude = math.hypot(dx, dy)
         deadzone = max(
-            2, int(getattr(player, "radius", 4) * _MOUSE_STEERING_DEADZONE_SCALE)
+            _MOUSE_STEERING_MIN_DEADZONE_PX,
+            int(getattr(player, "radius", 4) * _MOUSE_STEERING_DEADZONE_SCALE),
         )
         self.mouse_steering_active = True
         self.mouse_cursor_visible_until_ms = (
@@ -1164,7 +1167,8 @@ class GameplayScreenRunner:
         dy = float(mouse_pos[1] - player_screen_pos[1])
         distance = math.hypot(dx, dy)
         accel_radius = max(
-            2, int(getattr(player, "radius", 4) * _MOUSE_ACCEL_HOLD_SCALE)
+            _MOUSE_ACCEL_MIN_RADIUS_PX,
+            int(getattr(player, "radius", 4) * _MOUSE_ACCEL_HOLD_SCALE),
         )
         return distance <= float(accel_radius)
 
