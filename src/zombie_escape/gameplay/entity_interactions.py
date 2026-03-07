@@ -79,6 +79,21 @@ RNG = get_rng()
 CAR_ZOMBIE_RAM_DAMAGE = 6
 CAR_ZOMBIE_CONTACT_DAMAGE = 2
 CAR_ZOMBIE_HIT_DAMAGE = 20
+CAR_INTERACTION_RADIUS = _interaction_radius(CAR_WIDTH, CAR_HEIGHT)
+FUEL_INTERACTION_RADIUS = _interaction_radius(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT)
+EMPTY_FUEL_CAN_INTERACTION_RADIUS = _interaction_radius(
+    EMPTY_FUEL_CAN_WIDTH,
+    EMPTY_FUEL_CAN_HEIGHT,
+)
+FUEL_STATION_INTERACTION_RADIUS = _interaction_radius(
+    FUEL_STATION_WIDTH,
+    FUEL_STATION_HEIGHT,
+)
+FLASHLIGHT_INTERACTION_RADIUS = _interaction_radius(
+    FLASHLIGHT_WIDTH,
+    FLASHLIGHT_HEIGHT,
+)
+SHOES_INTERACTION_RADIUS = _interaction_radius(SHOES_WIDTH, SHOES_HEIGHT)
 
 
 @dataclass
@@ -99,12 +114,6 @@ class InteractionContext:
     need_empty_can_text: str
     flashlight_full_text: str
     shoes_full_text: str
-    car_interaction_radius: float
-    fuel_interaction_radius: float
-    empty_fuel_can_interaction_radius: float
-    fuel_station_interaction_radius: float
-    flashlight_interaction_radius: float
-    shoes_interaction_radius: float
     walkable_cells: list[tuple[int, int]]
     outside_cells: set[tuple[int, int]]
     contaminated_cells: set[tuple[int, int]]
@@ -141,7 +150,7 @@ class InteractionContext:
         )
 
     def player_near_car(self, car_obj: Car | None) -> bool:
-        return self.player_near_sprite(car_obj, self.car_interaction_radius)
+        return self.player_near_sprite(car_obj, CAR_INTERACTION_RADIUS)
 
     def entity_on_contaminated_cell(self, entity: pygame.sprite.Sprite) -> bool:
         if self.cell_size <= 0 or not self.contaminated_cells:
@@ -188,18 +197,6 @@ def _build_interaction_context(
         need_empty_can_text=tr("hud.need_empty_fuel_can"),
         flashlight_full_text=tr("hud.flashlight_full"),
         shoes_full_text=tr("hud.shoes_full"),
-        car_interaction_radius=_interaction_radius(CAR_WIDTH, CAR_HEIGHT),
-        fuel_interaction_radius=_interaction_radius(FUEL_CAN_WIDTH, FUEL_CAN_HEIGHT),
-        empty_fuel_can_interaction_radius=_interaction_radius(
-            EMPTY_FUEL_CAN_WIDTH, EMPTY_FUEL_CAN_HEIGHT
-        ),
-        fuel_station_interaction_radius=_interaction_radius(
-            FUEL_STATION_WIDTH, FUEL_STATION_HEIGHT
-        ),
-        flashlight_interaction_radius=_interaction_radius(
-            FLASHLIGHT_WIDTH, FLASHLIGHT_HEIGHT
-        ),
-        shoes_interaction_radius=_interaction_radius(SHOES_WIDTH, SHOES_HEIGHT),
         walkable_cells=game_data.layout.walkable_cells,
         outside_cells=game_data.layout.outside_cells,
         contaminated_cells=game_data.layout.zombie_contaminated_cells,
@@ -325,7 +322,7 @@ def _handle_fuel_pickup(
         and not ctx.player_mounted
     ):
         return
-    if not ctx.player_near_point(fuel.rect.center, ctx.fuel_interaction_radius):
+    if not ctx.player_near_point(fuel.rect.center, FUEL_INTERACTION_RADIUS):
         return
     state.fuel_progress = FuelProgress.FULL_CAN
     if state.timed_message == ctx.need_fuel_text:
@@ -354,7 +351,7 @@ def _handle_empty_fuel_can_pickup(
         return False
     if not ctx.player_near_point(
         empty_fuel_can.rect.center,
-        ctx.empty_fuel_can_interaction_radius,
+        EMPTY_FUEL_CAN_INTERACTION_RADIUS,
     ):
         return False
     state.fuel_progress = FuelProgress.EMPTY_CAN
@@ -381,7 +378,7 @@ def _handle_fuel_station_refuel(
         return False
     if not ctx.player_near_point(
         fuel_station.rect.center,
-        ctx.fuel_station_interaction_radius,
+        FUEL_STATION_INTERACTION_RADIUS,
     ):
         return False
     _remember_contact_hint(ctx.game_data, kind="fuel_station", target=fuel_station)
@@ -419,7 +416,7 @@ def _handle_fuel_station_without_can_hint(
         return
     if not ctx.player_near_point(
         fuel_station.rect.center,
-        ctx.fuel_station_interaction_radius,
+        FUEL_STATION_INTERACTION_RADIUS,
     ):
         return
     _remember_contact_hint(ctx.game_data, kind="fuel_station", target=fuel_station)
@@ -448,7 +445,7 @@ def _handle_player_item_pickups(
             continue
         if not ctx.player_near_point(
             flashlight.rect.center,
-            ctx.flashlight_interaction_radius,
+            FLASHLIGHT_INTERACTION_RADIUS,
         ):
             continue
         if state.flashlight_count >= MAX_FLASHLIGHT_EFFECT_LEVEL:
@@ -475,7 +472,7 @@ def _handle_player_item_pickups(
     for shoes in list(shoes_list):
         if not shoes.alive():
             continue
-        if not ctx.player_near_point(shoes.rect.center, ctx.shoes_interaction_radius):
+        if not ctx.player_near_point(shoes.rect.center, SHOES_INTERACTION_RADIUS):
             continue
         if state.shoes_count >= MAX_SHOES_EFFECT_LEVEL:
             schedule_timed_message(
