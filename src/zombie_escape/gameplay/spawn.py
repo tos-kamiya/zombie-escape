@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Literal, Mapping, Sequence
+from typing import Any, Callable, Literal, Sequence
 
 import pygame
 
@@ -38,7 +38,7 @@ from ..gameplay_constants import (
     DEFAULT_SHOES_SPAWN_COUNT,
 )
 from ..level_constants import DEFAULT_CELL_SIZE, DEFAULT_GRID_COLS, DEFAULT_GRID_ROWS
-from ..models import DustRing, FallingEntity, GameData, LevelLayout, Stage
+from ..models import DustRing, FallingEntity, GameData, LayoutSpawnData, LevelLayout, Stage
 from ..rng import get_rng
 from .constants import (
     FALLING_ZOMBIE_DUST_DURATION_MS,
@@ -1077,7 +1077,7 @@ def place_new_car(
 
 
 def spawn_survivors(
-    game_data: GameData, layout_data: Mapping[str, list[tuple[int, int]]]
+    game_data: GameData, layout_data: LayoutSpawnData
 ) -> list[Survivor]:
     """Populate rescue-stage survivors and buddy-stage buddies."""
     survivors: list[Survivor] = []
@@ -1085,7 +1085,7 @@ def spawn_survivors(
     if not (spawn_rate > 0.0 or game_data.stage.buddy_required_count > 0):
         return survivors
 
-    walkable = layout_data.get("walkable_cells", [])
+    walkable = layout_data.walkable_cells
     wall_group = game_data.groups.wall_group
     survivor_group = game_data.groups.survivor_group
     all_sprites = game_data.groups.all_sprites
@@ -1127,7 +1127,7 @@ def spawn_survivors(
 
 def setup_player_and_cars(
     game_data: GameData,
-    layout_data: Mapping[str, list[tuple[int, int]]],
+    layout_data: LayoutSpawnData,
     *,
     car_count: int = 1,
 ) -> tuple[Player, list[Car]]:
@@ -1136,7 +1136,7 @@ def setup_player_and_cars(
         assert car_count > 0, "Non-endurance stages must have at least one car"
 
     all_sprites = game_data.groups.all_sprites
-    walkable_cells: list[tuple[int, int]] = list(layout_data["walkable_cells"])
+    walkable_cells = list(layout_data.walkable_cells)
     cell_size = game_data.cell_size
     level_rect = game_data.layout.field_rect
     material_blocked_cells = {
@@ -1148,7 +1148,7 @@ def setup_player_and_cars(
         ]
     player_cells = [
         (int(cx), int(cy))
-        for cx, cy in layout_data.get("player_cells", [])
+        for cx, cy in layout_data.player_cells
         if (int(cx), int(cy)) not in material_blocked_cells
     ]
 
@@ -1162,13 +1162,13 @@ def setup_player_and_cars(
 
     car_spawn_cells = [
         (int(cx), int(cy))
-        for cx, cy in layout_data.get("car_spawn_cells", [])
+        for cx, cy in layout_data.car_spawn_cells
         if (int(cx), int(cy)) not in material_blocked_cells
     ]
-    spiky_plant_set = set(layout_data.get("spiky_plant_cells", []))
+    spiky_plant_set = set(layout_data.spiky_plant_cells)
     car_candidates = [
         c
-        for c in (layout_data["car_cells"] or car_spawn_cells or walkable_cells)
+        for c in (layout_data.car_cells or car_spawn_cells or walkable_cells)
         if c not in spiky_plant_set and c not in material_blocked_cells
     ]
     waiting_cars: list[Car] = []
@@ -1204,7 +1204,7 @@ def setup_player_and_cars(
 def spawn_initial_zombies(
     game_data: GameData,
     player: Player,
-    layout_data: Mapping[str, list[tuple[int, int]]],
+    layout_data: LayoutSpawnData,
     config: dict[str, Any],
 ) -> None:
     """Spawn initial zombies using blueprint candidate cells."""
@@ -1213,7 +1213,7 @@ def spawn_initial_zombies(
     all_sprites = game_data.groups.all_sprites
 
     cell_size = game_data.cell_size
-    spawn_cells = layout_data["walkable_cells"]
+    spawn_cells = layout_data.walkable_cells
     if not spawn_cells:
         return
 
@@ -1290,13 +1290,13 @@ def spawn_initial_zombies(
 def spawn_initial_patrol_bots(
     game_data: GameData,
     player: Player,
-    layout_data: Mapping[str, list[tuple[int, int]]],
+    layout_data: LayoutSpawnData,
 ) -> None:
     """Spawn initial patrol bots using walkable cells and stage spawn rate."""
     spawn_rate = max(0.0, game_data.stage.patrol_bot_spawn_rate)
     if spawn_rate <= 0.0:
         return
-    walkable_cells = layout_data.get("walkable_cells", [])
+    walkable_cells = layout_data.walkable_cells
     if not walkable_cells:
         return
     cell_size = game_data.cell_size
@@ -1696,11 +1696,11 @@ def spawn_weighted_zombie(
 
 def spawn_spiky_plants(
     game_data: GameData,
-    layout_data: Mapping[str, list[tuple[int, int]]],
+    layout_data: LayoutSpawnData,
 ) -> list[SpikyPlant]:
     """Spawn spiky plants based on blueprint cells."""
     spiky_plants: list[SpikyPlant] = []
-    spiky_plant_cells = layout_data.get("spiky_plant_cells", [])
+    spiky_plant_cells = layout_data.spiky_plant_cells
     if not spiky_plant_cells:
         return spiky_plants
 

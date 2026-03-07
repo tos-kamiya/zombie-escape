@@ -24,9 +24,7 @@ def test_car_and_item_spawn_cells_share_blocking_rules() -> None:
     blocked_cells = set(layout.fire_floor_cells) | set(layout.moving_floor_cells.keys())
     car_blocked_cells = blocked_cells | set(layout.spiky_plant_cells)
 
-    assert all(cell not in blocked_cells for cell in layout_data["item_spawn_cells"])
-    assert all(cell not in car_blocked_cells for cell in layout_data["car_spawn_cells"])
-    assert all(cell not in car_blocked_cells for cell in layout_data["car_cells"])
-    assert set(layout_data["car_spawn_cells"]).issubset(
-        set(layout_data["car_walkable_cells"])
-    )
+    assert all(cell not in blocked_cells for cell in layout_data.item_spawn_cells)
+    assert all(cell not in car_blocked_cells for cell in layout_data.car_spawn_cells)
+    assert all(cell not in car_blocked_cells for cell in layout_data.car_cells)
+    assert set(layout_data.car_spawn_cells).issubset(set(layout_data.car_walkable_cells))

@@ -4,6 +4,31 @@ Primary definitions live in:
 - `src/zombie_escape/models.py`
 - `src/zombie_escape/world_grid.py` (shared coordinate and grid utility types/helpers)
 
+## Refactor Tracking
+
+- `[DONE]` Replace ad-hoc `layout_data` dictionaries returned by level generation
+  with a typed runtime bundle.
+  - Working name: `LayoutSpawnData`
+  - Goal: reduce string-key lookups and bundle spawn/layout candidate cells into one
+    explicit object shared by gameplay setup and spawn helpers.
+  - Scope for this step:
+    - `gameplay/layout.py` returns `LayoutSpawnData`
+    - `gameplay/spawn.py` and `screens/gameplay.py` consume attributes instead of
+      dictionary keys
+  - Non-goal for this step:
+    - no broader `GameData` redesign
+    - no behavior changes in placement logic
+- `[PROPOSED]` Introduce an `InteractionContext` bundle for per-frame interaction
+  processing in `gameplay/entity_interactions.py`.
+  - Status: design exploration only
+  - Intent: gather `game_data`, active actor refs, localized strings, and precomputed
+    interaction radii into one object for `check_interactions(...)`.
+- `[PROPOSED]` Split gameplay screen data into immutable dependencies and mutable
+  runtime state.
+  - Status: design exploration only
+  - Intent: separate values such as `screen`, `clock`, `config`, `stage`,
+    `render_assets` from pause/input/runtime toggles inside `GameplayScreenRunner`.
+
 ## `ProgressState`
 
 Runtime play-state bundle. Key categories:
@@ -31,6 +56,26 @@ Main aggregate passed across gameplay/render systems.
 - World sizing: `cell_size`, `level_width`, `level_height`
 - Key entity refs: `player`, `car`, fuel/item refs, waiting cars
 - Train state: `lineformer_trains`
+
+## `LayoutSpawnData`
+
+Typed bundle for spawn/setup candidate cells derived from the generated blueprint.
+
+- Player/car/item candidates:
+  - `player_cells`, `car_cells`, `car_spawn_cells`, `item_spawn_cells`
+- Objective/item placement cells:
+  - `fuel_cells`, `fuel_station_cells`, `empty_fuel_can_cells`
+  - `flashlight_cells`, `shoes_cells`
+- Terrain-derived candidate sets exposed to spawn/setup:
+  - `walkable_cells`, `car_walkable_cells`
+  - `spiky_plant_cells`, `fire_floor_cells`, `metal_floor_cells`
+  - `zombie_contaminated_cells`, `puddle_cells`
+
+Purpose:
+
+- Replace stringly-typed layout dictionaries passed among gameplay initialization
+  helpers.
+- Make the spawn/setup contract explicit without inflating `GameData`.
 
 ## `Stage`
 

@@ -61,7 +61,7 @@ from ..gameplay.spawn import _alive_waiting_cars
 from ..world_grid import build_wall_index
 from ..entities.walls import consume_wall_index_dirty
 from ..localization import get_font_settings, translate as tr
-from ..models import FuelMode, FuelProgress, Stage
+from ..models import FuelMode, FuelProgress, LayoutSpawnData, Stage
 from ..overview import draw_debug_overview
 from ..render import (
     draw,
@@ -237,7 +237,7 @@ def _resolve_contact_memory_hint_targets(
 def _spawn_stage_items(
     *,
     game_data: Any,
-    layout_data: dict[str, Any],
+    layout_data: LayoutSpawnData,
     player: Any,
 ) -> None:
     stage = game_data.stage
@@ -254,7 +254,7 @@ def _spawn_stage_items(
             fuel_station_spawn_count = 0
         if stage.fuel_mode == FuelMode.REFUEL_CHAIN:
             empty_fuel_can = place_empty_fuel_can(
-                layout_data["empty_fuel_can_cells"],
+                layout_data.empty_fuel_can_cells,
                 cell_size,
                 player,
                 cars=game_data.waiting_cars,
@@ -266,7 +266,7 @@ def _spawn_stage_items(
                 game_data.groups.all_sprites.add(empty_fuel_can, layer=LAYER_ITEMS)
                 occupied_centers.add(empty_fuel_can.rect.center)
             fuel_station = place_fuel_station(
-                layout_data["fuel_station_cells"],
+                layout_data.fuel_station_cells,
                 cell_size,
                 player,
                 cars=game_data.waiting_cars,
@@ -279,7 +279,7 @@ def _spawn_stage_items(
                 occupied_centers.add(fuel_station.rect.center)
         else:
             fuel_can = place_fuel_can(
-                layout_data["fuel_cells"],
+                layout_data.fuel_cells,
                 cell_size,
                 player,
                 cars=game_data.waiting_cars,
@@ -293,7 +293,7 @@ def _spawn_stage_items(
 
     flashlight_count = stage.flashlight_spawn_count
     flashlights = place_flashlights(
-        layout_data["flashlight_cells"],
+        layout_data.flashlight_cells,
         cell_size,
         player,
         cars=game_data.waiting_cars,
@@ -307,7 +307,7 @@ def _spawn_stage_items(
 
     shoes_count = stage.shoes_spawn_count
     shoes_list = place_shoes(
-        layout_data["shoes_cells"],
+        layout_data.shoes_cells,
         cell_size,
         player,
         cars=game_data.waiting_cars,
@@ -514,7 +514,7 @@ class GameplayScreenRunner:
         spawn_initial_carrier_bots_and_materials(self.game_data)
 
         spiky_plant_list = spawn_spiky_plants(self.game_data, layout_data)
-        spiky_plant_cells = layout_data.get("spiky_plant_cells", [])
+        spiky_plant_cells = layout_data.spiky_plant_cells
         for cell, spiky_plant in zip(spiky_plant_cells, spiky_plant_list):
             self.game_data.spiky_plants[cell] = spiky_plant
 

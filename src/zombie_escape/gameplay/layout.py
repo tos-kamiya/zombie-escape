@@ -24,7 +24,7 @@ from ..level_blueprints import (
     generate_random_blueprint,
     validate_connectivity,
 )
-from ..models import LevelLayout, Stage
+from ..models import LayoutSpawnData, LevelLayout, Stage
 from ..models import FuelMode
 from ..rng import get_rng, seed_rng
 
@@ -152,25 +152,25 @@ def _build_layout_data(
     car_reachable_cells: set[tuple[int, int]],
     item_spawn_cells: list[tuple[int, int]],
     car_spawn_cells: list[tuple[int, int]],
-) -> dict[str, list[tuple[int, int]]]:
-    return {
-        "player_cells": player_cells,
-        "car_cells": filtered_car_cells,
-        "fuel_cells": fuel_cells,
-        "empty_fuel_can_cells": empty_fuel_can_cells,
-        "fuel_station_cells": fuel_cells,
-        "flashlight_cells": flashlight_cells,
-        "shoes_cells": shoes_cells,
-        "spiky_plant_cells": list(spiky_plant_cells),
-        "fire_floor_cells": list(fire_floor_cells),
-        "metal_floor_cells": list(metal_floor_cells),
-        "zombie_contaminated_cells": list(layout.zombie_contaminated_cells),
-        "puddle_cells": list(puddle_cells),
-        "walkable_cells": walkable_cells,
-        "car_walkable_cells": list(car_reachable_cells),
-        "item_spawn_cells": item_spawn_cells,
-        "car_spawn_cells": list(car_spawn_cells),
-    }
+) -> LayoutSpawnData:
+    return LayoutSpawnData(
+        player_cells=player_cells,
+        car_cells=filtered_car_cells,
+        fuel_cells=fuel_cells,
+        empty_fuel_can_cells=empty_fuel_can_cells,
+        fuel_station_cells=fuel_cells,
+        flashlight_cells=flashlight_cells,
+        shoes_cells=shoes_cells,
+        spiky_plant_cells=list(spiky_plant_cells),
+        fire_floor_cells=list(fire_floor_cells),
+        metal_floor_cells=list(metal_floor_cells),
+        zombie_contaminated_cells=list(layout.zombie_contaminated_cells),
+        puddle_cells=list(puddle_cells),
+        walkable_cells=walkable_cells,
+        car_walkable_cells=list(car_reachable_cells),
+        item_spawn_cells=item_spawn_cells,
+        car_spawn_cells=list(car_spawn_cells),
+    )
 
 
 def _finalize_layout_cells(

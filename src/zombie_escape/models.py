@@ -90,6 +90,28 @@ class LevelLayout:
     )
     floor_ruin_cells: dict[tuple[int, int], int] = field(default_factory=dict)
 
+
+@dataclass(frozen=True)
+class LayoutSpawnData:
+    """Typed spawn/setup candidate cells derived from the generated blueprint."""
+
+    player_cells: list[tuple[int, int]]
+    car_cells: list[tuple[int, int]]
+    fuel_cells: list[tuple[int, int]]
+    empty_fuel_can_cells: list[tuple[int, int]]
+    fuel_station_cells: list[tuple[int, int]]
+    flashlight_cells: list[tuple[int, int]]
+    shoes_cells: list[tuple[int, int]]
+    spiky_plant_cells: list[tuple[int, int]]
+    fire_floor_cells: list[tuple[int, int]]
+    metal_floor_cells: list[tuple[int, int]]
+    zombie_contaminated_cells: list[tuple[int, int]]
+    puddle_cells: list[tuple[int, int]]
+    walkable_cells: list[tuple[int, int]]
+    car_walkable_cells: list[tuple[int, int]]
+    item_spawn_cells: list[tuple[int, int]]
+    car_spawn_cells: list[tuple[int, int]]
+
 @dataclass
 class FallingEntity:
     """Represents an entity falling toward a target position or into a pit."""

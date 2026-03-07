@@ -7,7 +7,7 @@ from zombie_escape.gameplay.spawn import (
     spawn_initial_carrier_bots_and_materials,
 )
 from zombie_escape.level_constants import DEFAULT_CELL_SIZE
-from zombie_escape.models import LevelLayout, Stage
+from zombie_escape.models import LayoutSpawnData, LevelLayout, Stage
 
 pygame = pytest.importorskip("pygame")
 
@@ -32,13 +32,24 @@ def test_setup_player_and_cars_avoids_material_spawn_cells() -> None:
         layout=SimpleNamespace(field_rect=pygame.Rect(0, 0, 500, 500)),
         groups=SimpleNamespace(all_sprites=pygame.sprite.LayeredUpdates()),
     )
-    layout_data = {
-        "walkable_cells": [(2, 2), (3, 2)],
-        "player_cells": [(2, 2)],
-        "car_cells": [(2, 2), (3, 2)],
-        "car_spawn_cells": [(2, 2), (3, 2)],
-        "spiky_plant_cells": [],
-    }
+    layout_data = LayoutSpawnData(
+        player_cells=[(2, 2)],
+        car_cells=[(2, 2), (3, 2)],
+        fuel_cells=[],
+        empty_fuel_can_cells=[],
+        fuel_station_cells=[],
+        flashlight_cells=[],
+        shoes_cells=[],
+        spiky_plant_cells=[],
+        fire_floor_cells=[],
+        metal_floor_cells=[],
+        zombie_contaminated_cells=[],
+        puddle_cells=[],
+        walkable_cells=[(2, 2), (3, 2)],
+        car_walkable_cells=[],
+        item_spawn_cells=[],
+        car_spawn_cells=[(2, 2), (3, 2)],
+    )
 
     player, cars = setup_player_and_cars(game_data, layout_data, car_count=1)
     assert cars
