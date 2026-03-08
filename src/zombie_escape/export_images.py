@@ -3,6 +3,8 @@ from __future__ import annotations
 import math
 import random
 from pathlib import Path
+from types import MappingProxyType
+from typing import Collection, Mapping, Sequence
 
 import pygame
 
@@ -45,6 +47,10 @@ from .render.world_tiles import build_floor_ruin_cells
 from .screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
 __all__ = ["export_images"]
+
+_EMPTY_MOVING_FLOOR_CELLS: Mapping[tuple[int, int], MovingFloorDirection] = MappingProxyType(
+    {}
+)
 
 
 def _ensure_pygame_ready() -> None:
@@ -115,13 +121,13 @@ def _render_studio_snapshot(
     *,
     cell_size: int,
     target_rect: pygame.Rect,
-    sprites: list[pygame.sprite.Sprite] | None = None,
-    pitfall_cells: set[tuple[int, int]] | None = None,
-    fire_floor_cells: set[tuple[int, int]] | None = None,
-    fall_spawn_cells: set[tuple[int, int]] | None = None,
-    moving_floor_cells: dict[tuple[int, int], MovingFloorDirection] | None = None,
-    puddle_cells: set[tuple[int, int]] | None = None,
-    falling_zombies: list[FallingEntity] | None = None,
+    sprites: Sequence[pygame.sprite.Sprite] = (),
+    pitfall_cells: Collection[tuple[int, int]] = (),
+    fire_floor_cells: Collection[tuple[int, int]] = (),
+    fall_spawn_cells: Collection[tuple[int, int]] = (),
+    moving_floor_cells: Mapping[tuple[int, int], MovingFloorDirection] = _EMPTY_MOVING_FLOOR_CELLS,
+    puddle_cells: Collection[tuple[int, int]] = (),
+    falling_zombies: Sequence[FallingEntity] = (),
     enable_shadows: bool = False,
     ambient_palette_key: str | None = STUDIO_AMBIENT_PALETTE_KEY,
     wall_rubble_ratio: float | None = None,
@@ -135,12 +141,12 @@ def _render_studio_snapshot(
     )
 
     layout = game_data.layout
-    layout.pitfall_cells = pitfall_cells or set()
-    layout.fire_floor_cells = fire_floor_cells or set()
+    layout.pitfall_cells = set(pitfall_cells)
+    layout.fire_floor_cells = set(fire_floor_cells)
     layout.metal_floor_cells = set()
-    layout.fall_spawn_cells = fall_spawn_cells or set()
-    layout.moving_floor_cells = moving_floor_cells or {}
-    layout.puddle_cells = puddle_cells or set()
+    layout.fall_spawn_cells = set(fall_spawn_cells)
+    layout.moving_floor_cells = dict(moving_floor_cells)
+    layout.puddle_cells = set(puddle_cells)
     resolved_rubble_ratio = (
         float(wall_rubble_ratio)
         if wall_rubble_ratio is not None
@@ -162,7 +168,6 @@ def _render_studio_snapshot(
         rubble_ratio=resolved_rubble_ratio,
     )
 
-    sprites = sprites or []
     player = None
     for sprite in sprites:
         if isinstance(sprite, Player):
@@ -247,7 +252,7 @@ def _render_studio_snapshot(
         if drew_shadow:
             screen.blit(shadow_layer, (0, 0))
     if falling_zombies:
-        game_data.state.falling_zombies = falling_zombies
+        game_data.state.falling_zombies = list(falling_zombies)
         _draw_falling_fx(
             screen,
             game_data.camera.apply_rect,
@@ -483,6 +488,7 @@ def export_images(
 
     saved: list[Path] = []
     out = Path(output_dir)
+    studio_palette = get_environment_palette(STUDIO_AMBIENT_PALETTE_KEY)
 
     cols, rows = _studio_grid_size(cell_size)
     center_x = (cols * cell_size) // 2
@@ -720,7 +726,7 @@ def export_images(
         center_y - cell_size // 2,
         cell_size,
         health=STEEL_BEAM_HEALTH,
-        palette=None,
+        palette=studio_palette,
     )
     beam_surface = _render_studio_snapshot(
         cell_size=cell_size,
@@ -736,6 +742,7 @@ def export_images(
         center_y - cell_size // 2,
         cell_size,
         cell_size,
+        palette=studio_palette,
         palette_category="inner_wall",
         bevel_depth=INTERNAL_WALL_BEVEL_DEPTH,
         bevel_mask=(True, True, True, True),
@@ -757,6 +764,7 @@ def export_images(
         center_y - cell_size // 2,
         cell_size,
         cell_size,
+        palette=studio_palette,
         palette_category="inner_wall",
     )
     rubble_wall_surface = _render_studio_snapshot(
@@ -773,6 +781,7 @@ def export_images(
         center_y - cell_size // 2,
         cell_size,
         cell_size,
+        palette=studio_palette,
         palette_category="outer_wall",
         bevel_depth=0,
         bevel_mask=(True, True, True, True),
@@ -794,6 +803,7 @@ def export_images(
         center_y - cell_size // 2,
         cell_size,
         cell_size,
+        palette=studio_palette,
         bevel_depth=INTERNAL_WALL_BEVEL_DEPTH,
         bevel_mask=(True, True, True, True),
         draw_bottom_side=True,

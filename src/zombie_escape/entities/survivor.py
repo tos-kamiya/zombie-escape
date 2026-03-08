@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import random
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Iterable
 
 import pygame
 
@@ -128,7 +128,7 @@ class Survivor(RectSprite):
         *,
         patrol_bot_group: pygame.sprite.Group | None = None,
         wall_index: WallIndex | None = None,
-        cell_size: int | None = None,
+        cell_size: int,
         layout: "LevelLayout",
         wall_target_cell: tuple[int, int] | None = None,
         player_collision_radius: float | None = None,
@@ -199,12 +199,12 @@ class Survivor(RectSprite):
         *,
         walls: pygame.sprite.Group,
         wall_index: WallIndex | None,
-        cell_size: int | None,
+        cell_size: int,
         layout: "LevelLayout",
         pitfall_cells: set[tuple[int, int]],
         blocked_cells: set[tuple[int, int]],
         jumpable_hazard_cells: set[tuple[int, int]],
-        walkable_cells: set[tuple[int, int]],
+        walkable_cells: Iterable[tuple[int, int]],
         now: int,
         speed_factor: float = 1.0,
     ) -> None:
@@ -216,15 +216,14 @@ class Survivor(RectSprite):
         def _collide() -> Wall | None:
             return None
 
-        if cell_size is not None:
-            move_x, move_y = apply_cell_edge_nudge(
-                self.x,
-                self.y,
-                move_x,
-                move_y,
-                layout=layout,
-                cell_size=cell_size,
-            )
+        move_x, move_y = apply_cell_edge_nudge(
+            self.x,
+            self.y,
+            move_x,
+            move_y,
+            layout=layout,
+            cell_size=cell_size,
+        )
 
         can_jump_now = (
             not self.is_jumping
@@ -269,7 +268,7 @@ class Survivor(RectSprite):
         *,
         patrol_bot_group: pygame.sprite.Group | None,
         wall_index: WallIndex | None,
-        cell_size: int | None,
+        cell_size: int,
         layout: "LevelLayout",
         wall_target_cell: tuple[int, int] | None,
         player_collision_radius: float | None,
@@ -277,7 +276,7 @@ class Survivor(RectSprite):
         pitfall_cells: set[tuple[int, int]],
         blocked_cells: set[tuple[int, int]],
         jumpable_hazard_cells: set[tuple[int, int]],
-        walkable_cells: set[tuple[int, int]],
+        walkable_cells: Iterable[tuple[int, int]],
         now: int,
         level_width: int,
         level_height: int,
@@ -300,7 +299,7 @@ class Survivor(RectSprite):
             return
 
         target_pos = player_pos
-        if wall_target_cell is not None and cell_size is not None:
+        if wall_target_cell is not None:
             target_pos = (
                 wall_target_cell[0] * cell_size + cell_size // 2,
                 wall_target_cell[1] * cell_size + cell_size // 2,
@@ -329,15 +328,14 @@ class Survivor(RectSprite):
         move_x = (dx / dist) * BUDDY_FOLLOW_SPEED * speed_factor + drift_x
         move_y = (dy / dist) * BUDDY_FOLLOW_SPEED * speed_factor + drift_y
 
-        if cell_size is not None:
-            move_x, move_y = apply_cell_edge_nudge(
-                self.x,
-                self.y,
-                move_x,
-                move_y,
-                layout=layout,
-                cell_size=cell_size,
-            )
+        move_x, move_y = apply_cell_edge_nudge(
+            self.x,
+            self.y,
+            move_x,
+            move_y,
+            layout=layout,
+            cell_size=cell_size,
+        )
 
         self._update_input_facing(move_x, move_y)
         self._inner_wall_hit = False
@@ -436,13 +434,13 @@ class Survivor(RectSprite):
         *,
         patrol_bot_group: pygame.sprite.Group | None,
         wall_index: WallIndex | None,
-        cell_size: int | None,
+        cell_size: int,
         layout: "LevelLayout",
         drift: tuple[float, float],
         pitfall_cells: set[tuple[int, int]],
         blocked_cells: set[tuple[int, int]],
         jumpable_hazard_cells: set[tuple[int, int]],
-        walkable_cells: set[tuple[int, int]],
+        walkable_cells: Iterable[tuple[int, int]],
         now: int,
         speed_factor: float = 1.0,
     ) -> None:
@@ -495,15 +493,14 @@ class Survivor(RectSprite):
             )
         )
 
-        if cell_size is not None:
-            move_x, move_y = apply_cell_edge_nudge(
-                self.x,
-                self.y,
-                move_x,
-                move_y,
-                layout=layout,
-                cell_size=cell_size,
-            )
+        move_x, move_y = apply_cell_edge_nudge(
+            self.x,
+            self.y,
+            move_x,
+            move_y,
+            layout=layout,
+            cell_size=cell_size,
+        )
 
         self._move_with_pitfall(
             move_x,
@@ -533,16 +530,16 @@ class Survivor(RectSprite):
         *,
         walls: pygame.sprite.Group,
         wall_index: WallIndex | None,
-        cell_size: int | None,
+        cell_size: int,
         layout: "LevelLayout",
         blocked_cells: set[tuple[int, int]],
         on_wall_hit: Callable[[Wall], None] | None = None,
     ) -> None:
-        wall_candidates: list[pygame.sprite.Sprite]
+        wall_candidates: list[Wall]
         if wall_index is None:
-            wall_candidates = [wall for wall in walls if wall.alive()]
-        elif cell_size is None:
-            wall_candidates = []
+            wall_candidates = [
+                wall for wall in walls if isinstance(wall, Wall) and wall.alive()
+            ]
         else:
             radius = float(getattr(self, "collision_radius", self.radius))
             min_cell_x = max(0, int((self.x - radius) // cell_size))
@@ -565,7 +562,7 @@ class Survivor(RectSprite):
             y=self.y,
             radius=float(getattr(self, "collision_radius", self.radius)),
             walls=wall_candidates,
-            cell_size=int(cell_size or 0),
+            cell_size=cell_size,
             blocked_cells=blocked_cells,
             grid_cols=layout.grid_cols,
             grid_rows=layout.grid_rows,
@@ -603,7 +600,7 @@ class Survivor(RectSprite):
         move_y: float,
         *,
         collide: Callable[[], Wall | None],
-        cell_size: int | None,
+        cell_size: int,
         pitfall_cells: set[tuple[int, int]],
         blocked_cells: set[tuple[int, int]],
         pending_fall_cells: set[tuple[int, int]],

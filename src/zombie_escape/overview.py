@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Collection, Mapping, Sequence
 
 import pygame
 from pygame import sprite, surface
@@ -48,6 +49,8 @@ from .render.puddle import get_puddle_wave_color
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from .gameplay.lineformer_trains import LineformerTrainManager
+
+_EMPTY_CELL_MAPPING: Mapping[tuple[int, int], object] = MappingProxyType({})
 
 
 def compute_floor_cells(
@@ -99,11 +102,11 @@ def _draw_overview_floor_layers(
     floor_cells: set[tuple[int, int]],
     floor_color: tuple[int, int, int],
     fall_floor: tuple[int, int, int],
-    fall_spawn_cells: set[tuple[int, int]] | None,
-    moving_floor_cells: dict[tuple[int, int], object] | None,
-    fire_floor_cells: set[tuple[int, int]] | None,
-    puddle_cells: set[tuple[int, int]] | None,
-    zombie_contaminated_cells: set[tuple[int, int]] | None,
+    fall_spawn_cells: Collection[tuple[int, int]] = (),
+    moving_floor_cells: Mapping[tuple[int, int], object] = _EMPTY_CELL_MAPPING,
+    fire_floor_cells: Collection[tuple[int, int]] = (),
+    puddle_cells: Collection[tuple[int, int]] = (),
+    zombie_contaminated_cells: Collection[tuple[int, int]] = (),
 ) -> None:
     if cell_size <= 0:
         return
@@ -237,9 +240,9 @@ def _draw_overview_items(
     fuel: FuelCan | None,
     empty_fuel_can: EmptyFuelCan | None,
     fuel_station: FuelStation | None,
-    flashlights: list[Flashlight] | None,
-    shoes: list[Shoes] | None,
-    materials: list[Material] | None,
+    flashlights: Sequence[Flashlight] = (),
+    shoes: Sequence[Shoes] = (),
+    materials: Sequence[Material] = (),
 ) -> None:
     if fuel and fuel.alive():
         pygame.draw.rect(surface, YELLOW, fuel.rect, border_radius=3)
@@ -273,13 +276,13 @@ def _draw_overview_humanoids(
     *,
     assets: RenderAssets,
     player: Player | None,
-    survivors: list[Survivor] | None,
-    buddies: list[Survivor] | None,
-    car: Car | None,
-    waiting_cars: list[Car] | None,
-    patrol_bots: list[PatrolBot] | None,
-    carrier_bots: list[CarrierBot] | None,
-    spiky_plants: list[SpikyPlant] | None,
+    survivors: Sequence[Survivor] = (),
+    buddies: Sequence[Survivor] = (),
+    car: Car | None = None,
+    waiting_cars: Sequence[Car] = (),
+    patrol_bots: Sequence[PatrolBot] = (),
+    carrier_bots: Sequence[CarrierBot] = (),
+    spiky_plants: Sequence[SpikyPlant] = (),
 ) -> None:
     if survivors:
         for survivor in survivors:
@@ -346,8 +349,8 @@ def _draw_overview_zombies(
     surface: surface.Surface,
     *,
     assets: RenderAssets,
-    zombies: list[pygame.sprite.Sprite] | None,
-    lineformer_trains: "LineformerTrainManager | None",
+    zombies: Sequence[pygame.sprite.Sprite] = (),
+    lineformer_trains: "LineformerTrainManager | None" = None,
 ) -> None:
     if not zombies:
         return
@@ -389,28 +392,28 @@ def draw_level_overview(
     floor_cells: set[tuple[int, int]],
     player: Player | None,
     car: Car | None,
-    waiting_cars: list[Car] | None,
-    footprints: list[Footprint],
+    waiting_cars: Sequence[Car] = (),
+    footprints: Sequence[Footprint] = (),
     *,
     now_ms: int,
     fuel: FuelCan | None = None,
     empty_fuel_can: EmptyFuelCan | None = None,
     fuel_station: FuelStation | None = None,
-    flashlights: list[Flashlight] | None = None,
-    shoes: list[Shoes] | None = None,
-    materials: list[Material] | None = None,
-    buddies: list[Survivor] | None = None,
-    survivors: list[Survivor] | None = None,
-    patrol_bots: list[PatrolBot] | None = None,
-    carrier_bots: list[CarrierBot] | None = None,
-    spiky_plants: list[SpikyPlant] | None = None,
-    zombies: list[pygame.sprite.Sprite] | None = None,
+    flashlights: Sequence[Flashlight] = (),
+    shoes: Sequence[Shoes] = (),
+    materials: Sequence[Material] = (),
+    buddies: Sequence[Survivor] = (),
+    survivors: Sequence[Survivor] = (),
+    patrol_bots: Sequence[PatrolBot] = (),
+    carrier_bots: Sequence[CarrierBot] = (),
+    spiky_plants: Sequence[SpikyPlant] = (),
+    zombies: Sequence[pygame.sprite.Sprite] = (),
     lineformer_trains: "LineformerTrainManager | None" = None,
-    fall_spawn_cells: set[tuple[int, int]] | None = None,
-    moving_floor_cells: dict[tuple[int, int], object] | None = None,
-    fire_floor_cells: set[tuple[int, int]] | None = None,
-    puddle_cells: set[tuple[int, int]] | None = None,
-    zombie_contaminated_cells: set[tuple[int, int]] | None = None,
+    fall_spawn_cells: Collection[tuple[int, int]] = (),
+    moving_floor_cells: Mapping[tuple[int, int], object] = _EMPTY_CELL_MAPPING,
+    fire_floor_cells: Collection[tuple[int, int]] = (),
+    puddle_cells: Collection[tuple[int, int]] = (),
+    zombie_contaminated_cells: Collection[tuple[int, int]] = (),
     palette_key: str | None = None,
 ) -> None:
     palette = get_environment_palette(palette_key)

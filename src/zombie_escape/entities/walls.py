@@ -100,7 +100,7 @@ class Wall(RectSprite):
         height: int,
         *,
         health: int = INTERNAL_WALL_HEALTH,
-        palette: EnvironmentPalette | None = None,
+        palette: EnvironmentPalette,
         palette_category: str = "inner_wall",
         bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
         bevel_mask: tuple[bool, bool, bool, bool] | None = None,
@@ -282,9 +282,7 @@ class Wall(RectSprite):
             return True
         return _circle_polygon_collision(center, radius, self._collision_polygon)
 
-    def set_palette(
-        self: Self, palette: EnvironmentPalette | None, *, force: bool = False
-    ) -> None:
+    def set_palette(self: Self, palette: EnvironmentPalette, *, force: bool = False) -> None:
         """Update the wall's palette to match the current ambient palette."""
 
         if not force and self.palette is palette:
@@ -302,7 +300,7 @@ class RubbleWall(Wall):
         height: int,
         *,
         health: int = INTERNAL_WALL_HEALTH,
-        palette: EnvironmentPalette | None = None,
+        palette: EnvironmentPalette,
         palette_category: str = "inner_wall",
         bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
         rubble_rotation_deg: float | None = None,
@@ -372,7 +370,7 @@ class ReinforcedWall(Wall):
         height: int,
         *,
         health: int = INTERNAL_WALL_HEALTH,
-        palette: EnvironmentPalette | None = None,
+        palette: EnvironmentPalette,
         bevel_depth: int = INTERNAL_WALL_BEVEL_DEPTH,
         bevel_mask: tuple[bool, bool, bool, bool] | None = None,
         draw_bottom_side: bool = False,
@@ -508,7 +506,7 @@ class SteelBeam(RectSprite):
         size: int,
         *,
         health: int = STEEL_BEAM_HEALTH,
-        palette: EnvironmentPalette | None = None,
+        palette: EnvironmentPalette,
         damage_overlay_seed: int = _WALL_DAMAGE_OVERLAY_SEED,
         on_destroy: Callable[[Self], None] | None = None,
     ) -> None:

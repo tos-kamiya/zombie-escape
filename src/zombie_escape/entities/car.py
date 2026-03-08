@@ -1,7 +1,7 @@
 """Car entity logic."""
 
 from __future__ import annotations
-from typing import Iterable
+from typing import Collection, Iterable
 
 import math
 
@@ -112,7 +112,7 @@ class Car(RectSprite):
         y: float,
         *,
         cell_size: int,
-        cells: set[tuple[int, int]],
+        cells: Collection[tuple[int, int]],
     ) -> tuple[int, int] | None:
         cx, cy = self._collision_center(x, y)
         cell = (int(cx // cell_size), int(cy // cell_size))
@@ -141,9 +141,9 @@ class Car(RectSprite):
         walls: Iterable[Wall],
         *,
         walls_nearby: bool = False,
-        cell_size: int | None = None,
-        pitfall_cells: set[tuple[int, int]] | None = None,
-        blocked_cells: set[tuple[int, int]] | None = None,
+        cell_size: int,
+        pitfall_cells: Collection[tuple[int, int]] = (),
+        blocked_cells: Collection[tuple[int, int]] = (),
     ) -> None:
         if self.health <= 0:
             return
@@ -173,7 +173,7 @@ class Car(RectSprite):
                 hit_walls.append(wall)
 
         entered_pitfall = False
-        if pitfall_cells and cell_size:
+        if pitfall_cells:
             entered_pitfall = (
                 self._cell_at_position(
                     new_x,
@@ -184,7 +184,7 @@ class Car(RectSprite):
                 is not None
             )
         entered_blocked = False
-        if blocked_cells and cell_size:
+        if blocked_cells:
             entered_blocked = (
                 self._cell_at_position(
                     new_x,
@@ -229,7 +229,7 @@ class Car(RectSprite):
                 new_x = self.x - dx * 0.5
                 new_y = self.y - dy * 0.5
 
-        if pitfall_cells and cell_size:
+        if pitfall_cells:
             pitfall_cell = self._cell_at_position(
                 new_x,
                 new_y,
@@ -268,7 +268,6 @@ class Car(RectSprite):
         self.rect.center = (int(self.x), int(self.y))
         if not (
             pitfall_cells
-            and cell_size
             and self._cell_at_position(
                 self.x,
                 self.y,

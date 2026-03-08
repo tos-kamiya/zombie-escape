@@ -132,7 +132,7 @@ class Player(RectSprite):
         *,
         patrol_bot_group: pygame.sprite.Group | None = None,
         wall_index: WallIndex | None = None,
-        cell_size: int | None = None,
+        cell_size: int,
         layout: LevelLayout,
         now_ms: int,
     ) -> None:
@@ -214,7 +214,7 @@ class Player(RectSprite):
             )
             if inner_wall is not None:
                 inner_wall_hit = True
-                if inner_wall_cell is None and cell_size:
+                if inner_wall_cell is None:
                     inner_wall_cell = (
                         int(inner_wall.rect.centerx // cell_size),
                         int(inner_wall.rect.centery // cell_size),
@@ -230,7 +230,7 @@ class Player(RectSprite):
             collide=_collide_player,
             cell_size=cell_size,
             pitfall_cells=pitfall_hazard_cells,
-            blocked_cells=None,
+            blocked_cells=set(),
             pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
@@ -245,7 +245,7 @@ class Player(RectSprite):
             collide=_collide_player,
             cell_size=cell_size,
             pitfall_cells=pitfall_hazard_cells,
-            blocked_cells=None,
+            blocked_cells=set(),
             pending_fall_cells=pitfall_cells,
             can_jump_now=bool(can_jump_now),
             now=now,
@@ -260,8 +260,6 @@ class Player(RectSprite):
         wall_candidates: list[Wall]
         if wall_index is None:
             wall_candidates = [wall for wall in walls if wall.alive()]
-        elif cell_size is None:
-            wall_candidates = []
         else:
             wall_candidates = list(
                 walls_for_radius(

@@ -1,5 +1,6 @@
 import pygame
 
+from zombie_escape.colors import get_environment_palette
 from zombie_escape.entities import Wall
 from zombie_escape.entities.walls import _build_beveled_polygon
 
@@ -16,11 +17,13 @@ def test_build_beveled_polygon_rectangle() -> None:
 
 def test_rounded_wall_corner_collision() -> None:
     _init_pygame()
+    palette = get_environment_palette(None)
     wall = Wall(
         0,
         0,
         20,
         20,
+        palette=palette,
         bevel_depth=10,
         bevel_mask=(True, True, True, True),
     )

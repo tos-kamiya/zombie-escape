@@ -1,5 +1,6 @@
 import pytest
 
+from zombie_escape.colors import get_environment_palette
 from zombie_escape.render_assets import (
     paint_wall_damage_overlay,
     resolve_wall_colors,
@@ -15,15 +16,16 @@ def _init_pygame() -> None:
 
 
 def test_resolve_wall_colors_gets_significantly_darker_with_damage() -> None:
+    palette = get_environment_palette(None)
     healthy_fill, healthy_border = resolve_wall_colors(
         health_ratio=1.0,
         palette_category="inner_wall",
-        palette=None,
+        palette=palette,
     )
     damaged_fill, damaged_border = resolve_wall_colors(
         health_ratio=0.0,
         palette_category="inner_wall",
-        palette=None,
+        palette=palette,
     )
     assert sum(damaged_fill) < sum(healthy_fill)
     assert sum(damaged_border) < sum(healthy_border)
