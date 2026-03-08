@@ -198,5 +198,7 @@ runtime behavior and generation order:
 Public data contract remains unchanged:
 
 - `LevelLayout` fields used by runtime systems are preserved.
-- `layout_data` keys (`player_cells`, `car_cells`, `fuel_cells`, `item_spawn_cells`,
-  `car_spawn_cells`, etc.) are preserved.
+- Spawn/setup candidate data is returned as `LayoutSpawnData`.
+- `LayoutSpawnData` exposes the same gameplay-facing fields as attributes
+  (`player_cells`, `car_cells`, `fuel_cells`, `item_spawn_cells`,
+  `car_spawn_cells`, etc.).

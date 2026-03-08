@@ -6,25 +6,6 @@ Primary definitions live in:
 
 ## Refactor Tracking
 
-- `[DONE]` Replace ad-hoc `layout_data` dictionaries returned by level generation
-  with a typed runtime bundle.
-  - Working name: `LayoutSpawnData`
-  - Goal: reduce string-key lookups and bundle spawn/layout candidate cells into one
-    explicit object shared by gameplay setup and spawn helpers.
-  - Scope for this step:
-    - `gameplay/layout.py` returns `LayoutSpawnData`
-    - `gameplay/spawn.py` and `screens/gameplay.py` consume attributes instead of
-      dictionary keys
-  - Non-goal for this step:
-    - no broader `GameData` redesign
-    - no behavior changes in placement logic
-- `[DONE]` Introduce an `InteractionContext` bundle for per-frame interaction
-  processing in `gameplay/entity_interactions.py`.
-  - Intent: gather `game_data`, active actor refs, localized strings, and
-    precomputed interaction radii into one object for `check_interactions(...)`.
-  - Scope:
-    - `check_interactions(...)` now builds one per-frame context
-    - helper functions consume the context instead of long parameter lists
 - `[PROPOSED]` Split gameplay screen data into immutable dependencies and mutable
   runtime state.
   - Status: design exploration only
@@ -78,6 +59,28 @@ Purpose:
 - Replace stringly-typed layout dictionaries passed among gameplay initialization
   helpers.
 - Make the spawn/setup contract explicit without inflating `GameData`.
+- Current use:
+  - `gameplay/layout.py` returns `LayoutSpawnData`
+  - `gameplay/spawn.py` and `screens/gameplay.py` consume attributes directly
+    instead of dictionary keys
+
+## `InteractionContext`
+
+Per-frame interaction bundle built in `gameplay/entity_interactions.py`.
+
+- Contains the active gameplay references needed by `check_interactions(...)`
+  and its helpers:
+  - `game_data`
+  - active actor refs such as player/car
+  - localized interaction text
+  - other per-frame derived values used across interaction helpers
+- Purpose:
+  - replace long helper parameter lists in interaction processing
+  - keep per-frame interaction state separate from larger aggregates such as
+    `GameData`
+- Current use:
+  - `check_interactions(...)` builds one context for the frame
+  - helper functions consume the context rather than parallel argument lists
 
 ## `Stage`
 
