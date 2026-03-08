@@ -4,14 +4,15 @@ from typing import Any
 
 import pygame
 
+from ..entities.base import RectSprite
 from .constants import FOOTPRINT_MAX, FOOTPRINT_STEP_DISTANCE, PUDDLE_SPLASH_DURATION_MS
 from ..models import Footprint, GameData, PuddleSplash
 from ..surface_effects import is_in_puddle_cell
 
 
 def get_shrunk_sprite(
-    sprite_obj: pygame.sprite.Sprite, scale_x: float, *, scale_y: float | None = None
-) -> pygame.sprite.Sprite:
+    sprite_obj: RectSprite, scale_x: float, *, scale_y: float | None = None
+) -> RectSprite:
     if scale_y is None:
         scale_y = scale_x
 
@@ -25,7 +26,7 @@ def get_shrunk_sprite(
     rect = pygame.Rect(0, 0, shrunk_width, shrunk_height)
     rect.center = original_rect.center
 
-    new_sprite = pygame.sprite.Sprite()
+    new_sprite = RectSprite()
     new_sprite.rect = rect
     if hasattr(sprite_obj, "radius"):
         base_radius = getattr(sprite_obj, "radius", None)

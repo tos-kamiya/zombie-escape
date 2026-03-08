@@ -54,6 +54,7 @@ from ..rng import get_rng
 from ..surface_effects import SpikyPlantLike, is_in_contaminated_cell, is_in_puddle_cell
 from ..screen_constants import SCREEN_HEIGHT, SCREEN_WIDTH
 from ..world_grid import apply_cell_edge_nudge
+from .base import RectSprite
 from .movement import _circle_wall_collision
 from .movement_helpers import separate_circle_from_blockers
 from .zombie_movement import (
@@ -85,7 +86,7 @@ class MovementStrategy(Protocol):
     ) -> tuple[float, float]: ...
 
 
-class Zombie(pygame.sprite.Sprite):
+class Zombie(RectSprite):
     _next_lineformer_id = 1
 
     def __init__(
@@ -805,7 +806,7 @@ class Zombie(pygame.sprite.Sprite):
         self.vitals.carbonize()
 
 
-class TrappedZombie(pygame.sprite.Sprite):
+class TrappedZombie(RectSprite):
     """A zombie or dog that has been trapped by a spiky plant."""
 
     def __init__(

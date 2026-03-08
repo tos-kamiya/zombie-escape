@@ -2,17 +2,38 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Callable, Literal, TypeVar
+from typing import Callable, Literal, Protocol, TypeVar
 
 import pygame
-
 from .movement import _circle_rect_collision, _circle_wall_collision
+from .walls import Wall
 
 T = TypeVar("T")
 
 
+class PositionedRectSprite(Protocol):
+    rect: pygame.Rect
+    x: float
+    y: float
+
+
+class DirectionalRectSprite(Protocol):
+    rect: pygame.Rect
+    image: pygame.Surface
+    directional_images: list[pygame.Surface]
+    facing_bin: int
+
+
+class JumpingPositionedSprite(PositionedRectSprite, Protocol):
+    is_jumping: bool
+
+
+class RectOnlySprite(Protocol):
+    rect: pygame.Rect
+
+
 def _sprite_in_pitfall(
-    sprite: pygame.sprite.Sprite,
+    sprite: RectOnlySprite,
     *,
     cell_size: int,
     pitfall_cells: set[tuple[int, int]],
@@ -24,7 +45,7 @@ def _sprite_in_pitfall(
 
 def _repel_from_pitfall_center(
     *,
-    sprite: pygame.sprite.Sprite,
+    sprite: PositionedRectSprite,
     axis: Literal["x", "y"],
     delta: float,
     rollback_factor: float,
@@ -79,7 +100,7 @@ def pitfall_target(
     return int(x), int(y)
 
 
-def update_directional_image_scale(sprite: pygame.sprite.Sprite, scale: float) -> None:
+def update_directional_image_scale(sprite: DirectionalRectSprite, scale: float) -> None:
     """Scale current directional image, preserving center."""
     base_img = sprite.directional_images[sprite.facing_bin]  # type: ignore[attr-defined]
     if scale == 1.0:
@@ -93,7 +114,7 @@ def update_directional_image_scale(sprite: pygame.sprite.Sprite, scale: float) -
     sprite.rect = sprite.image.get_rect(center=old_center)
 
 
-def set_facing_bin(sprite: pygame.sprite.Sprite, new_bin: int) -> None:
+def set_facing_bin(sprite: DirectionalRectSprite, new_bin: int) -> None:
     """Update facing bin and image, preserving center."""
     if new_bin == sprite.facing_bin:  # type: ignore[attr-defined]
         return
@@ -107,7 +128,7 @@ def set_facing_bin(sprite: pygame.sprite.Sprite, new_bin: int) -> None:
 class SeparationResult:
     x: float
     y: float
-    hit_walls: list[pygame.sprite.Sprite]
+    hit_walls: list[Wall]
     hit_cells: set[tuple[int, int]]
 
 
@@ -153,7 +174,7 @@ def separate_circle_from_blockers(
     x: float,
     y: float,
     radius: float,
-    walls: list[pygame.sprite.Sprite],
+    walls: list[Wall],
     cell_size: int,
     blocked_cells: set[tuple[int, int]] | None = None,
     grid_cols: int | None = None,
@@ -162,7 +183,7 @@ def separate_circle_from_blockers(
     epsilon: float = 0.01,
 ) -> SeparationResult:
     blocked = blocked_cells or set()
-    hit_walls: list[pygame.sprite.Sprite] = []
+    hit_walls: list[Wall] = []
     hit_wall_ids: set[int] = set()
     hit_cells: set[tuple[int, int]] = set()
     cur_x, cur_y = x, y
@@ -215,7 +236,7 @@ def separate_circle_from_blockers(
 
 def move_axis_with_pitfall(
     *,
-    sprite: pygame.sprite.Sprite,
+    sprite: JumpingPositionedSprite,
     axis: Literal["x", "y"],
     delta: float,
     collide: Callable[[], T | None],

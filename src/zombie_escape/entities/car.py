@@ -28,11 +28,12 @@ from ..render_assets import (
     resolve_car_color,
 )
 from ..render_constants import ANGLE_BINS
+from .base import RectSprite
 from .movement import _circle_wall_collision, separate_circle_from_walls
 from .walls import Wall
 
 
-class Car(pygame.sprite.Sprite):
+class Car(RectSprite):
     def __init__(self: Self, x: int, y: int, *, appearance: str = "default") -> None:
         super().__init__()
         self.facing_bin = ANGLE_BINS * 3 // 4

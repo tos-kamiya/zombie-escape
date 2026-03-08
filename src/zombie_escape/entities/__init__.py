@@ -12,6 +12,7 @@ except ImportError:  # pragma: no cover - Python 3.10 fallback
 import pygame
 from pygame import rect
 
+from .base import RectSprite
 from ..entities_constants import (
     EMPTY_FUEL_CAN_HEIGHT,
     EMPTY_FUEL_CAN_WIDTH,
@@ -54,13 +55,13 @@ class Camera:
         self.width = width
         self.height = height
 
-    def apply(self: Self, entity: pygame.sprite.Sprite) -> rect.Rect:
+    def apply(self: Self, entity: RectSprite) -> rect.Rect:
         return entity.rect.move(self.camera.topleft)
 
     def apply_rect(self: Self, rect: rect.Rect) -> rect.Rect:
         return rect.move(self.camera.topleft)
 
-    def update(self: Self, target: pygame.sprite.Sprite, *, deadzone: int = 0) -> None:
+    def update(self: Self, target: RectSprite, *, deadzone: int = 0) -> None:
         x = -target.rect.centerx + int(SCREEN_WIDTH / 2)
         y = -target.rect.centery + int(SCREEN_HEIGHT / 2)
         min_x = -(self.width - SCREEN_WIDTH)
@@ -99,7 +100,7 @@ def random_position_outside_building(
     return x, y
 
 
-class FuelCan(pygame.sprite.Sprite):
+class FuelCan(RectSprite):
     """Simple fuel can collectible used in Stage 2."""
 
     def __init__(self: Self, x: int, y: int) -> None:
@@ -108,7 +109,7 @@ class FuelCan(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x, y))
 
 
-class EmptyFuelCan(pygame.sprite.Sprite):
+class EmptyFuelCan(RectSprite):
     """Empty fuel can collectible that must be filled at a station."""
 
     def __init__(self: Self, x: int, y: int) -> None:
@@ -119,7 +120,7 @@ class EmptyFuelCan(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x, y))
 
 
-class FuelStation(pygame.sprite.Sprite):
+class FuelStation(RectSprite):
     """Fuel station interaction point used to fill empty fuel cans."""
 
     def __init__(self: Self, x: int, y: int) -> None:
@@ -128,7 +129,7 @@ class FuelStation(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x, y))
 
 
-class Flashlight(pygame.sprite.Sprite):
+class Flashlight(RectSprite):
     """Flashlight pickup that expands the player's visible radius when collected."""
 
     def __init__(self: Self, x: int, y: int) -> None:
@@ -137,7 +138,7 @@ class Flashlight(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x, y))
 
 
-class Shoes(pygame.sprite.Sprite):
+class Shoes(RectSprite):
     """Shoes pickup that boosts the player's move speed when collected."""
 
     def __init__(self: Self, x: int, y: int) -> None:
@@ -153,6 +154,7 @@ __all__ = [
     "SteelBeam",
     "spritecollideany_walls",
     "Camera",
+    "RectSprite",
     "Player",
     "Survivor",
     "Zombie",

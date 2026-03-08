@@ -4,6 +4,7 @@ import math
 
 import pygame
 
+from .base import RectSprite
 from ..entities_constants import (
     SPIKY_PLANT_COLLISION_RADIUS,
     SPIKY_PLANT_HEALTH,
@@ -16,7 +17,7 @@ from ..render_constants import (
 )
 
 
-class SpikyPlant(pygame.sprite.Sprite):
+class SpikyPlant(RectSprite):
     def __init__(self, x: int, y: int):
         super().__init__()
         self.radius = SPIKY_PLANT_RADIUS

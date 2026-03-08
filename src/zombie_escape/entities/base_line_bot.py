@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Iterable, Protocol, cast
 
 import pygame
 
@@ -9,11 +9,21 @@ try:
 except ImportError:  # pragma: no cover - Python 3.10 fallback
     from typing_extensions import Self
 
+from .base import RectSprite
 from .movement import _circle_wall_collision
 from .walls import Wall
 
 
-class BaseLineBot(pygame.sprite.Sprite):
+class _PushableEntity(Protocol):
+    rect: pygame.Rect
+
+
+class _PositionedPushableEntity(_PushableEntity, Protocol):
+    x: float
+    y: float
+
+
+class BaseLineBot(RectSprite):
     """Shared line-bot mechanics used by patrol/carrier variants."""
 
     direction: tuple[int, int]
@@ -110,8 +120,8 @@ class BaseLineBot(pygame.sprite.Sprite):
         center_x: float,
         center_y: float,
         radius: float,
-        entities: Iterable[pygame.sprite.Sprite],
-        ignore: Iterable[pygame.sprite.Sprite] = (),
+        entities: Iterable[_PushableEntity],
+        ignore: Iterable[_PushableEntity] = (),
     ) -> None:
         ignored = set(ignore)
         for entity in entities:
@@ -140,6 +150,8 @@ class BaseLineBot(pygame.sprite.Sprite):
                 continue
             entity.rect.center = (int(new_x), int(new_y))
             if hasattr(entity, "x"):
-                entity.x = float(entity.rect.centerx)
+                positioned = cast(_PositionedPushableEntity, entity)
+                positioned.x = float(positioned.rect.centerx)
             if hasattr(entity, "y"):
-                entity.y = float(entity.rect.centery)
+                positioned = cast(_PositionedPushableEntity, entity)
+                positioned.y = float(positioned.rect.centery)

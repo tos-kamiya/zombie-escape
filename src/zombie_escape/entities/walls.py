@@ -28,6 +28,7 @@ from ..render_assets import (
     rubble_offset_for_size,
     RUBBLE_ROTATION_DEG,
 )
+from .base import RectSprite
 from .movement import (
     _circle_polygon_collision,
     _circle_rect_collision,
@@ -90,7 +91,7 @@ def consume_wall_index_dirty() -> bool:
     return True
 
 
-class Wall(pygame.sprite.Sprite):
+class Wall(RectSprite):
     def __init__(
         self: Self,
         x: int,
@@ -497,7 +498,7 @@ class ReinforcedWall(Wall):
         self._paint_damage_marks(health_ratio=health_ratio)
 
 
-class SteelBeam(pygame.sprite.Sprite):
+class SteelBeam(RectSprite):
     """Single-cell obstacle that behaves like a tougher internal wall."""
 
     def __init__(

@@ -1,36 +1,53 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Protocol, cast
 
 import pygame
 
 from ..world_grid import WallIndex, walls_for_radius
+from .base import RectSprite
 from .movement import _circle_wall_collision
 from .walls import Wall
 
 
+class CollisionSprite(Protocol):
+    rect: pygame.Rect
+
+    def get_collision_circle(self) -> tuple[tuple[int, int], float]: ...
+
+
+class RadiusSprite(Protocol):
+    rect: pygame.Rect
+    radius: float
+    collision_radius: float
+
+
 def _sprite_center_and_radius(
-    sprite: pygame.sprite.Sprite,
+    sprite: RectSprite,
 ) -> tuple[tuple[int, int], float]:
     center = sprite.rect.center
     if hasattr(sprite, "radius"):
-        radius = float(getattr(sprite, "collision_radius", sprite.radius))
+        radius_sprite = cast(RadiusSprite, sprite)
+        radius = float(
+            getattr(radius_sprite, "collision_radius", radius_sprite.radius)
+        )
     else:
         radius = float(max(sprite.rect.width, sprite.rect.height) / 2)
     return center, radius
 
 
 def _sprite_collision_circle(
-    sprite: pygame.sprite.Sprite,
+    sprite: RectSprite,
 ) -> tuple[tuple[int, int], float]:
     if hasattr(sprite, "get_collision_circle"):
-        center, radius = sprite.get_collision_circle()
+        collision_sprite = cast(CollisionSprite, sprite)
+        center, radius = collision_sprite.get_collision_circle()
         return (int(center[0]), int(center[1])), float(radius)
     return _sprite_center_and_radius(sprite)
 
 
 def collide_circle_custom(
-    sprite_a: pygame.sprite.Sprite, sprite_b: pygame.sprite.Sprite
+    sprite_a: RectSprite, sprite_b: RectSprite
 ) -> bool:
     center_a, radius_a = _sprite_collision_circle(sprite_a)
     center_b, radius_b = _sprite_collision_circle(sprite_b)
@@ -41,7 +58,7 @@ def collide_circle_custom(
 
 
 def _walls_for_sprite(
-    sprite: pygame.sprite.Sprite,
+    sprite: RectSprite,
     wall_index: WallIndex,
     *,
     cell_size: int,
@@ -59,22 +76,19 @@ def _walls_for_sprite(
     )
 
 
-def _collide_sprite_wall(
-    sprite: pygame.sprite.Sprite, wall: pygame.sprite.Sprite
-) -> bool:
+def _collide_sprite_wall(sprite: RectSprite, wall: Wall) -> bool:
     if hasattr(sprite, "radius"):
-        center = sprite.rect.center
-        radius = float(getattr(sprite, "collision_radius", sprite.radius))
+        radius_sprite = cast(RadiusSprite, sprite)
+        center = radius_sprite.rect.center
+        radius = float(
+            getattr(radius_sprite, "collision_radius", radius_sprite.radius)
+        )
         return _circle_wall_collision(center, radius, wall)
-    if hasattr(wall, "collides_rect"):
-        return wall.collides_rect(sprite.rect)
-    if hasattr(sprite, "collides_rect"):
-        return sprite.collides_rect(wall.rect)
-    return sprite.rect.colliderect(wall.rect)
+    return wall.collides_rect(sprite.rect)
 
 
 def spritecollideany_walls(
-    sprite: pygame.sprite.Sprite,
+    sprite: RectSprite,
     walls: pygame.sprite.Group,
     *,
     wall_index: WallIndex | None = None,

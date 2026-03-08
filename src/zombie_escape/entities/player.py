@@ -33,6 +33,7 @@ from ..render_assets import (
 )
 from ..render_constants import ANGLE_BINS, PLAYER_SHADOW_RADIUS_MULT
 from ..world_grid import WallIndex, walls_for_radius
+from .base import RectSprite
 from .collisions import collide_circle_custom
 from .movement import _can_humanoid_jump, _circle_wall_collision, _get_jump_scale
 from .movement_helpers import (
@@ -64,7 +65,7 @@ def _next_player_cell_jitter() -> tuple[float, float]:
     return _PLAYER_CELL_JITTER_QUEUE.pop()
 
 
-class Player(pygame.sprite.Sprite):
+class Player(RectSprite):
     def __init__(
         self: Self,
         x: float,
@@ -181,7 +182,7 @@ class Player(pygame.sprite.Sprite):
         inner_wall_hit = False
         inner_wall_cell: tuple[int, int] | None = None
 
-        def _apply_player_wall_damage(hit_walls: list[pygame.sprite.Sprite]) -> None:
+        def _apply_player_wall_damage(hit_walls: list[Wall]) -> None:
             nonlocal inner_wall_hit, inner_wall_cell
             targets = [
                 wall
@@ -191,7 +192,7 @@ class Player(pygame.sprite.Sprite):
             if not targets:
                 return
             damage = max(1, PLAYER_WALL_DAMAGE)
-            unique_targets: list[pygame.sprite.Sprite] = []
+            unique_targets: list[Wall] = []
             seen: set[int] = set()
             for wall in targets:
                 key = id(wall)
@@ -256,7 +257,7 @@ class Player(pygame.sprite.Sprite):
         collision_probe_x = self.x + jitter_dx
         collision_probe_y = self.y + jitter_dy
 
-        wall_candidates: list[pygame.sprite.Sprite]
+        wall_candidates: list[Wall]
         if wall_index is None:
             wall_candidates = [wall for wall in walls if wall.alive()]
         elif cell_size is None:

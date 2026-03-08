@@ -13,9 +13,10 @@ from ..entities_constants import MATERIAL_SIZE
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     from .carrier_bot import CarrierBot
+from .base import RectSprite
 
 
-class Material(pygame.sprite.Sprite):
+class Material(RectSprite):
     """Passive carryable object for carrier bots."""
 
     def __init__(self: Self, x: float, y: float, *, size: int = MATERIAL_SIZE) -> None:

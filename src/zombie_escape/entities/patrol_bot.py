@@ -25,6 +25,7 @@ from ..render_constants import ANGLE_BINS
 from ..rng import get_rng
 from ..surface_effects import is_in_puddle_cell
 from ..world_grid import apply_cell_edge_nudge
+from .base import RectSprite
 from .movement import (
     _circle_rect_collision,
     _circle_wall_collision,
@@ -33,12 +34,14 @@ from .movement import (
 from .walls import Wall
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
+    from .car import Car
+    from .player import Player
     from .spiky_plant import SpikyPlant
 
 RNG = get_rng()
 
 
-class PatrolBot(pygame.sprite.Sprite):
+class PatrolBot(RectSprite):
     def __init__(self: Self, x: float, y: float) -> None:
         super().__init__()
         self.size = PATROL_BOT_SPRITE_SIZE
@@ -188,9 +191,9 @@ class PatrolBot(pygame.sprite.Sprite):
         *,
         patrol_bot_group: pygame.sprite.Group | None = None,
         human_group: pygame.sprite.Group | None = None,
-        player: pygame.sprite.Sprite | None = None,
-        car: pygame.sprite.Sprite | None = None,
-        parked_cars: list[pygame.sprite.Sprite] | None = None,
+        player: "Player | None" = None,
+        car: "Car | None" = None,
+        parked_cars: list["Car"] | None = None,
         cell_size: int,
         pitfall_cells: set[tuple[int, int]],
         fire_floor_cells: set[tuple[int, int]] | None = None,
@@ -340,12 +343,12 @@ class PatrolBot(pygame.sprite.Sprite):
                     return True
             return False
 
+        closest_bot: PatrolBot | None = None
         if _bot_collision(final_x, final_y):
             hit_bot = True
             final_x = self.x
             final_y = self.y
-            closest_bot = None
-            closest_dist_sq = None
+            closest_dist_sq: float | None = None
             for bot in possible_bots:
                 dx = final_x - bot.x
                 dy = final_y - bot.y
@@ -355,7 +358,7 @@ class PatrolBot(pygame.sprite.Sprite):
                     closest_dist_sq = dist_sq
 
         hit_car = False
-        car_candidates: list[pygame.sprite.Sprite] = []
+        car_candidates: list["Car"] = []
         if car is not None and getattr(car, "alive", lambda: True)():
             car_candidates.append(car)
         if parked_cars:
@@ -393,7 +396,7 @@ class PatrolBot(pygame.sprite.Sprite):
                 if hit_spiky_plant:
                     break
 
-        possible_humans = []
+        possible_humans: list[RectSprite] = []
         if human_group:
             possible_humans.extend(
                 [

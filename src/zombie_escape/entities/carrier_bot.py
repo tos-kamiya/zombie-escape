@@ -20,6 +20,7 @@ from ..render_constants import (
     PATROL_BOT_BODY_COLOR,
     PATROL_BOT_OUTLINE_COLOR,
 )
+from .base import RectSprite
 from .base_line_bot import BaseLineBot
 from .material import Material
 from .movement import _circle_wall_collision
@@ -145,7 +146,7 @@ class CarrierBot(BaseLineBot):
         pitfall_cells: set[tuple[int, int]],
         walls: list[Wall],
         materials: Iterable[Material],
-        blockers: Iterable[pygame.sprite.Sprite],
+        blockers: Iterable[RectSprite],
     ) -> bool:
         cx, cy = cell
         if cell_size <= 0:
@@ -190,7 +191,7 @@ class CarrierBot(BaseLineBot):
         pitfall_cells: set[tuple[int, int]],
         walls: list[Wall],
         materials: Iterable[Material],
-        blockers: Iterable[pygame.sprite.Sprite],
+        blockers: Iterable[RectSprite],
     ) -> None:
         material = self.carried_material
         if material is None or cell_size <= 0:
@@ -283,7 +284,7 @@ class CarrierBot(BaseLineBot):
         layout: "LevelLayout",
         cell_size: int,
         pitfall_cells: set[tuple[int, int]],
-        blockers: Iterable[pygame.sprite.Sprite],
+        blockers: Iterable[RectSprite],
     ) -> bool:
         _, _, hit_wall = self._handle_axis_collision(
             next_x=next_x,
@@ -335,8 +336,8 @@ class CarrierBot(BaseLineBot):
         cell_size: int,
         pitfall_cells: set[tuple[int, int]],
         materials: Iterable[Material],
-        blockers: Iterable[pygame.sprite.Sprite] = (),
-        push_targets: Iterable[pygame.sprite.Sprite] | None = None,
+        blockers: Iterable[RectSprite] = (),
+        push_targets: Iterable[RectSprite] | None = None,
     ) -> None:
         recent = self._recently_dropped_material
         if recent is not None:

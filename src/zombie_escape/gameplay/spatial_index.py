@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 
 import pygame
 
+from ..entities.base import RectSprite
+
 if TYPE_CHECKING:  # pragma: no cover - typing-only imports
     pass
 
@@ -25,16 +27,11 @@ class SpatialKind(IntFlag):
     ALL = PLAYER | CAR | ZOMBIE | ZOMBIE_DOG | TRAPPED_ZOMBIE | SURVIVOR | PATROL_BOT
 
 
-def _entity_center(entity: pygame.sprite.Sprite) -> tuple[float, float]:
-    rect = getattr(entity, "rect", None)
-    if rect is not None:
-        return float(rect.centerx), float(rect.centery)
-    x = getattr(entity, "x", 0.0)
-    y = getattr(entity, "y", 0.0)
-    return float(x), float(y)
+def _entity_center(entity: RectSprite) -> tuple[float, float]:
+    return float(entity.rect.centerx), float(entity.rect.centery)
 
 
-def kind_for_entity(entity: pygame.sprite.Sprite) -> SpatialKind:
+def kind_for_entity(entity: RectSprite) -> SpatialKind:
     from ..entities import (
         Car,
         PatrolBot,
@@ -66,13 +63,13 @@ class SpatialIndex:
     def __init__(self, cell_size: int = SPATIAL_INDEX_CELL_SIZE) -> None:
         self.cell_size = max(1, int(cell_size))
         self._cells: dict[
-            tuple[int, int], list[tuple[pygame.sprite.Sprite, SpatialKind]]
+            tuple[int, int], list[tuple[RectSprite, SpatialKind]]
         ] = {}
 
     def clear(self) -> None:
         self._cells.clear()
 
-    def rebuild(self, entities: Iterable[pygame.sprite.Sprite]) -> None:
+    def rebuild(self, entities: Iterable[RectSprite]) -> None:
         self.clear()
         for entity in entities:
             if not getattr(entity, "alive", lambda: True)():
@@ -82,7 +79,7 @@ class SpatialIndex:
                 continue
             self.insert(entity, kind)
 
-    def insert(self, entity: pygame.sprite.Sprite, kind: SpatialKind) -> None:
+    def insert(self, entity: RectSprite, kind: SpatialKind) -> None:
         x, y = _entity_center(entity)
         cell = (int(x // self.cell_size), int(y // self.cell_size))
         self._cells.setdefault(cell, []).append((entity, kind))
@@ -93,7 +90,7 @@ class SpatialIndex:
         radius: float,
         *,
         kinds: SpatialKind = SpatialKind.ALL,
-    ) -> list[pygame.sprite.Sprite]:
+    ) -> list[RectSprite]:
         if kinds == SpatialKind.NONE:
             return []
         radius = max(0.0, float(radius))
@@ -105,7 +102,7 @@ class SpatialIndex:
         min_y = int((cy - radius) // self.cell_size)
         max_y = int((cy + radius) // self.cell_size)
         radius_sq = radius * radius
-        results: list[pygame.sprite.Sprite] = []
+        results: list[RectSprite] = []
         seen: set[int] = set()
         for cell_y in range(min_y, max_y + 1):
             for cell_x in range(min_x, max_x + 1):
@@ -131,14 +128,14 @@ class SpatialIndex:
         rect: pygame.Rect,
         *,
         kinds: SpatialKind = SpatialKind.ALL,
-    ) -> list[pygame.sprite.Sprite]:
+    ) -> list[RectSprite]:
         if kinds == SpatialKind.NONE:
             return []
         min_x = int(rect.left // self.cell_size)
         max_x = int(rect.right // self.cell_size)
         min_y = int(rect.top // self.cell_size)
         max_y = int(rect.bottom // self.cell_size)
-        results: list[pygame.sprite.Sprite] = []
+        results: list[RectSprite] = []
         seen: set[int] = set()
         for cell_y in range(min_y, max_y + 1):
             for cell_x in range(min_x, max_x + 1):
@@ -151,8 +148,7 @@ class SpatialIndex:
                     ent_id = id(entity)
                     if ent_id in seen:
                         continue
-                    ent_rect = getattr(entity, "rect", None)
-                    if ent_rect is None or rect.colliderect(ent_rect):
+                    if rect.colliderect(entity.rect):
                         results.append(entity)
                         seen.add(ent_id)
         return results
@@ -165,12 +161,12 @@ class SpatialIndex:
         min_cell_y: int,
         max_cell_y: int,
         kinds: SpatialKind = SpatialKind.ALL,
-    ) -> list[pygame.sprite.Sprite]:
+    ) -> list[RectSprite]:
         if kinds == SpatialKind.NONE:
             return []
         if min_cell_x > max_cell_x or min_cell_y > max_cell_y:
             return []
-        results: list[pygame.sprite.Sprite] = []
+        results: list[RectSprite] = []
         seen: set[int] = set()
         for cell_y in range(min_cell_y, max_cell_y + 1):
             for cell_x in range(min_cell_x, max_cell_x + 1):

@@ -29,6 +29,7 @@ from ..entities_constants import (
 from ..render_assets import angle_bin_from_vector, build_survivor_directional_surfaces
 from ..render_constants import ANGLE_BINS, ENTITY_SHADOW_RADIUS_MULT
 from ..world_grid import WallIndex, apply_cell_edge_nudge
+from .base import RectSprite
 from .collisions import collide_circle_custom
 from .movement import _can_humanoid_jump, _circle_wall_collision, _get_jump_scale
 from .movement_helpers import (
@@ -64,7 +65,7 @@ def _next_survivor_wall_jitter() -> tuple[float, float]:
     return _SURVIVOR_WALL_JITTER_QUEUE.pop()
 
 
-class Survivor(pygame.sprite.Sprite):
+class Survivor(RectSprite):
     """Civilians that gather near the player; optional buddy behavior."""
 
     def __init__(

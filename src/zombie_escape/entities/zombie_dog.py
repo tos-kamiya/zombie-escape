@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from enum import Enum
-from typing import Protocol
+from typing import Protocol, cast
 
 import pygame
 
@@ -59,6 +59,8 @@ from ..render_assets import (
     draw_tracker_nose,
 )
 from ..world_grid import apply_cell_edge_nudge
+from .base import RectSprite
+from .walls import Wall
 from .zombie import Zombie
 from .movement_helpers import separate_circle_from_blockers
 from .tracker_scent import TrackerScentState, update_tracker_target_from_footprints
@@ -88,11 +90,17 @@ class MovementStrategy(Protocol):
         cell_size: int,
         layout,
         player_center: tuple[float, float],
-        nearby_zombies: list[pygame.sprite.Sprite],
+        nearby_zombies: list[RectSprite],
         footprints: list,
         *,
         now_ms: int,
 ) -> tuple[float, float]: ...
+
+
+class PositionedSprite(Protocol):
+    rect: pygame.Rect
+    x: float
+    y: float
 
 
 def _set_wander_heading_toward_player_if_close(
@@ -227,7 +235,7 @@ def _zombie_dog_default_movement(
     cell_size: int,
     layout,
     player_center: tuple[float, float],
-    nearby_zombies: list[pygame.sprite.Sprite],
+    nearby_zombies: list[RectSprite],
     _footprints: list,
     *,
     now_ms: int,
@@ -363,7 +371,7 @@ def _zombie_dog_tracker_movement(
     )
 
 
-class ZombieDog(pygame.sprite.Sprite):
+class ZombieDog(RectSprite):
     def __init__(
         self: Self,
         x: float,
@@ -608,9 +616,9 @@ class ZombieDog(pygame.sprite.Sprite):
         return dx * dx + dy * dy <= self.sight_range * self.sight_range
 
     def _nearest_zombie_target(
-        self: Self, nearby_zombies: list[pygame.sprite.Sprite]
-    ) -> pygame.sprite.Sprite | None:
-        best: pygame.sprite.Sprite | None = None
+        self: Self, nearby_zombies: list[RectSprite]
+    ) -> RectSprite | None:
+        best: RectSprite | None = None
         best_dist_sq = ZOMBIE_DOG_PACK_CHASE_RANGE * ZOMBIE_DOG_PACK_CHASE_RANGE
         for candidate in nearby_zombies:
             if not isinstance(candidate, Zombie):
@@ -635,13 +643,13 @@ class ZombieDog(pygame.sprite.Sprite):
         self: Self,
         move_x: float,
         move_y: float,
-        zombies: list[pygame.sprite.Sprite],
+        zombies: list[RectSprite],
     ) -> tuple[float, float]:
         """If another zombie is too close, steer directly away from the closest one."""
         next_x = self.x + move_x
         next_y = self.y + move_y
 
-        closest: pygame.sprite.Sprite | None = None
+        closest: PositionedSprite | None = None
         closest_dist_sq = ZOMBIE_SEPARATION_DISTANCE * ZOMBIE_SEPARATION_DISTANCE
         for other in zombies:
             if other is self or not other.alive():
@@ -649,8 +657,9 @@ class ZombieDog(pygame.sprite.Sprite):
             if getattr(other, "is_trapped", False):
                 continue
 
-            ox = other.x  # type: ignore[attr-defined]
-            oy = other.y  # type: ignore[attr-defined]
+            positioned = cast(PositionedSprite, other)
+            ox = positioned.x
+            oy = positioned.y
 
             dx = ox - next_x
             dy = oy - next_y
@@ -661,7 +670,7 @@ class ZombieDog(pygame.sprite.Sprite):
                 continue
             dist_sq = dx * dx + dy * dy
             if dist_sq < closest_dist_sq:
-                closest = other
+                closest = cast(PositionedSprite, other)
                 closest_dist_sq = dist_sq
 
         if closest is None:
@@ -686,7 +695,7 @@ class ZombieDog(pygame.sprite.Sprite):
         self: Self,
         move_x: float,
         move_y: float,
-        zombies: list[pygame.sprite.Sprite],
+        zombies: list[RectSprite],
     ) -> tuple[float, float]:
         next_x = self.x + move_x
         next_y = self.y + move_y
@@ -761,7 +770,7 @@ class ZombieDog(pygame.sprite.Sprite):
         next_x: float,
         next_y: float,
         *,
-        walls: list[pygame.sprite.Sprite],
+        walls: list[Wall],
         cell_size: int,
         layout,
     ) -> tuple[float, float, bool, bool]:
@@ -812,8 +821,8 @@ class ZombieDog(pygame.sprite.Sprite):
     def update(
         self: Self,
         player_center: tuple[float, float],
-        walls: list[pygame.sprite.Sprite],
-        nearby_zombies: list[pygame.sprite.Sprite],
+        walls: list[Wall],
+        nearby_zombies: list[RectSprite],
         electrified_cells: set[tuple[int, int]] | None = None,
         footprints: list | None = None,
         *,
